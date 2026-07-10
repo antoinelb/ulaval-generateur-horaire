@@ -110,13 +110,15 @@ Un crate serveur (Axum) est réservé mais non construit ; déclencheurs qui jus
 
 Un dépôt, un workspace Cargo :
 
-- **`core`** (bibliothèque) — types du domaine (`Cours`, `Section`, `PlageHoraire`, `Horaire`, arbres de préalables, règles), détection de conflits, combinaison/classement de sections, génération d'organigramme sous contraintes, validation des préalables.
+- **`core`** (bibliothèque) — types du domaine (`Course`, `Section`, `TimeSlot`, `Schedule`, arbres de préalables, règles), détection de conflits, combinaison/classement de sections, génération d'organigramme sous contraintes, validation des préalables.
   Zéro IO, zéro async ; compile identiquement en natif (scraper, tests) et en WASM (UI).
 - **`scraper`** (binaire natif, async) — récolte + parsing → snapshots JSON ; dépend de `core` pour les types de sortie ; `tokio` + `reqwest` + `scraper` + `serde` ; `thiserror` dans la bibliothèque, `anyhow` à la frontière du binaire.
 - **`ui`** (binaire WASM) — frontend Dioxus 0.7, rendu client ; charge le snapshot JSON, pilote `core`, affiche.
 - `server` (Axum) et un wrapper desktop sont des noms réservés, construits seulement si leurs déclencheurs se matérialisent.
 
 Les répertoires gardent les noms `core`/`scraper`/`ui` ; les paquets Cargo sont préfixés `ulaval-scheduler-` (ADR `2026-07-nommage-des-crates-prefixe-ulaval-scheduler`).
+
+Convention de langue : le domaine s'exprime en français dans la prose, la documentation et l'interface, mais **le code est en anglais** — identifiants (variables, fonctions, types), messages d'erreur et clés de données JSON (ADR `2026-07-code-en-anglais-domaine-en-francais`).
 
 Alternatives rejetées (raisonnement complet dans `docs/conception/`) : Python + JS vanilla, Rust au scraper seulement, Leptos (second choix), Yew, iced, hybride Elm + WASM.
 
