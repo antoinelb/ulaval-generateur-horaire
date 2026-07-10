@@ -3,8 +3,8 @@
 **Date :** juillet 2026.
 **Statut :** conception terminée, implémentation non commencée.
 **Rôle de ce document :** point d'entrée du projet, autonome — tout ce qu'il faut pour implémenter est ici.
-Les documents de conception d'origine sont archivés dans `conception_docs/` ; ils gardent le détail supplémentaire (grammaires, exemples de formats JSON, résultats du spike, alternatives rejetées), mais en cas de contradiction, ce document a préséance.
-Toute nouvelle décision est documentée dans un fichier individuel sous `conception_docs/adr/`, et ce document est mis à jour en conséquence : le plan porte le *quoi*, l'ADR conserve le *pourquoi*.
+Les documents de conception d'origine sont archivés dans `docs/conception/` ; ils gardent le détail supplémentaire (grammaires, exemples de formats JSON, résultats du spike, alternatives rejetées), mais en cas de contradiction, ce document a préséance.
+Toute nouvelle décision est documentée dans un fichier individuel sous `docs/conception/adr/`, et ce document est mis à jour en conséquence : le plan porte le *quoi*, l'ADR conserve le *pourquoi*.
 
 ---
 
@@ -116,7 +116,7 @@ Un dépôt, un workspace Cargo :
 - **`ui`** (binaire WASM) — frontend Dioxus 0.7, rendu client ; charge le snapshot JSON, pilote `core`, affiche.
 - `server` (Axum) et un wrapper desktop sont des noms réservés, construits seulement si leurs déclencheurs se matérialisent.
 
-Alternatives rejetées (raisonnement complet dans `conception_docs/`) : Python + JS vanilla, Rust au scraper seulement, Leptos (second choix), Yew, iced, hybride Elm + WASM.
+Alternatives rejetées (raisonnement complet dans `docs/conception/`) : Python + JS vanilla, Rust au scraper seulement, Leptos (second choix), Yew, iced, hybride Elm + WASM.
 
 ### Flux de données de bout en bout
 
@@ -127,7 +127,7 @@ Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par
 
 ### Ordre de construction
 
-1. **Scraper d'abord** — tue le plus gros risque externe (la forme réelle des données) avant que du code n'en dépende ; démarche test-first (voir `next_steps.md`) : fixtures e2e des pages catalogue/cours/programme → parseur validé → tests unitaires.
+1. **Scraper d'abord** — tue le plus gros risque externe (la forme réelle des données) avant que du code n'en dépende ; démarche test-first (voir `docs/next_steps.md`) : fixtures e2e des pages catalogue/cours/programme → parseur validé → tests unitaires.
    Les sorties attendues vivent dans `tests/test_cases/` (`listing/`, `classes/`, `programs/`) ; pour le listing, la vérité terrain est les pages facettées GEX, page vide incluse comme signal de terminaison (ADR `2026-07-cas-de-test-listing-facette-gex`).
    Livrable : `donnees/{session}.json` + fixtures HTML + tests du parseur.
 2. **Cœur ensuite** — Rust pur contre les vraies données de l'étape 1 : combinaison de sections, préférences, préalables, génération d'organigramme.
@@ -162,7 +162,7 @@ Entrer des codes de cours pour une session : l'horaire se crée automatiquement 
 
 | Semaine | Jalon | Démonstration |
 |---|---|---|
-| 1 | **Scraper d'une session** (test-first, voir `next_steps.md`) : workspace Cargo, types du domaine dans `core`, fixtures e2e des pages catalogue et cours, parseur validé, snapshot `donnees/cours/a2026.json` pour les matières GEX | Le JSON de GCI-1007 (cours + laboratoires + sections liées) est correct |
+| 1 | **Scraper d'une session** (test-first, voir `docs/next_steps.md`) : workspace Cargo, types du domaine dans `core`, fixtures e2e des pages catalogue et cours, parseur validé, snapshot `donnees/cours/a2026.json` pour les matières GEX | Le JSON de GCI-1007 (cours + laboratoires + sections liées) est correct |
 | 2 | **Cœur solveur** : détection de conflits, combinaison automatique de sections (backtracking borné, une section de chaque type, sections liées incluses), harnais CLI | Le harnais imprime un horaire valide pour une liste de codes de cours ; absence de conflit testée par propriétés |
 | 3 | **UI minimale de l'horaire** : app Dioxus servie en statique, ajout/retrait de cours par code, grille hebdomadaire, combinaison automatique affichée, plages en conflit surlignées quand aucune combinaison n'existe, nombre total de crédits affiché | Le requis central de Daniel de bout en bout : entrer des codes de cours d'une session → l'horaire se monte tout de suite, crédits et conflits visibles |
 
@@ -193,7 +193,7 @@ Le cœur (requis explicites de Daniel, voir « Portée ») = v0 + jalons 4–5 ;
 
 ## Décisions révisées par rapport à la conception initiale
 
-Historique complet dans `conception_docs/` ; les décisions futures s'ajoutent en fichiers individuels dans `conception_docs/adr/`.
+Historique complet dans `docs/conception/` ; les décisions futures s'ajoutent en fichiers individuels dans `docs/conception/adr/`.
 
 | Sujet | Conception initiale | Décision retenue |
 |---|---|---|

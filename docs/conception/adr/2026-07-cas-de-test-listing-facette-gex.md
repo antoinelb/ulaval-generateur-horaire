@@ -4,7 +4,7 @@ Date : 2026-07-09
 
 ## Contexte
 
-La démarche test-first exige des cas de test e2e pour la page catalogue (https://www.ulaval.ca/etudes/cours), dernier cas manquant dans `next_steps.md`.
+La démarche test-first exige des cas de test e2e pour la page catalogue (https://www.ulaval.ca/etudes/cours), dernier cas manquant dans `docs/next_steps.md`.
 Transcrire les ~10 000 cours n'a pas de sens ; il faut un sous-ensemble vérifiable à la main.
 
 ## Décision
