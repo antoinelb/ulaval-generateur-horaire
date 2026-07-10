@@ -1,0 +1,327 @@
+{
+  "code": "baccalaureat-en-genie-des-eaux",
+  "title": "Baccalauréat en génie des eaux",
+  "cycle": 1,
+  "credits_required": 120,
+  "mandatory": [
+    {
+      "code": "CHM-1903",
+      "credits": 3
+    },
+    {
+      "code": "GCI-1000",
+      "credits": 3
+    },
+    {
+      "code": "GCI-1003",
+      "credits": 3
+    },
+    {
+      "code": "GEX-1002",
+      "credits": 1
+    },
+    {
+      "code": "GSC-1000",
+      "credits": 3
+    },
+    {
+      "code": "MAT-1900",
+      "credits": 3
+    },
+    {
+      "code": "GCI-1004",
+      "credits": 3
+    },
+    {
+      "code": "GGL-2600",
+      "credits": 3
+    },
+    {
+      "code": "IFT-1903",
+      "credits": 3
+    },
+    {
+      "code": "MAT-1910",
+      "credits": 3
+    },
+    {
+      "code": "STT-1900",
+      "credits": 3
+    },
+    {
+      "code": "GCI-1007",
+      "credits": 3
+    },
+    {
+      "code": "GCI-1010",
+      "credits": 3
+    },
+    {
+      "code": "GCI-1011",
+      "credits": 3
+    },
+    {
+      "code": "GCI-2008",
+      "credits": 3
+    },
+    {
+      "code": "GCI-2009",
+      "credits": 3
+    },
+    {
+      "code": "MCB-1907",
+      "credits": 3
+    },
+    {
+      "code": "GCI-1900",
+      "credits": 3
+    },
+    {
+      "code": "GCI-2010",
+      "credits": 3
+    },
+    {
+      "code": "GEX-1000",
+      "credits": 3
+    },
+    {
+      "code": "MAT-2910",
+      "credits": 3
+    },
+    {
+      "code": "GCI-2012",
+      "credits": 3
+    },
+    {
+      "code": "GCI-4301",
+      "credits": 3
+    },
+    {
+      "code": "GEX-2004",
+      "credits": 3
+    },
+    {
+      "code": "GMC-3009",
+      "credits": 3
+    },
+    {
+      "code": "ECN-4901",
+      "credits": 3
+    },
+    {
+      "code": "GEX-2001",
+      "credits": 3
+    },
+    {
+      "code": "GEX-2003",
+      "credits": 3
+    },
+    {
+      "code": "GEX-3001",
+      "credits": 3
+    },
+    {
+      "code": "DRT-1721",
+      "credits": 3
+    },
+    {
+      "code": "GEX-3333",
+      "credits": 3
+    },
+    {
+      "code": "PHI-2910",
+      "credits": 3
+    },
+    {
+      "code": "GEX-3335",
+      "credits": 3
+    },
+    {
+      "code": "PHI-3900",
+      "credits": 3
+    }
+  ],
+  "rules": [
+    {
+      "title": "Règle 1",
+      "constraint": {
+        "type": "course",
+        "count": 1
+      },
+      "courses": [
+        {
+          "code": "MED-1100",
+          "credits": 3
+        },
+        {
+          "code": "GMN-2901",
+          "credits": 2
+        },
+        {
+          "code": "GMN-2902",
+          "credits": 3
+        }
+      ]
+    },
+    {
+      "title": "Règle 2",
+      "constraint": {
+        "type": "credits",
+        "min": 3,
+        "max": 9
+      },
+      "courses": [
+        {
+          "code": "GCI-3101",
+          "credits": 3
+        },
+        {
+          "code": "GEX-3500",
+          "credits": 3
+        },
+        {
+          "code": "GEX-3502",
+          "credits": 3
+        },
+        {
+          "code": "GGL-4001",
+          "credits": 3
+        }
+      ]
+    },
+    {
+      "title": "Règle 3",
+      "constraint": {
+        "type": "credits",
+        "min": 3,
+        "max": 9
+      },
+      "courses": [
+        {
+          "code": "GAE-3006",
+          "credits": 3
+        },
+        {
+          "code": "GAE-3007",
+          "credits": 3
+        },
+        {
+          "code": "GAE-3008",
+          "credits": 3
+        },
+        {
+          "code": "GCI-3001",
+          "credits": 3
+        },
+        {
+          "code": "GCI-4201",
+          "credits": 3
+        },
+        {
+          "code": "GEX-4002",
+          "credits": 3
+        },
+        {
+          "code": "GEX-4008",
+          "credits": 3
+        },
+        {
+          "code": "GGL-2609",
+          "credits": 3
+        },
+        {
+          "code": "GMN-2005",
+          "credits": 3
+        }
+      ]
+    },
+    {
+      "title": "Règle 4",
+      "constraint": {
+        "type": "credits",
+        "min": 3,
+        "max": 3
+      },
+      "courses": [
+        {
+          "code": "IFT-4902",
+          "credits": 3
+        },
+        {
+          "code": "ANL-2020",
+          "credits": 3
+        },
+        {
+          "code": "FLS-2093",
+          "credits": 3
+        },
+        {
+          "code": "FRN-1914",
+          "credits": 3
+        },
+        {
+          "code": "ENT-1000",
+          "credits": 3
+        },
+        {
+          "code": "ENT-3020",
+          "credits": 3
+        },
+        {
+          "code": "MCB-4003",
+          "credits": 3
+        },
+        {
+          "code": "BIO-1008",
+          "credits": 3
+        },
+        {
+          "code": "BIO-1904",
+          "credits": 3
+        },
+        {
+          "code": "PLG-2104",
+          "credits": 3
+        },
+        {
+          "code": "DDU-2000",
+          "credits": 3
+        },
+        {
+          "code": "GGL-2601",
+          "credits": 3
+        },
+        {
+          "code": "GGR-1006",
+          "credits": 3
+        },
+        {
+          "code": "GGR-2307",
+          "credits": 3
+        }
+      ]
+    },
+    {
+      "title": "Règle 5",
+      "constraint": {
+        "type": "credits",
+        "min": 3,
+        "max": 3
+      },
+      "courses": "any",
+      "raw": "tous les cours de premier cycle, à l'exception des cours correctifs de français"
+    }
+  ],
+  "concentrations": [],
+  "profiles": [
+    {
+      "title": "Profil international",
+      "mandatory": [
+        {
+          "code": "EHE-1GEX",
+          "credits": null
+        }
+      ]
+    }
+  ]
+}

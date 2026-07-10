@@ -1,0 +1,41 @@
+{
+  "code": "GEX-4008",
+  "title": "Approvisionnement en eau dans les communautés nordiques",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "GEX, Crédits exigés : 60",
+    "tree": {
+      "program_credits": {
+        "program": "GEX",
+        "credits": 60
+      }
+    }
+  },
+  "equivalents": [
+    "GEX-7042"
+  ],
+  "seasons": {
+    "winter": {
+      "components": [
+        {
+          "type": "lecture",
+          "sections": [
+            {
+              "nrc": "14854",
+              "section": "A",
+              "mode": "in-person",
+              "slots": [
+                {
+                  "day": "wednesday",
+                  "start": "13:30",
+                  "end": "16:20"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

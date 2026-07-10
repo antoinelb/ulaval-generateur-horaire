@@ -1,0 +1,46 @@
+{
+  "code": "maitrise-en-genie-des-eaux-avec-memoire",
+  "title": "Maîtrise en génie des eaux - avec mémoire",
+  "cycle": 2,
+  "credits_required": 45,
+  "mandatory": [
+    { "code": "GCI-7077", "credits": 2 },
+    { "code": "GEX-6001", "credits": 1 }
+  ],
+  "rules": [
+    {
+      "title": "Règle 1",
+      "constraint": { "type": "credits", "min": 12, "max": 12 },
+      "courses": [
+        { "code": "GCI-7004", "credits": 3 },
+        { "code": "GCI-7010", "credits": 1 },
+        { "code": "GCI-7021", "credits": 3 },
+        { "code": "GCI-7030", "credits": 3 },
+        { "code": "GEX-7002", "credits": 3 },
+        { "code": "GEX-7004", "credits": 3 },
+        { "code": "GEX-7005", "credits": 3 },
+        { "code": "GEX-7007", "credits": 3 },
+        { "code": "GEX-7008", "credits": 3 },
+        { "code": "GEX-7013", "credits": 3 },
+        { "code": "GEX-7040", "credits": 3 },
+        { "code": "GEX-7042", "credits": 3 },
+        { "code": "GEX-7050", "credits": 3 },
+        { "code": "GEX-7061", "credits": 3 },
+        { "code": "GEX-7070", "credits": 3 },
+        { "code": "GEX-7078", "credits": 3 }
+      ]
+    },
+    {
+      "title": "Recherche",
+      "constraint": { "type": "credits", "min": 30, "max": 30 },
+      "courses": [
+        { "code": "GEX-6811", "credits": 7 },
+        { "code": "GEX-6812", "credits": 7 },
+        { "code": "GEX-6813", "credits": 7 },
+        { "code": "GEX-6814", "credits": 9 }
+      ]
+    }
+  ],
+  "concentrations": [],
+  "profiles": []
+}

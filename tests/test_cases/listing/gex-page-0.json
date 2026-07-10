@@ -1,0 +1,255 @@
+{
+  "total_results": 52,
+  "courses": [
+    {
+      "code": "GEX-1000",
+      "title": "Dispersion des polluants",
+      "url": "/etudes/cours/gex-1000-dispersion-des-polluants"
+    },
+    {
+      "code": "GEX-1002",
+      "title": "Génie des eaux : introduction à la profession",
+      "url": "/etudes/cours/gex-1002-genie-des-eaux-introduction-a-la-profession"
+    },
+    {
+      "code": "GEX-1580",
+      "title": "Stage en génie des eaux I",
+      "url": "/etudes/cours/gex-1580-stage-en-genie-des-eaux-i"
+    },
+    {
+      "code": "GEX-2001",
+      "title": "Interventions en bassin versant",
+      "url": "/etudes/cours/gex-2001-interventions-en-bassin-versant"
+    },
+    {
+      "code": "GEX-2003",
+      "title": "Production d'eau potable",
+      "url": "/etudes/cours/gex-2003-production-deau-potable"
+    },
+    {
+      "code": "GEX-2004",
+      "title": "Traitement des eaux usées",
+      "url": "/etudes/cours/gex-2004-traitement-des-eaux-usees"
+    },
+    {
+      "code": "GEX-2590",
+      "title": "Stage en génie des eaux II",
+      "url": "/etudes/cours/gex-2590-stage-en-genie-des-eaux-ii"
+    },
+    {
+      "code": "GEX-2591",
+      "title": "Stage en génie des eaux III",
+      "url": "/etudes/cours/gex-2591-stage-en-genie-des-eaux-iii"
+    },
+    {
+      "code": "GEX-3001",
+      "title": "Génie côtier",
+      "url": "/etudes/cours/gex-3001-genie-cotier"
+    },
+    {
+      "code": "GEX-3100",
+      "title": "Projet de gestion de l'eau par bassin versant",
+      "url": "/etudes/cours/gex-3100-projet-de-gestion-de-leau-par-bassin-versant"
+    },
+    {
+      "code": "GEX-3333",
+      "title": "Projet intégrateur en génie des eaux I",
+      "url": "/etudes/cours/gex-3333-projet-integrateur-en-genie-des-eaux-i"
+    },
+    {
+      "code": "GEX-3335",
+      "title": "Projet intégrateur en génie des eaux II",
+      "url": "/etudes/cours/gex-3335-projet-integrateur-en-genie-des-eaux-ii"
+    },
+    {
+      "code": "GEX-3500",
+      "title": "Projet de production d'eau potable",
+      "url": "/etudes/cours/gex-3500-projet-de-production-deau-potable"
+    },
+    {
+      "code": "GEX-3502",
+      "title": "Projet de traitement d'eaux usées",
+      "url": "/etudes/cours/gex-3502-projet-de-traitement-deaux-usees"
+    },
+    {
+      "code": "GEX-3590",
+      "title": "Stage en génie des eaux IV",
+      "url": "/etudes/cours/gex-3590-stage-en-genie-des-eaux-iv"
+    },
+    {
+      "code": "GEX-4002",
+      "title": "Hydrologie opérationnelle",
+      "url": "/etudes/cours/gex-4002-hydrologie-operationnelle"
+    },
+    {
+      "code": "GEX-4008",
+      "title": "Approvisionnement en eau dans les communautés nordiques",
+      "url": "/etudes/cours/gex-4008-approvisionnement-en-eau-dans-les-communautes-nordiques"
+    },
+    {
+      "code": "GEX-6001",
+      "title": "Séminaire de maîtrise",
+      "url": "/etudes/cours/gex-6001-seminaire-de-maitrise"
+    },
+    {
+      "code": "GEX-6811",
+      "title": "Activité de recherche - mémoire 1",
+      "url": "/etudes/cours/gex-6811-activite-de-recherche-memoire-1"
+    },
+    {
+      "code": "GEX-6812",
+      "title": "Activité de recherche - mémoire 2",
+      "url": "/etudes/cours/gex-6812-activite-de-recherche-memoire-2"
+    },
+    {
+      "code": "GEX-6813",
+      "title": "Activité de recherche - mémoire 3",
+      "url": "/etudes/cours/gex-6813-activite-de-recherche-memoire-3"
+    },
+    {
+      "code": "GEX-6814",
+      "title": "Activité de recherche - mémoire 4",
+      "url": "/etudes/cours/gex-6814-activite-de-recherche-memoire-4"
+    },
+    {
+      "code": "GEX-7002",
+      "title": "Hydrologie opérationnelle",
+      "url": "/etudes/cours/gex-7002-hydrologie-operationnelle"
+    },
+    {
+      "code": "GEX-7004",
+      "title": "Traitement des eaux usées",
+      "url": "/etudes/cours/gex-7004-traitement-des-eaux-usees"
+    },
+    {
+      "code": "GEX-7005",
+      "title": "Notions avancées en hydraulique urbaine",
+      "url": "/etudes/cours/gex-7005-notions-avancees-en-hydraulique-urbaine"
+    },
+    {
+      "code": "GEX-7007",
+      "title": "Ingénierie des glaces fluviales",
+      "url": "/etudes/cours/gex-7007-ingenierie-des-glaces-fluviales"
+    },
+    {
+      "code": "GEX-7008",
+      "title": "Télédétection, eau et territoire",
+      "url": "/etudes/cours/gex-7008-teledetection-eau-et-territoire"
+    },
+    {
+      "code": "GEX-7013",
+      "title": "Sujets spéciaux",
+      "url": "/etudes/cours/gex-7013-sujets-speciaux"
+    },
+    {
+      "code": "GEX-7040",
+      "title": "Infrastructures végétalisées et gestion de l'eau",
+      "url": "/etudes/cours/gex-7040-infrastructures-vegetalisees-et-gestion-de-leau"
+    },
+    {
+      "code": "GEX-7042",
+      "title": "Approvisionnement en eau dans les communautés nordiques",
+      "url": "/etudes/cours/gex-7042-approvisionnement-en-eau-dans-les-communautes-nordiques"
+    },
+    {
+      "code": "GEX-7050",
+      "title": "Traitements avancés des eaux",
+      "url": "/etudes/cours/gex-7050-traitements-avances-des-eaux"
+    },
+    {
+      "code": "GEX-7061",
+      "title": "Production d'eau potable",
+      "url": "/etudes/cours/gex-7061-production-deau-potable"
+    },
+    {
+      "code": "GEX-7070",
+      "title": "Modélisation et contrôle du système intégré d'assainissement",
+      "url": "/etudes/cours/gex-7070-modelisation-et-controle-du-systeme-integre-dassainissement"
+    },
+    {
+      "code": "GEX-7078",
+      "title": "Analyse et modélisation de séries environnementales",
+      "url": "/etudes/cours/gex-7078-analyse-et-modelisation-de-series-environnementales"
+    },
+    {
+      "code": "GEX-8000",
+      "title": "Examen de doctorat écrit",
+      "url": "/etudes/cours/gex-8000-examen-de-doctorat-ecrit"
+    },
+    {
+      "code": "GEX-8001",
+      "title": "Séminaire de doctorat I",
+      "url": "/etudes/cours/gex-8001-seminaire-de-doctorat-i"
+    },
+    {
+      "code": "GEX-8084",
+      "title": "Examen de doctorat oral",
+      "url": "/etudes/cours/gex-8084-examen-de-doctorat-oral"
+    },
+    {
+      "code": "GEX-8085",
+      "title": "Séminaire de doctorat II",
+      "url": "/etudes/cours/gex-8085-seminaire-de-doctorat-ii"
+    },
+    {
+      "code": "GEX-8804",
+      "title": "Activité de recherche - thèse 4",
+      "url": "/etudes/cours/gex-8804-activite-de-recherche-these-4"
+    },
+    {
+      "code": "GEX-8805",
+      "title": "Activité de recherche - thèse 5",
+      "url": "/etudes/cours/gex-8805-activite-de-recherche-these-5"
+    },
+    {
+      "code": "GEX-8806",
+      "title": "Activité de recherche - thèse 6",
+      "url": "/etudes/cours/gex-8806-activite-de-recherche-these-6"
+    },
+    {
+      "code": "GEX-8807",
+      "title": "Activité de recherche - thèse 7",
+      "url": "/etudes/cours/gex-8807-activite-de-recherche-these-7"
+    },
+    {
+      "code": "GEX-8808",
+      "title": "Activité de recherche - thèse 8",
+      "url": "/etudes/cours/gex-8808-activite-de-recherche-these-8"
+    },
+    {
+      "code": "GEX-8811",
+      "title": "Activité de recherche - thèse 1",
+      "url": "/etudes/cours/gex-8811-activite-de-recherche-these-1"
+    },
+    {
+      "code": "GEX-8812",
+      "title": "Activité de recherche - thèse 2",
+      "url": "/etudes/cours/gex-8812-activite-de-recherche-these-2"
+    },
+    {
+      "code": "GEX-8813",
+      "title": "Activité de recherche - thèse 3",
+      "url": "/etudes/cours/gex-8813-activite-de-recherche-these-3"
+    },
+    {
+      "code": "GEX-8814",
+      "title": "Activité de recherche - thèse 4",
+      "url": "/etudes/cours/gex-8814-activite-de-recherche-these-4"
+    },
+    {
+      "code": "GEX-8815",
+      "title": "Activité de recherche - thèse 5",
+      "url": "/etudes/cours/gex-8815-activite-de-recherche-these-5"
+    },
+    {
+      "code": "GEX-8816",
+      "title": "Activité de recherche - thèse 6",
+      "url": "/etudes/cours/gex-8816-activite-de-recherche-these-6"
+    },
+    {
+      "code": "GEX-8817",
+      "title": "Activité de recherche - thèse 7",
+      "url": "/etudes/cours/gex-8817-activite-de-recherche-these-7"
+    }
+  ]
+}
