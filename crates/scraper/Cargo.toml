@@ -1,0 +1,15 @@
+[package]
+name = "ulaval-scheduler-scraper"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "scraper"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+ulaval-scheduler-core = { workspace = true }

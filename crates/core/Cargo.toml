@@ -1,0 +1,8 @@
+[package]
+name = "ulaval-scheduler-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
