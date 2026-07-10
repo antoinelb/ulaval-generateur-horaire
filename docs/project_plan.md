@@ -116,11 +116,13 @@ Un dépôt, un workspace Cargo :
 - **`ui`** (binaire WASM) — frontend Dioxus 0.7, rendu client ; charge le snapshot JSON, pilote `core`, affiche.
 - `server` (Axum) et un wrapper desktop sont des noms réservés, construits seulement si leurs déclencheurs se matérialisent.
 
+Les répertoires gardent les noms `core`/`scraper`/`ui` ; les paquets Cargo sont préfixés `ulaval-scheduler-` (ADR `2026-07-nommage-des-crates-prefixe-ulaval-scheduler`).
+
 Alternatives rejetées (raisonnement complet dans `docs/conception/`) : Python + JS vanilla, Rust au scraper seulement, Leptos (second choix), Yew, iced, hybride Elm + WASM.
 
 ### Flux de données de bout en bout
 
-Cron GitHub Actions → binaire `scraper` (GET throttlés, HTML brut sauvegardé, parsing via les types de `core`) → `donnees/cours/{session}.json` + `donnees/programmes.json` → commit du snapshot → redéploiement du site statique → `ui` charge le JSON dans le navigateur, tout le calcul tourne localement via `core` → un horaire choisi se partage en URL.
+Cron GitHub Actions → binaire `scraper` (GET throttlés, HTML brut sauvegardé, parsing via les types de `core`) → `data/cours/{session}.json` + `data/programmes.json` → commit du snapshot → redéploiement du site statique → `ui` charge le JSON dans le navigateur, tout le calcul tourne localement via `core` → un horaire choisi se partage en URL.
 Aucun serveur nulle part dans le chemin.
 
 Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par de simples GET (ni session, ni POST de formulaire) ; le cookie store de `reqwest` reste un repli si certaines pages l'exigent (à vérifier à la semaine 1).
@@ -129,7 +131,7 @@ Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par
 
 1. **Scraper d'abord** — tue le plus gros risque externe (la forme réelle des données) avant que du code n'en dépende ; démarche test-first (voir `docs/next_steps.md`) : fixtures e2e des pages catalogue/cours/programme → parseur validé → tests unitaires.
    Les sorties attendues vivent dans `tests/test_cases/` (`listing/`, `classes/`, `programs/`) ; pour le listing, la vérité terrain est les pages facettées GEX, page vide incluse comme signal de terminaison (ADR `2026-07-cas-de-test-listing-facette-gex`).
-   Livrable : `donnees/{session}.json` + fixtures HTML + tests du parseur.
+   Livrable : `data/{session}.json` + fixtures HTML + tests du parseur.
 2. **Cœur ensuite** — Rust pur contre les vraies données de l'étape 1 : combinaison de sections, préférences, préalables, génération d'organigramme.
    Livrable : un harnais CLI/test qui imprime des horaires valides pour des codes de cours donnés, absence de conflit testée par propriétés.
 3. **UI en dernier** — à ce stade c'est un problème de rendu, pas de conception.
@@ -162,7 +164,7 @@ Entrer des codes de cours pour une session : l'horaire se crée automatiquement 
 
 | Semaine | Jalon | Démonstration |
 |---|---|---|
-| 1 | **Scraper d'une session** (test-first, voir `docs/next_steps.md`) : workspace Cargo, types du domaine dans `core`, fixtures e2e des pages catalogue et cours, parseur validé, snapshot `donnees/cours/a2026.json` pour les matières GEX | Le JSON de GCI-1007 (cours + laboratoires + sections liées) est correct |
+| 1 | **Scraper d'une session** (test-first, voir `docs/next_steps.md`) : workspace Cargo, types du domaine dans `core`, fixtures e2e des pages catalogue et cours, parseur validé, snapshot `data/cours/a2026.json` pour les matières GEX | Le JSON de GCI-1007 (cours + laboratoires + sections liées) est correct |
 | 2 | **Cœur solveur** : détection de conflits, combinaison automatique de sections (backtracking borné, une section de chaque type, sections liées incluses), harnais CLI | Le harnais imprime un horaire valide pour une liste de codes de cours ; absence de conflit testée par propriétés |
 | 3 | **UI minimale de l'horaire** : app Dioxus servie en statique, ajout/retrait de cours par code, grille hebdomadaire, combinaison automatique affichée, plages en conflit surlignées quand aucune combinaison n'existe, nombre total de crédits affiché | Le requis central de Daniel de bout en bout : entrer des codes de cours d'une session → l'horaire se monte tout de suite, crédits et conflits visibles |
 

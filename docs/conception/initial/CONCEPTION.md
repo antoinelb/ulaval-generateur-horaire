@@ -40,7 +40,7 @@ Vérifié sur GCI-1007 (cas compliqué de référence, cours + laboratoires), la
 
 ## Données
 
-### `donnees/cours/{session}.json` (ex. `a2026.json`)
+### `data/cours/{session}.json` (ex. `a2026.json`)
 
 Pour chaque cours offert à cette session :
 
@@ -49,7 +49,7 @@ Pour chaque cours offert à cette session :
 - programmes contributoires (depuis « Cette activité est contributoire dans : ») et cours équivalents
 - sections : NRC, type (en classe, laboratoire, forum…), capacité, enseignant, plages horaires (jour, heure début/fin, plage de dates, pavillon), sections liées et leur caractère obligatoire
 
-### `donnees/programmes.json`
+### `data/programmes.json`
 
 Scrapé des pages programmes (voir section suivante) : crédits exigés, cours obligatoires, règles.
 Le cheminement type (quel cours dans quelle session, l'organigramme A1→H8) n'apparaît pas sur la page programme ; il reste encodé à la main pour GEX.

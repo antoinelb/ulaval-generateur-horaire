@@ -40,7 +40,7 @@ Load-bearing invariants (constraints, not preferences) are in `docs/project_plan
 ## Domain quick facts
 
 - **Session naming & Daniel's founding hypothesis**: files are named season+year (`a2026` = Automne 2026, `h####` = Hiver, `e####` = Été). A future session with no published schedule reuses the most recent snapshot of the *same season* — so keep one snapshot per season, never blindly overwritten.
-- **Data files**: `donnees/cours/{session}.json` (per-course: code, titre, crédits, cycle, matière, préalables raw + parsed tree, contributing programs, equivalents, sections with NRC/type/plages/pavillon/linked sections) and `donnees/programmes.json` (credits_exiges, obligatoires, regles, notes, cheminement_type).
+- **Data files**: `data/cours/{session}.json` (per-course: code, titre, crédits, cycle, matière, préalables raw + parsed tree, contributing programs, equivalents, sections with NRC/type/plages/pavillon/linked sections) and `data/programmes.json` (credits_exiges, obligatoires, regles, notes, cheminement_type).
 - **`matière` = course-code prefix** (`GCI-`, `GEX-`); filtering by subject filters the listing URLs, no facet needed.
 - **Program mapping comes from course pages** ("Cette activité est contributoire dans :"), not program pages; only programs whose rules are needed get their page scraped.
 - **`cheminement_type` (A1→H8 organigramme) is hand-encoded**, GEX only — no machine-readable source exists.
