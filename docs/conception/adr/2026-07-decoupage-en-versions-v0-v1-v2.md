@@ -23,7 +23,7 @@ Deux détails migrent entre jalons pour respecter la définition de la v0 :
 Deux exigences deviennent explicites dans le plan :
 
 - L'affichage du nombre total de crédits (v0) — absent de la liste de fonctionnalités jusqu'ici.
-- Les **profils** de programme (v1) — déjà présents dans les cas de test du parseur (`tests/test_cases/programs/*.json`, clé `profiles`), mais absents des fonctionnalités et du jalon 6 ; aucune nouvelle source de données n'est requise.
+- Les **profils** de programme (v1) — déjà présents dans les cas de test du parseur (`tests/fixtures/test_cases/programs/*.json`, clé `profiles`), mais absents des fonctionnalités et du jalon 6 ; aucune nouvelle source de données n'est requise.
 
 Le découpage cœur/vision reste en vigueur pour les heures du mandat ; il ne coïncide pas avec les versions (le cœur = v0 + jalons 4–5).
 

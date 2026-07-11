@@ -132,7 +132,7 @@ Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par
 ### Ordre de construction
 
 1. **Scraper d'abord** — tue le plus gros risque externe (la forme réelle des données) avant que du code n'en dépende ; démarche test-first (voir `docs/next_steps.md`) : fixtures e2e des pages catalogue/cours/programme → parseur validé → tests unitaires.
-   Les sorties attendues vivent dans `tests/test_cases/` (`listing/`, `classes/`, `programs/`) ; pour le listing, la vérité terrain est les pages facettées GEX, page vide incluse comme signal de terminaison (ADR `2026-07-cas-de-test-listing-facette-gex`).
+   Les sorties attendues vivent dans `tests/fixtures/test_cases/` (`listing/`, `classes/`, `programs/`) ; pour le listing, la vérité terrain est les pages facettées GEX, page vide incluse comme signal de terminaison (ADR `2026-07-cas-de-test-listing-facette-gex`).
    Livrable : `data/{session}.json` + fixtures HTML + tests du parseur.
 2. **Cœur ensuite** — Rust pur contre les vraies données de l'étape 1 : combinaison de sections, préférences, préalables, génération d'organigramme.
    Livrable : un harnais CLI/test qui imprime des horaires valides pour des codes de cours donnés, absence de conflit testée par propriétés.

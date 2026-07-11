@@ -17,7 +17,7 @@ No source code yet — only planning documents and parser test cases.
 - `docs/project_plan.md` — **the standalone source of truth**: functionality, constraints, implementation, weekly jalons, revised decisions, open questions. Read it before writing code.
 - `docs/next_steps.md` — the immediate task list (test-first scraper/parser).
 - `docs/conception/` — the design history (original conception documents, deliverable plan, initial ADR, request emails). Consult only for extra detail (full grammar specs, worked JSON examples, spike results, rejected-alternative reasoning); where it contradicts `docs/project_plan.md`, the plan wins.
-- `tests/test_cases/` — expected parser outputs: `classes/*.json` (course pages) and `programs/*.json` (program pages).
+- `tests/fixtures/test_cases/` — expected parser outputs: `classes/*.json` (course pages) and `programs/*.json` (program pages). Shared across crates; see ADR `2026-07-structure-des-tests-et-fixtures`.
 
 ## Decision records (ADR) — required practice
 
@@ -35,6 +35,8 @@ Rust throughout, one Cargo workspace — details and reasoning in `docs/project_
 - **`core`** (library) — all domain logic, zero IO/async; compiles to native (scraper, tests) and WASM (UI).
 - **`scraper`** (native async binary) — fetch + parse ULaval pages into JSON snapshots; fetching and parsing strictly separated, parser tested against frozen HTML fixtures.
 - **`ui`** (WASM binary) — Dioxus 0.7, client-side rendered. **Whenever Dioxus code is written or understood, first read `.claude/dioxus.md`** (Dioxus 0.7 API reference): 0.7 changed every API — `cx`, `Scope`, and `use_state` are gone; use `use_signal`, `#[component]`, `rsx!`, `Routable`, `use_resource`.
+
+To run tests with coverage, use `make test` (wraps `cargo +nightly llvm-cov`).
 
 Fully static, serverless: no backend, no database; snapshots produced by a CI cron job (never in-app scraping); the solver runs in the browser; user state in `localStorage`; schedule sharing via URL.
 Load-bearing invariants (constraints, not preferences) are in `docs/project_plan.md` § Contraintes — notably: **all business logic in the pure `core` crate, none in the view**; **never drop unrecognized input silently**; **atomic snapshot replacement**.

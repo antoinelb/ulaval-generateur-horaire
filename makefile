@@ -3,4 +3,4 @@ static:
 	cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 test:
-	cargo +nightly llvm-cov
+	cargo +nightly llvm-cov --ignore-filename-regex '(lib\.rs|/mod\.rs)$$'

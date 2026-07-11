@@ -16,7 +16,7 @@ La vérité terrain est le listing filtré par la facette matière GEX (52 cours
 https://www.ulaval.ca/etudes/cours?search=&matieres%5B113%5D=113&day=All&start=All&end=All&field_sections_course_nbcred_min=All&field_sections_course_nbcred_max=All&page=N
 ```
 
-Trois fichiers dans `tests/test_cases/listing/` : `gex-page-0.json` (50 cours), `gex-page-1.json` (2 cours), `gex-page-2.json` (0 cours — la page « Aucun résultat », signal de terminaison).
+Trois fichiers dans `tests/fixtures/test_cases/listing/` : `gex-page-0.json` (50 cours), `gex-page-1.json` (2 cours), `gex-page-2.json` (0 cours — la page « Aucun résultat », signal de terminaison).
 Chaque entrée porte `code`, `title`, `url` (extraits des spans `cours-element--sigle` / `cours-element--titre` dans le lien `cours-element--lien`) ; le fichier porte aussi `total_results` (le « 52 résultats » de `total-resultats`), présent même sur la page vide.
 JSON seulement, pas de HTML gelé : les tests du parseur rouleront contre le HTML frais, pour qu'une dérive du site fasse échouer bruyamment plutôt que silencieusement.
 
