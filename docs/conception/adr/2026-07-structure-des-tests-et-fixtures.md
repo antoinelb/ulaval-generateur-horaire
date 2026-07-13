@@ -2,6 +2,9 @@
 
 Date : 2026-07-10
 
+> **Partiellement remplacé** (2026-07-13) : la cible externe `unit` est abandonnée — les tests unitaires vivent en ligne (`#[cfg(test)]` dans `src/`, exclus de la couverture), pour l'accès aux items privés et des chiffres de couverture honnêtes.
+> Voir `2026-07-tests-unitaires-en-ligne-et-couverture.md`. La cible `integration` et l'organisation des fixtures restent en vigueur.
+
 ## Contexte
 
 La crate `core` a maintenant une surface de types conséquente (`Course` et ses types imbriqués, énumérations, conversions `serde`).

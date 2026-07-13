@@ -9,6 +9,7 @@ workspace = true
 
 [dependencies]
 ulaval-scheduler-core = { workspace = true }
+anyhow = { version = "1" }
 dioxus = { version = "0.7.1", features = ["router"] }
 serde = { workspace = true }
 

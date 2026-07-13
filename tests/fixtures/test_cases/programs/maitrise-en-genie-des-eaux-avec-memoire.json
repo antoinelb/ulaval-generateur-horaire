@@ -4,40 +4,46 @@
   "cycle": 2,
   "credits_required": 45,
   "mandatory": [
-    { "code": "GCI-7077", "credits": 2 },
-    { "code": "GEX-6001", "credits": 1 }
+    "GCI-7077",
+    "GEX-6001"
   ],
   "rules": [
     {
       "title": "Règle 1",
-      "constraint": { "type": "credits", "min": 12, "max": 12 },
+      "constraint": {
+        "min": 12,
+        "max": 12
+      },
       "courses": [
-        { "code": "GCI-7004", "credits": 3 },
-        { "code": "GCI-7010", "credits": 1 },
-        { "code": "GCI-7021", "credits": 3 },
-        { "code": "GCI-7030", "credits": 3 },
-        { "code": "GEX-7002", "credits": 3 },
-        { "code": "GEX-7004", "credits": 3 },
-        { "code": "GEX-7005", "credits": 3 },
-        { "code": "GEX-7007", "credits": 3 },
-        { "code": "GEX-7008", "credits": 3 },
-        { "code": "GEX-7013", "credits": 3 },
-        { "code": "GEX-7040", "credits": 3 },
-        { "code": "GEX-7042", "credits": 3 },
-        { "code": "GEX-7050", "credits": 3 },
-        { "code": "GEX-7061", "credits": 3 },
-        { "code": "GEX-7070", "credits": 3 },
-        { "code": "GEX-7078", "credits": 3 }
+        "GCI-7004",
+        "GCI-7010",
+        "GCI-7021",
+        "GCI-7030",
+        "GEX-7002",
+        "GEX-7004",
+        "GEX-7005",
+        "GEX-7007",
+        "GEX-7008",
+        "GEX-7013",
+        "GEX-7040",
+        "GEX-7042",
+        "GEX-7050",
+        "GEX-7061",
+        "GEX-7070",
+        "GEX-7078"
       ]
     },
     {
       "title": "Recherche",
-      "constraint": { "type": "credits", "min": 30, "max": 30 },
+      "constraint": {
+        "min": 30,
+        "max": 30
+      },
       "courses": [
-        { "code": "GEX-6811", "credits": 7 },
-        { "code": "GEX-6812", "credits": 7 },
-        { "code": "GEX-6813", "credits": 7 },
-        { "code": "GEX-6814", "credits": 9 }
+        "GEX-6811",
+        "GEX-6812",
+        "GEX-6813",
+        "GEX-6814"
       ]
     }
   ],

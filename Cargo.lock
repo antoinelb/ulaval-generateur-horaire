@@ -5485,12 +5485,14 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "ulaval-scheduler-scraper"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "serde",
  "ulaval-scheduler-core",
 ]
@@ -5499,6 +5501,7 @@ dependencies = [
 name = "ulaval-scheduler-ui"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "dioxus",
  "serde",
  "ulaval-scheduler-core",

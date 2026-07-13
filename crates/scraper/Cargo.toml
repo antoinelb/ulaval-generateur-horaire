@@ -13,4 +13,5 @@ workspace = true
 
 [dependencies]
 ulaval-scheduler-core = { workspace = true }
+anyhow = { version = "1" }
 serde = { workspace = true }

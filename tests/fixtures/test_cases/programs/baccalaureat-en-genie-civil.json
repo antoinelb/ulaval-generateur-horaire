@@ -4,68 +4,76 @@
   "cycle": 1,
   "credits_required": 120,
   "mandatory": [
-    { "code": "GCI-1000", "credits": 3 },
-    { "code": "GCI-1001", "credits": 3 },
-    { "code": "GCI-1010", "credits": 3 },
-    { "code": "GCI-1011", "credits": 3 },
-    { "code": "GLG-1000", "credits": 3 },
-    { "code": "MAT-1900", "credits": 3 },
-    { "code": "GCI-2000", "credits": 3 },
-    { "code": "IFT-1903", "credits": 3 },
-    { "code": "MAT-1910", "credits": 3 },
-    { "code": "GCI-1003", "credits": 3 },
-    { "code": "GCI-1007", "credits": 3 },
-    { "code": "GCI-2001", "credits": 3 },
-    { "code": "GCI-2002", "credits": 3 },
-    { "code": "GCI-2003", "credits": 3 },
-    { "code": "GCI-1004", "credits": 3 },
-    { "code": "GCI-2004", "credits": 3 },
-    { "code": "GCI-2006", "credits": 3 },
-    { "code": "GCI-2007", "credits": 3 },
-    { "code": "GCI-3008", "credits": 3 },
-    { "code": "GMC-3009", "credits": 3 },
-    { "code": "STT-1900", "credits": 3 },
-    { "code": "GCI-2008", "credits": 3 },
-    { "code": "GCI-2009", "credits": 3 },
-    { "code": "GCI-3000", "credits": 3 },
-    { "code": "ECN-4901", "credits": 3 },
-    { "code": "GCI-2010", "credits": 3 },
-    { "code": "GCI-2011", "credits": 3 },
-    { "code": "GCI-2012", "credits": 3 },
-    { "code": "GCI-3009", "credits": 1 },
-    { "code": "GCI-3333", "credits": 6 },
-    { "code": "PHI-2910", "credits": 3 },
-    { "code": "PHI-3900", "credits": 3 }
+    "GCI-1000",
+    "GCI-1001",
+    "GCI-1010",
+    "GCI-1011",
+    "GLG-1000",
+    "MAT-1900",
+    "GCI-2000",
+    "IFT-1903",
+    "MAT-1910",
+    "GCI-1003",
+    "GCI-1007",
+    "GCI-2001",
+    "GCI-2002",
+    "GCI-2003",
+    "GCI-1004",
+    "GCI-2004",
+    "GCI-2006",
+    "GCI-2007",
+    "GCI-3008",
+    "GMC-3009",
+    "STT-1900",
+    "GCI-2008",
+    "GCI-2009",
+    "GCI-3000",
+    "ECN-4901",
+    "GCI-2010",
+    "GCI-2011",
+    "GCI-2012",
+    "GCI-3009",
+    "GCI-3333",
+    "PHI-2910",
+    "PHI-3900"
   ],
   "rules": [
     {
       "title": "Règle 1",
-      "constraint": { "type": "course", "count": 1 },
+      "constraint": {
+        "count": 1
+      },
       "courses": [
-        { "code": "GMN-2901", "credits": 2 },
-        { "code": "GMN-2902", "credits": 3 },
-        { "code": "MED-1100", "credits": 3 }
+        "GMN-2901",
+        "GMN-2902",
+        "MED-1100"
       ]
     },
     {
       "title": "Autres exigences – Règle 1",
-      "constraint": { "type": "credits", "min": 3, "max": 3 },
+      "constraint": {
+        "min": 3,
+        "max": 3
+      },
       "courses": [
-        { "code": "ANL-2020", "credits": 3 },
-        { "code": "ANL-3010", "credits": 3 },
-        { "code": "ANL-3020", "credits": 3 },
-        { "code": "ANL-3900", "credits": 3 },
-        { "code": "ANL-3905", "credits": 3 },
-        { "code": "EDC-1001", "credits": 3 },
-        { "code": "FLS-2093", "credits": 3 },
-        { "code": "FRN-1113", "credits": 3 },
-        { "code": "FRN-1914", "credits": 3 },
-        { "code": "PHI-1900", "credits": 3 }
+        "ANL-2020",
+        "ANL-3010",
+        "ANL-3020",
+        "ANL-3900",
+        "ANL-3905",
+        "EDC-1001",
+        "FLS-2093",
+        "FRN-1113",
+        "FRN-1914",
+        "PHI-1900"
       ]
     },
     {
       "title": "Autres exigences – Règle 2",
-      "constraint": { "type": "credits", "min": 3, "max": 3 },
+      "constraint": {
+        "min": 3,
+        "max": 3
+      },
       "courses": "any",
       "raw": "tous les cours de premier cycle, à l'exception des cours correctifs de français"
     }
@@ -77,33 +85,36 @@
       "rules": [
         {
           "title": "Règle 1",
-          "constraint": { "type": "credits", "min": 15, "max": 15 },
+          "constraint": {
+            "min": 15,
+            "max": 15
+          },
           "courses": [
-            { "code": "FOR-2020", "credits": 3 },
-            { "code": "GAE-3006", "credits": 3 },
-            { "code": "GBO-2040", "credits": 3 },
-            { "code": "GBO-4015", "credits": 3 },
-            { "code": "GBO-4070", "credits": 3 },
-            { "code": "GCI-2101", "credits": 3 },
-            { "code": "GCI-3003", "credits": 3 },
-            { "code": "GCI-3101", "credits": 3 },
-            { "code": "GCI-3300", "credits": 3 },
-            { "code": "GCI-4007", "credits": 3 },
-            { "code": "GCI-4074", "credits": 3 },
-            { "code": "GCI-4090", "credits": 3 },
-            { "code": "GCI-4093", "credits": 3 },
-            { "code": "GCI-4004", "credits": 3 },
-            { "code": "GCI-4100", "credits": 3 },
-            { "code": "GCI-4101", "credits": 3 },
-            { "code": "GCI-4201", "credits": 3 },
-            { "code": "GCI-4301", "credits": 3 },
-            { "code": "GCI-4401", "credits": 3 },
-            { "code": "GEX-1000", "credits": 3 },
-            { "code": "GEX-2001", "credits": 3 },
-            { "code": "GEX-3001", "credits": 3 },
-            { "code": "GGL-2600", "credits": 3 },
-            { "code": "GMN-2000", "credits": 3 },
-            { "code": "GMN-2001", "credits": 3 }
+            "FOR-2020",
+            "GAE-3006",
+            "GBO-2040",
+            "GBO-4015",
+            "GBO-4070",
+            "GCI-2101",
+            "GCI-3003",
+            "GCI-3101",
+            "GCI-3300",
+            "GCI-4007",
+            "GCI-4074",
+            "GCI-4090",
+            "GCI-4093",
+            "GCI-4004",
+            "GCI-4100",
+            "GCI-4101",
+            "GCI-4201",
+            "GCI-4301",
+            "GCI-4401",
+            "GEX-1000",
+            "GEX-2001",
+            "GEX-3001",
+            "GGL-2600",
+            "GMN-2000",
+            "GMN-2001"
           ]
         }
       ]
@@ -114,23 +125,33 @@
       "rules": [
         {
           "title": "Règle 1",
-          "constraint": { "type": "credits", "min": 12, "max": 12 },
+          "constraint": {
+            "min": 12,
+            "max": 12
+          },
           "courses": [
-            { "code": "FOR-2020", "credits": 3 },
-            { "code": "GAE-3006", "credits": 3 },
-            { "code": "GCI-3101", "credits": 3 },
-            { "code": "GCI-4004", "credits": 3 },
-            { "code": "GCI-4201", "credits": 3 },
-            { "code": "GCI-4301", "credits": 3 },
-            { "code": "GEX-1000", "credits": 3 },
-            { "code": "GEX-2001", "credits": 3 },
-            { "code": "GEX-3001", "credits": 3 },
-            { "code": "GGL-2600", "credits": 3 }
+            "FOR-2020",
+            "GAE-3006",
+            "GCI-3101",
+            "GCI-4004",
+            "GCI-4201",
+            "GCI-4301",
+            "GEX-1000",
+            "GEX-2001",
+            "GEX-3001",
+            "GGL-2600"
           ]
         },
         {
           "title": "Règle 2",
-          "constraint": { "type": "credits", "min": 3, "max": 3 },
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
+          "courses": {
+            "concentration": "Cheminement sans concentration",
+            "rule": "Règle 1"
+          },
           "raw": "tous les cours de la Règle 1 du cheminement sans concentration"
         }
       ]
@@ -141,23 +162,33 @@
       "rules": [
         {
           "title": "Règle 1",
-          "constraint": { "type": "credits", "min": 12, "max": 12 },
+          "constraint": {
+            "min": 12,
+            "max": 12
+          },
           "courses": [
-            { "code": "FOR-2020", "credits": 3 },
-            { "code": "GCI-2101", "credits": 3 },
-            { "code": "GCI-4004", "credits": 3 },
-            { "code": "GCI-4007", "credits": 3 },
-            { "code": "GCI-4101", "credits": 3 },
-            { "code": "GCI-4201", "credits": 3 },
-            { "code": "GEX-3001", "credits": 3 },
-            { "code": "GGL-2600", "credits": 3 },
-            { "code": "GMN-2000", "credits": 3 },
-            { "code": "GMN-2001", "credits": 3 }
+            "FOR-2020",
+            "GCI-2101",
+            "GCI-4004",
+            "GCI-4007",
+            "GCI-4101",
+            "GCI-4201",
+            "GEX-3001",
+            "GGL-2600",
+            "GMN-2000",
+            "GMN-2001"
           ]
         },
         {
           "title": "Règle 2",
-          "constraint": { "type": "credits", "min": 3, "max": 3 },
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
+          "courses": {
+            "concentration": "Cheminement sans concentration",
+            "rule": "Règle 1"
+          },
           "raw": "tous les cours de la Règle 1 du cheminement sans concentration"
         }
       ]
@@ -168,25 +199,35 @@
       "rules": [
         {
           "title": "Règle 1",
-          "constraint": { "type": "credits", "min": 12, "max": 12 },
+          "constraint": {
+            "min": 12,
+            "max": 12
+          },
           "courses": [
-            { "code": "FOR-2020", "credits": 3 },
-            { "code": "GBO-2040", "credits": 3 },
-            { "code": "GBO-4015", "credits": 3 },
-            { "code": "GBO-4070", "credits": 3 },
-            { "code": "GCI-3003", "credits": 3 },
-            { "code": "GCI-3300", "credits": 3 },
-            { "code": "GCI-4004", "credits": 3 },
-            { "code": "GCI-4074", "credits": 3 },
-            { "code": "GCI-4090", "credits": 3 },
-            { "code": "GCI-4100", "credits": 3 },
-            { "code": "GCI-4401", "credits": 3 },
-            { "code": "GEX-3001", "credits": 3 }
+            "FOR-2020",
+            "GBO-2040",
+            "GBO-4015",
+            "GBO-4070",
+            "GCI-3003",
+            "GCI-3300",
+            "GCI-4004",
+            "GCI-4074",
+            "GCI-4090",
+            "GCI-4100",
+            "GCI-4401",
+            "GEX-3001"
           ]
         },
         {
           "title": "Règle 2",
-          "constraint": { "type": "credits", "min": 3, "max": 3 },
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
+          "courses": {
+            "concentration": "Cheminement sans concentration",
+            "rule": "Règle 1"
+          },
           "raw": "tous les cours de la Règle 1 du cheminement sans concentration"
         }
       ]
@@ -196,30 +237,41 @@
     {
       "title": "Profil développement durable",
       "credits_required": 12,
-      "mandatory": [{ "code": "DDU-1000", "credits": 3 }],
+      "mandatory": [
+        "DDU-1000"
+      ],
       "rules": [
         {
           "title": "Règle 1",
-          "constraint": { "type": "credits", "min": 6, "max": 6 },
+          "constraint": {
+            "min": 6,
+            "max": 6
+          },
           "courses": [
-            { "code": "GAE-3006", "credits": 3 },
-            { "code": "GCI-4201", "credits": 3 },
-            { "code": "GBO-2040", "credits": 3 }
+            "GAE-3006",
+            "GCI-4201",
+            "GBO-2040"
           ]
         },
         {
           "title": "Règle 2",
-          "constraint": { "type": "credits", "min": 3, "max": 3 },
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
           "courses": [
-            { "code": "GCI-3101", "credits": 3 },
-            { "code": "GCI-4301", "credits": 3 }
+            "GCI-3101",
+            "GCI-4301"
           ]
         }
       ]
     },
     {
       "title": "Profil international",
-      "mandatory": [{ "code": "EHE-1GCI", "credits": null }]
+      "mandatory": [
+        "EHE-1GCI"
+      ],
+      "rules": []
     }
   ]
 }
