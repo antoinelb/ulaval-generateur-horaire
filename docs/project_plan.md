@@ -33,6 +33,7 @@ Toute nouvelle décision est documentée dans un fichier individuel sous `docs/c
 - Ajouter manuellement un cours avec son horaire (ex. session à l'étranger, autre université).
 - Visualisation de tous les cours sélectionnés dans un horaire hebdomadaire.
 - Choix automatique d'une combinaison de sections sans conflit (une section de chaque type par cours, sections liées obligatoires incluses).
+- Quand un cours a un équivalent, utiliser l'horaire du plus récent des deux.
 - Le choix n'est pas opaque : les autres sections d'un cours restent visibles, et cliquer une section la force ; le reste se recalcule autour.
 - Mise en évidence des conflits d'horaire ; s'il n'existe aucune combinaison valide, les plages en conflit sont identifiées et surlignées.
 - Classement des combinaisons valides selon des préférences (journées compactes, matins libres, pause dîner, distance entre pavillons) — modèle exact à concevoir contre des données réelles.
