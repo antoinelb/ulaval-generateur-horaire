@@ -242,22 +242,30 @@ fn render_bottom_line(state: &PrintState) -> Option<String> {
 
 /// The only function that touches stdout.
 fn write(state: &PrintState, permanent: Option<&str>) {
+    print!("{}", render_output(state, permanent));
+    // display is non-critical: a broken pipe must never kill the scrape
+    std::io::stdout().flush().ok();
+}
+
+fn render_output(state: &PrintState, permanent: Option<&str>) -> String {
+    let mut output = String::new();
+
     if state.is_tty {
-        print!("{}", ERASE_LINE);
+        output.push_str(ERASE_LINE);
     }
 
     if let Some(line) = permanent {
-        println!("{}", line);
+        output.push_str(line);
+        output.push('\n');
     }
 
     if state.is_tty {
         if let Some(line) = render_bottom_line(state) {
-            print!("{}", line)
+            output.push_str(&line);
         }
     }
 
-    // display is non-critical: a broken pipe must never kill the scrape
-    std::io::stdout().flush().ok();
+    output
 }
 
 fn format_line(indent: usize, msg: &str, symbol: &str) -> String {
@@ -349,6 +357,33 @@ mod tests {
                 &paint_symbol(&format_progress_symbol(3, 5), BLUE)
             ))
         );
+    }
+
+    #[test]
+    fn render_output_erases_and_redraws_bottom_line_on_tty() {
+        let mut state = test_state(Some(test_pending(0, 1)), None);
+        state.is_tty = true;
+        let bottom = format_line(1, "pending 0", &paint_symbol("✱", BLUE));
+        assert_eq!(
+            render_output(&state, Some("permanent")),
+            format!("{ERASE_LINE}permanent\n{bottom}")
+        );
+    }
+
+    #[test]
+    fn render_output_erases_without_redraw_when_nothing_transient() {
+        let mut state = test_state(None, None);
+        state.is_tty = true;
+        assert_eq!(
+            render_output(&state, Some("permanent")),
+            format!("{ERASE_LINE}permanent\n")
+        );
+    }
+
+    #[test]
+    fn render_output_emits_only_permanent_lines_off_tty() {
+        let state = test_state(Some(test_pending(0, 1)), None);
+        assert_eq!(render_output(&state, Some("permanent")), "permanent\n");
     }
 
     #[test]

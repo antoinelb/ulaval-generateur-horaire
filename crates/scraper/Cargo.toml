@@ -13,5 +13,9 @@ workspace = true
 
 [dependencies]
 ulaval-scheduler-core = { workspace = true }
-anyhow = { version = "1" }
 serde = { workspace = true }
+scraper = "0.27.0"
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

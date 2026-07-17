@@ -3,9 +3,4 @@
 // the unused_features lint
 #![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
 
-#[allow(dead_code)]
-mod print;
-
-fn main() {
-    println!("Scraper: not implemented yet");
-}
+pub mod parser;

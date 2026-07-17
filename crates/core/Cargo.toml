@@ -8,7 +8,7 @@ authors.workspace = true
 workspace = true
 
 [dependencies]
-thiserror = { version = "2" }
+thiserror = { workspace = true }
 serde = { workspace = true }
 
 [dev-dependencies]

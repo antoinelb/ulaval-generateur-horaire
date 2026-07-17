@@ -8,20 +8,25 @@ Rhythm for each page type: freeze the real HTML → write the failing integratio
     - [x] All courses page (listing)
     - [x] Course page
     - [x] Program page
-- [ ] Freeze HTML fixtures
-    - [ ] Fetch (one-off `curl`, honest user agent) the real page behind each test case into `tests/fixtures/html/classes/*.html` and `tests/fixtures/html/programs/*.html`, same basename as the expected JSON
-    - [ ] Freeze the three GEX facet listing pages into `tests/fixtures/html/listing/gex-page-{0,1,2}.html` (50 courses, 2 courses, empty page — ADR `2026-07-listing-teste-sur-html-gele`)
-    - [ ] ADR: HTML fixture location and refresh policy
-    - Verify: every `test_cases/classes/*.json` and `test_cases/programs/*.json` has a same-named `.html` source, and the three listing pages are present
-- [ ] Parser skeleton in `scraper`
-    - [ ] Dependencies: `scraper` (HTML parsing), `thiserror` (library-side errors; `anyhow` stays at the binary frontier)
-    - [ ] Module layout: `parse/` with `listing.rs`, `prerequisites.rs`, `course.rs`, `program.rs`, and a shared error type that carries the offending raw text (an anomaly is data, never a panic)
+- [x] Freeze HTML fixtures
+    - [x] Fetch (one-off `curl`, honest user agent) the real page behind each test case into `tests/fixtures/html/classes/*.html` and `tests/fixtures/html/programs/*.html`, same basename as the expected JSON
+    - [x] Freeze the listing pages into `tests/fixtures/test_cases/listing/`: `gex_{0,1,2}.html` (50 courses, 2 courses, 0 courses — ADR `2026-07-listing-teste-sur-html-gele`) and `all_last.html` (« Aucun résultat » variant — ADR `2026-07-page-aucun-resultat-et-total-optionnel`)
+    - Verify: every `test_cases/classes/*.json` and `test_cases/programs/*.json` has a same-named `.html` source, and the two listing pages are present
+- [x] Parser skeleton in `scraper`
+    - [x] Dependencies: `scraper` (HTML parsing), `thiserror` (library-side errors; `anyhow` stays at the binary frontier)
+    - [x] Module layout: `parse/` with `listing.rs`, `prerequisites.rs`, `course.rs`, `program.rs`, and a shared error type that carries the offending raw text (an anomaly is data, never a panic)
     - Verify: `cargo check` passes with the empty module tree
-- [ ] Listing parser (`parse/listing.rs`)
-    - [ ] One page of HTML → `{code, title, url}` entries + `total_results`
-    - [ ] Termination signal: 0 entries **with** the `total-resultats` element present; 0 entries **without** it = markup drift = error, not end of results
-    - [ ] Malformed entry → raw error line, never silently dropped
-    - Verify: integration test parses the three frozen listing pages, merges, sorts and dedups, and compares with `test_cases/listing/gex.json`; unit tests on inline snippets pin what the frozen pages never exercise (empty page without `total-resultats` = drift, malformed entry)
+- [x] Listing parser (`parse/listing.rs`)
+    - [x] One page of HTML → `{code, title, url}` entries + `total_results: Option<usize>` (`None` on the « Aucun résultat » variant)
+    - [x] Termination signal: 0 entries **with** proof of page shape (`total-resultats` element **or** texte « Aucun résultat ») = end of results; neither = markup drift = error (ADR `2026-07-page-aucun-resultat-et-total-optionnel`)
+    - [x] Malformed entry → raw error line, never silently dropped
+    - Verify: integration test parses the four frozen listing pages, merges, sorts and dedups, and compares with `test_cases/listing/gex.json`; unit tests on inline snippets pin what the frozen pages never exercise (0 entries with neither marker = drift, malformed entry)
+- [ ] Fetch module, up to complete listings (`fetch.rs`)
+    - [ ] Async client (honest user agent), throttled ~10 req/s
+    - [ ] Paginate each matière's listing URL until the parser's termination signal (0 entries with page-shape proof); markup drift = error that stops the run, never a silent truncation
+    - [ ] Merge, sort, dedup entries across pages and matières (same shape as `test_cases/listing/gex.json`)
+    - [ ] CLI wiring: a `listing` subcommand that writes the merged catalogue JSON (`anyhow` at the binary frontier)
+    - Verify: run live on the GEX matières and diff the output against `test_cases/listing/gex.json`
 - [ ] Préalables grammar (`parse/prerequisites.rs` — pure function, raw text → `PrereqTree`, no HTML)
     - [ ] ET/OU with parentheses → `all`/`any` trees; « Crédits exigés : N » → `program_credits`
     - [ ] Out-of-grammar text → kept raw-only and surfaced as an anomaly — requires deciding how `core::Prerequisites` represents "raw without tree" (type change + ADR at this step)
@@ -36,4 +41,4 @@ Rhythm for each page type: freeze the real HTML → write the failing integratio
 - [ ] Create unit tests for parser
     - [ ] Fill the gaps the valid fixtures never exercise: malformed times, unknown component types, unrecognized modes, missing elements
     - Verify: `make test` green; parse modules covered
-- [ ] Next, out of parser scope (completes jalon 1): fetch module (throttled ~10 req/s, resume), CLI wiring, snapshot `data/cours/a2026.json` for the GEX matières
+- [ ] Next, out of parser scope (completes jalon 1): extend fetch to course pages (resume on error), snapshot `data/cours/a2026.json` for the GEX matières
