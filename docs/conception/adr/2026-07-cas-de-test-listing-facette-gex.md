@@ -5,6 +5,9 @@ Date : 2026-07-09
 > **Partiellement remplacé** (2026-07-13) : l'unité de fixture par page est abandonnée au profit d'un fichier fusionné `gex.json`, insensible à la repagination ; les comportements par page migrent vers des tests unitaires avec HTML en ligne.
 > Voir `2026-07-catalogue-artefact-commite.md`. Les observations (facette 113, pagination, liens « Dernière page » trompeurs) restent valides.
 
+> **Renversé en partie** (2026-07-17) : le rejet du HTML gelé est annulé — le listing se teste finalement sur pages gelées, comme les pages cours et programmes.
+> Voir `2026-07-listing-teste-sur-html-gele.md`.
+
 ## Contexte
 
 La démarche test-first exige des cas de test e2e pour la page catalogue (https://www.ulaval.ca/etudes/cours), dernier cas manquant dans `docs/next_steps.md`.

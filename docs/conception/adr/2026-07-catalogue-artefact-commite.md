@@ -2,6 +2,9 @@
 
 Date : 2026-07-13
 
+> **Partiellement remplacé** (2026-07-17) : le e2e du listing ne scrape plus la facette GEX en direct — il parse des pages HTML gelées, comparées au même `gex.json`.
+> Voir `2026-07-listing-teste-sur-html-gele.md`. Tout le reste (artefact commité, schéma, phases, politique d'échec) reste en vigueur.
+
 ## Contexte
 
 Le scrape du listing (https://www.ulaval.ca/etudes/cours, ~10 000 cours, ~205 pages) produit les entrées `{code, title, url}` qui alimentent ensuite le scrape des pages cours.
