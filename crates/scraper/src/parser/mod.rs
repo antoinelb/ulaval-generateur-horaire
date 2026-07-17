@@ -1,5 +1,5 @@
+pub mod catalogue;
 pub mod course;
-pub mod listing;
 pub mod prerequisites;
 pub mod program;
 

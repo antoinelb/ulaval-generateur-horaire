@@ -2,20 +2,20 @@ use crate::parser::ParseError;
 use ulaval_scheduler_core::CatalogueEntry;
 
 #[derive(Debug)]
-pub struct ListingPage {
+pub struct CataloguePage {
     pub entries: Vec<CatalogueEntry>,
     pub anomalies: Vec<ParseError>,
     // None on the « Aucun résultat » variant, which displays no count
     pub total_results: Option<usize>,
 }
 
-pub fn parse(html: &str) -> Result<ListingPage, ParseError> {
+pub fn parse(html: &str) -> Result<CataloguePage, ParseError> {
     let doc = scraper::Html::parse_document(html);
 
     let total_results = get_total_results(&doc)?;
-    let (entries, anomalies) = get_listings(&doc);
+    let (entries, anomalies) = get_catalogues(&doc);
 
-    Ok(ListingPage {
+    Ok(CataloguePage {
         entries,
         anomalies,
         total_results,
@@ -69,7 +69,7 @@ fn get_total_results(
     }
 }
 
-fn get_listings(
+fn get_catalogues(
     doc: &scraper::Html,
 ) -> (Vec<CatalogueEntry>, Vec<ParseError>) {
     let selector_str = "a.cours-element--lien";
@@ -80,7 +80,7 @@ fn get_listings(
     let mut anomalies: Vec<ParseError> = Vec::new();
 
     for element in doc.select(&selector) {
-        match parse_listing(&element, selector_str) {
+        match parse_catalogue(&element, selector_str) {
             Ok(entry) => entries.push(entry),
             Err(anomaly) => anomalies.push(anomaly),
         }
@@ -89,7 +89,7 @@ fn get_listings(
     (entries, anomalies)
 }
 
-fn parse_listing(
+fn parse_catalogue(
     element: &scraper::ElementRef,
     selector_str: &str,
 ) -> Result<CatalogueEntry, ParseError> {

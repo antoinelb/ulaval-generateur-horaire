@@ -1,10 +1,10 @@
 use ulaval_scheduler_core::Catalogue;
 
-// Same contract as `course` and `program`: round-trip the real listing
+// Same contract as `course` and `program`: round-trip the real catalogue
 // fixture to prove `Catalogue` captures every field losslessly.
 const FIXTURE_DIR: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../tests/fixtures/test_cases/listing",
+    "/../../tests/fixtures/test_cases/catalogue",
 );
 
 const FIXTURES: &[&str] = &["gex"];
