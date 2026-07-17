@@ -57,3 +57,7 @@ Ten weekly demonstrable jalons (`docs/project_plan.md` § Versions et jalons heb
 - **v0 (MVP)**, weeks 1–3: enter course codes for a session → schedule auto-built, obvious conflicts highlighted, add/remove courses, credit total shown.
 - **v1**, weeks 4–6: pick courses from a list (search, filters, full catalogue + CI cron), program courses presented by rules and profils.
 - **v2**, weeks 7–10: the full bac — sessions fill automatically (organigramme, rules coverage, generation under constraints) and stay editable; preferences + URL sharing as final polish.
+
+## Other instructions
+
+- When writing comments, don't prefix them with `ponytail: `
