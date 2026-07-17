@@ -23,7 +23,7 @@ Chaque dossier a un `main.rs` qui déclare ses sous-modules (`mod course;`), car
 
 **Réorganisation des fixtures sous un parapluie `tests/fixtures/`** :
 
-- commun, utile à toutes les crates : `tests/fixtures/test_cases/{classes,programs,listing}/` (déplacé depuis `tests/test_cases/` par `git mv`, historique préservé) ;
+- commun, utile à toutes les crates : `tests/fixtures/test_cases/{classes,programs,catalogue}/` (déplacé depuis `tests/test_cases/` par `git mv`, historique préservé) ;
 - propre à une crate : `crates/<crate>/tests/fixtures/` (pour `core`, un `.gitkeep` en attendant des fixtures spécifiques, p. ex. un cours mal formé pour tester la gestion d'erreur).
 
 ## Alternatives rejetées

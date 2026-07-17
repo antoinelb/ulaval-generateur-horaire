@@ -8,7 +8,7 @@ Date : 2026-07-17
 
 ## Contexte
 
-Les pages de listing contiennent des URLs absolues (`https://www.ulaval.ca/etudes/cours/…`), mais le cas de test `tests/fixtures/test_cases/listing/gex.json` attendait des URLs relatives (`/etudes/cours/…`).
+Les pages du catalogue contiennent des URLs absolues (`https://www.ulaval.ca/etudes/cours/…`), mais le cas de test `tests/fixtures/test_cases/catalogue/gex.json` attendait des URLs relatives (`/etudes/cours/…`).
 Le parseur aurait donc dû retirer le préfixe hôte — une transformation de plus, et une divergence entre la donnée source et le snapshot.
 
 ## Décision

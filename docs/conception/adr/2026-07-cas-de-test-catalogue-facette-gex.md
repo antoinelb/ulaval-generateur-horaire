@@ -1,12 +1,12 @@
-# Cas de test du listing catalogue : pages facettées GEX
+# Cas de test du catalogue : facette GEX
 
 Date : 2026-07-09
 
 > **Partiellement remplacé** (2026-07-13) : l'unité de fixture par page est abandonnée au profit d'un fichier fusionné `gex.json`, insensible à la repagination ; les comportements par page migrent vers des tests unitaires avec HTML en ligne.
 > Voir `2026-07-catalogue-artefact-commite.md`. Les observations (facette 113, pagination, liens « Dernière page » trompeurs) restent valides.
 
-> **Renversé en partie** (2026-07-17) : le rejet du HTML gelé est annulé — le listing se teste finalement sur pages gelées, comme les pages cours et programmes.
-> Voir `2026-07-listing-teste-sur-html-gele.md`.
+> **Renversé en partie** (2026-07-17) : le rejet du HTML gelé est annulé — le catalogue se teste finalement sur pages gelées, comme les pages cours et programmes.
+> Voir `2026-07-catalogue-teste-sur-html-gele.md`.
 
 ## Contexte
 
@@ -15,14 +15,14 @@ Transcrire les ~10 000 cours n'a pas de sens ; il faut un sous-ensemble vérifia
 
 ## Décision
 
-L'unité de test est **une page de listing** : un HTML de page → un JSON attendu, comme pour les pages cours et programmes.
-La vérité terrain est le listing filtré par la facette matière GEX (52 cours, pertinents au mandat) :
+L'unité de test est **une page de catalogue** : un HTML de page → un JSON attendu, comme pour les pages cours et programmes.
+La vérité terrain est le catalogue filtré par la facette matière GEX (52 cours, pertinents au mandat) :
 
 ```
 https://www.ulaval.ca/etudes/cours?search=&matieres%5B113%5D=113&day=All&start=All&end=All&field_sections_course_nbcred_min=All&field_sections_course_nbcred_max=All&page=N
 ```
 
-Trois fichiers dans `tests/fixtures/test_cases/listing/` : `gex-page-0.json` (50 cours), `gex-page-1.json` (2 cours), `gex-page-2.json` (0 cours — la page « Aucun résultat », signal de terminaison).
+Trois fichiers dans `tests/fixtures/test_cases/catalogue/` : `gex-page-0.json` (50 cours), `gex-page-1.json` (2 cours), `gex-page-2.json` (0 cours — la page « Aucun résultat », signal de terminaison).
 Chaque entrée porte `code`, `title`, `url` (extraits des spans `cours-element--sigle` / `cours-element--titre` dans le lien `cours-element--lien`) ; le fichier porte aussi `total_results` (le « 52 résultats » de `total-resultats`), présent même sur la page vide.
 JSON seulement, pas de HTML gelé : les tests du parseur rouleront contre le HTML frais, pour qu'une dérive du site fasse échouer bruyamment plutôt que silencieusement.
 

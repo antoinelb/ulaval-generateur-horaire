@@ -5,28 +5,28 @@ The expected outputs in `tests/fixtures/test_cases/` are done; this plan makes t
 Rhythm for each page type: freeze the real HTML → write the failing integration test → implement the parser until it matches the expected JSON → pin edge cases with inline unit tests.
 
 - [x] Build e2e test cases for the parser
-    - [x] All courses page (listing)
+    - [x] All courses page (catalogue)
     - [x] Course page
     - [x] Program page
 - [x] Freeze HTML fixtures
     - [x] Fetch (one-off `curl`, honest user agent) the real page behind each test case into `tests/fixtures/html/classes/*.html` and `tests/fixtures/html/programs/*.html`, same basename as the expected JSON
-    - [x] Freeze the listing pages into `tests/fixtures/test_cases/listing/`: `gex_{0,1,2}.html` (50 courses, 2 courses, 0 courses — ADR `2026-07-listing-teste-sur-html-gele`) and `all_last.html` (« Aucun résultat » variant — ADR `2026-07-page-aucun-resultat-et-total-optionnel`)
-    - Verify: every `test_cases/classes/*.json` and `test_cases/programs/*.json` has a same-named `.html` source, and the two listing pages are present
+    - [x] Freeze the catalogue pages into `tests/fixtures/test_cases/catalogue/`: `gex_{0,1,2}.html` (50 courses, 2 courses, 0 courses — ADR `2026-07-catalogue-teste-sur-html-gele`) and `all_last.html` (« Aucun résultat » variant — ADR `2026-07-page-aucun-resultat-et-total-optionnel`)
+    - Verify: every `test_cases/classes/*.json` and `test_cases/programs/*.json` has a same-named `.html` source, and the two catalogue pages are present
 - [x] Parser skeleton in `scraper`
     - [x] Dependencies: `scraper` (HTML parsing), `thiserror` (library-side errors; `anyhow` stays at the binary frontier)
-    - [x] Module layout: `parse/` with `listing.rs`, `prerequisites.rs`, `course.rs`, `program.rs`, and a shared error type that carries the offending raw text (an anomaly is data, never a panic)
+    - [x] Module layout: `parse/` with `catalogue.rs`, `prerequisites.rs`, `course.rs`, `program.rs`, and a shared error type that carries the offending raw text (an anomaly is data, never a panic)
     - Verify: `cargo check` passes with the empty module tree
-- [x] Listing parser (`parse/listing.rs`)
+- [x] Catalogue parser (`parse/catalogue.rs`)
     - [x] One page of HTML → `{code, title, url}` entries + `total_results: Option<usize>` (`None` on the « Aucun résultat » variant)
     - [x] Termination signal: 0 entries **with** proof of page shape (`total-resultats` element **or** texte « Aucun résultat ») = end of results; neither = markup drift = error (ADR `2026-07-page-aucun-resultat-et-total-optionnel`)
     - [x] Malformed entry → raw error line, never silently dropped
-    - Verify: integration test parses the four frozen listing pages, merges, sorts and dedups, and compares with `test_cases/listing/gex.json`; unit tests on inline snippets pin what the frozen pages never exercise (0 entries with neither marker = drift, malformed entry)
-- [ ] Fetch module, up to complete listings (`fetch.rs`)
+    - Verify: integration test parses the four frozen catalogue pages, merges, sorts and dedups, and compares with `test_cases/catalogue/gex.json`; unit tests on inline snippets pin what the frozen pages never exercise (0 entries with neither marker = drift, malformed entry)
+- [ ] Fetch module, up to complete catalogues (`fetch.rs`)
     - [ ] Async client (honest user agent), throttled ~10 req/s
-    - [ ] Paginate each matière's listing URL until the parser's termination signal (0 entries with page-shape proof); markup drift = error that stops the run, never a silent truncation
-    - [ ] Merge, sort, dedup entries across pages and matières (same shape as `test_cases/listing/gex.json`)
-    - [ ] CLI wiring: a `listing` subcommand that writes the merged catalogue JSON (`anyhow` at the binary frontier)
-    - Verify: run live on the GEX matières and diff the output against `test_cases/listing/gex.json`
+    - [ ] Paginate each matière's catalogue URL until the parser's termination signal (0 entries with page-shape proof); markup drift = error that stops the run, never a silent truncation
+    - [ ] Merge, sort, dedup entries across pages and matières (same shape as `test_cases/catalogue/gex.json`)
+    - [ ] CLI wiring: a `catalogue` subcommand that writes the merged catalogue JSON (`anyhow` at the binary frontier)
+    - Verify: run live on the GEX matières and diff the output against `test_cases/catalogue/gex.json`
 - [ ] Préalables grammar (`parse/prerequisites.rs` — pure function, raw text → `PrereqTree`, no HTML)
     - [ ] ET/OU with parentheses → `all`/`any` trees; « Crédits exigés : N » → `program_credits`
     - [ ] Out-of-grammar text → kept raw-only and surfaced as an anomaly — requires deciding how `core::Prerequisites` represents "raw without tree" (type change + ADR at this step)

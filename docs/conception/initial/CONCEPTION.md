@@ -27,9 +27,9 @@ Vérifié sur GCI-1007 (cas compliqué de référence, cours + laboratoires), la
 
 - **Les pages cours sont rendues côté serveur** : session (« Automne 2026 »), NRC, capacité, enseignant, type (En classe/Laboratoire), dates, journée, plage horaire, pavillon, et les sections liées (A, B, …) avec leurs propres NRC sont tous dans le HTML d'un simple GET.
   Pas besoin de navigateur headless ; un parseur HTML suffit.
-- **Le catalogue est un listing Drupal paginé** : ~205 pages × 50 cours ≈ 10 000 cours, liens rendus côté serveur, pagination par `?page=N`, facettes de filtrage par matière disponibles.
+- **Le catalogue est un catalogue Drupal paginé** : ~205 pages × 50 cours ≈ 10 000 cours, liens rendus côté serveur, pagination par `?page=N`, facettes de filtrage par matière disponibles.
 - **Volume** : un scrape complet ≈ 10 000 requêtes ; à une requête/seconde (politesse), ~3 h de roulage — d'où l'importance des filtres et de la reprise sur erreur.
-- La matière étant le préfixe du code de cours (GCI-, GEX-), filtrer par matière ne demande aucune facette : on filtre les URL du listing.
+- La matière étant le préfixe du code de cours (GCI-, GEX-), filtrer par matière ne demande aucune facette : on filtre les URL du catalogue.
 - **La page programme est aussi rendue côté serveur et machine-lisible** : total de crédits exigés (« 120 crédits exigés »), bloc « Cours obligatoires » (code, titre, crédits), puis blocs « Règle N – \<contrainte\> parmi : » avec la liste de cours, parfois divisée en sous-groupes thématiques (Programmation, Langue et communication, Entrepreneuriat).
   Les contraintes observées : « Un cours parmi », « 3 crédits parmi », « 3 à 9 crédits parmi ».
 - **Les préalables sont des expressions structurées** dont trois formes ont été observées :

@@ -125,7 +125,7 @@ Alternatives rejetées (raisonnement complet dans `docs/conception/`) : Python +
 
 ### Flux de données de bout en bout
 
-Cron GitHub Actions → binaire `scraper` (GET throttlés, HTML brut sauvegardé, parsing via les types de `core`) → `data/catalogue.json` (listing complet trié/dédupliqué par code, écrit seulement si ≥ 90 % du compte précédent) + `data/catalogue.erreurs.log` (anomalies brutes, une par ligne ; le cron alerte si non vide) + `data/cours/{session}.json` + `data/programmes.json` → commit du snapshot → redéploiement du site statique → `ui` charge le JSON dans le navigateur, tout le calcul tourne localement via `core` → un horaire choisi se partage en URL.
+Cron GitHub Actions → binaire `scraper` (GET throttlés, HTML brut sauvegardé, parsing via les types de `core`) → `data/catalogue.json` (catalogue complet trié/dédupliqué par code, écrit seulement si ≥ 90 % du compte précédent) + `data/catalogue.erreurs.log` (anomalies brutes, une par ligne ; le cron alerte si non vide) + `data/cours/{session}.json` + `data/programmes.json` → commit du snapshot → redéploiement du site statique → `ui` charge le JSON dans le navigateur, tout le calcul tourne localement via `core` → un horaire choisi se partage en URL.
 Aucun serveur nulle part dans le chemin.
 
 Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par de simples GET (ni session, ni POST de formulaire) ; le cookie store de `reqwest` reste un repli si certaines pages l'exigent (à vérifier à la semaine 1).
@@ -133,7 +133,7 @@ Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par
 ### Ordre de construction
 
 1. **Scraper d'abord** — tue le plus gros risque externe (la forme réelle des données) avant que du code n'en dépende ; démarche test-first (voir `docs/next_steps.md`) : fixtures e2e des pages catalogue/cours/programme → parseur validé → tests unitaires.
-   Les sorties attendues vivent dans `tests/fixtures/test_cases/` (`listing/`, `classes/`, `programs/`) ; pour le listing, la vérité terrain est le catalogue fusionné de la facette GEX (`listing/gex.json`), comparé au parsing de pages HTML gelées, les comportements par page (page vide = terminaison, `total_results`) étant épinglés par des tests unitaires (ADR `2026-07-catalogue-artefact-commite`, révisé par `2026-07-listing-teste-sur-html-gele`).
+   Les sorties attendues vivent dans `tests/fixtures/test_cases/` (`catalogue/`, `classes/`, `programs/`) ; pour le catalogue, la vérité terrain est le catalogue fusionné de la facette GEX (`catalogue/gex.json`), comparé au parsing de pages HTML gelées, les comportements par page (page vide = terminaison, `total_results`) étant épinglés par des tests unitaires (ADR `2026-07-catalogue-artefact-commite`, révisé par `2026-07-catalogue-teste-sur-html-gele`).
    Livrable : `data/{session}.json` + fixtures HTML + tests du parseur.
 2. **Cœur ensuite** — Rust pur contre les vraies données de l'étape 1 : combinaison de sections, préférences, préalables, génération d'organigramme.
    Livrable : un harnais CLI/test qui imprime des horaires valides pour des codes de cours donnés, absence de conflit testée par propriétés.
