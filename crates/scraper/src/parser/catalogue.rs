@@ -1,16 +1,25 @@
-use crate::parser::ParseError;
+use std::collections::HashMap;
+
+use scraper::{ElementRef, Html, Selector};
 use ulaval_scheduler_core::CatalogueEntry;
+
+use crate::parser::ParseError;
+
+#[derive(Debug, Clone)]
+pub struct Matiere {
+    pub id: String,
+    pub label: String,
+}
 
 #[derive(Debug)]
 pub struct CataloguePage {
     pub entries: Vec<CatalogueEntry>,
     pub anomalies: Vec<ParseError>,
-    // None on the « Aucun résultat » variant, which displays no count
     pub total_results: Option<usize>,
 }
 
 pub fn parse(html: &str) -> Result<CataloguePage, ParseError> {
-    let doc = scraper::Html::parse_document(html);
+    let doc = Html::parse_document(html);
 
     let total_results = get_total_results(&doc)?;
     let (entries, anomalies) = get_catalogues(&doc);
@@ -22,16 +31,52 @@ pub fn parse(html: &str) -> Result<CataloguePage, ParseError> {
     })
 }
 
-fn get_total_results(
-    doc: &scraper::Html,
-) -> Result<Option<usize>, ParseError> {
+pub fn parse_matieres(
+    html: &str,
+) -> Result<(Vec<Matiere>, Vec<ParseError>), ParseError> {
+    let input_selector_str = r#"input.form-checkbox[name^="matieres["]"#;
+    let input_selector =
+        Selector::parse(input_selector_str).expect("Static selector is valid");
+    let label_selector =
+        Selector::parse("label.option").expect("Static selector is valid");
+
+    let doc = Html::parse_document(html);
+    let labels: HashMap<String, String> = doc
+        .select(&label_selector)
+        .filter_map(|label| {
+            let for_attr = label.value().attr("for")?;
+            let text = label.text().collect::<String>().trim().to_string();
+            Some((for_attr.to_string(), text))
+        })
+        .collect();
+
+    let mut matieres = Vec::new();
+    let mut anomalies = Vec::new();
+    for input in doc.select(&input_selector) {
+        match parse_matiere(&input, &labels, input_selector_str) {
+            Ok(matiere) => matieres.push(matiere),
+            Err(anomaly) => anomalies.push(anomaly),
+        }
+    }
+
+    if matieres.is_empty() && anomalies.is_empty() {
+        // no widget at all is markup drift, not an empty facet: refuse to
+        // partition the catalogue into nothing
+        Err(ParseError::MissingElement {
+            selector: input_selector_str.to_string(),
+        })
+    } else {
+        Ok((matieres, anomalies))
+    }
+}
+
+fn get_total_results(doc: &Html) -> Result<Option<usize>, ParseError> {
     let selector_str = "div.total-resultats p";
     let no_results_selector_str = "div.resultats--offre-etudes p";
-    let selector = scraper::Selector::parse(selector_str)
+    let selector =
+        Selector::parse(selector_str).expect("Static selector is valid");
+    let no_results_selector = Selector::parse(no_results_selector_str)
         .expect("Static selector is valid");
-    let no_results_selector =
-        scraper::Selector::parse(no_results_selector_str)
-            .expect("Static selector is valid");
 
     let text = doc
         .select(&selector)
@@ -69,12 +114,10 @@ fn get_total_results(
     }
 }
 
-fn get_catalogues(
-    doc: &scraper::Html,
-) -> (Vec<CatalogueEntry>, Vec<ParseError>) {
+fn get_catalogues(doc: &Html) -> (Vec<CatalogueEntry>, Vec<ParseError>) {
     let selector_str = "a.cours-element--lien";
-    let selector = scraper::Selector::parse(selector_str)
-        .expect("Static selector is valid");
+    let selector =
+        Selector::parse(selector_str).expect("Static selector is valid");
 
     let mut entries: Vec<CatalogueEntry> = Vec::new();
     let mut anomalies: Vec<ParseError> = Vec::new();
@@ -90,15 +133,15 @@ fn get_catalogues(
 }
 
 fn parse_catalogue(
-    element: &scraper::ElementRef,
+    element: &ElementRef,
     selector_str: &str,
 ) -> Result<CatalogueEntry, ParseError> {
     let code_selector_str = "span.cours-element--sigle";
     let title_selector_str = "span.cours-element--titre";
-    let code_selector = scraper::Selector::parse(code_selector_str)
-        .expect("Static selector is valid");
-    let title_selector = scraper::Selector::parse(title_selector_str)
-        .expect("Static selector is valid");
+    let code_selector =
+        Selector::parse(code_selector_str).expect("Static selector is valid");
+    let title_selector =
+        Selector::parse(title_selector_str).expect("Static selector is valid");
 
     let code = element
         .select(&code_selector)
@@ -128,8 +171,37 @@ fn parse_catalogue(
     Ok(CatalogueEntry { code, title, url })
 }
 
-// excluded from coverage: assertion failure branches only run when a test
-// fails, so test code can never reach 100% of itself
+fn parse_matiere(
+    input: &ElementRef,
+    labels: &HashMap<String, String>,
+    selector_str: &str,
+) -> Result<Matiere, ParseError> {
+    let id = input.value().attr("value").ok_or_else(|| {
+        ParseError::MalformedEntry {
+            selector: format!("{selector_str}[value]"),
+            raw: input.html(),
+        }
+    })?;
+    let dom_id = input.value().attr("id").ok_or_else(|| {
+        ParseError::MalformedEntry {
+            selector: format!("{selector_str}[id]"),
+            raw: input.html(),
+        }
+    })?;
+    let label = labels
+        .get(dom_id)
+        .filter(|label| !label.is_empty())
+        .ok_or_else(|| ParseError::MalformedEntry {
+            selector: format!(r#"label.option[for="{dom_id}"]"#),
+            raw: input.html(),
+        })?;
+
+    Ok(Matiere {
+        id: id.to_string(),
+        label: label.to_string(),
+    })
+}
+
 #[cfg_attr(coverage_nightly, coverage(off))]
 #[cfg(test)]
 mod tests {
@@ -241,5 +313,165 @@ mod tests {
             ),
             "expected MalformedEntry with raw text, got {result:?}"
         );
+    }
+
+    #[test]
+    fn matieres_are_parsed_with_ids_and_svg_free_labels() {
+        let html = concat!(
+            r#"<input type="checkbox" id="edit-matieres-113--2" "#,
+            r#"name="matieres[113]" value="113" "#,
+            r#"class="form-checkbox hidden-checkbox">"#,
+            r#"<label for="edit-matieres-113--2" class="option">"#,
+            r#"<svg viewBox="0 0 16 16"><path d="m0 0"/></svg>"#,
+            "\n  GEX - Génie des eaux </label>",
+            r#"<input type="checkbox" id="edit-matieres-9--2" "#,
+            r#"name="matieres[9]" value="9" "#,
+            r#"class="form-checkbox hidden-checkbox">"#,
+            r#"<label for="edit-matieres-9--2" class="option">"#,
+            r#"<svg></svg>GUI - Gest. urbaine et immobilière</label>"#,
+        );
+
+        let (matieres, anomalies) =
+            parse_matieres(html).expect("widget is present");
+
+        assert!(anomalies.is_empty(), "no anomalies expected: {anomalies:?}");
+        assert_eq!(matieres.len(), 2);
+        assert_eq!(matieres[0].id, "113");
+        assert_eq!(matieres[0].label, "GEX - Génie des eaux");
+        assert_eq!(matieres[1].id, "9");
+        assert_eq!(matieres[1].label, "GUI - Gest. urbaine et immobilière");
+    }
+
+    #[test]
+    fn matiere_checkbox_without_label_is_an_anomaly_not_a_failure() {
+        let html = concat!(
+            r#"<input type="checkbox" id="edit-matieres-7--2" "#,
+            r#"name="matieres[7]" value="7" class="form-checkbox">"#,
+            r#"<input type="checkbox" id="edit-matieres-113--2" "#,
+            r#"name="matieres[113]" value="113" class="form-checkbox">"#,
+            r#"<label for="edit-matieres-113--2" class="option">"#,
+            r#"<svg></svg>GEX - Génie des eaux</label>"#,
+        );
+
+        let (matieres, anomalies) =
+            parse_matieres(html).expect("widget is present");
+
+        assert_eq!(matieres.len(), 1, "valid matière still parsed");
+        assert_eq!(matieres[0].id, "113");
+        assert_eq!(anomalies.len(), 1);
+        let anomaly = &anomalies[0];
+        assert!(
+            matches!(
+                anomaly,
+                ParseError::MalformedEntry { selector, .. }
+                    if selector.contains("edit-matieres-7--2")
+            ),
+            "anomaly names the orphaned checkbox, got {anomaly:?}"
+        );
+    }
+
+    #[test]
+    fn matiere_checkbox_without_value_is_an_anomaly_not_a_failure() {
+        let html = concat!(
+            r#"<input type="checkbox" id="edit-matieres-7--2" "#,
+            r#"name="matieres[7]" class="form-checkbox">"#,
+            r#"<label for="edit-matieres-7--2" class="option">"#,
+            r#"<svg></svg>ACT - Actuariat</label>"#,
+        );
+
+        let (matieres, anomalies) =
+            parse_matieres(html).expect("widget is present");
+
+        assert!(matieres.is_empty());
+        assert_eq!(anomalies.len(), 1);
+        assert!(
+            matches!(
+                &anomalies[0],
+                ParseError::MalformedEntry { selector, .. }
+                    if selector.contains("[value]")
+            ),
+            "anomaly names the missing attribute, got {:?}",
+            anomalies[0]
+        );
+    }
+
+    #[test]
+    fn matiere_checkbox_without_dom_id_is_an_anomaly_not_a_failure() {
+        // no id means no label can reference it
+        let html = concat!(
+            r#"<input type="checkbox" name="matieres[7]" value="7" "#,
+            r#"class="form-checkbox">"#,
+        );
+
+        let (matieres, anomalies) =
+            parse_matieres(html).expect("widget is present");
+
+        assert!(matieres.is_empty());
+        assert_eq!(anomalies.len(), 1);
+        assert!(
+            matches!(
+                &anomalies[0],
+                ParseError::MalformedEntry { selector, .. }
+                    if selector.contains("[id]")
+            ),
+            "anomaly names the missing attribute, got {:?}",
+            anomalies[0]
+        );
+    }
+
+    #[test]
+    fn a_label_without_for_pairs_with_nothing_and_is_skipped() {
+        let html = concat!(
+            r#"<label class="option"><svg></svg>Sans cible</label>"#,
+            r#"<input type="checkbox" id="edit-matieres-7--2" "#,
+            r#"name="matieres[7]" value="7" class="form-checkbox">"#,
+            r#"<label for="edit-matieres-7--2" class="option">"#,
+            r#"<svg></svg>ACT - Actuariat</label>"#,
+        );
+
+        let (matieres, anomalies) =
+            parse_matieres(html).expect("widget is present");
+
+        assert_eq!(matieres.len(), 1);
+        assert!(anomalies.is_empty(), "no anomalies expected: {anomalies:?}");
+    }
+
+    #[test]
+    fn page_without_the_facet_widget_is_drift_not_an_empty_facet() {
+        let html = r#"<div class="total-resultats"><p>1 résultat</p></div>"#;
+
+        let result = parse_matieres(html);
+
+        assert!(
+            matches!(result, Err(ParseError::MissingElement { .. })),
+            "expected MissingElement, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn duplicated_input_attributes_from_the_live_site_still_parse() {
+        // the live HTML repeats the whole attribute block inside each
+        // checkbox tag; html5ever keeps the first occurrence of each
+        let html = concat!(
+            r#"<input data-drupal-selector="edit-matieres-113" "#,
+            r#"type="checkbox" id="edit-matieres-113--2" "#,
+            r#"name="matieres[113]" value="113" "#,
+            r#"class="form-checkbox hidden-checkbox" "#,
+            r#"data-drupal-selector="edit-matieres-113" "#,
+            r#"type="checkbox" id="edit-matieres-113--2" "#,
+            r#"name="matieres[113]" value="113" "#,
+            r#"class="form-checkbox hidden-checkbox" "#,
+            r#"aria-controls="resultats">"#,
+            r#"<label for="edit-matieres-113--2" class="option">"#,
+            r#"<svg></svg>GEX - Génie des eaux</label>"#,
+        );
+
+        let (matieres, anomalies) =
+            parse_matieres(html).expect("widget is present");
+
+        assert!(anomalies.is_empty(), "no anomalies expected: {anomalies:?}");
+        assert_eq!(matieres.len(), 1);
+        assert_eq!(matieres[0].id, "113");
+        assert_eq!(matieres[0].label, "GEX - Génie des eaux");
     }
 }

@@ -5,6 +5,9 @@ Date : 2026-07-17
 > **Précision** (2026-07-17, après re-gel des fixtures via `curl`) : la classe `resultats--offre-etudes` est le conteneur de résultats de **toutes** les pages, pas un marqueur de page vide.
 > Le marqueur est donc le **texte** « Aucun résultat » dans le `<p>` de ce conteneur ; sa seule présence en classe ne prouve rien (une dérive de `total-resultats` serait sinon lue comme « fin des résultats »).
 
+> **Partiellement remplacé** (2026-07-17) : la « page vide avec preuve de forme » n'est plus le signal de terminaison du scrape — la pagination se calcule depuis la page 0 et se vérifie par réconciliation arithmétique (voir `2026-07-pagination-du-catalogue-par-comptage.md`).
+> Tout le reste tient : les trois issues du parseur, `total_results: Option<usize>` et les quatre fixtures restent en vigueur — ce sont des formes de page à reconnaître, plus une condition d'arrêt.
+
 ## Contexte
 
 Le site rend une page « vide » de deux façons différentes selon la requête :

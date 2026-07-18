@@ -1,11 +1,16 @@
-// the coverage attribute is only used inside #[cfg(test)] modules, so only
-// declare the feature there — declaring it in the non-test build would trip
-// the unused_features lint
-#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
+use std::process::ExitCode;
 
-#[allow(dead_code)]
-mod print;
-
-fn main() {
-    println!("Scraper: not implemented yet");
+#[tokio::main]
+async fn main() -> ExitCode {
+    match ulaval_scheduler_scraper::cli::run(
+        std::env::args().skip(1).collect(),
+    )
+    .await
+    {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("{error:#}");
+            ExitCode::from(2)
+        }
+    }
 }

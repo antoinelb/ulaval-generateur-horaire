@@ -1,5 +1,6 @@
-use crate::common::Cycle;
 use std::collections::BTreeMap;
+
+use crate::common::Cycle;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Course {

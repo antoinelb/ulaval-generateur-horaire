@@ -62,3 +62,4 @@ Ten weekly demonstrable jalons (`docs/project_plan.md` § Versions et jalons heb
 
 - When writing comments, don't prefix them with `ponytail: `
 - Don't hesitate to delegate to a cheaper model when it makes sense
+- Never use while loops

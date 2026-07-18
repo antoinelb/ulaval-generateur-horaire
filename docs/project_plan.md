@@ -15,7 +15,7 @@ Toute nouvelle décision est documentée dans un fichier individuel sous `docs/c
 - Extraire des pages publiques de l'ULaval : le catalogue (~10 000 cours), les cours offerts par session (sections, NRC, plages horaires, pavillons, sections liées, préalables, programmes contributoires, équivalences) et les règles des programmes (crédits exigés, cours obligatoires, « Règle N – X crédits parmi »).
 - Produire un snapshot JSON par session (`a2026`, `h2027`, …) plus un fichier des programmes.
 - Conserver un snapshot par saison, jamais écrasé aveuglément : une session future sans horaire publié réutilise le plus récent de la même saison (hypothèse de Daniel).
-- Filtrer la portée d'un scrape : tout le catalogue, certains programmes ou certaines matières.
+- Le scrape du catalogue est toujours complet — l'union des facettes matières, aucun mode scopé (ADR `2026-07-scraper-plein-catalogue-seulement`) ; seules les pages programmes se limitent aux programmes nécessaires.
 - Reprendre un scrape interrompu sans tout refaire ; throttler à ~10 requêtes/seconde (~20 min pour le catalogue complet).
 - Parser les préalables (ET/OU parenthésés, exigences de crédits) et les règles de programme en arbres structurés ; toute expression hors grammaire est conservée en brut et signalée, jamais perdue silencieusement.
 - Tourner en CLI et sur un cron CI : les données sont à jour quand Daniel ouvre l'application, sans qu'il ait jamais à lancer quoi que ce soit ; un scrape qui échoue alerte un humain (le mode de défaillance est des données silencieusement périmées).
@@ -125,7 +125,7 @@ Alternatives rejetées (raisonnement complet dans `docs/conception/`) : Python +
 
 ### Flux de données de bout en bout
 
-Cron GitHub Actions → binaire `scraper` (GET throttlés, HTML brut sauvegardé, parsing via les types de `core`) → `data/catalogue.json` (catalogue complet trié/dédupliqué par code, écrit seulement si ≥ 90 % du compte précédent) + `data/catalogue.erreurs.log` (anomalies brutes, une par ligne ; le cron alerte si non vide) + `data/cours/{session}.json` + `data/programmes.json` → commit du snapshot → redéploiement du site statique → `ui` charge le JSON dans le navigateur, tout le calcul tourne localement via `core` → un horaire choisi se partage en URL.
+Cron GitHub Actions → binaire `scraper` (GET throttlés à ~10 req/s par un throttle partagé honorant `Retry-After`, pagination du catalogue calculée depuis la page 0 (borne supérieure, pages « Aucun résultat » excédentaires tolérées) puis vérifiée par réconciliation arithmétique, catalogue complet = union des facettes matières partitionnées (l'index du site plafonne toute requête à 10 000 résultats ; la bannière est ignorée, le widget troué étant un bug du site assumé) — ADR `2026-07-conception-du-fetcher`, `2026-07-pagination-du-catalogue-par-comptage`, `2026-07-tolerance-des-pages-aucun-resultat-du-fan-out`, `2026-07-partition-du-catalogue-par-matiere`, `2026-07-le-catalogue-est-lunion-des-facettes` — HTML brut sauvegardé, parsing via les types de `core`) → `data/catalogue.json` (catalogue complet trié/dédupliqué par code, écrit seulement si ≥ 90 % du compte précédent) + `data/catalogue.erreurs.log` (anomalies brutes, une par ligne ; le cron alerte si non vide) + `data/cours/{session}.json` + `data/programmes.json` → commit du snapshot → redéploiement du site statique → `ui` charge le JSON dans le navigateur, tout le calcul tourne localement via `core` → un horaire choisi se partage en URL.
 Aucun serveur nulle part dans le chemin.
 
 Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par de simples GET (ni session, ni POST de formulaire) ; le cookie store de `reqwest` reste un repli si certaines pages l'exigent (à vérifier à la semaine 1).
@@ -133,7 +133,7 @@ Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par
 ### Ordre de construction
 
 1. **Scraper d'abord** — tue le plus gros risque externe (la forme réelle des données) avant que du code n'en dépende ; démarche test-first (voir `docs/next_steps.md`) : fixtures e2e des pages catalogue/cours/programme → parseur validé → tests unitaires.
-   Les sorties attendues vivent dans `tests/fixtures/test_cases/` (`catalogue/`, `classes/`, `programs/`) ; pour le catalogue, la vérité terrain est le catalogue fusionné de la facette GEX (`catalogue/gex.json`), comparé au parsing de pages HTML gelées, les comportements par page (page vide = terminaison, `total_results`) étant épinglés par des tests unitaires (ADR `2026-07-catalogue-artefact-commite`, révisé par `2026-07-catalogue-teste-sur-html-gele`).
+   Les sorties attendues vivent dans `tests/fixtures/test_cases/` (`catalogue/`, `classes/`, `programs/`) ; pour le catalogue, la vérité terrain est le catalogue fusionné de la facette GEX (`catalogue/gex.json`), comparé au parsing de pages HTML gelées, les comportements par page (page vide, `total_results` optionnel) étant épinglés par des tests unitaires (ADR `2026-07-catalogue-artefact-commite`, révisé par `2026-07-catalogue-teste-sur-html-gele`).
    Livrable : `data/{session}.json` + fixtures HTML + tests du parseur.
 2. **Cœur ensuite** — Rust pur contre les vraies données de l'étape 1 : combinaison de sections, préférences, préalables, génération d'organigramme.
    Livrable : un harnais CLI/test qui imprime des horaires valides pour des codes de cours donnés, absence de conflit testée par propriétés.
@@ -178,7 +178,7 @@ Choisir les cours d'une liste plutôt que par code, le programme présentant ses
 | Semaine | Jalon | Démonstration |
 |---|---|---|
 | 4 | **Horaire complet** : recherche et filtres (matière, cycle, programme), sections visibles et cliquables (le reste se recalcule autour), ajout manuel d'un cours avec son horaire, reprise `localStorage` | Choisir des cours dans la liste, forcer un NRC et voir l'horaire se recalculer ; fermer puis rouvrir le navigateur sans rien perdre |
-| 5 | **Catalogue complet + cron CI** : filtres de scrape (programmes, matières), reprise sur erreur, throttling, écriture atomique ; workflow planifié, notifications d'échec, déploiement statique automatique | Le site public se met à jour sans intervention ; un scrape interrompu reprend où il était |
+| 5 | **Catalogue complet + cron CI** : reprise sur erreur, throttling, écriture atomique ; workflow planifié, notifications d'échec, déploiement statique automatique | Le site public se met à jour sans intervention ; un scrape interrompu reprend où il était |
 | 6 | **Programmes et préalables** : scraper des pages programmes (obligatoires + règles + profils, validé sur GEX), grammaire des préalables (ET/OU, crédits exigés) ; dans l'UI, cours du programme présentés selon ses règles et profils, filtre des cours aux préalables non remplis (option concomitants) | Les règles du bac GEX en JSON fidèle ; la liste de cours s'organise selon les règles et profils et se filtre selon les préalables |
 
 ### v2 — semaines 7 à 10

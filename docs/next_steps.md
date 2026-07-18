@@ -22,11 +22,13 @@ Rhythm for each page type: freeze the real HTML → write the failing integratio
     - [x] Malformed entry → raw error line, never silently dropped
     - Verify: integration test parses the four frozen catalogue pages, merges, sorts and dedups, and compares with `test_cases/catalogue/gex.json`; unit tests on inline snippets pin what the frozen pages never exercise (0 entries with neither marker = drift, malformed entry)
 - [ ] Fetch module, up to complete catalogues (`fetch.rs`)
-    - [ ] Async client (honest user agent), throttled ~10 req/s
-    - [ ] Paginate each matière's catalogue URL until the parser's termination signal (0 entries with page-shape proof); markup drift = error that stops the run, never a silent truncation
-    - [ ] Merge, sort, dedup entries across pages and matières (same shape as `test_cases/catalogue/gex.json`)
-    - [ ] CLI wiring: a `catalogue` subcommand that writes the merged catalogue JSON (`anyhow` at the binary frontier)
-    - Verify: run live on the GEX matières and diff the output against `test_cases/catalogue/gex.json`
+    - [x] `Fetcher`: async client (honest user agent, 30 s timeout), shared throttle ~10 req/s (`fetch(&self)`, mutexed clock), bounded retries (3; transport, 5xx, 429), `Retry-After` honored (seconds + HTTP-date, 5 min cap, bumps the shared clock) — ADR `2026-07-conception-du-fetcher`
+    - [x] Everything testable: pure `should_retry` / `parse_retry_after` unit-tested, `wait_for_slot` on tokio's paused clock, full HTTP behavior (200, 503 + `Retry-After` then 200, permanent 404, retries exhausted) against `wiremock`
+    - [x] Two-step pagination per matière URL: page 0 gives total + page size → remaining pages fan out under the shared throttle; arithmetic reconciliation guarantees completeness (merged count == advertised total, per-page totals agree, hard page cap) — ADR `2026-07-pagination-du-catalogue-par-comptage`; the computed page count is an upper bound, trailing « Aucun résultat » pages tolerated when empty — ADR `2026-07-tolerance-des-pages-aucun-resultat-du-fan-out`; any mismatch = error that stops the run, never a silent truncation
+    - [x] Merge, sort, dedup entries across pages and matières (same shape as `test_cases/catalogue/gex.json`)
+    - [x] Full catalogue = the union of the matière facets: the site's index caps any query at 10 000 results, so page 0 provides the facet directory and one partition per matière fans out under the one shared throttle (bracketed `matieres%5B<id>%5D=<id>` form only — the flat form is silently ignored by the site); the banner total is ignored — the widget omitting 11 real courses is a ULaval bug the scraper doesn't work around — ADR `2026-07-partition-du-catalogue-par-matiere`, `2026-07-le-catalogue-est-lunion-des-facettes`
+    - [x] CLI wiring: a `catalogue` subcommand that writes the merged catalogue JSON (`anyhow` at the binary frontier) — clap 4 derive, exit code 2 on usage errors, `catalogue_errors.log` beside the artifact (ADR `2026-07-cli-dans-la-lib-et-style-derreurs`, `2026-07-adoption-de-clap`); optional `--output-dir`/`--url` flags with defaults `data` + the production URL, no scoped mode (ADR `2026-07-scraper-plein-catalogue-seulement`)
+    - Verify: `make test` green (unit + wiremock); run live on the full catalogue and spot-check the unique course count (~10 224, the facet union)
 - [ ] Préalables grammar (`parse/prerequisites.rs` — pure function, raw text → `PrereqTree`, no HTML)
     - [ ] ET/OU with parentheses → `all`/`any` trees; « Crédits exigés : N » → `program_credits`
     - [ ] Out-of-grammar text → kept raw-only and surfaced as an anomaly — requires deciding how `core::Prerequisites` represents "raw without tree" (type change + ADR at this step)

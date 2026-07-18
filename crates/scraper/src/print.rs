@@ -1,13 +1,13 @@
-use std::io::{IsTerminal, Write};
-use std::sync::LazyLock;
-use std::sync::Mutex;
+use std::io::{self, IsTerminal, Write};
+use std::sync::{LazyLock, Mutex};
+use std::time::Instant;
 
-const BLUE: &str = "\x1b[34m";
-const BOLD_GREEN: &str = "\x1b[1;32m";
-const BOLD_YELLOW: &str = "\x1b[1;33m";
-const BOLD_RED: &str = "\x1b[1;31m";
-const NORMAL: &str = "\x1b[0m";
-const ERASE_LINE: &str = "\r\x1b[2K";
+pub const BLUE: &str = "\x1b[34m";
+pub const BOLD_GREEN: &str = "\x1b[1;32m";
+pub const BOLD_YELLOW: &str = "\x1b[1;33m";
+pub const BOLD_RED: &str = "\x1b[1;31m";
+pub const NORMAL: &str = "\x1b[0m";
+pub const ERASE_LINE: &str = "\r\x1b[2K";
 
 /// All mutable display state, behind one lock (`STATE`): the bottom line of
 /// the screen is a pure function of this state (`render_bottom_line`) and is
@@ -43,6 +43,7 @@ pub struct Task {
     id: usize,
     msg: String,
     done_msg: String,
+    started: Instant,
     finished: bool,
 }
 
@@ -52,7 +53,7 @@ static STATE: LazyLock<Mutex<PrintState>> = LazyLock::new(|| {
         pending: None,
         progress: None,
         next_id: 0,
-        is_tty: std::io::stdout().is_terminal(),
+        is_tty: io::stdout().is_terminal(),
     })
 });
 
@@ -76,18 +77,22 @@ impl Task {
         let mut state = lock_state();
         state.indent = state.indent.saturating_sub(1);
         let msg = if success { &self.done_msg } else { &self.msg };
+        let time = format!("[{:.1}s]", self.started.elapsed().as_secs_f64());
         let symbol = paint_symbol(symbol, colour);
 
         if state.progress.as_ref().is_some_and(|p| p.id == self.id) {
             state.progress = None;
         }
 
-        if state.pending.as_ref().is_some_and(|p| p.id == self.id) {
+        let line = if state.pending.as_ref().is_some_and(|p| p.id == self.id) {
             state.pending = None;
-            write(&state, Some(&format_line(state.indent, msg, &symbol)))
+            &format_line(state.indent, msg, &symbol)
         } else {
-            write(&state, Some(&format_line(state.indent + 1, msg, &symbol)))
-        }
+            &format_line(state.indent + 1, msg, &symbol)
+        };
+
+        let line = format_close_line(state.is_tty, line, &time);
+        write(&state, Some(&line))
     }
 }
 
@@ -99,6 +104,7 @@ impl Drop for Task {
     }
 }
 
+#[allow(dead_code)]
 pub fn done_print(msg: &str) {
     print_permanent(msg, "+", BOLD_GREEN);
 }
@@ -123,6 +129,7 @@ pub fn task(msg: &str, done_msg: &str) -> Task {
         id,
         msg: msg.to_string(),
         done_msg: done_msg.to_string(),
+        started: Instant::now(),
         finished: false,
     }
 }
@@ -172,8 +179,13 @@ pub fn progress_task(msg: &str, done_msg: &str, total: usize) -> Task {
         id,
         msg: msg.to_string(),
         done_msg: done_msg.to_string(),
+        started: Instant::now(),
         finished: false,
     }
+}
+
+pub fn paint(text: &str, colour: &str) -> String {
+    format!("{colour}{text}{NORMAL}")
 }
 
 fn print_permanent(msg: &str, symbol: &str, colour: &str) {
@@ -190,6 +202,8 @@ fn print_permanent(msg: &str, symbol: &str, colour: &str) {
 }
 
 fn lock_state() -> std::sync::MutexGuard<'static, PrintState> {
+    // point-free on purpose: a closure here would be a new never-executed
+    // region (poisoning is untestable), while a fn path adds no code
     STATE
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -244,7 +258,7 @@ fn render_bottom_line(state: &PrintState) -> Option<String> {
 fn write(state: &PrintState, permanent: Option<&str>) {
     print!("{}", render_output(state, permanent));
     // display is non-critical: a broken pipe must never kill the scrape
-    std::io::stdout().flush().ok();
+    io::stdout().flush().ok();
 }
 
 fn render_output(state: &PrintState, permanent: Option<&str>) -> String {
@@ -278,9 +292,31 @@ fn format_progress_symbol(done: usize, total: usize) -> String {
     format!("{done:>width$}/{total}")
 }
 
-fn paint_symbol(text: &str, colour: &str) -> String {
-    format!("{colour}[{text}]{NORMAL}")
+// flush-right time: cursor-forward 999 clamps at the last column, then back
+// up by the visible length — measured before painting, since the colour
+// escapes occupy zero columns; off-tty (logs) plain text only
+fn format_close_line(is_tty: bool, line: &str, time: &str) -> String {
+    if is_tty {
+        format!(
+            "{line}\x1b[999C\x1b[{}D{}",
+            time.len() - 1,
+            paint(time, BLUE)
+        )
+    } else {
+        format!("{line} {time}")
+    }
 }
+
+fn paint_symbol(text: &str, colour: &str) -> String {
+    paint(&format!("[{}]", text), colour)
+}
+
+// tests (here or in other modules) that drive the public API mutate the
+// global STATE and cargo runs tests concurrently: they must hold this lock
+// for their whole duration; all other tests build local states
+#[cfg(test)]
+pub(crate) static TEST_STATE_LOCK: std::sync::Mutex<()> =
+    std::sync::Mutex::new(());
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
@@ -297,6 +333,24 @@ mod tests {
     fn format_progress_symbol_right_aligns_done_to_total_width() {
         assert_eq!(format_progress_symbol(7, 9743), "   7/9743");
         assert_eq!(format_progress_symbol(9743, 9743), "9743/9743");
+    }
+
+    #[test]
+    fn close_line_places_the_time_flush_right_on_tty() {
+        // "[1.2s]" is 6 columns visible: forward to the edge, back 5,
+        // print — the painted string moves the cursor only 6 columns
+        assert_eq!(
+            format_close_line(true, "[+] msg", "[1.2s]"),
+            format!("[+] msg\x1b[999C\x1b[5D{}", paint("[1.2s]", BLUE))
+        );
+    }
+
+    #[test]
+    fn close_line_appends_the_time_plainly_off_tty() {
+        assert_eq!(
+            format_close_line(false, "[+] msg", "[1.2s]"),
+            "[+] msg [1.2s]"
+        );
     }
 
     #[test]
@@ -400,11 +454,11 @@ mod tests {
         assert!(state.pending.is_none());
     }
 
-    // The public API mutates the global STATE and cargo runs tests
-    // concurrently, so every use of the global lives in this single test;
-    // all other tests build local states.
     #[test]
     fn public_api_lifecycle_returns_state_to_neutral() {
+        let _guard = TEST_STATE_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let outer = task("outer", "outer done");
         {
             let state = lock_state();
