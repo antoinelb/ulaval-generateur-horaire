@@ -1,0 +1,54 @@
+{
+  "code": "PHI-7750",
+  "title": "Enseignement individuel",
+  "credits": 3,
+  "cycle": 2,
+  "prerequisites": {
+    "raw": "PHI-6000 à 8899, Crédits exigés : 12",
+    "tree": {
+      "program_credits": {
+        "program": "PHI",
+        "credits": 12
+      }
+    }
+  },
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "groups": [
+        [
+          {
+            "nrc": "87777",
+            "section": "A",
+            "mode": "in-person",
+            "slots": []
+          }
+        ]
+      ]
+    },
+    "winter": {
+      "groups": [
+        [
+          {
+            "nrc": "17573",
+            "section": "A",
+            "mode": "in-person",
+            "slots": []
+          }
+        ]
+      ]
+    },
+    "summer": {
+      "groups": [
+        [
+          {
+            "nrc": "52661",
+            "section": "A",
+            "mode": "in-person",
+            "slots": []
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -99,11 +99,9 @@ enum PrereqToken {
     Close,
     And,
     Or,
-    Course(String),
-    Credits {
-        program: Option<String>,
-        credits: u32,
-    },
+    // an operand is classified whole by the tokenizer — only `(`, `)`, `ET`
+    // and `OU` carry structure, so nothing inside one concerns the parser
+    Operand(PrereqTree),
 }
 
 struct PrereqFrame {
@@ -177,20 +175,21 @@ fn parse_element(
 }
 
 fn parse_credits(doc: &Html) -> Result<u32, ParseError> {
-    let card = doc
-        .select(&FAITS_RAPIDES)
-        .find(|card| {
-            card.select(&CREDITS_LABEL).next().is_some_and(|label| {
-                label
-                    .text()
-                    .collect::<String>()
-                    .trim()
-                    .starts_with("Crédit")
-            })
+    // a course can carry no credits card at all — GCI-2510, a « Stage »
+    // seminar, lists only its cycle and its modes. It is worth no credits,
+    // which is a fact about the course, not markup drift: the page is
+    // otherwise complete, so the course is kept rather than dropped.
+    let Some(card) = doc.select(&FAITS_RAPIDES).find(|card| {
+        card.select(&CREDITS_LABEL).next().is_some_and(|label| {
+            label
+                .text()
+                .collect::<String>()
+                .trim()
+                .starts_with("Crédit")
         })
-        .ok_or_else(|| ParseError::MissingElement {
-            selector: format!("{} = Crédits", CREDITS_LABEL_CSS),
-        })?;
+    }) else {
+        return Ok(0);
+    };
     let raw = card
         .select(&CREDITS_VALUE)
         .next()
@@ -260,6 +259,9 @@ fn parse_prerequisites(
 
     match parse_prereq_tree(&raw) {
         Ok(tree) => Some(Prerequisites::Parsed { raw, tree }),
+        // only the structure of the expression can fail: an operand nobody
+        // can check is kept in place as text (ADR
+        // `2026-07-operande-non-verifiable-gardee-en-texte`)
         Err(error) => {
             anomalies.push(error);
             Some(Prerequisites::Raw { raw })
@@ -267,13 +269,13 @@ fn parse_prerequisites(
     }
 }
 
+// Only a broken structure — an unclosed group, an operator missing an
+// operand — can fail: it has no local repair, nothing says which operands
+// the group was meant to hold. Everything else ends up in the tree.
 fn parse_prereq_tree(raw: &str) -> Result<PrereqTree, ParseError> {
-    let malformed = |error: &str| ParseError::MalformedPrerequisites {
-        error: error.to_string(),
-        raw: raw.to_string(),
-    };
+    let malformed = |error: &str| malformed_prereq(error, raw);
 
-    let tokens = tokenize_prereq_raw(raw)?;
+    let tokens = tokenize_prereq_raw(raw);
 
     let mut current = PrereqFrame::new();
     let mut enclosing: Vec<PrereqFrame> = Vec::new();
@@ -281,20 +283,11 @@ fn parse_prereq_tree(raw: &str) -> Result<PrereqTree, ParseError> {
 
     for token in tokens {
         match token {
-            PrereqToken::Course(course) => {
+            PrereqToken::Operand(tree) => {
                 if !expecting_operand {
                     return Err(malformed("two operands in a row"));
                 }
-                current.chain.push(PrereqTree::Course(course));
-                expecting_operand = false;
-            }
-            PrereqToken::Credits { program, credits } => {
-                if !expecting_operand {
-                    return Err(malformed("two operands in a row"));
-                }
-                current.chain.push(PrereqTree::ProgramCredits {
-                    program_credits: ProgramCredits { program, credits },
-                });
+                current.chain.push(tree);
                 expecting_operand = false;
             }
             PrereqToken::Open => {
@@ -349,93 +342,123 @@ fn parse_prereq_tree(raw: &str) -> Result<PrereqTree, ParseError> {
     )
 }
 
-fn tokenize_prereq_raw(raw: &str) -> Result<Vec<PrereqToken>, ParseError> {
+// Only `(`, `)`, `ET` and `OU` carry structure; everything between two of
+// them is one operand, read whole rather than word by word. The parenthesis
+// is padded first because the source glues it to the sigle, and the `*` some
+// sigles carry means nothing to the grammar.
+fn tokenize_prereq_raw(raw: &str) -> Vec<PrereqToken> {
     let padded = raw.replace('(', " ( ").replace(')', " ) ").replace("*", "");
-    let words: Vec<&str> = padded.split_whitespace().collect();
     let mut tokens: Vec<PrereqToken> = Vec::new();
-    let mut skip = 0;
-    for i in 0..words.len() {
-        if skip > 0 {
-            skip -= 1;
-            continue;
-        } else {
-            match words[i] {
-                "(" => tokens.push(PrereqToken::Open),
-                ")" => tokens.push(PrereqToken::Close),
-                "ET" => tokens.push(PrereqToken::And),
-                "OU" => tokens.push(PrereqToken::Or),
-                word => {
-                    if let Some(program) = word.strip_suffix(',') {
-                        match words.get(i + 1..i + 5) {
-                            Some(["Crédits", "exigés", ":", n]) => {
-                                if !is_program_code(program) {
-                                    return Err(
-                                        ParseError::MalformedPrerequisites {
-                                            error: "program".to_string(),
-                                            raw: raw.to_string(),
-                                        },
-                                    );
-                                }
-                                tokens.push(PrereqToken::Credits {
-                                    program: Some(program.to_string()),
-                                    credits: prereq_credits(n, raw)?,
-                                });
-                                skip = 4;
-                            }
-                            _ => {
-                                return Err(
-                                    ParseError::MalformedPrerequisites {
-                                        error: "course".to_string(),
-                                        raw: raw.to_string(),
-                                    },
-                                );
-                            }
-                        }
-                    } else if word == "Crédits" {
-                        // « Crédits exigés : N » with no programme named:
-                        // the requirement bears on the student's own
-                        // (GEX-3333)
-                        match words.get(i + 1..i + 4) {
-                            Some(["exigés", ":", n]) => {
-                                tokens.push(PrereqToken::Credits {
-                                    program: None,
-                                    credits: prereq_credits(n, raw)?,
-                                });
-                                skip = 3;
-                            }
-                            _ => {
-                                return Err(
-                                    ParseError::MalformedPrerequisites {
-                                        error: "credits requirement"
-                                            .to_string(),
-                                        raw: raw.to_string(),
-                                    },
-                                );
-                            }
-                        }
-                    } else {
-                        if !is_course_code(word) {
-                            return Err(ParseError::MalformedPrerequisites {
-                                error: "course code.".to_string(),
-                                raw: raw.to_string(),
-                            });
-                        }
-                        tokens.push(PrereqToken::Course(word.to_string()));
-                    }
-                }
+    let mut operand: Vec<&str> = Vec::new();
+
+    for word in padded.split_whitespace() {
+        let separator = match word {
+            "(" => PrereqToken::Open,
+            ")" => PrereqToken::Close,
+            "ET" => PrereqToken::And,
+            "OU" => PrereqToken::Or,
+            _ => {
+                operand.push(word);
+                continue;
             }
-        }
+        };
+        flush_operand(&mut operand, &mut tokens);
+        tokens.push(separator);
     }
-    Ok(tokens)
+    flush_operand(&mut operand, &mut tokens);
+
+    tokens
 }
 
-fn prereq_credits(count: &str, raw: &str) -> Result<u32, ParseError> {
-    count.trim().parse::<u32>().map_err(|_| {
-        ParseError::MalformedPrerequisites {
-            error: "program credits".to_string(),
-            raw: raw.to_string(),
-        }
+// Two separators in a row enclose no operand at all — « A ET OU B » — and
+// nothing is emitted: the parser is the one that knows an operator needs
+// operands on both sides, and reports it.
+fn flush_operand(operand: &mut Vec<&str>, tokens: &mut Vec<PrereqToken>) {
+    if operand.is_empty() {
+        return;
+    }
+    let tree = classify_operand(operand);
+    operand.clear();
+    tokens.push(PrereqToken::Operand(tree));
+}
+
+// An operand the planner cannot check is kept as text: an examination
+// (« Examen Test français … », FRN-1904), a range of courses leaving the
+// choice to the student (« ESG-2020 à 3799 », ESP-1000), a sigle the source
+// mistyped (« FRN 19543 », FRN-1112), de la prose. None of these is
+// recognized one by one — they are simply what is left when no checkable
+// shape fits (ADR `2026-07-operande-non-verifiable-gardee-en-texte`).
+fn classify_operand(words: &[&str]) -> PrereqTree {
+    checkable_operand(words).unwrap_or_else(|| PrereqTree::Raw {
+        raw: words.join(" "),
     })
+}
+
+// The shapes the planner can act on, and only those.
+fn checkable_operand(words: &[&str]) -> Option<PrereqTree> {
+    match words {
+        // a bound on the courses the credits are counted from — « ACT-1000 à
+        // 4999, Crédits exigés : 39 » (ACT-4114) or « 1000 à 4999 Crédits
+        // exigés : 15 » (GMC-1590). It drops out: the cycle it names is the
+        // cycle of the course carrying the requirement, which the snapshot
+        // already records (ADR `2026-07-bornes-de-credits-toutes-retirees`)
+        [lower, "à", upper, "Crédits", "exigés", ":", count] => {
+            match (bound_lower(lower), bound_upper(upper)) {
+                (Some(""), Some("")) => program_credits(None, count),
+                (Some(subject), Some(",")) => {
+                    program_credits(Some(program_code(subject)?), count)
+                }
+                _ => None,
+            }
+        }
+        [subject, "Crédits", "exigés", ":", count]
+            if subject.ends_with(',') =>
+        {
+            program_credits(Some(program_code(subject)?), count)
+        }
+        // « Crédits exigés : N » with no programme named: the requirement
+        // bears on the student's own (GEX-3333)
+        ["Crédits", "exigés", ":", count] => program_credits(None, count),
+        [code] if is_course_code(code) => {
+            Some(PrereqTree::Course(code.to_string()))
+        }
+        _ => None,
+    }
+}
+
+fn program_credits(program: Option<&str>, count: &str) -> Option<PrereqTree> {
+    Some(PrereqTree::ProgramCredits {
+        program_credits: ProgramCredits {
+            program: program.map(str::to_string),
+            credits: count.trim().parse::<u32>().ok()?,
+        },
+    })
+}
+
+// « GEX, » → « GEX »: a matière is three uppercase letters, and the comma
+// the source puts before « Crédits exigés » is not part of it
+fn program_code(word: &str) -> Option<&str> {
+    let code = word.strip_suffix(',').unwrap_or(word);
+    is_program_code(code).then_some(code)
+}
+
+// « PHI-6000 » → « PHI », « 1000 » → « », anything else is not a bound
+fn bound_lower(word: &str) -> Option<&str> {
+    let subject = word.trim_end_matches(|c: char| c.is_ascii_digit());
+    (word.len() - subject.len() == 4).then(|| subject.trim_end_matches('-'))
+}
+
+// « 8899, » → « , », « 4999 » → « », anything else is not a bound
+fn bound_upper(word: &str) -> Option<&str> {
+    let punctuation = word.trim_start_matches(|c: char| c.is_ascii_digit());
+    (word.len() - punctuation.len() == 4).then_some(punctuation)
+}
+
+fn malformed_prereq(error: &str, raw: &str) -> ParseError {
+    ParseError::MalformedPrerequisites {
+        error: error.to_string(),
+        raw: raw.to_string(),
+    }
 }
 
 fn is_program_code(word: &str) -> bool {
@@ -681,8 +704,10 @@ fn parse_mode(label: &str) -> Result<Mode, ParseError> {
         "À distance" => Ok(Mode::Remote),
         // its « Sur Internet » plage carries no Journée/Horaire, so
         // `parse_slot` already drops it and only the in-class meetings
-        // become slots (GEX-3100)
-        "Hybride" => Ok(Mode::Hybrid),
+        // become slots (GEX-3100). GMC-7000 spells the same arrangement
+        // « À distance-hybride ». « Comodal » (assister en classe ou à
+        // distance, au choix) offre les mêmes plages : même traitement.
+        "Hybride" | "À distance-hybride" | "Comodal" => Ok(Mode::Hybrid),
         other => Err(ParseError::MalformedEntry {
             selector: "mode".to_string(),
             raw: other.to_string(),
@@ -938,7 +963,11 @@ mod tests {
         for (missing, body) in [
             ("code", String::new()),
             ("title", code.to_string()),
-            ("credits", format!("{code}{title}")),
+            // credits are the one field whose absence is a fact rather than
+            // a hole (`a_course_without_a_credits_card_is_worth_zero_credits`),
+            // so the page that must fail here is the one carrying an
+            // unreadable card
+            ("credits", format!("{code}{title}{}", credits_card("trois"))),
             ("cycle", format!("{code}{title}{credits}")),
             (
                 "equivalents",
@@ -1062,13 +1091,11 @@ mod tests {
     }
 
     #[test]
-    fn credits_are_missing_when_no_card_carries_the_label() {
+    fn a_course_without_a_credits_card_is_worth_zero_credits() {
         // the cycle card exists, so the scan runs and finds no « Crédits »
+        // — GCI-2510, a seminar, is that shape and must survive the parse
         let doc = document(&cycle_card(&["Premier cycle"]));
-        assert!(matches!(
-            parse_credits(&doc),
-            Err(ParseError::MissingElement { .. })
-        ));
+        assert_eq!(parse_credits(&doc).unwrap_or_else(|e| panic!("{e}")), 0);
     }
 
     #[test]
@@ -1158,7 +1185,11 @@ mod tests {
     }
 
     #[test]
-    fn out_of_grammar_prerequisites_are_kept_raw_and_surfaced() {
+    fn a_prerequisite_no_rule_can_check_is_kept_as_text() {
+        // a prose préalable is one operand no checkable shape fits: it lands
+        // in the tree verbatim, where the UI shows it to the student. It is
+        // not an anomaly — nothing went wrong, the source simply asks for
+        // something no catalogue can verify
         let doc = document(
             r#"<div class="fe--prealables"><p class="etiquette-container">Autorisation de la direction</p></div>"#,
         );
@@ -1166,8 +1197,29 @@ mod tests {
 
         assert_eq!(
             parse_prerequisites(&doc, &mut anomalies),
+            Some(Prerequisites::Parsed {
+                raw: "Autorisation de la direction".to_string(),
+                tree: PrereqTree::Raw {
+                    raw: "Autorisation de la direction".to_string()
+                },
+            })
+        );
+        assert!(anomalies.is_empty(), "got {anomalies:?}");
+    }
+
+    #[test]
+    fn a_broken_expression_keeps_no_tree_at_all() {
+        // an unclosed group has no local repair — there is no telling which
+        // operands it was meant to hold — so the whole expression stays raw
+        let doc = document(
+            r#"<div class="fe--prealables"><p class="etiquette-container">(GAE-1004 ET GAE-2000</p></div>"#,
+        );
+        let mut anomalies = Vec::new();
+
+        assert_eq!(
+            parse_prerequisites(&doc, &mut anomalies),
             Some(Prerequisites::Raw {
-                raw: "Autorisation de la direction".to_string()
+                raw: "(GAE-1004 ET GAE-2000".to_string()
             })
         );
         assert!(matches!(
@@ -1543,6 +1595,9 @@ mod tests {
             ("En classe", Mode::InPerson),
             ("À distance", Mode::Remote),
             ("Hybride", Mode::Hybrid),
+            // GMC-7000 spells the hybrid arrangement its own way
+            ("À distance-hybride", Mode::Hybrid),
+            ("Comodal", Mode::Hybrid),
         ] {
             assert_eq!(
                 parse_mode(label).unwrap_or_else(|e| panic!("{label}: {e}")),
@@ -1611,6 +1666,19 @@ mod tests {
                 "for {schedule:?}"
             );
         }
+    }
+
+    // an operand no checkable shape fits comes back as text, verbatim
+    fn assert_kept_as_text(raw: &str) {
+        let tree =
+            parse_prereq_tree(raw).unwrap_or_else(|e| panic!("{raw:?}: {e}"));
+        assert_eq!(
+            tree,
+            PrereqTree::Raw {
+                raw: raw.to_string()
+            },
+            "for {raw:?}"
+        );
     }
 
     fn course(code: &str) -> PrereqTree {
@@ -1727,6 +1795,141 @@ mod tests {
     }
 
     #[test]
+    fn a_bound_on_a_credits_requirement_drops_out() {
+        // GMC-1590 reads « … ET  1000 à 4999 Crédits exigés : 15 »,
+        // ACT-4114 « … ET ACT-1000 à 4999, Crédits exigés : 39 » and
+        // PHI-7750 « … ET PHI-6000 à 8899, Crédits exigés : 12 » — the range
+        // always covers the cycle of the course carrying the requirement, and
+        // the cycle is in the snapshot, so the bound is rebuilt at planning
+        // time rather than carried here (ADR
+        // `2026-07-bornes-de-credits-toutes-retirees`)
+        for (raw, expected) in [
+            ("GMC-1024 ET 1000 à 4999 Crédits exigés : 15", (None, 15)),
+            (
+                "GMC-1024 ET ACT-1000 à 4999, Crédits exigés : 39",
+                (Some("ACT"), 39),
+            ),
+            (
+                "GMC-1024 ET PHI-6000 à 8899, Crédits exigés : 12",
+                (Some("PHI"), 12),
+            ),
+            // a bound narrower than its cycle is read as its cycle: the
+            // widening is accepted, the source text stays in `raw`
+            ("GMC-1024 ET 1000 à 2999 Crédits exigés : 12", (None, 12)),
+        ] {
+            let tree = parse_prereq_tree(raw)
+                .unwrap_or_else(|e| panic!("parse {raw:?}: {e}"));
+            assert_eq!(
+                tree,
+                all(vec![
+                    course("GMC-1024"),
+                    PrereqTree::ProgramCredits {
+                        program_credits: ProgramCredits {
+                            program: expected.0.map(str::to_string),
+                            credits: expected.1,
+                        }
+                    },
+                ]),
+                "for {raw:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn only_a_four_digit_range_reads_as_a_bound() {
+        // a bound is two course numbers; anything else keeping the same
+        // shape is not one, and is kept verbatim rather than stripped on a
+        // guess
+        for raw in [
+            "60 à 4999 Crédits exigés : 12",
+            "1000 à 49999 Crédits exigés : 12",
+            "mille à 4999 Crédits exigés : 12",
+            // the bound drops out, but the count behind it is still unread
+            "1000 à 4999 Crédits exigés : plusieurs",
+        ] {
+            assert_kept_as_text(raw);
+        }
+    }
+
+    #[test]
+    fn a_range_of_courses_on_its_own_is_a_raw_operand() {
+        // ESP-1000 reads « ESG-2020 à 3799 OU … »: with no credits
+        // requirement behind it the range names the courses themselves, one
+        // of which satisfies the préalable — a choice the grammar cannot
+        // make, so the three words are kept verbatim
+        let tree = parse_prereq_tree("ESG-2020 à 3799 OU GCI-1000")
+            .unwrap_or_else(|e| panic!("parse: {e}"));
+        assert_eq!(
+            tree,
+            any(vec![
+                PrereqTree::Raw {
+                    raw: "ESG-2020 à 3799".to_string()
+                },
+                course("GCI-1000"),
+            ])
+        );
+    }
+
+    #[test]
+    fn an_operand_naming_an_examination_is_kept_verbatim() {
+        // FRN-1904 requires an examination result, ESP-1000 a placement
+        // test: no rule can check either, so the operand is kept whole
+        // instead of dragging the whole expression out of grammar
+        for (raw, expected) in [
+            (
+                "Examen Test français Laval-Montréal avec résultat de 060.0 à 100.0",
+                "Examen Test français Laval-Montréal avec résultat de 060.0 à 100.0",
+            ),
+            // the run stops at the operator, not at the end of the text
+            (
+                "Examen Classement en espagnol avec résultat de 5 à 8 OU GCI-1000",
+                "Examen Classement en espagnol avec résultat de 5 à 8",
+            ),
+        ] {
+            let tree = parse_prereq_tree(raw)
+                .unwrap_or_else(|e| panic!("parse {raw:?}: {e}"));
+            let first = match &tree {
+                PrereqTree::Any { any } => any[0].clone(),
+                leaf => leaf.clone(),
+            };
+            assert_eq!(
+                first,
+                PrereqTree::Raw {
+                    raw: expected.to_string()
+                },
+                "for {raw:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_raw_operand_stops_at_a_parenthesis() {
+        let tree =
+            parse_prereq_tree("( Examen de langue OU GCI-1000 ) ET GCI-2000")
+                .unwrap_or_else(|e| panic!("parse: {e}"));
+        assert_eq!(
+            tree,
+            all(vec![
+                any(vec![
+                    PrereqTree::Raw {
+                        raw: "Examen de langue".to_string()
+                    },
+                    course("GCI-1000"),
+                ]),
+                course("GCI-2000"),
+            ])
+        );
+    }
+
+    #[test]
+    fn a_raw_operand_still_needs_an_operator_beside_it() {
+        // the run stops at « ( », so the group that follows is a second
+        // operand with no operator between them — a broken structure, which
+        // no operand kept verbatim can repair
+        assert!(parse_prereq_tree("Examen de langue ( GCI-1000 )").is_err());
+    }
+
+    #[test]
     fn credits_not_followed_by_a_requirement_is_out_of_grammar() {
         for raw in [
             "Crédits",
@@ -1734,10 +1937,7 @@ mod tests {
             "Crédits obtenus : 72",
             "Crédits exigés : plusieurs",
         ] {
-            assert!(
-                parse_prereq_tree(raw).is_err(),
-                "{raw:?} must not parse as a credits requirement"
-            );
+            assert_kept_as_text(raw);
         }
     }
 
@@ -1778,22 +1978,18 @@ mod tests {
     }
 
     #[test]
-    fn out_of_grammar_text_is_a_malformed_prerequisites_error() {
+    fn a_broken_structure_is_a_malformed_prerequisites_error() {
+        // What fails as a whole is the *shape* of the expression: an empty
+        // one, a group left open or closed alone, an operator missing an
+        // operand. None of these can be repaired by keeping text in place,
+        // unlike an operand nobody can read.
         for raw in [
             "",
             "   ",
-            "Connaissance de base en programmation",
             "(GAE-1004 ET GAE-2000",
             "GAE-1004 ET GAE-2000)",
             "GLG-1900 OU",
             "GLG-1900 OU ET GLG-1000",
-            "GEX, Crédits exigés : soixante",
-            "GEX, Crédits exigés :",
-            "GEXX, Crédits exigés : 60",
-            ", Crédits exigés : 60",
-            "GLG-100",
-            "GLG-1000 GLG-1900",
-            "GLG-1000 GEX, Crédits exigés : 60",
             "GLG-1000 (GLG-1900 OU GGL-2600)",
             "()",
             "OU GLG-1000",
@@ -1811,13 +2007,56 @@ mod tests {
     }
 
     #[test]
+    fn an_operand_no_shape_reads_is_kept_in_place_and_reported() {
+        // Every way an operand can defeat the grammar — prose, a sigle
+        // miswritten at the source, a count in words, a matière of the wrong
+        // width, two operands with no operator between them, a bound whose
+        // subject is not a matière. Each is kept verbatim, each is reported.
+        for raw in [
+            "Connaissance de base en programmation",
+            "GEX, Crédits exigés : soixante",
+            "GEX, Crédits exigés :",
+            "GEXX, Crédits exigés : 60",
+            ", Crédits exigés : 60",
+            "GLG-100",
+            "GLG-1000 GLG-1900",
+            "GLG-1000 GEX, Crédits exigés : 60",
+            "PHIL-6000 à 8899, Crédits exigés : 12",
+            // FRN-1112 reads « FRN-1910 OU FRN 19543 »: a sigle the source
+            // mistyped, which no rule can repair — FRN-1954 and FRN-1543
+            // both being absent from the catalogue
+            "FRN 19543",
+        ] {
+            assert_kept_as_text(raw);
+        }
+    }
+
+    #[test]
+    fn an_unreadable_operand_leaves_the_rest_of_the_expression_readable() {
+        // the point of keeping it in place: FRN-1112 keeps FRN-1910, which
+        // the whole-expression fallback used to take down with the typo
+        let tree = parse_prereq_tree("FRN-1910 OU FRN 19543")
+            .unwrap_or_else(|e| panic!("parse: {e}"));
+        assert_eq!(
+            tree,
+            any(vec![
+                course("FRN-1910"),
+                PrereqTree::Raw {
+                    raw: "FRN 19543".to_string()
+                },
+            ])
+        );
+    }
+
+    #[test]
     fn each_operand_and_operator_guard_reports_its_own_error_label() {
         // The table above only proves each input is *some* kind of
-        // MalformedPrerequisites; these five are chosen to each trip a
-        // different guard, so check the `error` label to prove which one.
+        // MalformedPrerequisites; these are chosen to each trip a different
+        // guard, so check the `error` label to prove which one.
         for (raw, expected_error) in [
-            ("GLG-1000 GLG-1900", "two operands in a row"),
-            ("GLG-1000 GEX, Crédits exigés : 60", "two operands in a row"),
+            // a closed group followed by an operand is the only way to reach
+            // the guard: anywhere else, a separator would have swallowed it
+            ("( GLG-1900 ) GLG-1000", "two operands in a row"),
             (
                 "GLG-1000 (GLG-1900 OU GGL-2600)",
                 "( where an operator was expected",

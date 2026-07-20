@@ -1,0 +1,43 @@
+{
+  "code": "ESP-1000",
+  "title": "Estructuras del español I",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "ESG-2020 à 3799 OU Examen Classement en espagnol avec résultat de 5 à 8 OU Examen Test espagnol avec résultat de 5 à 5",
+    "tree": {
+      "any": [
+        {
+          "raw": "ESG-2020 à 3799"
+        },
+        {
+          "raw": "Examen Classement en espagnol avec résultat de 5 à 8"
+        },
+        {
+          "raw": "Examen Test espagnol avec résultat de 5 à 5"
+        }
+      ]
+    }
+  },
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "groups": [
+        [
+          {
+            "nrc": "84332",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "09:00",
+                "end": "11:50"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

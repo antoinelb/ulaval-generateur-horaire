@@ -1,0 +1,22 @@
+{
+  "code": "GMC-7000",
+  "title": "Combustion",
+  "credits": 3,
+  "cycle": 2,
+  "prerequisites": null,
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "groups": [
+        [
+          {
+            "nrc": "85480",
+            "section": "DH1",
+            "mode": "hybrid",
+            "slots": []
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "code": "FRN-1112",
+  "title": "Introduction à la lexicologie et à la lexicographie",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "FRN-1910 OU FRN 19543",
+    "tree": {
+      "any": [
+        "FRN-1910",
+        {
+          "raw": "FRN 19543"
+        }
+      ]
+    }
+  },
+  "equivalents": [],
+  "seasons": {
+    "winter": {
+      "groups": [
+        [
+          {
+            "nrc": "14570",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "12:30",
+                "end": "15:20"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

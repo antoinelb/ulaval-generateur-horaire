@@ -26,6 +26,11 @@ pub enum Prerequisites {
 #[serde(untagged)]
 pub enum PrereqTree {
     Course(String),
+    // an operand no rule can check automatically — an examination
+    // (« Examen Test français … avec résultat de 060.0 à 100.0 », FRN-1904)
+    // or a range of course numbers (« ESG-2020 à 3799 », ESP-1000) — kept
+    // verbatim for the student to judge, never dropped
+    Raw { raw: String },
     All { all: Vec<PrereqTree> },
     Any { any: Vec<PrereqTree> },
     ProgramCredits { program_credits: ProgramCredits },
@@ -333,6 +338,22 @@ mod tests {
                     program: Some("GEX".to_string()),
                     credits: 60,
                 }
+            }
+        );
+        assert_eq!(serde_json::to_value(&tree).expect("ser"), as_value(json));
+    }
+
+    #[test]
+    fn prereq_raw_variant_round_trips() {
+        // an operand kept verbatim is an object with a single `raw` key,
+        // which no other variant claims — a course is a bare string, and a
+        // group is keyed `all`/`any`
+        let json = r#"{"raw":"Examen Test espagnol avec résultat de 5 à 5"}"#;
+        let tree: PrereqTree = serde_json::from_str(json).expect("raw");
+        assert_eq!(
+            tree,
+            PrereqTree::Raw {
+                raw: "Examen Test espagnol avec résultat de 5 à 5".to_string()
             }
         );
         assert_eq!(serde_json::to_value(&tree).expect("ser"), as_value(json));

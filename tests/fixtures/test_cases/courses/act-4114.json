@@ -1,0 +1,54 @@
+{
+  "code": "ACT-4114",
+  "title": "Apprentissage statistique en actuariat",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "ACT-2002 ET ACT-2003 ET ACT-1000 à 4999, Crédits exigés : 39",
+    "tree": {
+      "all": [
+        "ACT-2002",
+        "ACT-2003",
+        {
+          "program_credits": {
+            "program": "ACT",
+            "credits": 39
+          }
+        }
+      ]
+    }
+  },
+  "equivalents": [
+    "ACT-6114"
+  ],
+  "seasons": {
+    "winter": {
+      "groups": [
+        [
+          {
+            "nrc": "12305",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "10:30",
+                "end": "11:20"
+              },
+              {
+                "day": "wednesday",
+                "start": "11:30",
+                "end": "12:20"
+              },
+              {
+                "day": "thursday",
+                "start": "10:30",
+                "end": "12:20"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

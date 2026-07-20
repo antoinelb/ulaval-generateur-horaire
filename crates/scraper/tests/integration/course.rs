@@ -10,8 +10,9 @@ const FIXTURE_DIR: &str = concat!(
 );
 
 const FIXTURES: &[&str] = &[
-    "ecn-4901", "gae-3008", "gci-1007", "gci-2010", "gex-3100", "gex-3333",
-    "gex-4008", "gex-7002",
+    "act-4114", "ecn-4901", "esp-1000", "frn-1112", "gae-3008", "gci-1007",
+    "gci-2010", "gci-2510", "gex-3100", "gex-3333", "gex-4008", "gex-7002",
+    "gmc-1590", "gmc-7000", "phi-7750",
 ];
 
 #[test]
@@ -41,6 +42,22 @@ fn parses_every_course_fixture_without_anomalies() {
 
         assert_eq!(got, expected, "parsed course differs from {name}.json");
     }
+}
+
+// GCI-2510 is a « Stage » seminar carrying no credits card at all: it is
+// worth 0 credits rather than being dropped. Its préalable — an obligatory
+// training to pass — reads as an examination, so the whole table above
+// covers it like any other page.
+#[test]
+fn a_seminar_without_a_credits_card_is_worth_zero() {
+    let html_path = format!("{FIXTURE_DIR}/gci-2510.html");
+    let html = fs::read_to_string(&html_path)
+        .unwrap_or_else(|e| panic!("read {html_path}: {e}"));
+
+    let page =
+        parser::course::parse(&html).unwrap_or_else(|e| panic!("parse: {e}"));
+
+    assert_eq!(page.course.credits, 0);
 }
 
 // `Course` is keyed by season alone, but the snapshots are named per
