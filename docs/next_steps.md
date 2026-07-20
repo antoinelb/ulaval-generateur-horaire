@@ -36,13 +36,21 @@ Rhythm for each page type: freeze the real HTML → write the failing integratio
     - [x] Section model: `SeasonOffering { groups: Vec<Vec<Section>> }` — pick one section per group, union the slots; `ComponentKind` dropped, one-off « Date: » slots excluded, guard on «plusieurs sections + sections liées» (ADR `2026-07-sections-en-groupes-de-choix`)
     - [x] Fold a grammar `Err` into `Prerequisites::Raw` + an anomaly at the assembly site (the grammar function itself returns `Result<PrereqTree, ParseError>`)
     - Verify: unit tests per grammar rule plus rejection cases that fall back to raw; integration test parses each frozen `courses/*.html` and compares `serde_json::Value` with the matching `test_cases/courses/*.json`
-- [ ] Program page parser (`parse/program.rs`)
-    - [ ] Page HTML → `core::Program`: mandatory, rules (« Règle N — contrainte parmi : » → `count` vs `min`/`max` credits, list vs reference vs keyword courses), concentrations, profiles
-    - [ ] Unrecognized rule text → `Raw` variant, surfaced, never ignored
-    - Verify: integration test against the three `test_cases/programs/*.json`
-- [ ] Create unit tests for parser
-    - [ ] Fill the gaps the valid fixtures never exercise: malformed times, unknown component types, unrecognized modes, missing elements
-    - Verify: `make test` green; parse modules covered
+- [x] Program page parser (`parser/program.rs`)
+    - [x] Three more test cases frozen and expected: `baccalaureat-en-genie-physique`, `baccalaureat-en-genie-industriel`, `baccalaureat-en-genie-mecanique` — between them they exercise six constructions the first three pages never did
+    - [x] Page HTML → `core::Program`: groups (`div.fe-bloc-section`) → blocks (`div.collapsible-sections`) → accordions; « Cours obligatoires » → `mandatory`, « Règle N – \<contrainte\> » → `rules`, the `<h3>` naming the role of a group — and a group that has none read by its block count, with an anomaly (ADR `2026-07-blocs-de-la-page-programme`)
+    - [x] Constraint grammar: `Un cours parmi :` → `{count: 1}`, `X crédits` / `X à Y crédits` → `{min, max}`, the « parmi : » tail optional; an unreadable one leaves `constraint: None` rather than a made-up number (ADR `2026-07-contrainte-de-regle-optionnelle`)
+    - [x] `Concentration` gains `mandatory` (génie industriel, mécanique) and an optional `credits_required` (ADR `2026-07-cours-obligatoires-de-concentration`); a second program block feeds `Program.mandatory`, which retires the maîtrise's fabricated « Recherche » rule
+    - [x] Unrecognized rule text → `Raw` variant, surfaced, never ignored; `raw` carries the **whole** paragraph, the grammar matching only a prefix of it (ADR `2026-07-texte-brut-de-regle-paragraphe-complet`)
+    - [x] Prose no grammar covers — subgroup labels, English requirements, the stage exigé pour diplômer (GCI-2580, GEX-1580, GMC-2580) — kept in `notes` on rules and blocks, displayed and never interpreted (ADR `2026-07-notes-en-prose-conservees`)
+    - [x] The three hand-written fixtures regenerated from the frozen HTML: they predated it by four days and had lost ENT-4020/GEX-3501 and fabricated `{min:30,max:30}` (ADR `2026-07-fixtures-programmes-regenerees`)
+    - Verify: `make test` green at 100 % on `parser/program.rs`; the integration test parses each frozen `programs/*.html`, compares `serde_json::Value` with the matching `.json`, **and** pins the anomalies each page is expected to raise — an unlisted one fails
+- [x] Drive the program parser — `ulaval-scraper program <url>... [--output-dir data]`
+    - [x] The URLs are **mandatory positional arguments**: unlike `catalogue` and `courses`, this command has no derivable work queue — a program page URL is a slug no course code rebuilds, and only the programs whose rules are wanted need their page at all
+    - [x] One file per program, `data/programmes/{code}.json`, a bare `core::Program` — the very shape of the parser fixtures, so the integration test compares the written artifact byte for byte with `test_cases/programs/*.json` (ADR `2026-07-un-fichier-par-programme`)
+    - [x] A run writes only the programs it was named and sweeps nothing; `{code}.manuel.json` (the hand-encoded `cheminement_type`) is out of reach by construction (ADR `2026-07-cheminement-type-en-fichier-manuel`)
+    - [x] A failing URL is an anomaly in `data/programmes_errors.log`, never an abort — `collect`, not `try_collect`, with `write_error_log` warning on stderr (ADR `2026-07-echec-de-page-programme-non-bloquant`); no cache, the run is seconds not minutes
+    - Verify: `make test` green at 100 % on `scraper/src/program.rs`; live run over the six known programs, each output diffed against its fixture
 - [x] Next, out of parser scope (completes jalon 1): drive the course parser over the catalogue and write the session snapshots — `ulaval-scraper courses [--output-dir data] [--subjects gex gci]`
     - [x] Work queue = `data/catalogue.json` (course URLs are slugs, not derivable from a code); `--subjects` narrows by code prefix, case-insensitive, and omitting it scrapes the whole catalogue; an unknown subject is a hard error
     - [x] One `data/cours/{session}.json` per (season, year) found — `parse_seasons` now surfaces the year on `CoursePage.years`, `Course` stays keyed by season (ADR `2026-07-cours-par-session-et-annee`)

@@ -1,0 +1,397 @@
+{
+  "code": "baccalaureat-en-genie-industriel",
+  "title": "Baccalauréat en génie industriel",
+  "cycle": 1,
+  "credits_required": 120,
+  "mandatory": [
+    "GIN-1500",
+    "GMC-1000",
+    "GSC-1000",
+    "MAT-1900",
+    "STT-1900",
+    "ECN-4901",
+    "GIN-2010",
+    "GIN-3040",
+    "GLO-1901",
+    "MAT-1910",
+    "GIN-2110",
+    "GIN-2120",
+    "GIN-3030",
+    "GSO-2100",
+    "MAT-2910",
+    "GIN-3000",
+    "GIN-3010",
+    "GIN-3020",
+    "MQT-2100",
+    "RLT-3300",
+    "GIN-3050",
+    "GIN-3060",
+    "GIN-3080",
+    "GIN-3110",
+    "GSO-3103",
+    "GIN-3200",
+    "GIN-3220",
+    "CTB-1001",
+    "GIN-3310",
+    "RLT-1700",
+    "GIN-3320",
+    "PHI-3900"
+  ],
+  "rules": [
+    {
+      "title": "Règle 1",
+      "constraint": {
+        "min": 3,
+        "max": 3
+      },
+      "courses": [
+        "MED-1100",
+        "RLT-2002"
+      ]
+    },
+    {
+      "title": "Règle 2",
+      "constraint": {
+        "min": 3,
+        "max": 3
+      },
+      "courses": [
+        "BIO-1910",
+        "BIO-2909",
+        "BIO-4900",
+        "GLG-1000",
+        "PHY-1000",
+        "PHY-2100"
+      ]
+    },
+    {
+      "title": "Autres exigences – Règle 1",
+      "constraint": {
+        "min": 3,
+        "max": 3
+      },
+      "raw": "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues doit choisir un cours d'anglais de niveau supérieur. S'il a acquis le niveau Advanced English II (VEPT : 63), il peut choisir un cours d'une autre langue moderne."
+    },
+    {
+      "title": "Autres exigences – Règle 2",
+      "constraint": {
+        "min": 15,
+        "max": 15
+      },
+      "raw": "Réussir les cours requis par sa concentration."
+    }
+  ],
+  "concentrations": [
+    {
+      "title": "Approche généraliste",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 15,
+            "max": 15
+          },
+          "courses": [
+            "GIF-1003",
+            "GIN-4021",
+            "GMC-2007",
+            "GMC-4100",
+            "GMC-4200",
+            "GMC-4202",
+            "GSO-2102",
+            "GSO-2104",
+            "GSO-2105",
+            "IFT-1003",
+            "MQT-2101",
+            "MQT-3000",
+            "STT-1100"
+          ]
+        }
+      ],
+      "notes": [
+        "L'étudiant admis au profil entrepreneurial choisit les activités qui y sont prévues."
+      ]
+    },
+    {
+      "title": "Ingénierie de la chaîne logistique et des réseaux de création de valeur",
+      "credits_required": 15,
+      "mandatory": [
+        "GIN-4021"
+      ],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 3,
+            "max": 9
+          },
+          "courses": [
+            "GSO-2102",
+            "GSO-2104",
+            "GSO-2105"
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "min": 3,
+            "max": 9
+          },
+          "courses": [
+            "GGR-2109",
+            "GIN-4003",
+            "GLO-2005",
+            "GSO-2106",
+            "MNG-2100",
+            "SIO-2100",
+            "SIO-2104"
+          ]
+        },
+        {
+          "title": "Règle 3",
+          "constraint": {
+            "min": 0,
+            "max": 6
+          },
+          "courses": [
+            "GIF-1003",
+            "GMC-1300",
+            "GMC-2007",
+            "GMC-3016",
+            "GMC-4100",
+            "GMC-4200",
+            "GMC-4202",
+            "IFT-1003",
+            "MQT-2101",
+            "MQT-3000",
+            "STT-1100"
+          ]
+        },
+        {
+          "title": "Règle 4",
+          "constraint": {
+            "min": 0,
+            "max": 3
+          },
+          "courses": [
+            "MNG-3103"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Ingénierie en intelligence numérique des systèmes",
+      "credits_required": 15,
+      "mandatory": [
+        "MQT-3000"
+      ],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
+          "courses": [
+            "MQT-2101",
+            "STT-1100"
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "min": 6,
+            "max": 9
+          },
+          "courses": [
+            "GIN-4003",
+            "GIN-4021",
+            "GLO-2005",
+            "GLO-4000",
+            "GSO-3105",
+            "MQT-2102",
+            "SIO-3105",
+            "STT-4230"
+          ]
+        },
+        {
+          "title": "Règle 3",
+          "constraint": {
+            "min": 0,
+            "max": 3
+          },
+          "courses": [
+            "GIF-1003",
+            "GMC-1300",
+            "GMC-2007",
+            "GMC-3016",
+            "GMC-4100",
+            "GSO-2102",
+            "GSO-2104",
+            "GSO-2105",
+            "IFT-1003"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Ingénierie de l'informatisation des systèmes d'entreprise",
+      "credits_required": 15,
+      "mandatory": [
+        "GIF-1003"
+      ],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
+          "courses": [
+            "IFT-1003",
+            "SIO-2103"
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "min": 3,
+            "max": 9
+          },
+          "courses": [
+            "GIN-4003",
+            "GIN-4021",
+            "GLO-2004",
+            "GLO-2005",
+            "GLO-2100",
+            "GLO-4000",
+            "IFT-4102",
+            "SIO-2100",
+            "SIO-2104",
+            "SIO-3100"
+          ]
+        },
+        {
+          "title": "Règle 3",
+          "constraint": {
+            "min": 0,
+            "max": 6
+          },
+          "courses": [
+            "GMC-1300",
+            "GMC-2007",
+            "GMC-3016",
+            "GMC-4100",
+            "GMC-4200",
+            "GMC-4202",
+            "GSO-2102",
+            "GSO-2104",
+            "GSO-2105",
+            "MQT-2101",
+            "MQT-3000",
+            "STT-1100"
+          ]
+        },
+        {
+          "title": "Règle 4",
+          "constraint": {
+            "min": 0,
+            "max": 3
+          },
+          "courses": [
+            "MNG-3103"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Systèmes productiques et distributiques",
+      "credits_required": 15,
+      "mandatory": [
+        "GMC-2007"
+      ],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 6,
+            "max": 9
+          },
+          "courses": [
+            "GMC-1300",
+            "GMC-3016",
+            "GMC-4100",
+            "GMC-4200",
+            "GMC-4202"
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "min": 3,
+            "max": 6
+          },
+          "courses": [
+            "GGR-2109",
+            "GIN-4003",
+            "GLO-2005",
+            "GSO-2102",
+            "GSO-2104"
+          ]
+        },
+        {
+          "title": "Règle 3",
+          "constraint": {
+            "min": 0,
+            "max": 3
+          },
+          "courses": [
+            "GIF-1003",
+            "GIN-4021",
+            "GSO-2105",
+            "IFT-1003",
+            "MQT-2101",
+            "MQT-3000",
+            "STT-1100"
+          ]
+        }
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "title": "Profil entrepreneurial",
+      "credits_required": 12,
+      "mandatory": [
+        "ENT-1000",
+        "ENT-3000",
+        "ENT-3010"
+      ],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
+          "courses": [
+            "ENT-2023",
+            "ENT-2145"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Profil international",
+      "mandatory": [
+        "EHE-1GIN"
+      ],
+      "rules": []
+    }
+  ],
+  "notes": [
+    "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GIN-3580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GIN-3590, GIN-3591 et GIN-3592. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
+  ]
+}

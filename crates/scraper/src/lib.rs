@@ -9,3 +9,4 @@ pub mod course;
 pub mod fetch;
 pub mod parser;
 mod print;
+pub mod program;

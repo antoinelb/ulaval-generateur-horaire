@@ -44,7 +44,7 @@ Load-bearing invariants (constraints, not preferences) are in `docs/project_plan
 ## Domain quick facts
 
 - **Session naming & founding hypothesis**: files are named season+year (`a2026` = Automne 2026, `h####` = Hiver, `e####` = Été). A future session with no published schedule reuses the most recent snapshot of the *same season* — so keep one snapshot per season, never blindly overwritten.
-- **Data files**: `data/cours/{session}.json` (per-course: `code`, `title`, `credits`, `cycle`, subject, `prerequisites` raw + parsed tree, contributing programs, `equivalents`, per-season choice groups of sections with NRC/section/mode/slots) and `data/programmes.json` (`credits_required`, `mandatory`, `rules`, `concentrations`, `profiles`, plus the hand-encoded `cheminement_type`).
+- **Data files**: `data/cours/{session}.json` (per-course: `code`, `title`, `credits`, `cycle`, subject, `prerequisites` raw + parsed tree, contributing programs, `equivalents`, per-season choice groups of sections with NRC/section/mode/slots) and `data/programmes/{code}.json` — one file per program, a bare `core::Program` (`credits_required`, `mandatory`, `rules`, `concentrations`, `profiles`, `notes` for prose no grammar covers) — beside `data/programmes/{code}.manuel.json`, which carries the hand-encoded `cheminement_type` and is never written by the scraper.
 - **`matière` = course-code prefix** (`GCI-`, `GEX-`); filtering by subject filters the catalogue URLs, no facet needed.
 - **Program mapping comes from course pages** ("Cette activité est contributoire dans :"), not program pages; only programs whose rules are needed get their page scraped.
 - **`cheminement_type` (A1→H8 organigramme) is hand-encoded**, GEX only — no machine-readable source exists.

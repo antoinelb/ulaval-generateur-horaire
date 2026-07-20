@@ -8,8 +8,9 @@ use clap::builder::styling::{AnsiColor, Styles};
 use clap::{Parser, Subcommand};
 
 use crate::course::{self, CourseError, SessionSnapshot};
+use crate::program::{self, ProgramError};
 use crate::{catalogue, fetch::Fetcher, parser::ParseError, print};
-use ulaval_scheduler_core::{Catalogue, CatalogueEntry};
+use ulaval_scheduler_core::{Catalogue, CatalogueEntry, Program};
 
 // ~10 requests/second, the politeness budget the whole scraper shares
 // (ADR `2026-07-conception-du-fetcher`)
@@ -53,6 +54,16 @@ enum Command {
         #[arg(long, num_args = 1.., value_delimiter = ' ')]
         subjects: Vec<String>,
     },
+    Program {
+        #[arg(long, default_value = "data")]
+        output_dir: String,
+        // Required, unlike every other work queue in this binary: a program
+        // page URL is a slug no course code can rebuild, and only the
+        // programs whose rules are wanted need their page scraped at all —
+        // so the list is the caller's to give.
+        #[arg(required = true, num_args = 1..)]
+        urls: Vec<String>,
+    },
 }
 
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
@@ -83,6 +94,10 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
             let (sessions, anomalies) =
                 get_courses(&output_dir, &subjects).await?;
             write_courses(sessions, anomalies, &output_dir, &subjects)
+        }
+        Command::Program { output_dir, urls } => {
+            let (programs, anomalies) = get_programs(&urls).await;
+            write_programs(programs, anomalies, &output_dir)
         }
     }
 }
@@ -276,6 +291,47 @@ fn stale_sessions(
         })
         .map(|entry| entry.path())
         .collect()
+}
+
+// no `Result`, unlike its two siblings: there is no work queue to read and
+// no cache directory to create, so nothing can fail before the first request
+async fn get_programs(urls: &[String]) -> (Vec<Program>, Vec<ProgramError>) {
+    // expect over `?`: this static config provably builds (the failure path
+    // needs an injected bad builder — seam-tested in fetch.rs)
+    let fetcher = Fetcher::new(min_interval, backoff)
+        .expect("static fetcher config always builds");
+    program::scrape(&fetcher, urls).await
+}
+
+// One file per program rather than one snapshot holding them all: a run is
+// restricted to the URLs it was handed, so it writes exactly those and
+// leaves every other program's file — including the hand-maintained
+// `{code}.manuel.json` — alone (ADR `2026-07-un-fichier-par-programme`).
+fn write_programs(
+    programs: Vec<Program>,
+    anomalies: Vec<ProgramError>,
+    output_dir: &str,
+) -> anyhow::Result<()> {
+    let dir = Path::new(output_dir);
+    let programs_dir = dir.join("programmes");
+    let task = print::task(
+        &format!("Writing programs to {}...", programs_dir.display()),
+        &format!("Wrote programs in {}.", programs_dir.display()),
+    );
+    std::fs::create_dir_all(&programs_dir)?;
+
+    for program in programs {
+        // expect over `?`: serializing strings, vecs and options provably
+        // cannot fail
+        let json = serde_json::to_string_pretty(&program)
+            .expect("Program serialization always succeeds");
+        let path = programs_dir.join(format!("{}.json", program.code));
+        write_atomic(&path, &(json + "\n"))?;
+    }
+    write_error_log(&dir.join("programmes_errors.log"), &anomalies)?;
+
+    task.done();
+    Ok(())
 }
 
 fn write_error_log(
@@ -799,6 +855,170 @@ mod tests {
             .respond_with(
                 ResponseTemplate::new(200)
                     .set_body_string(crate::course::tests::course_html(code)),
+            )
+            .mount(server)
+            .await;
+    }
+
+    #[tokio::test]
+    async fn scraped_programs_are_written_one_file_each() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        mount_program(&server, "genie-civil").await;
+        mount_program(&server, "genie-des-eaux").await;
+        let dir = test_dir("programs-happy");
+
+        run(programs_args(
+            &dir,
+            &[
+                &program_url(&server, "genie-civil"),
+                &program_url(&server, "genie-des-eaux"),
+            ],
+        ))
+        .await
+        .unwrap_or_else(|e| panic!("scrape two programs: {e}"));
+
+        let programmes = dir.join("programmes");
+        let civil =
+            std::fs::read_to_string(programmes.join("genie-civil.json"))
+                .unwrap_or_else(|e| panic!("read the program file: {e}"));
+        assert!(civil.contains("genie-civil"), "{civil}");
+        assert!(programmes.join("genie-des-eaux.json").exists());
+        // declaration order, not alphabetical: these files are committed and
+        // the diffs have to stay readable
+        assert!(civil.find("\"code\"") < civil.find("\"title\""), "{civil}");
+        assert!(!dir.join("programmes_errors.log").exists(), "clean run");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn program_without_any_url_is_a_usage_error() {
+        // there is no work queue to fall back on, so an empty list can only
+        // mean the caller forgot — never « scrape everything »
+        let error = run(vec!["program".to_string()])
+            .await
+            .expect_err("the URL list is mandatory");
+
+        let message = error.to_string();
+        assert!(message.contains("URLS"), "{message}");
+        assert!(message.contains("required"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn program_help_prints_help_and_succeeds() {
+        for flag in ["--help", "-h"] {
+            let result =
+                run(vec!["program".to_string(), flag.to_string()]).await;
+
+            assert!(result.is_ok(), "program {flag} is a help request");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_failing_url_is_logged_and_the_reachable_programs_still_land() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        mount_program(&server, "genie-civil").await;
+        // nothing mounted for the second URL, so it 404s
+        let dir = test_dir("programs-error-log");
+
+        run(programs_args(
+            &dir,
+            &[
+                &program_url(&server, "genie-civil"),
+                &program_url(&server, "genie-absent"),
+            ],
+        ))
+        .await
+        .unwrap_or_else(|e| panic!("a 404 must not fail the run: {e}"));
+
+        assert!(
+            dir.join("programmes").join("genie-civil.json").exists(),
+            "the reachable program still lands"
+        );
+        let logged =
+            std::fs::read_to_string(dir.join("programmes_errors.log"))
+                .unwrap_or_else(|e| panic!("read the error log: {e}"));
+        assert!(logged.contains("genie-absent"), "{logged}");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn an_unusable_programs_dir_is_an_error() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        mount_program(&server, "genie-civil").await;
+        let dir = test_dir("programs-blocked-dir");
+        // a file where the program files must go
+        std::fs::write(dir.join("programmes"), "in the way")
+            .unwrap_or_else(|e| panic!("block the programs dir: {e}"));
+
+        let result =
+            run(programs_args(&dir, &[&program_url(&server, "genie-civil")]))
+                .await;
+
+        assert!(result.is_err(), "an unusable programs dir must fail");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn an_unwritable_program_file_is_an_error() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        mount_program(&server, "genie-civil").await;
+        let dir = test_dir("programs-blocked-file");
+        // a directory at the target path makes the rename fail
+        std::fs::create_dir_all(
+            dir.join("programmes").join("genie-civil.json"),
+        )
+        .unwrap_or_else(|e| panic!("block the program path: {e}"));
+
+        let result =
+            run(programs_args(&dir, &[&program_url(&server, "genie-civil")]))
+                .await;
+
+        assert!(result.is_err(), "an unwritable program file must fail");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn an_unwritable_program_error_log_is_an_error() {
+        let _guard = lock_print();
+        // nothing mounted: the only URL 404s, so there is something to log —
+        // and the path it must be logged to is blocked
+        let server = MockServer::start().await;
+        let dir = test_dir("programs-blocked-log");
+        std::fs::create_dir_all(dir.join("programmes_errors.log"))
+            .unwrap_or_else(|e| panic!("block the log path: {e}"));
+
+        let result =
+            run(programs_args(&dir, &[&program_url(&server, "absent")])).await;
+
+        assert!(result.is_err(), "an unwritable error log must fail");
+        cleanup(&dir);
+    }
+
+    fn programs_args(dir: &Path, urls: &[&str]) -> Vec<String> {
+        let mut args = vec![
+            "program".to_string(),
+            "--output-dir".to_string(),
+            dir.display().to_string(),
+        ];
+        args.extend(urls.iter().map(|url| url.to_string()));
+        args
+    }
+
+    fn program_url(server: &MockServer, slug: &str) -> String {
+        format!("{}/{slug}", server.uri())
+    }
+
+    async fn mount_program(server: &MockServer, slug: &str) {
+        Mock::given(method("GET"))
+            .and(wiremock::matchers::path(format!("/{slug}")))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_string(
+                    crate::program::tests::program_html(slug),
+                ),
             )
             .mount(server)
             .await;

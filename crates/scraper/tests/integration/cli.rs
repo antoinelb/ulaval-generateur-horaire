@@ -4,7 +4,8 @@ use std::process::Command;
 
 use ulaval_scheduler_core::{Catalogue, CatalogueEntry};
 use ulaval_scheduler_scraper::cli;
-use wiremock::MockServer;
+use wiremock::matchers::method;
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use crate::catalogue::{
     facet_html, mount_matiere_page, mount_page, page_html,
@@ -197,6 +198,68 @@ async fn an_unremovable_stale_error_log_is_an_error() {
     cleanup(&dir);
 }
 
+// -- programs ---------------------------------------------------------------
+
+#[tokio::test]
+async fn a_program_is_written_exactly_as_the_parser_fixture_expects() {
+    // The scraper writes a `core::Program` with no envelope, which is what
+    // the parser fixtures already are: the frozen page and its expected JSON
+    // pin the production artifact, not merely the parser.
+    let server = MockServer::start().await;
+    mount_fixture(&server, "baccalaureat-en-genie-civil").await;
+    let dir = test_dir("run-program");
+
+    run_program(&dir, &[server.uri()])
+        .await
+        .unwrap_or_else(|e| panic!("scrape a program: {e}"));
+
+    assert_eq!(
+        read(&dir.join("programmes/baccalaureat-en-genie-civil.json")),
+        read(&program_fixture("baccalaureat-en-genie-civil.json")),
+    );
+    assert!(
+        !dir.join("programmes_errors.log").exists(),
+        "génie civil parses without a single anomaly"
+    );
+    cleanup(&dir);
+}
+
+#[tokio::test]
+async fn a_run_leaves_the_programs_it_was_not_given_alone() {
+    // one file per program, and no sweeping: a run is scoped to the URLs it
+    // was handed, so another program's snapshot — and the hand-maintained
+    // cheminement type beside it — outlive it (ADR
+    // `2026-07-un-fichier-par-programme`)
+    let server = MockServer::start().await;
+    mount_fixture(&server, "baccalaureat-en-genie-civil").await;
+    let dir = test_dir("run-program-scoped");
+    let programmes = dir.join("programmes");
+    fs::create_dir_all(&programmes)
+        .unwrap_or_else(|e| panic!("pre-create the programs dir: {e}"));
+    let untouched = [
+        "baccalaureat-en-genie-des-eaux.json",
+        "baccalaureat-en-genie-des-eaux.manuel.json",
+    ];
+    for name in untouched {
+        fs::write(programmes.join(name), "earlier run\n")
+            .unwrap_or_else(|e| panic!("plant {name}: {e}"));
+    }
+
+    run_program(&dir, &[server.uri()])
+        .await
+        .unwrap_or_else(|e| panic!("scrape one program: {e}"));
+
+    assert!(programmes.join("baccalaureat-en-genie-civil.json").exists());
+    for name in untouched {
+        assert_eq!(
+            read(&programmes.join(name)),
+            "earlier run\n",
+            "{name} was not named by this run and must survive it"
+        );
+    }
+    cleanup(&dir);
+}
+
 // -- the compiled binary end to end ----------------------------------------
 
 #[tokio::test(flavor = "multi_thread")]
@@ -223,6 +286,47 @@ async fn the_binary_scrapes_a_catalogue_end_to_end() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Wrote catalogue"), "{stdout}");
     cleanup(&dir);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_binary_scrapes_a_program_end_to_end() {
+    // multi_thread: the blocking child process and the mock server must not
+    // share the one test thread
+    let server = MockServer::start().await;
+    mount_fixture(&server, "baccalaureat-en-genie-civil").await;
+    let dir = test_dir("e2e-program");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_ulaval-scraper"))
+        .args([
+            "program",
+            "--output-dir",
+            &dir.display().to_string(),
+            &server.uri(),
+        ])
+        .output()
+        .unwrap_or_else(|e| panic!("run the scraper binary: {e}"));
+
+    assert!(output.status.success(), "{output:?}");
+    assert!(dir
+        .join("programmes/baccalaureat-en-genie-civil.json")
+        .exists());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Wrote programs"), "{stdout}");
+    cleanup(&dir);
+}
+
+#[test]
+fn the_binary_rejects_program_without_a_url_with_exit_code_2() {
+    // the URL list is the whole work queue: there is nothing to default to
+    let output = Command::new(env!("CARGO_BIN_EXE_ulaval-scraper"))
+        .arg("program")
+        .output()
+        .unwrap_or_else(|e| panic!("run the scraper binary: {e}"));
+
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("required"), "{stderr}");
+    assert!(stderr.contains("URLS"), "{stderr}");
 }
 
 #[test]
@@ -270,6 +374,34 @@ async fn run_catalogue(dir: &Path, url: &str) -> anyhow::Result<()> {
         url.to_string(),
     ])
     .await
+}
+
+async fn run_program(dir: &Path, urls: &[String]) -> anyhow::Result<()> {
+    let mut args = vec![
+        "program".to_string(),
+        "--output-dir".to_string(),
+        dir.display().to_string(),
+    ];
+    args.extend(urls.iter().cloned());
+    cli::run(args).await
+}
+
+// serves the frozen page of a parser fixture, so the whole chain runs on
+// real ULaval markup rather than on a builder's idea of it
+async fn mount_fixture(server: &MockServer, name: &str) {
+    let html = read(&program_fixture(&format!("{name}.html")));
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(html))
+        .mount(server)
+        .await;
+}
+
+fn program_fixture(name: &str) -> PathBuf {
+    Path::new(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/fixtures/test_cases/programs",
+    ))
+    .join(name)
 }
 
 fn entry(code: &str) -> CatalogueEntry {

@@ -10,6 +10,9 @@ const FIXTURE_DIR: &str = concat!(
 const FIXTURES: &[&str] = &[
     "baccalaureat-en-genie-civil",
     "baccalaureat-en-genie-des-eaux",
+    "baccalaureat-en-genie-industriel",
+    "baccalaureat-en-genie-mecanique",
+    "baccalaureat-en-genie-physique",
     "maitrise-en-genie-des-eaux-avec-memoire",
 ];
 

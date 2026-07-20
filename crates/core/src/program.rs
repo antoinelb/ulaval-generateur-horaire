@@ -1,5 +1,10 @@
 use crate::common::Cycle;
 
+// A block of the « Structure du programme » section, in its three roles. The
+// prose a block carries — thematic subgroup labels, stage requirements, the
+// English-level note — is understood by no grammar, so it rides along in
+// `notes`: displayed to the student, never interpreted (ADR
+// `2026-07-notes-en-prose-conservees`).
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Program {
     pub code: String,
@@ -10,13 +15,22 @@ pub struct Program {
     pub rules: Vec<Rule>,
     pub concentrations: Vec<Concentration>,
     pub profiles: Vec<Profile>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Concentration {
     pub title: String,
-    pub credits_required: i64,
+    // every concentration of the six known pages carries « N crédits
+    // exigés », but the figure is optional on a block — `Profile` already
+    // proves the shape, and an `Option` is one less way to invent a number
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credits_required: Option<i64>,
+    pub mandatory: Vec<String>,
     pub rules: Vec<Rule>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -26,14 +40,23 @@ pub struct Profile {
     pub credits_required: Option<i64>,
     pub mandatory: Vec<String>,
     pub rules: Vec<Rule>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Rule {
     pub title: String,
-    pub constraint: Constraint,
+    // « Règle 1 – Réussir la scolarité de » (génie mécanique) is cut off
+    // mid-sentence and names no number anywhere: the rule is still shown,
+    // and the solver skips what it cannot count (ADR
+    // `2026-07-contrainte-de-regle-optionnelle`)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub constraint: Option<Constraint>,
     #[serde(flatten)]
     pub courses: RuleCourses,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -160,6 +183,29 @@ mod tests {
     }
 
     #[test]
+    fn rule_without_a_constraint_round_trips_without_the_key() {
+        // « Règle 1 – Réussir la scolarité de »: the header names no number,
+        // so the rule is carried without one rather than with a made-up one
+        let json = r#"{"title":"Règle 1","raw":"Réussir la scolarité de deuxième cycle suivante :"}"#;
+        let rule = assert_rule_round_trips(json);
+        assert_eq!(rule.constraint, None);
+    }
+
+    #[test]
+    fn rule_notes_round_trip_and_vanish_when_empty() {
+        let json = r#"{"title":"Règle 4","constraint":{"min":3,"max":3},"courses":["IFT-4902"],"notes":["Programmation"]}"#;
+        let rule = assert_rule_round_trips(json);
+        assert_eq!(rule.notes, vec!["Programmation".to_string()]);
+
+        // the same rule without notes serializes no `notes` key at all
+        let bare = Rule {
+            notes: Vec::new(),
+            ..rule
+        };
+        assert!(!serde_json::to_string(&bare).expect("ser").contains("notes"));
+    }
+
+    #[test]
     fn rule_without_courses_nor_raw_is_rejected() {
         let json = r#"{"title":"Règle 1","constraint":{"count":1}}"#;
         assert!(serde_json::from_str::<Rule>(json).is_err());
@@ -178,5 +224,28 @@ mod tests {
         let profile: Profile = serde_json::from_str(json).expect("profile");
         assert_eq!(profile.credits_required, None);
         assert_eq!(serde_json::to_string(&profile).expect("ser"), json);
+    }
+
+    // --- Concentration: the two fields a real page forced open ---
+
+    #[test]
+    fn concentration_keeps_its_mandatory_courses_and_notes() {
+        // génie industriel and génie mécanique put a « Cours obligatoires »
+        // accordion inside a concentration (ADR
+        // `2026-07-cours-obligatoires-de-concentration`)
+        let json = r#"{"title":"Robotique","credits_required":18,"mandatory":["GMC-3351"],"rules":[],"notes":["Un stage est exigé."]}"#;
+        let concentration: Concentration =
+            serde_json::from_str(json).expect("concentration");
+        assert_eq!(concentration.mandatory, vec!["GMC-3351".to_string()]);
+        assert_eq!(serde_json::to_string(&concentration).expect("ser"), json);
+    }
+
+    #[test]
+    fn concentration_without_credits_round_trips_without_the_key() {
+        let json = r#"{"title":"Robotique","mandatory":[],"rules":[]}"#;
+        let concentration: Concentration =
+            serde_json::from_str(json).expect("concentration");
+        assert_eq!(concentration.credits_required, None);
+        assert_eq!(serde_json::to_string(&concentration).expect("ser"), json);
     }
 }
