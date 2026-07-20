@@ -1,8 +1,8 @@
 {
   "courses": [
     {
-      "code": "GEL-7021",
-      "title": "Spectrométrie par transformation de Fourier",
+      "code": "ANG-7121",
+      "title": "Post-Modern American Literature",
       "credits": 3,
       "cycle": 2,
       "prerequisites": null,
@@ -12,7 +12,7 @@
           "groups": [
             [
               {
-                "nrc": "83385",
+                "nrc": "96075",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -23,8 +23,8 @@
       }
     },
     {
-      "code": "PHI-1137",
-      "title": "Montaigne",
+      "code": "EAN-2112",
+      "title": "Le théâtre en Grèce et à Rome",
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
@@ -34,7 +34,7 @@
           "groups": [
             [
               {
-                "nrc": "93431",
+                "nrc": "96021",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -45,10 +45,10 @@
       }
     },
     {
-      "code": "TRE-6861",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 1,
-      "cycle": 2,
+      "code": "HAR-2154",
+      "title": "La peinture médiévale",
+      "credits": 3,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
@@ -56,7 +56,7 @@
           "groups": [
             [
               {
-                "nrc": "85243",
+                "nrc": "96012",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -67,10 +67,10 @@
       }
     },
     {
-      "code": "TRE-6862",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 2,
-      "cycle": 2,
+      "code": "HST-1320",
+      "title": "Introduction à l'histoire européenne 1750-1914",
+      "credits": 3,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
@@ -78,7 +78,7 @@
           "groups": [
             [
               {
-                "nrc": "85242",
+                "nrc": "91412",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -89,8 +89,8 @@
       }
     },
     {
-      "code": "TRE-6863",
-      "title": "Activité de recherche - mémoire (ajustement)",
+      "code": "SIN-6003",
+      "title": "Lectures dirigées",
       "credits": 3,
       "cycle": 2,
       "prerequisites": null,
@@ -100,7 +100,7 @@
           "groups": [
             [
               {
-                "nrc": "85240",
+                "nrc": "81730",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -111,8 +111,102 @@
       }
     },
     {
-      "code": "TRE-6864",
-      "title": "Activité de recherche - mémoire (ajustement)",
+      "code": "SOC-2127",
+      "title": "Psychosociologie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "81838",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-2152",
+      "title": "Afrique, sociétés et environnement",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "92697",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "STT-7710",
+      "title": "Sujets spéciaux I",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "81592",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              },
+              {
+                "nrc": "87869",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "STT-7730",
+      "title": "Sujets spéciaux III",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "81605",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "STT-7740",
+      "title": "Sujets spéciaux IV",
       "credits": 4,
       "cycle": 2,
       "prerequisites": null,
@@ -122,161 +216,7 @@
           "groups": [
             [
               {
-                "nrc": "85239",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "TRE-6865",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 5,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "groups": [
-            [
-              {
-                "nrc": "85237",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "TRE-6866",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 6,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "groups": [
-            [
-              {
-                "nrc": "85236",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "TRE-6867",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 7,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "groups": [
-            [
-              {
-                "nrc": "85235",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "TRE-6868",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 8,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "groups": [
-            [
-              {
-                "nrc": "85225",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "TRE-6869",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 9,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "groups": [
-            [
-              {
-                "nrc": "85223",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "TRE-6870",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 10,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "groups": [
-            [
-              {
-                "nrc": "85222",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "TRE-6871",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 11,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "groups": [
-            [
-              {
-                "nrc": "85220",
+                "nrc": "82077",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []

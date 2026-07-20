@@ -1,40 +1,18 @@
 {
   "courses": [
     {
-      "code": "GEL-7021",
-      "title": "Spectrométrie par transformation de Fourier",
-      "credits": 3,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "groups": [
-            [
-              {
-                "nrc": "83385",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "PHI-1137",
-      "title": "Montaigne",
+      "code": "CRL-3700",
+      "title": "Travaux dirigés I",
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "fall": {
+        "winter": {
           "groups": [
             [
               {
-                "nrc": "93431",
+                "nrc": "21463",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -45,18 +23,18 @@
       }
     },
     {
-      "code": "TRE-6861",
-      "title": "Activité de recherche - mémoire (ajustement)",
+      "code": "GCI-7010",
+      "title": "Sujets spéciaux (génie civil)",
       "credits": 1,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "fall": {
+        "winter": {
           "groups": [
             [
               {
-                "nrc": "85243",
+                "nrc": "13615",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -67,18 +45,18 @@
       }
     },
     {
-      "code": "TRE-6862",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 2,
-      "cycle": 2,
+      "code": "HAR-2181",
+      "title": "Baroque européen et colonial",
+      "credits": 3,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "fall": {
+        "winter": {
           "groups": [
             [
               {
-                "nrc": "85242",
+                "nrc": "26645",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -89,18 +67,62 @@
       }
     },
     {
-      "code": "TRE-6863",
-      "title": "Activité de recherche - mémoire (ajustement)",
+      "code": "HAR-2350",
+      "title": "Théories et méthodes de l'art contemporain",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "26647",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2160",
+      "title": "Roman français au XXe siècle II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "17659",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-7106",
+      "title": "Littérature, théâtre et cinéma III",
       "credits": 3,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "fall": {
+        "winter": {
           "groups": [
             [
               {
-                "nrc": "85240",
+                "nrc": "26689",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -111,18 +133,21 @@
       }
     },
     {
-      "code": "TRE-6864",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 4,
-      "cycle": 2,
-      "prerequisites": null,
+      "code": "MUS-2410",
+      "title": "Harmonie au clavier II",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "MUS-1410",
+        "tree": "MUS-1410"
+      },
       "equivalents": [],
       "seasons": {
-        "fall": {
+        "winter": {
           "groups": [
             [
               {
-                "nrc": "85239",
+                "nrc": "21078",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -133,18 +158,18 @@
       }
     },
     {
-      "code": "TRE-6865",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 5,
+      "code": "SAC-7010",
+      "title": "Lectures dirigées",
+      "credits": 3,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "fall": {
+        "winter": {
           "groups": [
             [
               {
-                "nrc": "85237",
+                "nrc": "27073",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -155,18 +180,18 @@
       }
     },
     {
-      "code": "TRE-6866",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 6,
-      "cycle": 2,
+      "code": "SOC-2137",
+      "title": "Corps, santé et biopolitique",
+      "credits": 3,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "fall": {
+        "winter": {
           "groups": [
             [
               {
-                "nrc": "85236",
+                "nrc": "20490",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -177,18 +202,18 @@
       }
     },
     {
-      "code": "TRE-6867",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 7,
+      "code": "SOC-7145",
+      "title": "Origines de la pensée sociologique",
+      "credits": 3,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "fall": {
+        "winter": {
           "groups": [
             [
               {
-                "nrc": "85235",
+                "nrc": "20542",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -199,85 +224,21 @@
       }
     },
     {
-      "code": "TRE-6868",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 8,
+      "code": "THL-6224",
+      "title": "Selected Themes in Orthodox Spirituality",
+      "credits": 3,
       "cycle": 2,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "THL-6210"
+      ],
       "seasons": {
-        "fall": {
+        "winter": {
           "groups": [
             [
               {
-                "nrc": "85225",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "TRE-6869",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 9,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "groups": [
-            [
-              {
-                "nrc": "85223",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "TRE-6870",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 10,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "groups": [
-            [
-              {
-                "nrc": "85222",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "TRE-6871",
-      "title": "Activité de recherche - mémoire (ajustement)",
-      "credits": 11,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "groups": [
-            [
-              {
-                "nrc": "85220",
-                "section": "A",
+                "nrc": "26698",
+                "section": "W",
                 "mode": "in-person",
                 "slots": []
               }

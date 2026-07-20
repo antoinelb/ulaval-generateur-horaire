@@ -1,74 +1,8 @@
 {
   "courses": [
     {
-      "code": "CRL-3701",
-      "title": "Travaux dirigés II",
-      "credits": 3,
-      "cycle": 1,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "summer": {
-          "groups": [
-            [
-              {
-                "nrc": "56712",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "ESP-3210",
-      "title": "Proyecto de investigación (literatura)",
-      "credits": 3,
-      "cycle": 1,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "summer": {
-          "groups": [
-            [
-              {
-                "nrc": "50276",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "HAR-2201",
-      "title": "Architecture de la ville de Québec",
-      "credits": 3,
-      "cycle": 1,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "summer": {
-          "groups": [
-            [
-              {
-                "nrc": "57842",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "SAC-7010",
-      "title": "Lectures dirigées",
+      "code": "BCM-7007",
+      "title": "Évolution des systèmes biologiques moléculaires",
       "credits": 3,
       "cycle": 2,
       "prerequisites": null,
@@ -78,7 +12,7 @@
           "groups": [
             [
               {
-                "nrc": "55203",
+                "nrc": "55797",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -89,10 +23,10 @@
       }
     },
     {
-      "code": "THL-2227",
-      "title": "History of the Church II",
+      "code": "GAA-7007",
+      "title": "Analyse et modélisation d'agroécosystèmes",
       "credits": 3,
-      "cycle": 1,
+      "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
@@ -100,8 +34,30 @@
           "groups": [
             [
               {
-                "nrc": "58195",
-                "section": "W",
+                "nrc": "55782",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GGR-7033",
+      "title": "Géomorphologie, environnements sédimentaires du Quaternaire",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51148",
+                "section": "A",
                 "mode": "in-person",
                 "slots": []
               }
@@ -111,8 +67,74 @@
       }
     },
     {
-      "code": "THT-2152",
-      "title": "Projet étudiant II",
+      "code": "GLO-7050",
+      "title": "Apprentissage machine en pratique",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55759",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-3105",
+      "title": "Séminaire en pathologie buccale",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55886",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6207",
+      "title": "Revue de littérature en endodontie III",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55898",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PST-2000",
+      "title": "Supervision d'activités pastorales",
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
@@ -122,8 +144,8 @@
           "groups": [
             [
               {
-                "nrc": "54014",
-                "section": "A",
+                "nrc": "51744",
+                "section": "W1",
                 "mode": "in-person",
                 "slots": []
               }

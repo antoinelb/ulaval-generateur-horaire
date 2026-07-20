@@ -1,10 +1,10 @@
 {
   "courses": [
     {
-      "code": "ESP-7000",
-      "title": "Teorìa del género narrativo",
+      "code": "HAR-2501",
+      "title": "Question d'art II",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
@@ -12,7 +12,7 @@
           "groups": [
             [
               {
-                "nrc": "23366",
+                "nrc": "18058",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -23,10 +23,10 @@
       }
     },
     {
-      "code": "SCR-7014",
-      "title": "Séminaire sur les textes de Nag Hammadi",
+      "code": "POR-3600",
+      "title": "Projet étudiant en langue portugaise",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
@@ -34,7 +34,7 @@
           "groups": [
             [
               {
-                "nrc": "12713",
+                "nrc": "13445",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []

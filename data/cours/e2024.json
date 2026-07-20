@@ -32,6 +32,1826 @@
           ]
         }
       }
+    },
+    {
+      "code": "ARC-7006",
+      "title": "Stage",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55758",
+                "section": "A1",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "AUD-6502",
+      "title": "Rapport de stage",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ORT-6142",
+        "tree": "ORT-6142"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51986",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CIN-2400",
+      "title": "Classe de maître",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "CIN-1306 ET CIN-2320",
+        "tree": {
+          "all": [
+            "CIN-1306",
+            "CIN-2320"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "50916",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-6003",
+      "title": "Sujets spéciaux (communication publique)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "COM-6000 à 8899, Crédits exigés : 12",
+        "tree": {
+          "program_credits": {
+            "program": "COM",
+            "credits": 12
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52059",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CSO-1304",
+      "title": "Psychologie de l'adulte au travail",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52077",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DES-6912",
+      "title": "Projet de design entrepreneurial",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52106",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DES-7000",
+      "title": "Lectures dirigées en design",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52107",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DID-3976",
+      "title": "Projet d'enseignement en FL2",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52124",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-2131",
+      "title": "Droit des délits civils en common law",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "DRT, Crédits exigés : 27",
+        "tree": {
+          "program_credits": {
+            "program": "DRT",
+            "credits": 27
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55672",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-2132",
+      "title": "Droit des biens en common law",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "DRT, Crédits exigés : 27",
+        "tree": {
+          "program_credits": {
+            "program": "DRT",
+            "credits": 27
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55673",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-2653",
+      "title": "Sujet avancé en droit II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "DRT, Crédits exigés : 60",
+        "tree": {
+          "program_credits": {
+            "program": "DRT",
+            "credits": 60
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55728",
+                "section": "H",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "15:15"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "15:15"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "15:15"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "15:15"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-7062",
+      "title": "Procédure et preuve en droit international pénal",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55641",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ENT-7000",
+      "title": "Fondements théoriques de l'entrepreneuriat",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "54882",
+                "section": "Z1A",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "15:45"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "15:45"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "15:45"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "15:45"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "15:45"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "15:45"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "15:45"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "15:45"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "15:45"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "15:45"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ERG-6008",
+      "title": "Stage préparatoire",
+      "credits": 4,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52227",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETI-4017",
+      "title": "École d'été sur l'Afrique et le Moyen-Orient",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 60",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 60
+          }
+        }
+      },
+      "equivalents": [
+        "ETI-7017"
+      ],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "50985",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "17:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "17:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "17:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "17:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "17:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETI-7017",
+      "title": "École d'été sur l'Afrique et le Moyen-Orient",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "ETI-4017"
+      ],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51012",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "17:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "17:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "17:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "17:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "17:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETN-3001",
+      "title": "Tourisme et patrimoine",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55679",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETN-7018",
+      "title": "Tourisme et patrimoine",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55680",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FLS-6900",
+      "title": "Perfectionnement en enseignement du FLS ou du FLE",
+      "credits": 4,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55648",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "15:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FOR-6001",
+      "title": "Essai-phase I",
+      "credits": 9,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52272",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FOR-6002",
+      "title": "Essai-phase II",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52273",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GRH-4000",
+      "title": "Évaluation des emplois et équité salariale",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "GRH-6000",
+        "RLT-3203"
+      ],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51159",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HAR-7100",
+      "title": "École d'été internationale en histoire de l'art",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51162",
+                "section": "W",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LNG-7041",
+      "title": "Enseignement et langue seconde",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55178",
+                "section": "H",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "13:00",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "13:00",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "13:00",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "13:00",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "13:00",
+                    "end": "15:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LOA-3000",
+      "title": "Grec néotestamentaire et patristique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52511",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6009",
+      "title": "Parodontie I",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51259",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "13:00",
+                    "end": "15:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6010",
+      "title": "Parodontie II",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "MDD-6009",
+        "tree": "MDD-6009"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51260",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "13:00",
+                    "end": "15:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "13:00",
+                    "end": "15:50"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "13:00",
+                    "end": "15:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MED-2502",
+      "title": "Introduction à l'externat",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "FIS-4101 ET FIS-4102 ET FIS-4103 ET MED, Crédits exigés : 97",
+        "tree": {
+          "all": [
+            "FIS-4101",
+            "FIS-4102",
+            "FIS-4103",
+            {
+              "program_credits": {
+                "program": "MED",
+                "credits": 97
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51473",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              },
+              {
+                "nrc": "51474",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              },
+              {
+                "nrc": "51475",
+                "section": "C",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MEV-7018",
+      "title": "Sujets spéciaux",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55756",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MNG-6178",
+      "title": "Projet d'intervention : préparation du projet EDI",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ANT-6900* ET MNG-6175* ET  6000 à 6999 Crédits exigés : 27",
+        "tree": {
+          "all": [
+            "ANT-6900",
+            "MNG-6175",
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 27
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55000",
+                "section": "DH1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MRK-6500",
+      "title": "Essai",
+      "credits": 12,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52613",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHA-6101",
+      "title": "Démarche éthique appliquée à la pharmacie",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51673",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHT-6504",
+      "title": "ÉCOS en physiothérapie",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "PHT-6508 OU PHT-6524 OU PHT-6510",
+        "tree": {
+          "any": [
+            "PHT-6508",
+            "PHT-6524",
+            "PHT-6510"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51701",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "POL-7100",
+      "title": "Université d'été sur la démocratie",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55053",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PSE-2103",
+      "title": "Intervention auprès des personnes ayant un trouble du spectre de l'autisme",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55236",
+                "section": "Z4",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PST-2401",
+      "title": "Projet de pastorale I",
+      "credits": 1,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52802",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RLT-1100",
+      "title": "Sujets spéciaux",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55251",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RLT-3203",
+      "title": "Évaluation des emplois et équité salariale",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "RLT-1006 OU RLT-1700 OU RLT 11526",
+        "tree": {
+          "any": [
+            "RLT-1006",
+            "RLT-1700",
+            {
+              "raw": "RLT 11526"
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55263",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SCR-4036",
+      "title": "Femmes, communautés et associations religieuses au Québec",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "SCR-7036"
+      ],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55284",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:00",
+                    "end": "14:00"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "sunday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "18:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "18:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "07:30",
+                    "end": "21:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "07:30",
+                    "end": "21:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:00",
+                    "end": "17:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SCR-7036",
+      "title": "Femmes, communautés et associations religieuses au Québec",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "SCR-4036"
+      ],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55285",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:00",
+                    "end": "14:00"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "sunday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "18:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "18:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "07:30",
+                    "end": "21:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "07:30",
+                    "end": "21:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:00",
+                    "end": "17:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-1500",
+      "title": "Projet étudiant I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55797",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-6045",
+      "title": "Stage II - Intégration des compétences IPS-PL",
+      "credits": 9,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "SIN-6044",
+        "tree": "SIN-6044"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51767",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "51768",
+                "section": "A1",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-6054",
+      "title": "Stage II - Intégration des compétences IPS-ADULTE",
+      "credits": 9,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "SIN-6052",
+        "tree": "SIN-6052"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51769",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "51770",
+                "section": "A1",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-6500",
+      "title": "Rapport de stage",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "SIN-6020",
+        "tree": "SIN-6020"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52945",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-7139",
+      "title": "Dynamiques des sociétés africaines",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51782",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-1232",
+      "title": "Éthique orthodoxe",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55315",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "19:00",
+                    "end": "22:00"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "19:00",
+                    "end": "22:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "19:00",
+                    "end": "22:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "19:00",
+                    "end": "22:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-6024",
+      "title": "Stage d'observation II",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "53130",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-6025",
+      "title": "Stage d'intervention I",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "53131",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-6026",
+      "title": "Stage d'intervention 2",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "53132",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-6209",
+      "title": "Droit canon et ecclésiologie orthodoxe",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55317",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "19:00",
+                    "end": "22:00"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "19:00",
+                    "end": "22:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "19:00",
+                    "end": "22:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "19:00",
+                    "end": "22:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
     }
   ]
 }

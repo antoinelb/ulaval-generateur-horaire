@@ -1,19 +1,19 @@
 {
   "courses": [
     {
-      "code": "ESP-7000",
-      "title": "Teorìa del género narrativo",
+      "code": "GPL-3900",
+      "title": "Reconnaissance de l'implication étudiante",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "fall": {
           "groups": [
             [
               {
-                "nrc": "23366",
-                "section": "A",
+                "nrc": "87959",
+                "section": null,
                 "mode": "in-person",
                 "slots": []
               }
@@ -23,18 +23,18 @@
       }
     },
     {
-      "code": "SCR-7014",
-      "title": "Séminaire sur les textes de Nag Hammadi",
+      "code": "HAR-2202",
+      "title": "Architecture et postmodernité",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "fall": {
           "groups": [
             [
               {
-                "nrc": "12713",
+                "nrc": "86704",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []

@@ -1,10 +1,10 @@
 {
   "courses": [
     {
-      "code": "GMC-7030",
-      "title": "Foyers de combustion",
+      "code": "LIT-2600",
+      "title": "Milieux littéraires et culturels",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
@@ -12,7 +12,7 @@
           "groups": [
             [
               {
-                "nrc": "12732",
+                "nrc": "18814",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -23,8 +23,8 @@
       }
     },
     {
-      "code": "HST-2458",
-      "title": "Culture politique au Canada et au Québec au XXe siècle",
+      "code": "LIT-2602",
+      "title": "Atelier d'édition",
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
@@ -34,7 +34,7 @@
           "groups": [
             [
               {
-                "nrc": "25458",
+                "nrc": "18820",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -45,9 +45,9 @@
       }
     },
     {
-      "code": "LIT-2133",
-      "title": "Poésie française au XIXe siècle",
-      "credits": 3,
+      "code": "MUS-1180",
+      "title": "Trompette jazz (secondaire)",
+      "credits": 2,
       "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
@@ -56,7 +56,7 @@
           "groups": [
             [
               {
-                "nrc": "15544",
+                "nrc": "18869",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -67,8 +67,8 @@
       }
     },
     {
-      "code": "PHI-3108",
-      "title": "Habermas",
+      "code": "MUS-2152",
+      "title": "Clavecin (principal)",
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
@@ -78,7 +78,7 @@
           "groups": [
             [
               {
-                "nrc": "17261",
+                "nrc": "18712",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -89,8 +89,8 @@
       }
     },
     {
-      "code": "RUS-1100",
-      "title": "Littérature russe",
+      "code": "MUS-2156",
+      "title": "Alto (principal)",
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
@@ -100,7 +100,7 @@
           "groups": [
             [
               {
-                "nrc": "25566",
+                "nrc": "18737",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []

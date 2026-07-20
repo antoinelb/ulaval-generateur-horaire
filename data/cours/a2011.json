@@ -1,19 +1,19 @@
 {
   "courses": [
     {
-      "code": "ESP-7000",
-      "title": "Teorìa del género narrativo",
-      "credits": 3,
+      "code": "GAD-7016",
+      "title": "Sujets spéciaux (archivistique)",
+      "credits": 6,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "fall": {
           "groups": [
             [
               {
-                "nrc": "23366",
-                "section": "A",
+                "nrc": "88701",
+                "section": "B",
                 "mode": "in-person",
                 "slots": []
               }
@@ -23,18 +23,21 @@
       }
     },
     {
-      "code": "SCR-7014",
-      "title": "Séminaire sur les textes de Nag Hammadi",
+      "code": "POL-6004",
+      "title": "Projet de mémoire",
       "credits": 3,
       "cycle": 2,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "POL-7031*",
+        "tree": "POL-7031"
+      },
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "fall": {
           "groups": [
             [
               {
-                "nrc": "12713",
+                "nrc": "88117",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []

@@ -1,18 +1,18 @@
 {
   "courses": [
     {
-      "code": "ESP-7000",
-      "title": "Teorìa del género narrativo",
+      "code": "MUS-2152",
+      "title": "Clavecin (principal)",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "fall": {
           "groups": [
             [
               {
-                "nrc": "23366",
+                "nrc": "88781",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -23,18 +23,18 @@
       }
     },
     {
-      "code": "SCR-7014",
-      "title": "Séminaire sur les textes de Nag Hammadi",
+      "code": "MUS-2156",
+      "title": "Alto (principal)",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "fall": {
           "groups": [
             [
               {
-                "nrc": "12713",
+                "nrc": "88615",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []

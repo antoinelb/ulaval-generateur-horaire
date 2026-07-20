@@ -1,19 +1,25 @@
 {
   "courses": [
     {
-      "code": "ESP-7000",
-      "title": "Teorìa del género narrativo",
-      "credits": 3,
+      "code": "AME-6034",
+      "title": "Sujets spéciaux (aménagement)",
+      "credits": 1,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "fall": {
           "groups": [
             [
               {
-                "nrc": "23366",
+                "nrc": "86442",
                 "section": "A",
+                "mode": "in-person",
+                "slots": []
+              },
+              {
+                "nrc": "86562",
+                "section": "B",
                 "mode": "in-person",
                 "slots": []
               }
@@ -23,18 +29,18 @@
       }
     },
     {
-      "code": "SCR-7014",
-      "title": "Séminaire sur les textes de Nag Hammadi",
+      "code": "POR-3600",
+      "title": "Projet étudiant en langue portugaise",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "fall": {
           "groups": [
             [
               {
-                "nrc": "12713",
+                "nrc": "83578",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []

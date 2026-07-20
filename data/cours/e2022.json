@@ -21,6 +21,1447 @@
           ]
         }
       }
+    },
+    {
+      "code": "AGC-2501",
+      "title": "Stage en entreprise agricole II",
+      "credits": 5,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "AGC-1003 ET AGC-1010 ET AGC-2500",
+        "tree": {
+          "all": [
+            "AGC-1003",
+            "AGC-1010",
+            "AGC-2500"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51837",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARC-7009",
+      "title": "Études et lectures dirigées",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51906",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARV-2003",
+      "title": "Sujet spécial en art",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ARV-1012 ET ARV-1401 ET ARV-1402 ET ARV-1411 ET ARV-1412",
+        "tree": {
+          "all": [
+            "ARV-1012",
+            "ARV-1401",
+            "ARV-1402",
+            "ARV-1411",
+            "ARV-1412"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "54926",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "saturday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "saturday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARV-6200",
+      "title": "Sujet spécial en art",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "54928",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "saturday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "saturday",
+                    "start": "13:00",
+                    "end": "16:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-6160",
+      "title": "Communiquer en contexte d'équité, diversité et inclusion",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "COM-4160"
+      ],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "50859",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "16:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-2451",
+      "title": "Activités cliniques : prévention et règlement des différends",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "DRT-1006 ET DRT, Crédits exigés : 27",
+        "tree": {
+          "all": [
+            "DRT-1006",
+            {
+              "program_credits": {
+                "program": "DRT",
+                "credits": 27
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55707",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-7064",
+      "title": "Régimes de redressement des entreprises",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52090",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-7108",
+      "title": "Sujets spéciaux II",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55714",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "12:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EDC-7018",
+      "title": "École d'été sur la recherche en éducation",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52136",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ERG-3101",
+      "title": "Stage processus ergothérapique B",
+      "credits": 7,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ERG-2103 ET ERG-3506",
+        "tree": {
+          "all": [
+            "ERG-2103",
+            "ERG-3506"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "50908",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ERU-6950",
+      "title": "Projet d'intervention stratégique",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ERU-6001 OU MNG-6010",
+        "tree": {
+          "any": [
+            "ERU-6001",
+            "MNG-6010"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52172",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETI-7036",
+      "title": "École sur l'Amérique latine",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55727",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "17:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETN-2900",
+      "title": "Projets d'intervention et d'action culturelle",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "1000 à 4999 Crédits exigés : 12",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 12
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52203",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "saturday",
+                    "start": "09:00",
+                    "end": "16:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GGR-4035",
+      "title": "Tourisme et transformation des territoires",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "GGR-7035"
+      ],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51091",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GGR-7035",
+      "title": "Tourisme et transformation des territoires",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "GGR-4035"
+      ],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51099",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GML-7002",
+      "title": "Déformation et rupture",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "54758",
+                "section": "H",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GPL-1905",
+      "title": "Intelligence artificielle et créativité",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55855",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GRH-1400",
+      "title": "Communication interactive dans l'entreprise",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "54989",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6045",
+      "title": "Clinique de gérodontologie III",
+      "credits": 4,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "MDD-6044",
+        "tree": "MDD-6044"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52495",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6059",
+      "title": "Stage hospitalier en psychogériatrie",
+      "credits": 4,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52498",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MMO-7025",
+      "title": "Communication scientifique II",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51447",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "10:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MSL-6020",
+      "title": "Sujets spéciaux",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55887",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MUS-2201",
+      "title": "Analyse de la musique populaire",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55729",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "NUT-3503",
+      "title": "Stage en gestion des services d'alimentation",
+      "credits": 4,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "NUT-2500",
+        "tree": "NUT-2500"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51480",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ORT-6002",
+      "title": "Counseling et relation d'aide",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ORT-6015 ET ORT-6020 ET ORT-6028",
+        "tree": {
+          "all": [
+            "ORT-6015",
+            "ORT-6020",
+            "ORT-6028"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51482",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:30",
+                    "end": "10:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:30",
+                    "end": "10:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:30",
+                    "end": "10:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:30",
+                    "end": "10:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:30",
+                    "end": "10:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:30",
+                    "end": "10:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHA-3011",
+      "title": "Références scientifiques",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "PHA-1021",
+        "tree": "PHA-1021"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51586",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "POL-2325",
+      "title": "Régimes politiques, religions et laïcités dans le monde",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "POL-1003 OU ANT-1102 OU SCR-1000",
+        "tree": {
+          "any": [
+            "POL-1003",
+            "ANT-1102",
+            "SCR-1000"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "54878",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PPG-7045",
+      "title": "Concept de compétence et son actualisation en éducation",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55058",
+                "section": "Z3A",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "16:30",
+                    "end": "19:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "16:30",
+                    "end": "19:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "16:30",
+                    "end": "19:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "16:30",
+                    "end": "19:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PSE-6500",
+      "title": "Essai",
+      "credits": 12,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52719",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PSY-3152",
+      "title": "Psychologie appliquée à l'emploi",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "PSY, Crédits exigés : 30",
+        "tree": {
+          "program_credits": {
+            "program": "PSY",
+            "credits": 30
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52732",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RED-3500",
+      "title": "Stage en rédaction ou révision professionnelles",
+      "credits": 6,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Réussir 3 parmi FRN-2209, FRN-2210, FRN-3200, FRN-3902, RED-2000 ET  Crédits exigés : 51",
+        "tree": {
+          "all": [
+            {
+              "raw": "Réussir 3 parmi FRN-2209, FRN-2210, FRN-3200, FRN-3902, RED-2000"
+            },
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 51
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52779",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RED-3510",
+      "title": "Projet de rédaction professionnelle",
+      "credits": 6,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Réussir 3 parmi FRN-2209, FRN-2210, FRN-3200, FRN-3902, RED-2000 ET  Crédits exigés : 51",
+        "tree": {
+          "all": [
+            {
+              "raw": "Réussir 3 parmi FRN-2209, FRN-2210, FRN-3200, FRN-3902, RED-2000"
+            },
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 51
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52780",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RLT-3601",
+      "title": "Simulateur de gestion d’entreprise en relations industrielles",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "((RLT-1002 ET RLT-1007 ET RLT-2005) OU ECN-2000)",
+        "tree": {
+          "any": [
+            {
+              "all": [
+                "RLT-1002",
+                "RLT-1007",
+                "RLT-2005"
+              ]
+            },
+            "ECN-2000"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51665",
+                "section": "H",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "12:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RLT-7002",
+      "title": "Sujets spéciaux (relations industrielles)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55093",
+                "section": "H",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "12:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-2163",
+      "title": "Fictions et sociétés",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55112",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2231",
+      "title": "Fathers of the Church II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51759",
+                "section": "Z3A",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "19:00",
+                    "end": "21:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "19:00",
+                    "end": "21:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-6205",
+      "title": "Textes fondateurs : période médiévale et postbyzantine",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51795",
+                "section": "Z3A",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "19:00",
+                    "end": "21:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "19:00",
+                    "end": "21:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
     }
   ]
 }

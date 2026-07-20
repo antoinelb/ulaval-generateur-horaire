@@ -1,18 +1,48 @@
 {
   "courses": [
     {
-      "code": "GMC-7030",
-      "title": "Foyers de combustion",
+      "code": "ETN-2005",
+      "title": "Pratiques professionnelles et culture",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "1000 à 4999 Crédits exigés : 18",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 18
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "50862",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FOR-7034",
+      "title": "Sujets spéciaux en écologie fonctionnelle",
       "credits": 3,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "summer": {
           "groups": [
             [
               {
-                "nrc": "12732",
+                "nrc": "50965",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -23,18 +53,18 @@
       }
     },
     {
-      "code": "HST-2458",
-      "title": "Culture politique au Canada et au Québec au XXe siècle",
+      "code": "GCI-7021",
+      "title": "Sujets spéciaux (génie civil)",
       "credits": 3,
-      "cycle": 1,
+      "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "summer": {
           "groups": [
             [
               {
-                "nrc": "25458",
+                "nrc": "52278",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -45,20 +75,20 @@
       }
     },
     {
-      "code": "LIT-2133",
-      "title": "Poésie française au XIXe siècle",
-      "credits": 3,
-      "cycle": 1,
+      "code": "PHA-6232",
+      "title": "Pharmacothérapie ambulatoire en gériatrie II",
+      "credits": 1,
+      "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "summer": {
           "groups": [
             [
               {
-                "nrc": "15544",
-                "section": "A",
-                "mode": "in-person",
+                "nrc": "51592",
+                "section": "Z1",
+                "mode": "remote",
                 "slots": []
               }
             ]
@@ -67,40 +97,18 @@
       }
     },
     {
-      "code": "PHI-3108",
-      "title": "Habermas",
+      "code": "THL-6081",
+      "title": "Méthodes interprétatives en études bibliques",
       "credits": 3,
-      "cycle": 1,
+      "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "summer": {
           "groups": [
             [
               {
-                "nrc": "17261",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "RUS-1100",
-      "title": "Littérature russe",
-      "credits": 3,
-      "cycle": 1,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "winter": {
-          "groups": [
-            [
-              {
-                "nrc": "25566",
+                "nrc": "55780",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []

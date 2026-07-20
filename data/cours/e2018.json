@@ -1,8 +1,8 @@
 {
   "courses": [
     {
-      "code": "CRL-3701",
-      "title": "Travaux dirigés II",
+      "code": "FLS-3300",
+      "title": "Projet étudiant I",
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
@@ -12,7 +12,7 @@
           "groups": [
             [
               {
-                "nrc": "56712",
+                "nrc": "52622",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -23,52 +23,8 @@
       }
     },
     {
-      "code": "ESP-3210",
-      "title": "Proyecto de investigación (literatura)",
-      "credits": 3,
-      "cycle": 1,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "summer": {
-          "groups": [
-            [
-              {
-                "nrc": "50276",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "HAR-2201",
-      "title": "Architecture de la ville de Québec",
-      "credits": 3,
-      "cycle": 1,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "summer": {
-          "groups": [
-            [
-              {
-                "nrc": "57842",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "SAC-7010",
-      "title": "Lectures dirigées",
+      "code": "GPL-7990",
+      "title": "Mémoire, thèse, article : les principes et la pratique de la rédaction scientifique",
       "credits": 3,
       "cycle": 2,
       "prerequisites": null,
@@ -78,7 +34,54 @@
           "groups": [
             [
               {
-                "nrc": "55203",
+                "nrc": "55517",
+                "section": "A",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6049",
+      "title": "Projet spécial en gérodontologie",
+      "credits": 4,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "MDD-6047",
+        "tree": "MDD-6047"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "55729",
+                "section": "C",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "STT-7710",
+      "title": "Sujets spéciaux I",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "54477",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -89,10 +92,10 @@
       }
     },
     {
-      "code": "THL-2227",
-      "title": "History of the Church II",
-      "credits": 3,
-      "cycle": 1,
+      "code": "STT-7720",
+      "title": "Sujets spéciaux II",
+      "credits": 2,
+      "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
@@ -100,8 +103,8 @@
           "groups": [
             [
               {
-                "nrc": "58195",
-                "section": "W",
+                "nrc": "54478",
+                "section": "A",
                 "mode": "in-person",
                 "slots": []
               }
@@ -111,10 +114,10 @@
       }
     },
     {
-      "code": "THT-2152",
-      "title": "Projet étudiant II",
+      "code": "STT-7730",
+      "title": "Sujets spéciaux III",
       "credits": 3,
-      "cycle": 1,
+      "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
@@ -122,7 +125,29 @@
           "groups": [
             [
               {
-                "nrc": "54014",
+                "nrc": "54479",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "STT-7740",
+      "title": "Sujets spéciaux IV",
+      "credits": 4,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "54480",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []

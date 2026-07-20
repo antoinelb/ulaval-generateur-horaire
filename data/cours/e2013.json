@@ -1,18 +1,18 @@
 {
   "courses": [
     {
-      "code": "ESP-7000",
-      "title": "Teorìa del género narrativo",
+      "code": "GCH-2200",
+      "title": "Sujets spéciaux en génie chimique",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "summer": {
           "groups": [
             [
               {
-                "nrc": "23366",
+                "nrc": "50127",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -23,18 +23,18 @@
       }
     },
     {
-      "code": "SCR-7014",
-      "title": "Séminaire sur les textes de Nag Hammadi",
-      "credits": 3,
-      "cycle": 2,
+      "code": "GCH-2700",
+      "title": "Sujets spéciaux en génie chimique",
+      "credits": 1,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "summer": {
           "groups": [
             [
               {
-                "nrc": "12713",
+                "nrc": "50124",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
