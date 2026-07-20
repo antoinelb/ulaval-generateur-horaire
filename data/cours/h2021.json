@@ -1,0 +1,26 @@
+{
+  "courses": [
+    {
+      "code": "GEX-7005",
+      "title": "Notions avancées en hydraulique urbaine",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "15256",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

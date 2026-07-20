@@ -1,0 +1,37 @@
+{
+  "courses": [
+    {
+      "code": "GEX-7070",
+      "title": "Modélisation et contrôle du système intégré d'assainissement",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "84725",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

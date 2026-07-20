@@ -1,0 +1,448 @@
+{
+  "courses": [
+    {
+      "code": "GEX-1002",
+      "title": "Génie des eaux : introduction à la profession",
+      "credits": 1,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "84783",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "10:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-1580",
+      "title": "Stage en génie des eaux I",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 24",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 24
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "81267",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-2003",
+      "title": "Production d'eau potable",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "((CHM-1903 ET GEX-1000 ET MCB-1907) OU (BIO-1003 ET GCH-1004))",
+        "tree": {
+          "any": [
+            {
+              "all": [
+                "CHM-1903",
+                "GEX-1000",
+                "MCB-1907"
+              ]
+            },
+            {
+              "all": [
+                "BIO-1003",
+                "GCH-1004"
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [
+        "GEX-7061"
+      ],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "84784",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-2590",
+      "title": "Stage en génie des eaux II",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX-1580",
+        "tree": "GEX-1580"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "81268",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-2591",
+      "title": "Stage en génie des eaux III",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX-2590",
+        "tree": "GEX-2590"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "81269",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-3333",
+      "title": "Projet intégrateur en génie des eaux I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "(ECN-2901 OU ECN-4901) ET GCI-1011 ET GMC-3009 ET  Crédits exigés : 72",
+        "tree": {
+          "all": [
+            {
+              "any": [
+                "ECN-2901",
+                "ECN-4901"
+              ]
+            },
+            "GCI-1011",
+            "GMC-3009",
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 72
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "84787",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "13:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-3500",
+      "title": "Projet de production d'eau potable",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX-2003",
+        "tree": "GEX-2003"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "84788",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "13:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-3590",
+      "title": "Stage en génie des eaux IV",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX-2591",
+        "tree": "GEX-2591"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "81270",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6001",
+      "title": "Séminaire de maîtrise",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "84790",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6811",
+      "title": "Activité de recherche - mémoire 1",
+      "credits": 7,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "89998",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6812",
+      "title": "Activité de recherche - mémoire 2",
+      "credits": 7,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "89999",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6813",
+      "title": "Activité de recherche - mémoire 3",
+      "credits": 7,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "90000",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6814",
+      "title": "Activité de recherche - mémoire 4",
+      "credits": 9,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "90001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-7061",
+      "title": "Production d'eau potable",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "GEX-2003"
+      ],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "84795",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-7078",
+      "title": "Analyse et modélisation de séries environnementales",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "84797",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

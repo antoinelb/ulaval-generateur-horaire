@@ -1,0 +1,32 @@
+{
+  "courses": [
+    {
+      "code": "GEX-7040",
+      "title": "Infrastructures végétalisées et gestion de l'eau",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "21398",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

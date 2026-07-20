@@ -1,0 +1,652 @@
+{
+  "courses": [
+    {
+      "code": "GEX-1000",
+      "title": "Dispersion des polluants",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GCI-1004",
+        "tree": "GCI-1004"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14848",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "10:30",
+                    "end": "12:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-1580",
+      "title": "Stage en génie des eaux I",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 24",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 24
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "11481",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-2001",
+      "title": "Interventions en bassin versant",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GGL-2600* ET (GCI-2009 OU GGL-2609) ET (GEX-1000 OU GCI-1005)",
+        "tree": {
+          "all": [
+            "GGL-2600",
+            {
+              "any": [
+                "GCI-2009",
+                "GGL-2609"
+              ]
+            },
+            {
+              "any": [
+                "GEX-1000",
+                "GCI-1005"
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14849",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-2004",
+      "title": "Traitement des eaux usées",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "((CHM-1903 ET GEX-1000 ET MCB-1907) OU (BIO-1003 ET GCH-1004))",
+        "tree": {
+          "any": [
+            {
+              "all": [
+                "CHM-1903",
+                "GEX-1000",
+                "MCB-1907"
+              ]
+            },
+            {
+              "all": [
+                "BIO-1003",
+                "GCH-1004"
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [
+        "GEX-7004"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14850",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-2590",
+      "title": "Stage en génie des eaux II",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX-1580",
+        "tree": "GEX-1580"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "11482",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-2591",
+      "title": "Stage en génie des eaux III",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX-2590",
+        "tree": "GEX-2590"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "11483",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-3001",
+      "title": "Génie côtier",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GCI-2010*",
+        "tree": "GCI-2010"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14851",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-3335",
+      "title": "Projet intégrateur en génie des eaux II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "(ECN-2901 OU ECN-4901) ET GCI-1011 ET GCI-4301 ET GMC-3009 ET  Crédits exigés : 72",
+        "tree": {
+          "all": [
+            {
+              "any": [
+                "ECN-2901",
+                "ECN-4901"
+              ]
+            },
+            "GCI-1011",
+            "GCI-4301",
+            "GMC-3009",
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 72
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14852",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "11:30",
+                    "end": "12:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-3590",
+      "title": "Stage en génie des eaux IV",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX-2591",
+        "tree": "GEX-2591"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "11484",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-4008",
+      "title": "Approvisionnement en eau dans les communautés nordiques",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX, Crédits exigés : 60",
+        "tree": {
+          "program_credits": {
+            "program": "GEX",
+            "credits": 60
+          }
+        }
+      },
+      "equivalents": [
+        "GEX-7042"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14854",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6001",
+      "title": "Séminaire de maîtrise",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14855",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6811",
+      "title": "Activité de recherche - mémoire 1",
+      "credits": 7,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "19761",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6812",
+      "title": "Activité de recherche - mémoire 2",
+      "credits": 7,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "19762",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6813",
+      "title": "Activité de recherche - mémoire 3",
+      "credits": 7,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "19763",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6814",
+      "title": "Activité de recherche - mémoire 4",
+      "credits": 9,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "19764",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-7002",
+      "title": "Hydrologie opérationnelle",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "GEX-4002"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14856",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-7004",
+      "title": "Traitement des eaux usées",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "GEX-2004"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14857",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-7013",
+      "title": "Sujets spéciaux",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "21176",
+                "section": "B",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-7042",
+      "title": "Approvisionnement en eau dans les communautés nordiques",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "GEX-4008"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14861",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-7050",
+      "title": "Traitements avancés des eaux",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14862",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-7078",
+      "title": "Analyse et modélisation de séries environnementales",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "14865",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

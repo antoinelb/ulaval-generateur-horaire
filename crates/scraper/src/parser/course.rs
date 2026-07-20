@@ -87,6 +87,10 @@ static LINKED_WRAPPER: LazyLock<Selector> =
 
 pub struct CoursePage {
     pub course: Course,
+    // the year each retained season was read from: it names the session
+    // snapshot (`a2026`) but is not a property of the course, so it rides
+    // alongside `Course` instead of inside it
+    pub years: BTreeMap<Season, u16>,
     pub anomalies: Vec<ParseError>,
 }
 
@@ -96,7 +100,10 @@ enum PrereqToken {
     And,
     Or,
     Course(String),
-    Credits { program: String, credits: u32 },
+    Credits {
+        program: Option<String>,
+        credits: u32,
+    },
 }
 
 struct PrereqFrame {
@@ -130,7 +137,16 @@ pub fn parse(html: &str) -> Result<CoursePage, ParseError> {
     let cycle = parse_cycle(&doc)?;
     let prerequisites = parse_prerequisites(&doc, &mut anomalies);
     let equivalents = parse_equivalents(&doc)?;
-    let seasons = parse_seasons(&doc, &mut anomalies);
+    let sessions = parse_seasons(&doc, &mut anomalies);
+
+    let years = sessions
+        .iter()
+        .map(|(season, (year, _))| (*season, *year))
+        .collect();
+    let seasons = sessions
+        .into_iter()
+        .map(|(season, (_, offering))| (season, offering))
+        .collect();
 
     Ok(CoursePage {
         course: Course {
@@ -142,6 +158,7 @@ pub fn parse(html: &str) -> Result<CoursePage, ParseError> {
             equivalents,
             seasons,
         },
+        years,
         anomalies,
     })
 }
@@ -164,7 +181,11 @@ fn parse_credits(doc: &Html) -> Result<u32, ParseError> {
         .select(&FAITS_RAPIDES)
         .find(|card| {
             card.select(&CREDITS_LABEL).next().is_some_and(|label| {
-                label.text().collect::<String>().trim() == "Crédits"
+                label
+                    .text()
+                    .collect::<String>()
+                    .trim()
+                    .starts_with("Crédit")
             })
         })
         .ok_or_else(|| ParseError::MissingElement {
@@ -329,7 +350,7 @@ fn parse_prereq_tree(raw: &str) -> Result<PrereqTree, ParseError> {
 }
 
 fn tokenize_prereq_raw(raw: &str) -> Result<Vec<PrereqToken>, ParseError> {
-    let padded = raw.replace('(', " ( ").replace(')', " ) ");
+    let padded = raw.replace('(', " ( ").replace(')', " ) ").replace("*", "");
     let words: Vec<&str> = padded.split_whitespace().collect();
     let mut tokens: Vec<PrereqToken> = Vec::new();
     let mut skip = 0;
@@ -355,17 +376,9 @@ fn tokenize_prereq_raw(raw: &str) -> Result<Vec<PrereqToken>, ParseError> {
                                         },
                                     );
                                 }
-                                let credits =
-                                    n.trim().parse::<u32>().map_err(|_| {
-                                        ParseError::MalformedPrerequisites {
-                                            error: "program credits"
-                                                .to_string(),
-                                            raw: raw.to_string(),
-                                        }
-                                    })?;
                                 tokens.push(PrereqToken::Credits {
-                                    program: program.to_string(),
-                                    credits,
+                                    program: Some(program.to_string()),
+                                    credits: prereq_credits(n, raw)?,
                                 });
                                 skip = 4;
                             }
@@ -373,6 +386,28 @@ fn tokenize_prereq_raw(raw: &str) -> Result<Vec<PrereqToken>, ParseError> {
                                 return Err(
                                     ParseError::MalformedPrerequisites {
                                         error: "course".to_string(),
+                                        raw: raw.to_string(),
+                                    },
+                                );
+                            }
+                        }
+                    } else if word == "Crédits" {
+                        // « Crédits exigés : N » with no programme named:
+                        // the requirement bears on the student's own
+                        // (GEX-3333)
+                        match words.get(i + 1..i + 4) {
+                            Some(["exigés", ":", n]) => {
+                                tokens.push(PrereqToken::Credits {
+                                    program: None,
+                                    credits: prereq_credits(n, raw)?,
+                                });
+                                skip = 3;
+                            }
+                            _ => {
+                                return Err(
+                                    ParseError::MalformedPrerequisites {
+                                        error: "credits requirement"
+                                            .to_string(),
                                         raw: raw.to_string(),
                                     },
                                 );
@@ -392,6 +427,15 @@ fn tokenize_prereq_raw(raw: &str) -> Result<Vec<PrereqToken>, ParseError> {
         }
     }
     Ok(tokens)
+}
+
+fn prereq_credits(count: &str, raw: &str) -> Result<u32, ParseError> {
+    count.trim().parse::<u32>().map_err(|_| {
+        ParseError::MalformedPrerequisites {
+            error: "program credits".to_string(),
+            raw: raw.to_string(),
+        }
+    })
 }
 
 fn is_program_code(word: &str) -> bool {
@@ -447,7 +491,7 @@ fn parse_equivalents(doc: &Html) -> Result<Vec<String>, ParseError> {
 fn parse_seasons(
     doc: &Html,
     anomalies: &mut Vec<ParseError>,
-) -> BTreeMap<Season, SeasonOffering> {
+) -> BTreeMap<Season, (u16, SeasonOffering)> {
     let mut latest: BTreeMap<Season, (u16, SeasonOffering)> = BTreeMap::new();
 
     for session in doc.select(&SESSION) {
@@ -474,9 +518,6 @@ fn parse_seasons(
     }
 
     latest
-        .into_iter()
-        .map(|(season, (_, offering))| (season, offering))
-        .collect()
 }
 
 fn parse_session_heading(heading: &str) -> Result<(Season, u16), ParseError> {
@@ -638,6 +679,10 @@ fn parse_mode(label: &str) -> Result<Mode, ParseError> {
     match label {
         "En classe" => Ok(Mode::InPerson),
         "À distance" => Ok(Mode::Remote),
+        // its « Sur Internet » plage carries no Journée/Horaire, so
+        // `parse_slot` already drops it and only the in-class meetings
+        // become slots (GEX-3100)
+        "Hybride" => Ok(Mode::Hybrid),
         other => Err(ParseError::MalformedEntry {
             selector: "mode".to_string(),
             raw: other.to_string(),
@@ -1195,9 +1240,10 @@ mod tests {
             let seasons = parse_seasons(&doc, &mut anomalies);
 
             assert_eq!(seasons.len(), 1, "one offering per season ({order})");
+            let (year, offering) = &seasons[&Season::Fall];
+            assert_eq!(*year, 2026, "the 2026 session wins ({order})");
             assert_eq!(
-                seasons[&Season::Fall].groups[0][0].nrc,
-                "22222",
+                offering.groups[0][0].nrc, "22222",
                 "the 2026 session wins ({order})"
             );
             assert!(anomalies.is_empty(), "{order}: {anomalies:?}");
@@ -1241,7 +1287,7 @@ mod tests {
         let mut anomalies = Vec::new();
 
         let seasons = parse_seasons(&doc, &mut anomalies);
-        assert_eq!(seasons[&Season::Winter].groups.len(), 1);
+        assert_eq!(seasons[&Season::Winter].1.groups.len(), 1);
         assert_eq!(malformed_entry(&anomalies[0]).0, "p.controls-title");
     }
 
@@ -1263,7 +1309,7 @@ mod tests {
             let mut anomalies = Vec::new();
 
             let seasons = parse_seasons(&doc, &mut anomalies);
-            assert_eq!(seasons[&Season::Fall].groups.len(), 1);
+            assert_eq!(seasons[&Season::Fall].1.groups.len(), 1);
             assert_eq!(
                 malformed_entry(&anomalies[0]).0,
                 "p.controls-title",
@@ -1319,7 +1365,7 @@ mod tests {
         let mut anomalies = Vec::new();
 
         let seasons = parse_seasons(&doc, &mut anomalies);
-        assert_eq!(seasons[&Season::Fall].groups.len(), 2);
+        assert_eq!(seasons[&Season::Fall].1.groups.len(), 2);
         assert!(
             malformed_entry(&anomalies[0]).1.contains("linked sections"),
             "got {anomalies:?}"
@@ -1380,6 +1426,42 @@ mod tests {
             .expect("one-off plage"),
             None
         );
+    }
+
+    #[test]
+    fn a_hybrid_section_keeps_only_its_in_class_meetings() {
+        // GEX-3100: a « Hybride » section lists a « Sur Internet » plage
+        // carrying dates but neither day nor schedule, then the in-class
+        // one. Only the latter can occupy a place in a timetable.
+        let dates = "Du 6 sept. 2022 au 16 déc. 2022";
+        let body = format!(
+            "{}{}{}",
+            nrc_block("85174"),
+            plage(&[("Type:", "Sur Internet"), ("Dates:", dates)]),
+            plage(&[
+                ("Type:", "En classe"),
+                ("Dates:", dates),
+                ("Journée:", "Mardi"),
+                ("Horaire:", "De 9h30 à 12h20"),
+            ]),
+        );
+        let doc = document(&session(
+            "Automne 2022 – 1 section offerte",
+            &toggle_section(&["GEX-3100", "H", "Hybride"], &body, ""),
+        ));
+        let mut anomalies = Vec::new();
+
+        let seasons = parse_seasons(&doc, &mut anomalies);
+
+        assert!(anomalies.is_empty(), "{anomalies:?}");
+        let section = &seasons[&Season::Fall].1.groups[0][0];
+        assert_eq!(section.mode, Mode::Hybrid);
+        assert_eq!(
+            section.slots.len(),
+            1,
+            "the remote half occupies no timetable slot"
+        );
+        assert_eq!(section.slots[0].day, Day::Tuesday);
     }
 
     #[test]
@@ -1457,9 +1539,11 @@ mod tests {
 
     #[test]
     fn both_teaching_modes_are_recognized() {
-        for (label, expected) in
-            [("En classe", Mode::InPerson), ("À distance", Mode::Remote)]
-        {
+        for (label, expected) in [
+            ("En classe", Mode::InPerson),
+            ("À distance", Mode::Remote),
+            ("Hybride", Mode::Hybrid),
+        ] {
             assert_eq!(
                 parse_mode(label).unwrap_or_else(|e| panic!("{label}: {e}")),
                 expected,
@@ -1617,11 +1701,44 @@ mod tests {
             tree,
             PrereqTree::ProgramCredits {
                 program_credits: ProgramCredits {
-                    program: "GEX".to_string(),
+                    program: Some("GEX".to_string()),
                     credits: 60,
                 }
             }
         );
+    }
+
+    #[test]
+    fn a_credits_requirement_can_name_no_program() {
+        // GEX-3333 reads « … ET  Crédits exigés : 72 » — the requirement
+        // then bears on the student's own programme, so the field is empty
+        // rather than the expression being out of grammar
+        let tree = parse_prereq_tree("Crédits exigés : 72")
+            .unwrap_or_else(|e| panic!("parse: {e}"));
+        assert_eq!(
+            tree,
+            PrereqTree::ProgramCredits {
+                program_credits: ProgramCredits {
+                    program: None,
+                    credits: 72,
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn credits_not_followed_by_a_requirement_is_out_of_grammar() {
+        for raw in [
+            "Crédits",
+            "Crédits exigés",
+            "Crédits obtenus : 72",
+            "Crédits exigés : plusieurs",
+        ] {
+            assert!(
+                parse_prereq_tree(raw).is_err(),
+                "{raw:?} must not parse as a credits requirement"
+            );
+        }
     }
 
     #[test]
@@ -1637,7 +1754,7 @@ mod tests {
                 course("GCI-1001"),
                 PrereqTree::ProgramCredits {
                     program_credits: ProgramCredits {
-                        program: "GEX".to_string(),
+                        program: Some("GEX".to_string()),
                         credits: 45,
                     }
                 },

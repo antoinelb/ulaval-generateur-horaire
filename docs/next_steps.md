@@ -29,12 +29,12 @@ Rhythm for each page type: freeze the real HTML → write the failing integratio
     - [x] Full catalogue = the union of the matière facets: the site's index caps any query at 10 000 results, so page 0 provides the facet directory and one partition per matière fans out under the one shared throttle (bracketed `matieres%5B<id>%5D=<id>` form only — the flat form is silently ignored by the site); the banner total is ignored — the widget omitting 11 real courses is a ULaval bug the scraper doesn't work around — ADR `2026-07-partition-du-catalogue-par-matiere`, `2026-07-le-catalogue-est-lunion-des-facettes`
     - [x] CLI wiring: a `catalogue` subcommand that writes the merged catalogue JSON (`anyhow` at the binary frontier) — clap 4 derive, exit code 2 on usage errors, `catalogue_errors.log` beside the artifact (ADR `2026-07-cli-dans-la-lib-et-style-derreurs`, `2026-07-adoption-de-clap`); optional `--output-dir`/`--url` flags with defaults `data` + the production URL, no scoped mode (ADR `2026-07-scraper-plein-catalogue-seulement`)
     - Verify: `make test` green (unit + wiremock); run live on the full catalogue and spot-check the unique course count (~10 224, the facet union)
-- [ ] Course page parser (`parse/course.rs`, préalables grammar included — drop `parse/prerequisites.rs`)
+- [x] Course page parser (`parse/course.rs`, préalables grammar included — drop `parse/prerequisites.rs`)
     - [x] Préalables grammar (pure function in `course.rs`, raw text → `PrereqTree`, no HTML): ET/OU with parentheses → `all`/`any` trees; « Crédits exigés : N » → `program_credits` — tokenizer + explicit-stack state machine, no recursion (ADR `2026-07-conception-du-parseur-de-cours`)
     - [x] Out-of-grammar text → kept raw-only and surfaced as an anomaly — `core::Prerequisites` is now an untagged enum `Parsed { raw, tree } | Raw { raw }` (ADR `2026-07-prealables-hors-grammaire-en-enum`)
-    - [ ] Page HTML → `core::Course`: code, title, credits, cycle, prerequisites (raw + tree via the grammar), equivalents, seasons → choice groups → sections (NRC, section, mode) → slots (day, start, end); selector map and extraction rules in ADR `2026-07-extraction-html-de-la-page-cours`
-    - [ ] Section model: `SeasonOffering { groups: Vec<Vec<Section>> }` — pick one section per group, union the slots; `ComponentKind` dropped, one-off « Date: » slots excluded, guard on «plusieurs sections + sections liées» (ADR `2026-07-sections-en-groupes-de-choix`)
-    - [ ] Fold a grammar `Err` into `Prerequisites::Raw` + an anomaly at the assembly site (the grammar function itself returns `Result<PrereqTree, ParseError>`)
+    - [x] Page HTML → `core::Course`: code, title, credits, cycle, prerequisites (raw + tree via the grammar), equivalents, seasons → choice groups → sections (NRC, section, mode) → slots (day, start, end); selector map and extraction rules in ADR `2026-07-extraction-html-de-la-page-cours`
+    - [x] Section model: `SeasonOffering { groups: Vec<Vec<Section>> }` — pick one section per group, union the slots; `ComponentKind` dropped, one-off « Date: » slots excluded, guard on «plusieurs sections + sections liées» (ADR `2026-07-sections-en-groupes-de-choix`)
+    - [x] Fold a grammar `Err` into `Prerequisites::Raw` + an anomaly at the assembly site (the grammar function itself returns `Result<PrereqTree, ParseError>`)
     - Verify: unit tests per grammar rule plus rejection cases that fall back to raw; integration test parses each frozen `courses/*.html` and compares `serde_json::Value` with the matching `test_cases/courses/*.json`
 - [ ] Program page parser (`parse/program.rs`)
     - [ ] Page HTML → `core::Program`: mandatory, rules (« Règle N — contrainte parmi : » → `count` vs `min`/`max` credits, list vs reference vs keyword courses), concentrations, profiles
@@ -43,4 +43,16 @@ Rhythm for each page type: freeze the real HTML → write the failing integratio
 - [ ] Create unit tests for parser
     - [ ] Fill the gaps the valid fixtures never exercise: malformed times, unknown component types, unrecognized modes, missing elements
     - Verify: `make test` green; parse modules covered
-- [ ] Next, out of parser scope (completes jalon 1): extend fetch to course pages (resume on error), snapshot `data/cours/a2026.json` for the GEX matières
+- [x] Next, out of parser scope (completes jalon 1): drive the course parser over the catalogue and write the session snapshots — `ulaval-scraper courses [--output-dir data] [--subjects gex gci]`
+    - [x] Work queue = `data/catalogue.json` (course URLs are slugs, not derivable from a code); `--subjects` narrows by code prefix, case-insensitive, and omitting it scrapes the whole catalogue; an unknown subject is a hard error
+    - [x] One `data/cours/{session}.json` per (season, year) found — `parse_seasons` now surfaces the year on `CoursePage.years`, `Course` stays keyed by season (ADR `2026-07-cours-par-session-et-annee`)
+    - [x] A failed page is an anomaly in `data/cours_errors.log`, never an abort — `collect`, not `try_collect` (ADR `2026-07-echec-de-page-cours-non-bloquant`)
+    - [x] Cache of parsed courses under `data/cache/cours/` (gitignored), written only for anomaly-free parses so a parser fix needs no manual purge (ADR `2026-07-cache-de-cours-parses`)
+    - [x] A full run removes session snapshots it no longer produces; a `--subjects` run and any `{session}.manuel.json` are left alone (ADR `2026-07-nettoyage-des-snapshots-perimes`)
+    - Verify: `make test` green at 100 % coverage; live GEX run writes `a2026.json`/`h2026.json`/`e2026.json` and a re-run issues no request for cached courses
+- [x] Close the parser gaps the first live run surfaced (see `cours_errors.log`) — GEX + GCI went from 40 anomalies to 1
+    - [x] Mode « Hybride »: kept as `Mode::Hybrid`; its « Sur Internet » plage carries no Journée/Horaire so `parse_slot` already drops it (ADR `2026-07-mode-hybride`), fixture `gex-3100`
+    - [x] « Crédits exigés : N » with no program: `ProgramCredits.program` is now `Option<String>` (ADR `2026-07-credits-exiges-sans-programme`), fixture `gex-3333`
+    - [x] `*`-suffixed sigles, and « Crédit » in the singular
+- [ ] Courses with no credits card at all (GCI-2510, a « Stage » seminar: its `fe--faits-rapides` carries only « Cycle du cours » and « Modes d'enseignement ») — currently a hard error, so the course is dropped entirely
+- [ ] Resume across a killed process (jalon 5): the cache covers re-runs, not a run interrupted mid-flight

@@ -5,6 +5,7 @@
 
 pub mod catalogue;
 pub mod cli;
+pub mod course;
 pub mod fetch;
 pub mod parser;
 mod print;

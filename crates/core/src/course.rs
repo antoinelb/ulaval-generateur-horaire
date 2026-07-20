@@ -33,7 +33,11 @@ pub enum PrereqTree {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ProgramCredits {
-    pub program: String,
+    // some pages state a credit requirement with no programme at all —
+    // GEX-3333 reads « … ET  Crédits exigés : 72 », the requirement then
+    // bearing on the student's own programme
+    #[serde(default)]
+    pub program: Option<String>,
     pub credits: u32,
 }
 
@@ -82,6 +86,9 @@ pub enum Season {
 pub enum Mode {
     InPerson,
     Remote,
+    // part in class, part online: only the in-class meetings carry a day
+    // and a time, so a hybrid section yields the in-person slots alone
+    Hybrid,
 }
 
 #[derive(
@@ -323,7 +330,7 @@ mod tests {
             tree,
             PrereqTree::ProgramCredits {
                 program_credits: ProgramCredits {
-                    program: "GEX".to_string(),
+                    program: Some("GEX".to_string()),
                     credits: 60,
                 }
             }

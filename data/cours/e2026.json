@@ -1,0 +1,219 @@
+{
+  "courses": [
+    {
+      "code": "GEX-1580",
+      "title": "Stage en génie des eaux I",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 24",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 24
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51172",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-2590",
+      "title": "Stage en génie des eaux II",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX-1580",
+        "tree": "GEX-1580"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51173",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-2591",
+      "title": "Stage en génie des eaux III",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX-2590",
+        "tree": "GEX-2590"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51174",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-3590",
+      "title": "Stage en génie des eaux IV",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX-2591",
+        "tree": "GEX-2591"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51175",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6001",
+      "title": "Séminaire de maîtrise",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "52278",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6811",
+      "title": "Activité de recherche - mémoire 1",
+      "credits": 7,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "53660",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6812",
+      "title": "Activité de recherche - mémoire 2",
+      "credits": 7,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "53661",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6813",
+      "title": "Activité de recherche - mémoire 3",
+      "credits": 7,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "53662",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-6814",
+      "title": "Activité de recherche - mémoire 4",
+      "credits": 9,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "53663",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

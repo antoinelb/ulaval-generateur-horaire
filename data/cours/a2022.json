@@ -1,0 +1,57 @@
+{
+  "courses": [
+    {
+      "code": "GEX-3100",
+      "title": "Projet de gestion de l'eau par bassin versant",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GEX-2001",
+        "tree": "GEX-2001"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "85174",
+                "section": "H",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-7013",
+      "title": "Sujets spéciaux",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "85185",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}
