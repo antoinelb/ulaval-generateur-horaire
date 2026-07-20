@@ -6,10 +6,12 @@ use ulaval_scheduler_core::Course;
 // scraper will actually produce.
 const FIXTURE_DIR: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../tests/fixtures/test_cases/classes",
+    "/../../tests/fixtures/test_cases/courses",
 );
 
-const FIXTURES: &[&str] = &["gci-1007", "gex-7002", "gex-4008", "ecn-4901"];
+const FIXTURES: &[&str] = &[
+    "gci-1007", "gci-2010", "gex-7002", "gex-4008", "ecn-4901", "gae-3008",
+];
 
 #[test]
 fn round_trips_every_fixture() {

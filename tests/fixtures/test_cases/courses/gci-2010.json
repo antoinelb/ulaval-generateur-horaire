@@ -1,0 +1,43 @@
+{
+  "code": "GCI-2010",
+  "title": "Laboratoire d'hydraulique",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "GCI-2008",
+    "tree": "GCI-2008"
+  },
+  "equivalents": [],
+  "seasons": {
+    "winter": {
+      "groups": [
+        [
+          {
+            "nrc": "14733",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
+                "start": "09:00",
+                "end": "11:50"
+              }
+            ]
+          },
+          {
+            "nrc": "14734",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
+                "start": "12:00",
+                "end": "14:50"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

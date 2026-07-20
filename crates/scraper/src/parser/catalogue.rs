@@ -1,9 +1,30 @@
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use scraper::{ElementRef, Html, Selector};
 use ulaval_scheduler_core::CatalogueEntry;
 
 use crate::parser::ParseError;
+
+const MATIERE_INPUT_CSS: &str = r#"input.form-checkbox[name^="matieres["]"#;
+static MATIERE_INPUT: LazyLock<Selector> =
+    LazyLock::new(|| sel(MATIERE_INPUT_CSS));
+static MATIERE_LABEL: LazyLock<Selector> =
+    LazyLock::new(|| sel("label.option"));
+
+const TOTAL_CSS: &str = "div.total-resultats p";
+static TOTAL: LazyLock<Selector> = LazyLock::new(|| sel(TOTAL_CSS));
+const NO_RESULTS_CSS: &str = "div.resultats--offre-etudes p";
+static NO_RESULTS: LazyLock<Selector> = LazyLock::new(|| sel(NO_RESULTS_CSS));
+
+const ENTRY_CSS: &str = "a.cours-element--lien";
+static ENTRY: LazyLock<Selector> = LazyLock::new(|| sel(ENTRY_CSS));
+
+const ENTRY_CODE_CSS: &str = "span.cours-element--sigle";
+static ENTRY_CODE: LazyLock<Selector> = LazyLock::new(|| sel(ENTRY_CODE_CSS));
+const ENTRY_TITLE_CSS: &str = "span.cours-element--titre";
+static ENTRY_TITLE: LazyLock<Selector> =
+    LazyLock::new(|| sel(ENTRY_TITLE_CSS));
 
 #[derive(Debug, Clone)]
 pub struct Matiere {
@@ -34,15 +55,9 @@ pub fn parse(html: &str) -> Result<CataloguePage, ParseError> {
 pub fn parse_matieres(
     html: &str,
 ) -> Result<(Vec<Matiere>, Vec<ParseError>), ParseError> {
-    let input_selector_str = r#"input.form-checkbox[name^="matieres["]"#;
-    let input_selector =
-        Selector::parse(input_selector_str).expect("Static selector is valid");
-    let label_selector =
-        Selector::parse("label.option").expect("Static selector is valid");
-
     let doc = Html::parse_document(html);
     let labels: HashMap<String, String> = doc
-        .select(&label_selector)
+        .select(&MATIERE_LABEL)
         .filter_map(|label| {
             let for_attr = label.value().attr("for")?;
             let text = label.text().collect::<String>().trim().to_string();
@@ -52,8 +67,8 @@ pub fn parse_matieres(
 
     let mut matieres = Vec::new();
     let mut anomalies = Vec::new();
-    for input in doc.select(&input_selector) {
-        match parse_matiere(&input, &labels, input_selector_str) {
+    for input in doc.select(&MATIERE_INPUT) {
+        match parse_matiere(&input, &labels, MATIERE_INPUT_CSS) {
             Ok(matiere) => matieres.push(matiere),
             Err(anomaly) => anomalies.push(anomaly),
         }
@@ -63,7 +78,7 @@ pub fn parse_matieres(
         // no widget at all is markup drift, not an empty facet: refuse to
         // partition the catalogue into nothing
         Err(ParseError::MissingElement {
-            selector: input_selector_str.to_string(),
+            selector: MATIERE_INPUT_CSS.to_string(),
         })
     } else {
         Ok((matieres, anomalies))
@@ -71,15 +86,8 @@ pub fn parse_matieres(
 }
 
 fn get_total_results(doc: &Html) -> Result<Option<usize>, ParseError> {
-    let selector_str = "div.total-resultats p";
-    let no_results_selector_str = "div.resultats--offre-etudes p";
-    let selector =
-        Selector::parse(selector_str).expect("Static selector is valid");
-    let no_results_selector = Selector::parse(no_results_selector_str)
-        .expect("Static selector is valid");
-
     let text = doc
-        .select(&selector)
+        .select(&TOTAL)
         .next()
         .map(|element| element.text().collect::<String>());
 
@@ -90,14 +98,14 @@ fn get_total_results(doc: &Html) -> Result<Option<usize>, ParseError> {
                 .next()
                 .and_then(|element| element.parse::<usize>().ok())
                 .ok_or_else(|| ParseError::MalformedEntry {
-                    selector: selector_str.to_string(),
+                    selector: TOTAL_CSS.to_string(),
                     raw: text,
                 })?;
             Ok(Some(total))
         }
         None => {
             let is_no_results = doc
-                .select(&no_results_selector)
+                .select(&NO_RESULTS)
                 .next()
                 .map(|element| element.text().collect::<String>())
                 .is_some_and(|text| text.trim() == "Aucun résultat");
@@ -105,9 +113,7 @@ fn get_total_results(doc: &Html) -> Result<Option<usize>, ParseError> {
                 Ok(None)
             } else {
                 Err(ParseError::MissingElement {
-                    selector: format!(
-                        "{selector_str} (nor {no_results_selector_str})"
-                    ),
+                    selector: format!("{TOTAL_CSS} (nor {NO_RESULTS_CSS})"),
                 })
             }
         }
@@ -115,15 +121,11 @@ fn get_total_results(doc: &Html) -> Result<Option<usize>, ParseError> {
 }
 
 fn get_catalogues(doc: &Html) -> (Vec<CatalogueEntry>, Vec<ParseError>) {
-    let selector_str = "a.cours-element--lien";
-    let selector =
-        Selector::parse(selector_str).expect("Static selector is valid");
-
     let mut entries: Vec<CatalogueEntry> = Vec::new();
     let mut anomalies: Vec<ParseError> = Vec::new();
 
-    for element in doc.select(&selector) {
-        match parse_catalogue(&element, selector_str) {
+    for element in doc.select(&ENTRY) {
+        match parse_catalogue(&element, ENTRY_CSS) {
             Ok(entry) => entries.push(entry),
             Err(anomaly) => anomalies.push(anomaly),
         }
@@ -136,27 +138,20 @@ fn parse_catalogue(
     element: &ElementRef,
     selector_str: &str,
 ) -> Result<CatalogueEntry, ParseError> {
-    let code_selector_str = "span.cours-element--sigle";
-    let title_selector_str = "span.cours-element--titre";
-    let code_selector =
-        Selector::parse(code_selector_str).expect("Static selector is valid");
-    let title_selector =
-        Selector::parse(title_selector_str).expect("Static selector is valid");
-
     let code = element
-        .select(&code_selector)
+        .select(&ENTRY_CODE)
         .next()
         .map(|element| element.text().collect::<String>())
         .ok_or_else(|| ParseError::MalformedEntry {
-            selector: code_selector_str.to_string(),
+            selector: ENTRY_CODE_CSS.to_string(),
             raw: element.html(),
         })?;
     let title = element
-        .select(&title_selector)
+        .select(&ENTRY_TITLE)
         .next()
         .map(|element| element.text().collect::<String>())
         .ok_or_else(|| ParseError::MalformedEntry {
-            selector: title_selector_str.to_string(),
+            selector: ENTRY_TITLE_CSS.to_string(),
             raw: element.html(),
         })?;
     let url = element
@@ -200,6 +195,10 @@ fn parse_matiere(
         id: id.to_string(),
         label: label.to_string(),
     })
+}
+
+fn sel(selector: &str) -> Selector {
+    Selector::parse(selector).expect("Static selector is valid")
 }
 
 #[cfg_attr(coverage_nightly, coverage(off))]

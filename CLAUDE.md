@@ -17,7 +17,7 @@ No source code yet — only planning documents and parser test cases.
 - `docs/project_plan.md` — **the standalone source of truth**: functionality, constraints, implementation, weekly jalons, revised decisions, open questions. Read it before writing code.
 - `docs/next_steps.md` — the immediate task list (test-first scraper/parser).
 - `docs/conception/` — the design history (original conception documents, deliverable plan, initial ADR, request emails). Consult only for extra detail (full grammar specs, worked JSON examples, spike results, rejected-alternative reasoning); where it contradicts `docs/project_plan.md`, the plan wins.
-- `tests/fixtures/test_cases/` — expected parser outputs: `classes/*.json` (course pages) and `programs/*.json` (program pages). Shared across crates; see ADR `2026-07-structure-des-tests-et-fixtures`.
+- `tests/fixtures/test_cases/` — expected parser outputs: `courses/*.json` (course pages) and `programs/*.json` (program pages). Shared across crates; see ADR `2026-07-structure-des-tests-et-fixtures`.
 
 ## Decision records (ADR) — required practice
 
@@ -44,7 +44,7 @@ Load-bearing invariants (constraints, not preferences) are in `docs/project_plan
 ## Domain quick facts
 
 - **Session naming & founding hypothesis**: files are named season+year (`a2026` = Automne 2026, `h####` = Hiver, `e####` = Été). A future session with no published schedule reuses the most recent snapshot of the *same season* — so keep one snapshot per season, never blindly overwritten.
-- **Data files**: `data/cours/{session}.json` (per-course: `code`, `title`, `credits`, `cycle`, subject, `prerequisites` raw + parsed tree, contributing programs, `equivalents`, sections with NRC/type/slots/building/linked sections) and `data/programmes.json` (`credits_required`, `mandatory`, `rules`, `concentrations`, `profiles`, plus the hand-encoded `cheminement_type`).
+- **Data files**: `data/cours/{session}.json` (per-course: `code`, `title`, `credits`, `cycle`, subject, `prerequisites` raw + parsed tree, contributing programs, `equivalents`, per-season choice groups of sections with NRC/section/mode/slots) and `data/programmes.json` (`credits_required`, `mandatory`, `rules`, `concentrations`, `profiles`, plus the hand-encoded `cheminement_type`).
 - **`matière` = course-code prefix** (`GCI-`, `GEX-`); filtering by subject filters the catalogue URLs, no facet needed.
 - **Program mapping comes from course pages** ("Cette activité est contributoire dans :"), not program pages; only programs whose rules are needed get their page scraped.
 - **`cheminement_type` (A1→H8 organigramme) is hand-encoded**, GEX only — no machine-readable source exists.
@@ -63,3 +63,4 @@ Ten weekly demonstrable jalons (`docs/project_plan.md` § Versions et jalons heb
 - When writing comments, don't prefix them with `ponytail: `
 - Don't hesitate to delegate to a cheaper model when it makes sense
 - Never use while loops
+- Code should be structured to avoid expect in the production code as much as possible

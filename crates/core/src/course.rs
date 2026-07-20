@@ -6,7 +6,7 @@ use crate::common::Cycle;
 pub struct Course {
     pub code: String,
     pub title: String,
-    pub credits: i64,
+    pub credits: u32,
     pub cycle: Cycle,
     #[serde(default)]
     pub prerequisites: Option<Prerequisites>,
@@ -16,9 +16,10 @@ pub struct Course {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct Prerequisites {
-    pub raw: String,
-    pub tree: PrereqTree,
+#[serde(untagged)]
+pub enum Prerequisites {
+    Parsed { raw: String, tree: PrereqTree },
+    Raw { raw: String },
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -33,19 +34,12 @@ pub enum PrereqTree {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ProgramCredits {
     pub program: String,
-    pub credits: i64,
+    pub credits: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SeasonOffering {
-    pub components: Vec<Component>,
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct Component {
-    #[serde(rename = "type")]
-    pub kind: ComponentKind,
-    pub sections: Vec<Section>,
+    pub groups: Vec<Vec<Section>>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -79,15 +73,6 @@ pub enum Season {
     Fall,
     Winter,
     Summer,
-}
-
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize,
-)]
-#[serde(rename_all = "lowercase")]
-pub enum ComponentKind {
-    Lecture,
-    Laboratory,
 }
 
 #[derive(
@@ -244,18 +229,7 @@ mod tests {
         assert!(Season::Winter < Season::Summer);
     }
 
-    // --- Component / Mode / Day: serde rename conventions ---
-
-    #[test]
-    fn component_kind_round_trips_lowercase() {
-        let lecture: ComponentKind =
-            serde_json::from_str(r#""lecture""#).expect("lecture");
-        assert_eq!(lecture, ComponentKind::Lecture);
-        assert_eq!(
-            serde_json::to_string(&ComponentKind::Laboratory).expect("ser"),
-            r#""laboratory""#
-        );
-    }
+    // --- Mode / Day: serde rename conventions ---
 
     #[test]
     fn mode_uses_kebab_case() {
@@ -291,12 +265,20 @@ mod tests {
     }
 
     #[test]
-    fn component_type_key_maps_to_kind() {
-        let json = r#"{"type":"laboratory","sections":[]}"#;
-        let component: Component =
-            serde_json::from_str(json).expect("component");
-        assert_eq!(component.kind, ComponentKind::Laboratory);
-        assert!(component.sections.is_empty());
+    fn season_offering_holds_choice_groups() {
+        // Each inner array is one choice: pick exactly one section per group
+        // and union the slots. GCI-1007's shape — the lecture is forced (a
+        // one-element group), one of two labs is chosen.
+        let json = r#"{"groups":[[{"nrc":"84664","section":null,"mode":"in-person","slots":[]}],[{"nrc":"84665","section":"A","mode":"in-person","slots":[]},{"nrc":"84666","section":"B","mode":"in-person","slots":[]}]]}"#;
+        let offering: SeasonOffering =
+            serde_json::from_str(json).expect("offering");
+        assert_eq!(offering.groups.len(), 2);
+        assert_eq!(offering.groups[0].len(), 1);
+        assert_eq!(offering.groups[1].len(), 2);
+        assert_eq!(
+            serde_json::to_value(&offering).expect("ser"),
+            as_value(json)
+        );
     }
 
     // --- PrereqTree: untagged ET/OU tree, each variant round-trips exactly ---
@@ -361,8 +343,50 @@ mod tests {
         let json = r#"{"raw":"GEX, Crédits exigés : 60","tree":{"program_credits":{"program":"GEX","credits":60}}}"#;
         let prereq: Prerequisites =
             serde_json::from_str(json).expect("prereq");
-        assert_eq!(prereq.raw, "GEX, Crédits exigés : 60");
-        assert!(matches!(prereq.tree, PrereqTree::ProgramCredits { .. }));
+        match prereq {
+            Prerequisites::Parsed { raw, tree } => {
+                assert_eq!(raw, "GEX, Crédits exigés : 60");
+                assert!(matches!(tree, PrereqTree::ProgramCredits { .. }));
+            }
+            Prerequisites::Raw { .. } => {
+                panic!("expected Parsed variant, got Raw")
+            }
+        }
+    }
+
+    #[test]
+    fn prerequisites_without_tree_is_raw() {
+        let json = r#"{"raw":"Connaissance de base"}"#;
+        let prereq: Prerequisites =
+            serde_json::from_str(json).expect("raw prereq");
+        assert_eq!(
+            prereq,
+            Prerequisites::Raw {
+                raw: "Connaissance de base".to_string(),
+            }
+        );
+        assert_eq!(
+            serde_json::to_value(&prereq).expect("ser"),
+            as_value(json)
+        );
+    }
+
+    #[test]
+    fn prerequisites_with_malformed_tree_falls_back_to_raw() {
+        // Untagged variants are tried in declaration order: Parsed first,
+        // then Raw. A "tree" key that doesn't match PrereqTree's shape
+        // fails the Parsed attempt, and Raw ignores unknown fields — so a
+        // corrupted tree degrades to raw-only instead of an error
+        // (ADR 2026-07-prealables-hors-grammaire-en-enum).
+        let json = r#"{"raw":"x","tree":{"bogus":true}}"#;
+        let prereq: Prerequisites =
+            serde_json::from_str(json).expect("degrades to raw");
+        assert_eq!(
+            prereq,
+            Prerequisites::Raw {
+                raw: "x".to_string(),
+            }
+        );
     }
 
     // --- Section: optional section identifier ---
@@ -428,14 +452,14 @@ mod tests {
 
     #[test]
     fn course_deserializes_season_keyed_map() {
-        let json = r#"{"code":"GEX-7002","title":"x","credits":3,"cycle":2,"prerequisites":null,"equivalents":[],"seasons":{"winter":{"components":[{"type":"lecture","sections":[{"nrc":"14856","section":"A","mode":"in-person","slots":[{"day":"friday","start":"08:30","end":"11:20"}]}]}]}}}"#;
+        let json = r#"{"code":"GEX-7002","title":"x","credits":3,"cycle":2,"prerequisites":null,"equivalents":[],"seasons":{"winter":{"groups":[[{"nrc":"14856","section":"A","mode":"in-person","slots":[{"day":"friday","start":"08:30","end":"11:20"}]}]]}}}"#;
         let course: Course = serde_json::from_str(json).expect("course");
         assert_eq!(course.cycle, Cycle::Second);
         let winter = course
             .seasons
             .get(&Season::Winter)
             .expect("winter offering");
-        assert_eq!(winter.components.len(), 1);
-        assert_eq!(winter.components[0].kind, ComponentKind::Lecture);
+        assert_eq!(winter.groups.len(), 1);
+        assert_eq!(winter.groups[0][0].nrc, "14856");
     }
 }

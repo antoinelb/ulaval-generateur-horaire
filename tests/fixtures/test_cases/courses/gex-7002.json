@@ -1,0 +1,30 @@
+{
+  "code": "GEX-7002",
+  "title": "Hydrologie opérationnelle",
+  "credits": 3,
+  "cycle": 2,
+  "prerequisites": null,
+  "equivalents": [
+    "GEX-4002"
+  ],
+  "seasons": {
+    "winter": {
+      "groups": [
+        [
+          {
+            "nrc": "14856",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

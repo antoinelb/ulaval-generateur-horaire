@@ -1,0 +1,63 @@
+{
+  "code": "GCI-1007",
+  "title": "Mécanique des sols",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "GGL-2600 OU GLG-1900 OU GLG-1000",
+    "tree": {
+      "any": [
+        "GGL-2600",
+        "GLG-1900",
+        "GLG-1000"
+      ]
+    }
+  },
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "groups": [
+        [
+          {
+            "nrc": "84664",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
+                "start": "12:30",
+                "end": "15:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "84665",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "12:30",
+                "end": "15:20"
+              }
+            ]
+          },
+          {
+            "nrc": "84666",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

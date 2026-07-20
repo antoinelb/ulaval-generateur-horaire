@@ -12,6 +12,14 @@ pub struct CatalogueEntry {
 
 impl Catalogue {
     pub fn from_entries(mut entries: Vec<CatalogueEntry>) -> Self {
+        // removes 8xxx courses which are phd specific courses that don't enter
+        // a schedule
+        entries.retain(|entry| {
+            !entry
+                .code
+                .split_once('-')
+                .is_some_and(|(_, number)| number.starts_with('8'))
+        });
         entries.sort_by(|a, b| a.code.cmp(&b.code));
         entries.dedup_by(|a, b| a.code == b.code);
         Self { courses: entries }
@@ -59,6 +67,28 @@ mod tests {
             .map(|course| course.title.as_str())
             .collect();
         assert_eq!(titles, ["Cours GEX-1000", "Cours GEX-2000"]);
+    }
+
+    #[test]
+    fn graduate_level_codes_are_dropped() {
+        // only the first digit decides: MAT-1800 merely contains an 8 and
+        // stays. A code without a dash is kept — the filter cannot locate a
+        // number, so it removes nothing (ADR
+        // `2026-07-troisieme-cycle-hors-perimetre`)
+        let catalogue = Catalogue::from_entries(vec![
+            entry("GEX-8000"),
+            entry("GCI-1000"),
+            entry("GEX-8999"),
+            entry("MAT-1800"),
+            entry("SANSTIRET"),
+        ]);
+
+        let codes: Vec<&str> = catalogue
+            .courses
+            .iter()
+            .map(|course| course.code.as_str())
+            .collect();
+        assert_eq!(codes, ["GCI-1000", "MAT-1800", "SANSTIRET"]);
     }
 
     #[test]

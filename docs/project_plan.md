@@ -31,6 +31,7 @@ Toute nouvelle décision est documentée dans un fichier individuel sous `docs/c
 - Enlever un cours de l'horaire actuel.
 - Affichage du nombre total de crédits de l'horaire actuel.
 - Ajouter manuellement un cours avec son horaire (ex. session à l'étranger, autre université).
+- Proposer un cours ajouté à la main au catalogue partagé : un bouton ouvre une issue GitHub préremplie avec son JSON ; une fois commité dans `data/cours/{session}.manuel.json`, il est visible de tous (ADR `2026-07-contribution-de-cours-manuels`).
 - Visualisation de tous les cours sélectionnés dans un horaire hebdomadaire.
 - Choix automatique d'une combinaison de sections sans conflit (une section de chaque type par cours, sections liées obligatoires incluses).
 - Quand un cours a un équivalent, utiliser l'horaire du plus récent des deux.
@@ -127,6 +128,7 @@ Alternatives rejetées (raisonnement complet dans `docs/conception/`) : Python +
 
 Cron GitHub Actions → binaire `scraper` (GET throttlés à ~10 req/s par un throttle partagé honorant `Retry-After`, pagination du catalogue calculée depuis la page 0 (borne supérieure, pages « Aucun résultat » excédentaires tolérées) puis vérifiée par réconciliation arithmétique, catalogue complet = union des facettes matières partitionnées (l'index du site plafonne toute requête à 10 000 résultats ; la bannière est ignorée, le widget troué étant un bug du site assumé) — ADR `2026-07-conception-du-fetcher`, `2026-07-pagination-du-catalogue-par-comptage`, `2026-07-tolerance-des-pages-aucun-resultat-du-fan-out`, `2026-07-partition-du-catalogue-par-matiere`, `2026-07-le-catalogue-est-lunion-des-facettes` — HTML brut sauvegardé, parsing via les types de `core`) → `data/catalogue.json` (catalogue complet trié/dédupliqué par code, écrit seulement si ≥ 90 % du compte précédent) + `data/catalogue.erreurs.log` (anomalies brutes, une par ligne ; le cron alerte si non vide) + `data/cours/{session}.json` + `data/programmes.json` → commit du snapshot → redéploiement du site statique → `ui` charge le JSON dans le navigateur, tout le calcul tourne localement via `core` → un horaire choisi se partage en URL.
 Aucun serveur nulle part dans le chemin.
+En parallèle, `data/cours/{session}.manuel.json` (cours sans source machine-lisible, jamais touché par le scraper) est fusionné au chargement avec le snapshot, entrées marquées `source: "manuel"` et scrapé prioritaire en cas de collision de code — ADR `2026-07-contribution-de-cours-manuels`.
 
 Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par de simples GET (ni session, ni POST de formulaire) ; le cookie store de `reqwest` reste un repli si certaines pages l'exigent (à vérifier à la semaine 1).
 
@@ -190,7 +192,7 @@ Le bac complet : les sessions se remplissent automatiquement et restent modifiab
 | 7 | **Automatisation par organigramme** : format JSON provisoire de l'organigramme, ajout automatique des cours de la session visée, mise en évidence des cours qui rentreraient dans l'horaire | Charger un organigramme → l'horaire de la session se remplit tout seul |
 | 8 | **Couverture des règles** : satisfait / à combler / cours candidats pour un organigramme donné ; validation de l'ordre des cours selon les préalables (équivalences comprises) | L'organigramme signale un cours placé avant son préalable et ce qui manque pour diplômer |
 | 9 | **Génération de l'organigramme sous contraintes** : cours réussis, cours voulus, sessions remplies à la main, session à l'étranger ; règles et sessions d'offre respectées | Fournir ses contraintes → un organigramme complet et valide est proposé |
-| 10 | **Préférences et partage** : classement des combinaisons (journées compactes, matins libres, pause dîner, distance entre pavillons), partage d'un horaire par URL ; polissage | Changer une préférence reclasse l'horaire ; l'URL copiée rouvre le même horaire ailleurs |
+| 10 | **Préférences et partage** : classement des combinaisons (journées compactes, matins libres, pause dîner, distance entre pavillons), partage d'un horaire par URL, contribution d'un cours manuel (fusion de `{session}.manuel.json` + bouton d'issue préremplie) ; polissage | Changer une préférence reclasse l'horaire ; l'URL copiée rouvre le même horaire ailleurs ; un cours proposé par Daniel apparaît pour tous après commit |
 
 Le cœur (requis explicites de Daniel, voir « Portée ») = v0 + jalons 4–5 ; la vision complète s'achève avec la v2.
 
