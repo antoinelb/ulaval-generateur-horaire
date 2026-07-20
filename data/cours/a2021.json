@@ -1,0 +1,35 @@
+{
+  "courses": [
+    {
+      "code": "ESP-2005",
+      "title": "Literatura hispanoamericana actual",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ESP-2001",
+        "tree": "ESP-2001"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "84940",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

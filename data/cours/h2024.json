@@ -1,8 +1,8 @@
 {
   "courses": [
     {
-      "code": "ACT-7103",
-      "title": "Mathématiques des risques financiers",
+      "code": "ACT-7116",
+      "title": "Modélisation et évaluation des risques vie",
       "credits": 3,
       "cycle": 2,
       "prerequisites": null,
@@ -12,12 +12,12 @@
           "groups": [
             [
               {
-                "nrc": "12655",
+                "nrc": "21538",
                 "section": "A",
                 "mode": "in-person",
                 "slots": [
                   {
-                    "day": "thursday",
+                    "day": "monday",
                     "start": "13:30",
                     "end": "16:20"
                   }

@@ -1,20 +1,20 @@
 {
   "courses": [
     {
-      "code": "ACT-7118",
-      "title": "Méthodes d'inférence appliquées en actuariat",
+      "code": "ANT-2303",
+      "title": "Anthropologie et environnement",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "fall": {
           "groups": [
             [
               {
-                "nrc": "21345",
-                "section": "DH1",
-                "mode": "hybrid",
+                "nrc": "83068",
+                "section": "A",
+                "mode": "in-person",
                 "slots": []
               }
             ]

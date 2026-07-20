@@ -1,8 +1,8 @@
 {
   "courses": [
     {
-      "code": "ACT-7103",
-      "title": "Mathématiques des risques financiers",
+      "code": "ESP-7000",
+      "title": "Teorìa del género narrativo",
       "credits": 3,
       "cycle": 2,
       "prerequisites": null,
@@ -12,16 +12,10 @@
           "groups": [
             [
               {
-                "nrc": "12655",
+                "nrc": "23366",
                 "section": "A",
                 "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "thursday",
-                    "start": "13:30",
-                    "end": "16:20"
-                  }
-                ]
+                "slots": []
               }
             ]
           ]

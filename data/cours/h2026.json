@@ -1,28 +1,25 @@
 {
   "courses": [
     {
-      "code": "GEX-1000",
-      "title": "Dispersion des polluants",
+      "code": "ACT-1001",
+      "title": "Mathématiques financières",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": {
-        "raw": "GCI-1004",
-        "tree": "GCI-1004"
-      },
+      "prerequisites": null,
       "equivalents": [],
       "seasons": {
         "winter": {
           "groups": [
             [
               {
-                "nrc": "14848",
+                "nrc": "12289",
                 "section": "A",
                 "mode": "in-person",
                 "slots": [
                   {
                     "day": "monday",
-                    "start": "10:30",
-                    "end": "12:20"
+                    "start": "12:30",
+                    "end": "15:20"
                   },
                   {
                     "day": "wednesday",
@@ -37,8 +34,322 @@
       }
     },
     {
-      "code": "GEX-1580",
-      "title": "Stage en génie des eaux I",
+      "code": "ACT-1005",
+      "title": "Analyse et traitement collectif du risque",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12290",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-1006",
+      "title": "Gestion du risque financier I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-1001",
+        "tree": "ACT-1001"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12291",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "16:30",
+                    "end": "19:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-2000",
+      "title": "Analyse statistique des risques actuariels",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-1002",
+        "tree": "ACT-1002"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12292",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "13:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-2001",
+      "title": "Introduction à l'actuariat II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-1000 ET ACT-1002",
+        "tree": {
+          "all": [
+            "ACT-1000",
+            "ACT-1002"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12293",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "13:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "10:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "11:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-2002",
+      "title": "Méthodes numériques en actuariat",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-1002 ET (IFT-1902 OU IFT-4902)",
+        "tree": {
+          "all": [
+            "ACT-1002",
+            {
+              "any": [
+                "IFT-1902",
+                "IFT-4902"
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12294",
+                "section": "H",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-2007",
+      "title": "Mathématiques actuarielles vie II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-2004",
+        "tree": "ACT-2004"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12295",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "10:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-2008",
+      "title": "Mathématiques actuarielles IARD II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-2003",
+        "tree": "ACT-2003"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12296",
+                "section": "A",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-2011",
+      "title": "Gestion du risque financier II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-1006",
+        "tree": "ACT-1006"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12297",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "11:30",
+                    "end": "12:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-2101",
+      "title": "Projet de recherche",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT, Crédits exigés : 36",
+        "tree": {
+          "program_credits": {
+            "program": "ACT",
+            "credits": 36
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12298",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-2590",
+      "title": "Stage en actuariat I",
       "credits": 9,
       "cycle": 1,
       "prerequisites": {
@@ -56,7 +367,7 @@
           "groups": [
             [
               {
-                "nrc": "11481",
+                "nrc": "11194",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -67,28 +378,17 @@
       }
     },
     {
-      "code": "GEX-2001",
-      "title": "Interventions en bassin versant",
+      "code": "ACT-3001",
+      "title": "Législation et responsabilité professionnelle en actuariat",
       "credits": 3,
       "cycle": 1,
       "prerequisites": {
-        "raw": "GGL-2600* ET (GCI-2009 OU GGL-2609) ET (GEX-1000 OU GCI-1005)",
+        "raw": "ACT, Crédits exigés : 39",
         "tree": {
-          "all": [
-            "GGL-2600",
-            {
-              "any": [
-                "GCI-2009",
-                "GGL-2609"
-              ]
-            },
-            {
-              "any": [
-                "GEX-1000",
-                "GCI-1005"
-              ]
-            }
-          ]
+          "program_credits": {
+            "program": "ACT",
+            "credits": 39
+          }
         }
       },
       "equivalents": [],
@@ -97,264 +397,12 @@
           "groups": [
             [
               {
-                "nrc": "14849",
-                "section": "A",
-                "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "friday",
-                    "start": "08:30",
-                    "end": "11:20"
-                  }
-                ]
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "GEX-2004",
-      "title": "Traitement des eaux usées",
-      "credits": 3,
-      "cycle": 1,
-      "prerequisites": {
-        "raw": "((CHM-1903 ET GEX-1000 ET MCB-1907) OU (BIO-1003 ET GCH-1004))",
-        "tree": {
-          "any": [
-            {
-              "all": [
-                "CHM-1903",
-                "GEX-1000",
-                "MCB-1907"
-              ]
-            },
-            {
-              "all": [
-                "BIO-1003",
-                "GCH-1004"
-              ]
-            }
-          ]
-        }
-      },
-      "equivalents": [
-        "GEX-7004"
-      ],
-      "seasons": {
-        "winter": {
-          "groups": [
-            [
-              {
-                "nrc": "14850",
-                "section": "A",
-                "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "tuesday",
-                    "start": "09:30",
-                    "end": "11:20"
-                  },
-                  {
-                    "day": "thursday",
-                    "start": "09:30",
-                    "end": "11:20"
-                  }
-                ]
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "GEX-2590",
-      "title": "Stage en génie des eaux II",
-      "credits": 9,
-      "cycle": 1,
-      "prerequisites": {
-        "raw": "GEX-1580",
-        "tree": "GEX-1580"
-      },
-      "equivalents": [],
-      "seasons": {
-        "winter": {
-          "groups": [
-            [
-              {
-                "nrc": "11482",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "GEX-2591",
-      "title": "Stage en génie des eaux III",
-      "credits": 9,
-      "cycle": 1,
-      "prerequisites": {
-        "raw": "GEX-2590",
-        "tree": "GEX-2590"
-      },
-      "equivalents": [],
-      "seasons": {
-        "winter": {
-          "groups": [
-            [
-              {
-                "nrc": "11483",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "GEX-3001",
-      "title": "Génie côtier",
-      "credits": 3,
-      "cycle": 1,
-      "prerequisites": {
-        "raw": "GCI-2010*",
-        "tree": "GCI-2010"
-      },
-      "equivalents": [],
-      "seasons": {
-        "winter": {
-          "groups": [
-            [
-              {
-                "nrc": "14851",
-                "section": "A",
-                "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "tuesday",
-                    "start": "13:30",
-                    "end": "16:20"
-                  }
-                ]
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "GEX-3335",
-      "title": "Projet intégrateur en génie des eaux II",
-      "credits": 3,
-      "cycle": 1,
-      "prerequisites": {
-        "raw": "(ECN-2901 OU ECN-4901) ET GCI-1011 ET GCI-4301 ET GMC-3009 ET  Crédits exigés : 72",
-        "tree": {
-          "all": [
-            {
-              "any": [
-                "ECN-2901",
-                "ECN-4901"
-              ]
-            },
-            "GCI-1011",
-            "GCI-4301",
-            "GMC-3009",
-            {
-              "program_credits": {
-                "program": null,
-                "credits": 72
-              }
-            }
-          ]
-        }
-      },
-      "equivalents": [],
-      "seasons": {
-        "winter": {
-          "groups": [
-            [
-              {
-                "nrc": "14852",
+                "nrc": "12299",
                 "section": "A",
                 "mode": "in-person",
                 "slots": [
                   {
                     "day": "monday",
-                    "start": "11:30",
-                    "end": "12:20"
-                  },
-                  {
-                    "day": "wednesday",
-                    "start": "08:30",
-                    "end": "11:20"
-                  }
-                ]
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "GEX-3590",
-      "title": "Stage en génie des eaux IV",
-      "credits": 9,
-      "cycle": 1,
-      "prerequisites": {
-        "raw": "GEX-2591",
-        "tree": "GEX-2591"
-      },
-      "equivalents": [],
-      "seasons": {
-        "winter": {
-          "groups": [
-            [
-              {
-                "nrc": "11484",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "GEX-4008",
-      "title": "Approvisionnement en eau dans les communautés nordiques",
-      "credits": 3,
-      "cycle": 1,
-      "prerequisites": {
-        "raw": "GEX, Crédits exigés : 60",
-        "tree": {
-          "program_credits": {
-            "program": "GEX",
-            "credits": 60
-          }
-        }
-      },
-      "equivalents": [
-        "GEX-7042"
-      ],
-      "seasons": {
-        "winter": {
-          "groups": [
-            [
-              {
-                "nrc": "14854",
-                "section": "A",
-                "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "wednesday",
                     "start": "13:30",
                     "end": "16:20"
                   }
@@ -366,18 +414,21 @@
       }
     },
     {
-      "code": "GEX-6001",
-      "title": "Séminaire de maîtrise",
-      "credits": 1,
-      "cycle": 2,
-      "prerequisites": null,
+      "code": "ACT-3590",
+      "title": "Stage en actuariat II",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-2590",
+        "tree": "ACT-2590"
+      },
       "equivalents": [],
       "seasons": {
         "winter": {
           "groups": [
             [
               {
-                "nrc": "14855",
+                "nrc": "11195",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -388,9 +439,301 @@
       }
     },
     {
-      "code": "GEX-6811",
+      "code": "ACT-3591",
+      "title": "Stage en actuariat III",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-3590",
+        "tree": "ACT-3590"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "11196",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-4111",
+      "title": "Gestion de risques en entreprise",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-2001 ET ACT, Crédits exigés : 39",
+        "tree": {
+          "all": [
+            "ACT-2001",
+            {
+              "program_credits": {
+                "program": "ACT",
+                "credits": 39
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [
+        "ACT-6111"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12303",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-4113",
+      "title": "Gestion actif-passif",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-1006 ET ACT-2009",
+        "tree": {
+          "all": [
+            "ACT-1006",
+            "ACT-2009"
+          ]
+        }
+      },
+      "equivalents": [
+        "ACT-6113"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12304",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "16:30",
+                    "end": "19:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-4114",
+      "title": "Apprentissage statistique en actuariat",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-2002 ET ACT-2003 ET ACT-1000 à 4999, Crédits exigés : 39",
+        "tree": {
+          "all": [
+            "ACT-2002",
+            "ACT-2003",
+            {
+              "program_credits": {
+                "program": "ACT",
+                "credits": 39
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [
+        "ACT-6114"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12305",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "10:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "11:30",
+                    "end": "12:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "10:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-6100",
+      "title": "Essai",
+      "credits": 9,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12308",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-6111",
+      "title": "Gestion de risques en entreprise",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "ACT-4111"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12309",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-6113",
+      "title": "Gestion actif-passif",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "ACT-4113"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12310",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "16:30",
+                    "end": "19:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-6114",
+      "title": "Apprentissage statistique en actuariat",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "ACT-4114"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12311",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "10:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "11:30",
+                    "end": "12:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "10:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-6804",
+      "title": "Activité de recherche - mémoire 4",
+      "credits": 8,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "19206",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-6811",
       "title": "Activité de recherche - mémoire 1",
-      "credits": 7,
+      "credits": 3,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
@@ -399,7 +742,7 @@
           "groups": [
             [
               {
-                "nrc": "19761",
+                "nrc": "19207",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -410,7 +753,7 @@
       }
     },
     {
-      "code": "GEX-6812",
+      "code": "ACT-6812",
       "title": "Activité de recherche - mémoire 2",
       "credits": 7,
       "cycle": 2,
@@ -421,7 +764,7 @@
           "groups": [
             [
               {
-                "nrc": "19762",
+                "nrc": "19208",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -432,7 +775,7 @@
       }
     },
     {
-      "code": "GEX-6813",
+      "code": "ACT-6813",
       "title": "Activité de recherche - mémoire 3",
       "credits": 7,
       "cycle": 2,
@@ -443,7 +786,7 @@
           "groups": [
             [
               {
-                "nrc": "19763",
+                "nrc": "19209",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -454,9 +797,9 @@
       }
     },
     {
-      "code": "GEX-6814",
+      "code": "ACT-6814",
       "title": "Activité de recherche - mémoire 4",
-      "credits": 9,
+      "credits": 7,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
@@ -465,7 +808,7 @@
           "groups": [
             [
               {
-                "nrc": "19764",
+                "nrc": "19210",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -476,29 +819,21 @@
       }
     },
     {
-      "code": "GEX-7002",
-      "title": "Hydrologie opérationnelle",
-      "credits": 3,
+      "code": "ACT-7005",
+      "title": "Travail actuariel pratique en entreprise",
+      "credits": 4,
       "cycle": 2,
       "prerequisites": null,
-      "equivalents": [
-        "GEX-4002"
-      ],
+      "equivalents": [],
       "seasons": {
         "winter": {
           "groups": [
             [
               {
-                "nrc": "14856",
+                "nrc": "12312",
                 "section": "A",
                 "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "friday",
-                    "start": "08:30",
-                    "end": "11:20"
-                  }
-                ]
+                "slots": []
               }
             ]
           ]
@@ -506,82 +841,335 @@
       }
     },
     {
-      "code": "GEX-7004",
-      "title": "Traitement des eaux usées",
-      "credits": 3,
+      "code": "ACT-7012",
+      "title": "Lectures dirigées",
+      "credits": 1,
       "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [
-        "GEX-2004"
-      ],
+      "prerequisites": {
+        "raw": "ACT, Crédits exigés : 9 ET (MAT, Crédits exigés : 3 OU STT, Crédits exigés : 3 OU ECN, Crédits exigés : 3 OU MQT, Crédits exigés : 3 OU IFT, Crédits exigés : 3 OU GLO, Crédits exigés : 3 OU GIF, Crédits exigés : 3)",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": "ACT",
+                "credits": 9
+              }
+            },
+            {
+              "any": [
+                {
+                  "program_credits": {
+                    "program": "MAT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "STT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "ECN",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "MQT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "IFT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GLO",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GIF",
+                    "credits": 3
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
       "seasons": {
         "winter": {
           "groups": [
             [
               {
-                "nrc": "14857",
+                "nrc": "12314",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7013",
+      "title": "Lectures dirigées",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ACT, Crédits exigés : 9 ET (MAT, Crédits exigés : 3 OU STT, Crédits exigés : 3 OU ECN, Crédits exigés : 3 OU MQT, Crédits exigés : 3 OU IFT, Crédits exigés : 3 OU GLO, Crédits exigés : 3 OU GIF, Crédits exigés : 3)",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": "ACT",
+                "credits": 9
+              }
+            },
+            {
+              "any": [
+                {
+                  "program_credits": {
+                    "program": "MAT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "STT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "ECN",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "MQT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "IFT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GLO",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GIF",
+                    "credits": 3
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12315",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7014",
+      "title": "Lectures dirigées",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ACT, Crédits exigés : 9 ET (MAT, Crédits exigés : 3 OU STT, Crédits exigés : 3 OU ECN, Crédits exigés : 3 OU MQT, Crédits exigés : 3 OU IFT, Crédits exigés : 3 OU GLO, Crédits exigés : 3 OU GIF, Crédits exigés : 3)",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": "ACT",
+                "credits": 9
+              }
+            },
+            {
+              "any": [
+                {
+                  "program_credits": {
+                    "program": "MAT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "STT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "ECN",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "MQT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "IFT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GLO",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GIF",
+                    "credits": 3
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12316",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7015",
+      "title": "Lectures dirigées",
+      "credits": 4,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ACT, Crédits exigés : 12 ET (MAT, Crédits exigés : 4 OU STT, Crédits exigés : 4)",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": "ACT",
+                "credits": 12
+              }
+            },
+            {
+              "any": [
+                {
+                  "program_credits": {
+                    "program": "MAT",
+                    "credits": 4
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "STT",
+                    "credits": 4
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12317",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7019",
+      "title": "Formation aux compétences informationnelles",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12318",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7102",
+      "title": "Modèles avancés de la théorie du risque",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12319",
                 "section": "A",
                 "mode": "in-person",
                 "slots": [
                   {
                     "day": "tuesday",
-                    "start": "09:30",
-                    "end": "11:20"
-                  },
-                  {
-                    "day": "thursday",
-                    "start": "09:30",
-                    "end": "11:20"
-                  }
-                ]
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "GEX-7013",
-      "title": "Sujets spéciaux",
-      "credits": 3,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "winter": {
-          "groups": [
-            [
-              {
-                "nrc": "21176",
-                "section": "B",
-                "mode": "remote",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "GEX-7042",
-      "title": "Approvisionnement en eau dans les communautés nordiques",
-      "credits": 3,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [
-        "GEX-4008"
-      ],
-      "seasons": {
-        "winter": {
-          "groups": [
-            [
-              {
-                "nrc": "14861",
-                "section": "A",
-                "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "wednesday",
                     "start": "13:30",
                     "end": "16:20"
                   }
@@ -593,8 +1181,8 @@
       }
     },
     {
-      "code": "GEX-7050",
-      "title": "Traitements avancés des eaux",
+      "code": "ACT-7105",
+      "title": "Travail actuariel pratique en entreprise",
       "credits": 3,
       "cycle": 2,
       "prerequisites": null,
@@ -604,14 +1192,36 @@
           "groups": [
             [
               {
-                "nrc": "14862",
+                "nrc": "12321",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7119",
+      "title": "Modèles de risque avec dépendance et mesures de risque",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12324",
                 "section": "A",
                 "mode": "in-person",
                 "slots": [
                   {
-                    "day": "monday",
-                    "start": "15:30",
-                    "end": "18:20"
+                    "day": "thursday",
+                    "start": "13:30",
+                    "end": "16:20"
                   }
                 ]
               }
@@ -621,8 +1231,8 @@
       }
     },
     {
-      "code": "GEX-7078",
-      "title": "Analyse et modélisation de séries environnementales",
+      "code": "ACT-7120",
+      "title": "Analyse quantitative des risques financiers",
       "credits": 3,
       "cycle": 2,
       "prerequisites": null,
@@ -632,14 +1242,14 @@
           "groups": [
             [
               {
-                "nrc": "14865",
+                "nrc": "12325",
                 "section": "A",
                 "mode": "in-person",
                 "slots": [
                   {
-                    "day": "wednesday",
-                    "start": "08:30",
-                    "end": "11:20"
+                    "day": "monday",
+                    "start": "13:30",
+                    "end": "16:20"
                   }
                 ]
               }

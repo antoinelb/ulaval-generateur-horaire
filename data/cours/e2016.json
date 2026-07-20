@@ -1,20 +1,20 @@
 {
   "courses": [
     {
-      "code": "ACT-7118",
-      "title": "Méthodes d'inférence appliquées en actuariat",
+      "code": "ESP-3210",
+      "title": "Proyecto de investigación (literatura)",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "summer": {
           "groups": [
             [
               {
-                "nrc": "21345",
-                "section": "DH1",
-                "mode": "hybrid",
+                "nrc": "50276",
+                "section": "A",
+                "mode": "in-person",
                 "slots": []
               }
             ]

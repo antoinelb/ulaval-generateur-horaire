@@ -1,0 +1,122 @@
+{
+  "courses": [
+    {
+      "code": "ACT-4110",
+      "title": "Coût et financement de régimes de retraite",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ACT-3101 OU ACT-4101",
+        "tree": {
+          "any": [
+            "ACT-3101",
+            "ACT-4101"
+          ]
+        }
+      },
+      "equivalents": [
+        "ACT-6007"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12808",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-6000",
+      "title": "Essai",
+      "credits": 12,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "12812",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-6007",
+      "title": "Coût et financement de régimes de retraite",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "ACT-4110"
+      ],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "21213",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7008",
+      "title": "Sujets spéciaux III",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "groups": [
+            [
+              {
+                "nrc": "21212",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

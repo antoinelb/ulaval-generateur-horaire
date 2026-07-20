@@ -1,20 +1,20 @@
 {
   "courses": [
     {
-      "code": "ACT-7118",
-      "title": "Méthodes d'inférence appliquées en actuariat",
+      "code": "ESP-2003",
+      "title": "Culture de l'Amérique latine",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "fall": {
           "groups": [
             [
               {
-                "nrc": "21345",
-                "section": "DH1",
-                "mode": "hybrid",
+                "nrc": "84655",
+                "section": "Z1",
+                "mode": "remote",
                 "slots": []
               }
             ]

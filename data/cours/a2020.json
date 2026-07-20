@@ -1,0 +1,34 @@
+{
+  "courses": [
+    {
+      "code": "ESP-2300",
+      "title": "Sujets spéciaux en cultures hispaniques",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ESP-1001 ET ESP-1003",
+        "tree": {
+          "all": [
+            "ESP-1001",
+            "ESP-1003"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "91212",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

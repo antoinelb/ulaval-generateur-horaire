@@ -1,25 +1,25 @@
 {
   "courses": [
     {
-      "code": "ACT-7103",
-      "title": "Mathématiques des risques financiers",
+      "code": "ANT-6900",
+      "title": "Formation méthodologique à l'expérience en milieu ciblé EDI",
       "credits": 3,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "summer": {
           "groups": [
             [
               {
-                "nrc": "12655",
-                "section": "A",
-                "mode": "in-person",
+                "nrc": "54983",
+                "section": "DH1",
+                "mode": "hybrid",
                 "slots": [
                   {
                     "day": "thursday",
-                    "start": "13:30",
-                    "end": "16:20"
+                    "start": "15:30",
+                    "end": "18:20"
                   }
                 ]
               }

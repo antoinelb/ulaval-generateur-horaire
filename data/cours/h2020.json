@@ -1,10 +1,10 @@
 {
   "courses": [
     {
-      "code": "ACT-7103",
-      "title": "Mathématiques des risques financiers",
+      "code": "PHI-2133",
+      "title": "Introduction à la philosophie française contemporaine",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
@@ -12,16 +12,10 @@
           "groups": [
             [
               {
-                "nrc": "12655",
+                "nrc": "17512",
                 "section": "A",
                 "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "thursday",
-                    "start": "13:30",
-                    "end": "16:20"
-                  }
-                ]
+                "slots": []
               }
             ]
           ]

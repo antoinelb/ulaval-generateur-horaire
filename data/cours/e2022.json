@@ -1,20 +1,20 @@
 {
   "courses": [
     {
-      "code": "ACT-7118",
-      "title": "Méthodes d'inférence appliquées en actuariat",
-      "credits": 3,
+      "code": "ACT-6000",
+      "title": "Essai",
+      "credits": 12,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "summer": {
           "groups": [
             [
               {
-                "nrc": "21345",
-                "section": "DH1",
-                "mode": "hybrid",
+                "nrc": "51806",
+                "section": "A",
+                "mode": "in-person",
                 "slots": []
               }
             ]

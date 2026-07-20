@@ -1,0 +1,66 @@
+{
+  "courses": [
+    {
+      "code": "ESP-2001",
+      "title": "Las letras hispánicas : historia y sociedad",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ESG-2020 à 3799 OU Examen Classement en espagnol avec résultat de 5 à 8",
+        "tree": {
+          "any": [
+            {
+              "raw": "ESG-2020 à 3799"
+            },
+            {
+              "raw": "Examen Classement en espagnol avec résultat de 5 à 8"
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "84722",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ESP-7002",
+      "title": "Sujets spéciaux (espagnol)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "groups": [
+            [
+              {
+                "nrc": "84738",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

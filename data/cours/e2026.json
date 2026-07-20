@@ -1,8 +1,8 @@
 {
   "courses": [
     {
-      "code": "GEX-1580",
-      "title": "Stage en génie des eaux I",
+      "code": "ACT-2590",
+      "title": "Stage en actuariat I",
       "credits": 9,
       "cycle": 1,
       "prerequisites": {
@@ -20,7 +20,7 @@
           "groups": [
             [
               {
-                "nrc": "51172",
+                "nrc": "50989",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -31,13 +31,13 @@
       }
     },
     {
-      "code": "GEX-2590",
-      "title": "Stage en génie des eaux II",
+      "code": "ACT-3590",
+      "title": "Stage en actuariat II",
       "credits": 9,
       "cycle": 1,
       "prerequisites": {
-        "raw": "GEX-1580",
-        "tree": "GEX-1580"
+        "raw": "ACT-2590",
+        "tree": "ACT-2590"
       },
       "equivalents": [],
       "seasons": {
@@ -45,7 +45,7 @@
           "groups": [
             [
               {
-                "nrc": "51173",
+                "nrc": "50990",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -56,13 +56,13 @@
       }
     },
     {
-      "code": "GEX-2591",
-      "title": "Stage en génie des eaux III",
+      "code": "ACT-3591",
+      "title": "Stage en actuariat III",
       "credits": 9,
       "cycle": 1,
       "prerequisites": {
-        "raw": "GEX-2590",
-        "tree": "GEX-2590"
+        "raw": "ACT-3590",
+        "tree": "ACT-3590"
       },
       "equivalents": [],
       "seasons": {
@@ -70,7 +70,7 @@
           "groups": [
             [
               {
-                "nrc": "51174",
+                "nrc": "50991",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -81,34 +81,9 @@
       }
     },
     {
-      "code": "GEX-3590",
-      "title": "Stage en génie des eaux IV",
+      "code": "ACT-6100",
+      "title": "Essai",
       "credits": 9,
-      "cycle": 1,
-      "prerequisites": {
-        "raw": "GEX-2591",
-        "tree": "GEX-2591"
-      },
-      "equivalents": [],
-      "seasons": {
-        "summer": {
-          "groups": [
-            [
-              {
-                "nrc": "51175",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "GEX-6001",
-      "title": "Séminaire de maîtrise",
-      "credits": 1,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
@@ -117,7 +92,7 @@
           "groups": [
             [
               {
-                "nrc": "52278",
+                "nrc": "51841",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -128,9 +103,31 @@
       }
     },
     {
-      "code": "GEX-6811",
+      "code": "ACT-6804",
+      "title": "Activité de recherche - mémoire 4",
+      "credits": 8,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "53120",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-6811",
       "title": "Activité de recherche - mémoire 1",
-      "credits": 7,
+      "credits": 3,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
@@ -139,7 +136,7 @@
           "groups": [
             [
               {
-                "nrc": "53660",
+                "nrc": "53121",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -150,7 +147,7 @@
       }
     },
     {
-      "code": "GEX-6812",
+      "code": "ACT-6812",
       "title": "Activité de recherche - mémoire 2",
       "credits": 7,
       "cycle": 2,
@@ -161,7 +158,7 @@
           "groups": [
             [
               {
-                "nrc": "53661",
+                "nrc": "53122",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -172,7 +169,7 @@
       }
     },
     {
-      "code": "GEX-6813",
+      "code": "ACT-6813",
       "title": "Activité de recherche - mémoire 3",
       "credits": 7,
       "cycle": 2,
@@ -183,7 +180,7 @@
           "groups": [
             [
               {
-                "nrc": "53662",
+                "nrc": "53123",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -194,9 +191,9 @@
       }
     },
     {
-      "code": "GEX-6814",
+      "code": "ACT-6814",
       "title": "Activité de recherche - mémoire 4",
-      "credits": 9,
+      "credits": 7,
       "cycle": 2,
       "prerequisites": null,
       "equivalents": [],
@@ -205,7 +202,319 @@
           "groups": [
             [
               {
-                "nrc": "53663",
+                "nrc": "53124",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7012",
+      "title": "Lectures dirigées",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ACT, Crédits exigés : 9 ET (MAT, Crédits exigés : 3 OU STT, Crédits exigés : 3 OU ECN, Crédits exigés : 3 OU MQT, Crédits exigés : 3 OU IFT, Crédits exigés : 3 OU GLO, Crédits exigés : 3 OU GIF, Crédits exigés : 3)",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": "ACT",
+                "credits": 9
+              }
+            },
+            {
+              "any": [
+                {
+                  "program_credits": {
+                    "program": "MAT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "STT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "ECN",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "MQT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "IFT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GLO",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GIF",
+                    "credits": 3
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51842",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7013",
+      "title": "Lectures dirigées",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ACT, Crédits exigés : 9 ET (MAT, Crédits exigés : 3 OU STT, Crédits exigés : 3 OU ECN, Crédits exigés : 3 OU MQT, Crédits exigés : 3 OU IFT, Crédits exigés : 3 OU GLO, Crédits exigés : 3 OU GIF, Crédits exigés : 3)",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": "ACT",
+                "credits": 9
+              }
+            },
+            {
+              "any": [
+                {
+                  "program_credits": {
+                    "program": "MAT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "STT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "ECN",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "MQT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "IFT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GLO",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GIF",
+                    "credits": 3
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51843",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7014",
+      "title": "Lectures dirigées",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ACT, Crédits exigés : 9 ET (MAT, Crédits exigés : 3 OU STT, Crédits exigés : 3 OU ECN, Crédits exigés : 3 OU MQT, Crédits exigés : 3 OU IFT, Crédits exigés : 3 OU GLO, Crédits exigés : 3 OU GIF, Crédits exigés : 3)",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": "ACT",
+                "credits": 9
+              }
+            },
+            {
+              "any": [
+                {
+                  "program_credits": {
+                    "program": "MAT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "STT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "ECN",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "MQT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "IFT",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GLO",
+                    "credits": 3
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "GIF",
+                    "credits": 3
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51844",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7015",
+      "title": "Lectures dirigées",
+      "credits": 4,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ACT, Crédits exigés : 12 ET (MAT, Crédits exigés : 4 OU STT, Crédits exigés : 4)",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": "ACT",
+                "credits": 12
+              }
+            },
+            {
+              "any": [
+                {
+                  "program_credits": {
+                    "program": "MAT",
+                    "credits": 4
+                  }
+                },
+                {
+                  "program_credits": {
+                    "program": "STT",
+                    "credits": 4
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51845",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ACT-7105",
+      "title": "Travail actuariel pratique en entreprise",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "groups": [
+            [
+              {
+                "nrc": "51846",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []

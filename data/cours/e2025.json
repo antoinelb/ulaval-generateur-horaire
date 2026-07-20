@@ -1,20 +1,20 @@
 {
   "courses": [
     {
-      "code": "ACT-7118",
-      "title": "Méthodes d'inférence appliquées en actuariat",
+      "code": "ANT-1203",
+      "title": "Anthropologie de l'Amérique du Sud",
       "credits": 3,
-      "cycle": 2,
+      "cycle": 1,
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "winter": {
+        "summer": {
           "groups": [
             [
               {
-                "nrc": "21345",
-                "section": "DH1",
-                "mode": "hybrid",
+                "nrc": "54559",
+                "section": "Z1",
+                "mode": "remote",
                 "slots": []
               }
             ]
