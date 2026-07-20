@@ -4516,16 +4516,6 @@
       "url": "https://www.ulaval.ca/etudes/cours/bif-7900-bio-informatique-i"
     },
     {
-      "code": "BIO-0110",
-      "title": "Introduction à la physiologie humaine",
-      "url": "https://www.ulaval.ca/etudes/cours/bio-0110-introduction-a-la-physiologie-humaine"
-    },
-    {
-      "code": "BIO-0150",
-      "title": "Biologie générale",
-      "url": "https://www.ulaval.ca/etudes/cours/bio-0150-biologie-generale"
-    },
-    {
       "code": "BIO-1003",
       "title": "Microbiologie générale et laboratoire",
       "url": "https://www.ulaval.ca/etudes/cours/bio-1003-microbiologie-generale-et-laboratoire"
@@ -5349,26 +5339,6 @@
       "code": "CAT-6000",
       "title": "Catéchèse des adultes",
       "url": "https://www.ulaval.ca/etudes/cours/cat-6000-catechese-des-adultes"
-    },
-    {
-      "code": "CHM-0150",
-      "title": "Chimie générale",
-      "url": "https://www.ulaval.ca/etudes/cours/chm-0150-chimie-generale"
-    },
-    {
-      "code": "CHM-0160",
-      "title": "Chimie des solutions",
-      "url": "https://www.ulaval.ca/etudes/cours/chm-0160-chimie-des-solutions"
-    },
-    {
-      "code": "CHM-0170",
-      "title": "Éléments de chimie générale et des solutions",
-      "url": "https://www.ulaval.ca/etudes/cours/chm-0170-elements-de-chimie-generale-et-des-solutions"
-    },
-    {
-      "code": "CHM-0250",
-      "title": "Chimie organique",
-      "url": "https://www.ulaval.ca/etudes/cours/chm-0250-chimie-organique"
     },
     {
       "code": "CHM-1000",
@@ -11081,11 +11051,6 @@
       "url": "https://www.ulaval.ca/etudes/cours/ean-7002-seminaire-de-litteratures-anciennes"
     },
     {
-      "code": "ECN-0100",
-      "title": "Économie dans un contexte nord-américain",
-      "url": "https://www.ulaval.ca/etudes/cours/ecn-0100-economie-dans-un-contexte-nord-americain"
-    },
-    {
       "code": "ECN-1000",
       "title": "Principes de microéconomie",
       "url": "https://www.ulaval.ca/etudes/cours/ecn-1000-principes-de-microeconomie"
@@ -11594,16 +11559,6 @@
       "code": "ECN-7950",
       "title": "Politiques canadiennes et québécoises du commerce extérieur",
       "url": "https://www.ulaval.ca/etudes/cours/ecn-7950-politiques-canadiennes-et-quebecoises-du-commerce-exterieur"
-    },
-    {
-      "code": "EDC-0100",
-      "title": "Ressources et stratégies pour l'apprentissage universitaire",
-      "url": "https://www.ulaval.ca/etudes/cours/edc-0100-ressources-et-strategies-pour-lapprentissage-universitaire"
-    },
-    {
-      "code": "EDC-0911",
-      "title": "Apprentissage en contexte universitaire québécois",
-      "url": "https://www.ulaval.ca/etudes/cours/edc-0911-apprentissage-en-contexte-universitaire-quebecois"
     },
     {
       "code": "EDC-1001",
@@ -14789,11 +14744,6 @@
       "code": "FPT-3501",
       "title": "Stage d'enseignement : développement professionnel VII",
       "url": "https://www.ulaval.ca/etudes/cours/fpt-3501-stage-denseignement-developpement-professionnel-vii"
-    },
-    {
-      "code": "FRN-0100",
-      "title": "Français écrit",
-      "url": "https://www.ulaval.ca/etudes/cours/frn-0100-francais-ecrit"
     },
     {
       "code": "FRN-1000",
@@ -20156,11 +20106,6 @@
       "url": "https://www.ulaval.ca/etudes/cours/gph-4104-fondements-et-applications-de-la-fibre-optique"
     },
     {
-      "code": "GPL-0150",
-      "title": "Découvrir le Québec : un nouveau milieu de vie",
-      "url": "https://www.ulaval.ca/etudes/cours/gpl-0150-decouvrir-le-quebec-un-nouveau-milieu-de-vie"
-    },
-    {
       "code": "GPL-1000",
       "title": "Méthodes de rédaction et de recherche",
       "url": "https://www.ulaval.ca/etudes/cours/gpl-1000-methodes-de-redaction-et-de-recherche"
@@ -21621,11 +21566,6 @@
       "url": "https://www.ulaval.ca/etudes/cours/har-7100-ecole-dete-internationale-en-histoire-de-lart"
     },
     {
-      "code": "HST-0101",
-      "title": "Dissertation historique",
-      "url": "https://www.ulaval.ca/etudes/cours/hst-0101-dissertation-historique"
-    },
-    {
       "code": "HST-1000",
       "title": "Lecture critique en histoire",
       "url": "https://www.ulaval.ca/etudes/cours/hst-1000-lecture-critique-en-histoire"
@@ -23051,11 +22991,6 @@
       "url": "https://www.ulaval.ca/etudes/cours/lat-6001-auteurs-latins"
     },
     {
-      "code": "LIT-0100",
-      "title": "Panorama des littératures française et québécoise",
-      "url": "https://www.ulaval.ca/etudes/cours/lit-0100-panorama-des-litteratures-francaise-et-quebecoise"
-    },
-    {
       "code": "LIT-1000",
       "title": "Études littéraires : outils et méthodes",
       "url": "https://www.ulaval.ca/etudes/cours/lit-1000-etudes-litteraires-outils-et-methodes"
@@ -24304,31 +24239,6 @@
       "code": "LOA-7901",
       "title": "Philologie et dialectologie du copte II",
       "url": "https://www.ulaval.ca/etudes/cours/loa-7901-philologie-et-dialectologie-du-copte-ii"
-    },
-    {
-      "code": "MAT-0130",
-      "title": "Algèbre vectorielle",
-      "url": "https://www.ulaval.ca/etudes/cours/mat-0130-algebre-vectorielle"
-    },
-    {
-      "code": "MAT-0150",
-      "title": "Calcul différentiel",
-      "url": "https://www.ulaval.ca/etudes/cours/mat-0150-calcul-differentiel"
-    },
-    {
-      "code": "MAT-0250",
-      "title": "Calcul intégral et probabilités",
-      "url": "https://www.ulaval.ca/etudes/cours/mat-0250-calcul-integral-et-probabilites"
-    },
-    {
-      "code": "MAT-0260",
-      "title": "Calcul intégral",
-      "url": "https://www.ulaval.ca/etudes/cours/mat-0260-calcul-integral"
-    },
-    {
-      "code": "MAT-0310",
-      "title": "Introduction aux mathématiques des affaires I",
-      "url": "https://www.ulaval.ca/etudes/cours/mat-0310-introduction-aux-mathematiques-des-affaires-i"
     },
     {
       "code": "MAT-1100",
@@ -29044,11 +28954,6 @@
       "code": "MED-6901",
       "title": "Notions scientifiques en illustration II - le vivant, l'humain",
       "url": "https://www.ulaval.ca/etudes/cours/med-6901-notions-scientifiques-en-illustration-ii-le-vivant-lhumain"
-    },
-    {
-      "code": "MET-0100",
-      "title": "Initiation à la méthodologie de recherche en sciences humaines",
-      "url": "https://www.ulaval.ca/etudes/cours/met-0100-initiation-a-la-methodologie-de-recherche-en-sciences-humaines"
     },
     {
       "code": "MET-7900",
@@ -34156,11 +34061,6 @@
       "url": "https://www.ulaval.ca/etudes/cours/phc-7903-theorie-des-recepteurs"
     },
     {
-      "code": "PHI-0100",
-      "title": "Développement de la pensée critique",
-      "url": "https://www.ulaval.ca/etudes/cours/phi-0100-developpement-de-la-pensee-critique"
-    },
-    {
       "code": "PHI-1000",
       "title": "Platon",
       "url": "https://www.ulaval.ca/etudes/cours/phi-1000-platon"
@@ -35101,21 +35001,6 @@
       "url": "https://www.ulaval.ca/etudes/cours/pht-6525-stage-en-contexte-de-pratique-en-region-iii"
     },
     {
-      "code": "PHY-0150",
-      "title": "Physique : mécanique classique",
-      "url": "https://www.ulaval.ca/etudes/cours/phy-0150-physique-mecanique-classique"
-    },
-    {
-      "code": "PHY-0250",
-      "title": "Physique : électricité et magnétisme",
-      "url": "https://www.ulaval.ca/etudes/cours/phy-0250-physique-electricite-et-magnetisme"
-    },
-    {
-      "code": "PHY-0260",
-      "title": "Physique : ondes et corpuscules",
-      "url": "https://www.ulaval.ca/etudes/cours/phy-0260-physique-ondes-et-corpuscules"
-    },
-    {
       "code": "PHY-1000",
       "title": "Introduction à l'astrophysique",
       "url": "https://www.ulaval.ca/etudes/cours/phy-1000-introduction-a-lastrophysique"
@@ -35714,11 +35599,6 @@
       "code": "PLG-4053",
       "title": "Mycologie agroalimentaire",
       "url": "https://www.ulaval.ca/etudes/cours/plg-4053-mycologie-agroalimentaire"
-    },
-    {
-      "code": "POL-0100",
-      "title": "Concepts de base en science politique",
-      "url": "https://www.ulaval.ca/etudes/cours/pol-0100-concepts-de-base-en-science-politique"
     },
     {
       "code": "POL-1001",
@@ -37109,11 +36989,6 @@
       "code": "PST-3300",
       "title": "Stage d'intervention pastorale II",
       "url": "https://www.ulaval.ca/etudes/cours/pst-3300-stage-dintervention-pastorale-ii"
-    },
-    {
-      "code": "PSY-0100",
-      "title": "Introduction à la psychologie",
-      "url": "https://www.ulaval.ca/etudes/cours/psy-0100-introduction-a-la-psychologie"
     },
     {
       "code": "PSY-1000",
@@ -39531,11 +39406,6 @@
       "url": "https://www.ulaval.ca/etudes/cours/sex-3401-demarche-dintervention-en-sexologie-v"
     },
     {
-      "code": "SIN-0151",
-      "title": "Mentorat et réussite",
-      "url": "https://www.ulaval.ca/etudes/cours/sin-0151-mentorat-et-reussite"
-    },
-    {
       "code": "SIN-1300",
       "title": "Expérience de santé et soins infirmiers",
       "url": "https://www.ulaval.ca/etudes/cours/sin-1300-experience-de-sante-et-soins-infirmiers"
@@ -40686,11 +40556,6 @@
       "url": "https://www.ulaval.ca/etudes/cours/sls-7041-ecologie-microbienne-et-sante-du-sol"
     },
     {
-      "code": "SOC-0100",
-      "title": "Introduction à la sociologie",
-      "url": "https://www.ulaval.ca/etudes/cours/soc-0100-introduction-a-la-sociologie"
-    },
-    {
       "code": "SOC-1000",
       "title": "Introduction à la sociologie",
       "url": "https://www.ulaval.ca/etudes/cours/soc-1000-introduction-a-la-sociologie"
@@ -41734,11 +41599,6 @@
       "code": "STA-7026",
       "title": "Rédaction scientifique",
       "url": "https://www.ulaval.ca/etudes/cours/sta-7026-redaction-scientifique"
-    },
-    {
-      "code": "STT-0150",
-      "title": "Statistique",
-      "url": "https://www.ulaval.ca/etudes/cours/stt-0150-statistique"
     },
     {
       "code": "STT-1000",
