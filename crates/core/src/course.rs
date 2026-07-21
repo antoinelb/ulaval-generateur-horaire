@@ -1,13 +1,11 @@
 use std::collections::BTreeMap;
 
-use crate::common::Cycle;
-
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Course {
     pub code: String,
     pub title: String,
     pub credits: Credits,
-    pub cycle: Cycle,
+    pub cycle: CourseCycle,
     #[serde(default)]
     pub prerequisites: Option<Prerequisites>,
     #[serde(default)]
@@ -25,6 +23,43 @@ pub struct Course {
 pub enum Credits {
     Fixed(u32),
     Range { min: u32, max: u32 },
+}
+
+// A course can sit below the first cycle: a préuniversitaire « cours
+// d'appoint » (CHM-0150) fills a collegial prerequisite missing at admission.
+// A programme never can — a diploma is a bachelor's, a master's, a doctorate —
+// so this is a course-only cycle, kept distinct from `common::Cycle` (ADR
+// `2026-07-cycle-preuniversitaire-cours-seulement`).
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize,
+)]
+#[serde(try_from = "u8", into = "u8")]
+pub enum CourseCycle {
+    Preuniversity,
+    First,
+    Second,
+}
+
+impl TryFrom<u8> for CourseCycle {
+    type Error = String;
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        match v {
+            0 => Ok(CourseCycle::Preuniversity),
+            1 => Ok(CourseCycle::First),
+            2 => Ok(CourseCycle::Second),
+            other => Err(format!("invalid level : {other}")),
+        }
+    }
+}
+
+impl From<CourseCycle> for u8 {
+    fn from(c: CourseCycle) -> u8 {
+        match c {
+            CourseCycle::Preuniversity => 0,
+            CourseCycle::First => 1,
+            CourseCycle::Second => 2,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -171,7 +206,43 @@ impl From<Time> for String {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
-    use crate::common::Cycle;
+
+    // --- CourseCycle: préuniversitaire (0) is a course-only cycle ---
+
+    #[test]
+    fn course_cycle_deserializes_valid_levels() {
+        let pre: CourseCycle = serde_json::from_str("0").expect("level 0");
+        let first: CourseCycle = serde_json::from_str("1").expect("level 1");
+        let second: CourseCycle = serde_json::from_str("2").expect("level 2");
+        assert_eq!(pre, CourseCycle::Preuniversity);
+        assert_eq!(first, CourseCycle::First);
+        assert_eq!(second, CourseCycle::Second);
+    }
+
+    #[test]
+    fn course_cycle_serializes_back_to_u8() {
+        assert_eq!(
+            serde_json::to_string(&CourseCycle::Preuniversity).expect("ser"),
+            "0"
+        );
+        assert_eq!(
+            serde_json::to_string(&CourseCycle::First).expect("ser"),
+            "1"
+        );
+        assert_eq!(
+            serde_json::to_string(&CourseCycle::Second).expect("ser"),
+            "2"
+        );
+    }
+
+    #[test]
+    fn course_cycle_accepts_preuniversitaire_but_rejects_above_second() {
+        // the mirror of `common::Cycle`'s `cycle_rejects_out_of_range`: a
+        // course CAN be préuniversitaire (0), a programme cannot — hence the
+        // distinct type (ADR `2026-07-cycle-preuniversitaire-cours-seulement`)
+        assert!(serde_json::from_str::<CourseCycle>("0").is_ok());
+        assert!(serde_json::from_str::<CourseCycle>("3").is_err());
+    }
 
     // Parse a JSON literal into a comparable value, for asserting that an
     // untagged enum serializes back to the exact shape it was read from.
@@ -536,7 +607,7 @@ mod tests {
     fn course_deserializes_season_keyed_map() {
         let json = r#"{"code":"GEX-7002","title":"x","credits":3,"cycle":2,"prerequisites":null,"equivalents":[],"seasons":{"winter":{"options":[[{"nrc":"14856","section":"A","mode":"in-person","slots":[{"day":"friday","start":"08:30","end":"11:20"}]}]]}}}"#;
         let course: Course = serde_json::from_str(json).expect("course");
-        assert_eq!(course.cycle, Cycle::Second);
+        assert_eq!(course.cycle, CourseCycle::Second);
         assert_eq!(course.credits, Credits::Fixed(3));
         let winter = course
             .seasons

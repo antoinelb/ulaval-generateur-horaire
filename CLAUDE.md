@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A course-schedule generator / study-path planner for Université Laval, commissioned by the director of the *baccalauréat en génie des eaux* (GEX) as a paid mandate.
-The whole domain is French: keep domain vocabulary in French (`cours`, `cheminement`, `préalables`, `matière`, `session`, `jalon`, `pavillon`) in prose, documentation, and user-facing UI copy.
+The whole domain is French: keep domain vocabulary in French (`cours`, `cheminement`, `préalables`, `matière`, `session`, `jalon`) in prose, documentation, and user-facing UI copy.
 
 **Code is English.** All identifiers (variables, functions, types), error messages, and data keys (JSON) are in English — as the test fixtures already do: `title`/`credits`/`prerequisites`/`mandatory`/`rules`, never `titre`/`crédits`/`préalables`/`obligatoires`/`regles`. French domain terms belong in prose and displayed text, not in code or serialized keys.
 
@@ -45,7 +45,7 @@ Load-bearing invariants (constraints, not preferences) are in `docs/project_plan
 
 - **Session naming & founding hypothesis**: files are named season+year (`a2026` = Automne 2026, `h####` = Hiver, `e####` = Été). A future session with no published schedule reuses the most recent snapshot of the *same season* — so keep one snapshot per season, never blindly overwritten.
 - **Data files**: `data/cours/{session}.json` (per-course: `code`, `title`, `credits` — a plain number or `{min, max}` for a stage the student weights himself, `cycle`, subject, `prerequisites` raw + parsed tree, contributing programs, `equivalents`, per-season `options`: each one a *complete* enrolment, so you take one option whole and union its sections' slots) and `data/programmes/{code}.json` — one file per program, a bare `core::Program` (`credits_required`, `mandatory`, `rules`, `concentrations`, `profiles`, `notes` for prose no grammar covers) — beside `data/programmes/{code}.manuel.json`, which carries the hand-encoded `cheminement_type` and is never written by the scraper.
-- **Scope is decided twice**: the `0xxx`/`8xxx` filter in `Catalogue::from_entries` is a shortcut that saves an HTTP request, *not* an exhaustive rule (PSY-7851 is a thesis milestone numbered `7xxx`). The authority is the cycle read on the page — anything above the second cycle, « Études post-MDD » included, yields no course and no anomaly.
+- **Scope is decided twice**: the `8xxx` filter in `Catalogue::from_entries` is a shortcut that saves an HTTP request, *not* an exhaustive rule (PSY-7851 is a thesis milestone numbered `7xxx`). The authority is the cycle read on the page — anything above the second cycle, « Études post-MDD » included, yields no course and no anomaly. Préuniversitaire `0xxx` courses are *in* scope (reinstated for préalables préuniversitaires); a course's cycle is `CourseCycle` (`Preuniversity`/`First`/`Second`, serialized `0`/`1`/`2`), distinct from a program's `Cycle` (`First`/`Second`) which can never be préuniversitaire.
 - **`matière` = course-code prefix** (`GCI-`, `GEX-`); filtering by subject filters the catalogue URLs, no facet needed.
 - **Program mapping comes from course pages** ("Cette activité est contributoire dans :"), not program pages; only programs whose rules are needed get their page scraped.
 - **`cheminement_type` (A1→H8 organigramme) is hand-encoded**, GEX only — no machine-readable source exists.

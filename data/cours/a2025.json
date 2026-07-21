@@ -1,6 +1,39 @@
 {
   "courses": [
     {
+      "code": "ACT-7117",
+      "title": "Modélisation et évaluation quantitative des risques en actuariat",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82186",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "10:30",
+                    "end": "12:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "11:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "ADM-3100",
       "title": "Projet dirigé en administration I",
       "credits": 3,
@@ -6039,6 +6072,34 @@
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GPL-0150",
+      "title": "Découvrir le Québec : un nouveau milieu de vie",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85155",
+                "section": "D",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
               }
             ]
           ]

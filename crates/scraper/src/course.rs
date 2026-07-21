@@ -6,7 +6,7 @@ use futures::stream::{self, StreamExt};
 use crate::fetch::{FetchError, Fetcher};
 use crate::parser::{self, ParseError};
 use crate::print;
-use ulaval_scheduler_core::{CatalogueEntry, Course, Cycle, Season};
+use ulaval_scheduler_core::{CatalogueEntry, Course, CourseCycle, Season};
 
 const n_concurrent: usize = 32;
 
@@ -55,14 +55,14 @@ enum CacheEntry {
 }
 
 // A fingerprint of the in-scope rule as it stands in the code — the cycle
-// levels `Cycle` accepts — not an enumeration of reality. A sentinel is
+// levels `CourseCycle` accepts — not an enumeration of reality. A sentinel is
 // trusted only while its fingerprint still matches: add a third cycle and
 // every sentinel written under « first and second only » stops matching, so
 // those pages are read again instead of staying wrongly excluded, with no
 // hand-purge of the cache. Bounded scan over `u8`, no recursion.
 fn scope_tag() -> String {
     (0u8..=u8::MAX)
-        .filter(|&level| Cycle::try_from(level).is_ok())
+        .filter(|&level| CourseCycle::try_from(level).is_ok())
         .map(|level| level.to_string())
         .collect::<Vec<_>>()
         .join(",")
@@ -305,7 +305,7 @@ pub(crate) mod tests {
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     use super::*;
-    use ulaval_scheduler_core::{Credits, Cycle, SeasonOffering};
+    use ulaval_scheduler_core::{CourseCycle, Credits, SeasonOffering};
 
     #[test]
     fn a_session_is_named_by_its_season_letter_and_year() {
@@ -781,7 +781,7 @@ pub(crate) mod tests {
                 code: code.to_string(),
                 title: format!("Cours {code}"),
                 credits: Credits::Fixed(3),
-                cycle: Cycle::First,
+                cycle: CourseCycle::First,
                 prerequisites: None,
                 equivalents: Vec::new(),
                 seasons: years

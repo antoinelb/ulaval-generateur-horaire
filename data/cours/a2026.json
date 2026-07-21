@@ -33,7 +33,10 @@
       "title": "Mathématiques financières",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0150",
+        "tree": "MAT-0150"
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -67,11 +70,21 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": {
-        "raw": "ACT-1003* OU MAT-1110",
+        "raw": "(ACT-1003* OU MAT-1110) ET (MAT-0130 ET MAT-0150)",
         "tree": {
-          "any": [
-            "ACT-1003",
-            "MAT-1110"
+          "all": [
+            {
+              "any": [
+                "ACT-1003",
+                "MAT-1110"
+              ]
+            },
+            {
+              "all": [
+                "MAT-0130",
+                "MAT-0150"
+              ]
+            }
           ]
         }
       },
@@ -107,7 +120,15 @@
       "title": "Compléments de mathématiques",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0130 ET MAT-0150",
+        "tree": {
+          "all": [
+            "MAT-0130",
+            "MAT-0150"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -1356,39 +1377,6 @@
                     "day": "thursday",
                     "start": "13:30",
                     "end": "16:20"
-                  }
-                ]
-              }
-            ]
-          ]
-        }
-      }
-    },
-    {
-      "code": "ACT-7117",
-      "title": "Modélisation et évaluation quantitative des risques en actuariat",
-      "credits": 3,
-      "cycle": 2,
-      "prerequisites": null,
-      "equivalents": [],
-      "seasons": {
-        "fall": {
-          "options": [
-            [
-              {
-                "nrc": "82249",
-                "section": "A",
-                "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "tuesday",
-                    "start": "15:30",
-                    "end": "17:20"
-                  },
-                  {
-                    "day": "friday",
-                    "start": "11:30",
-                    "end": "12:20"
                   }
                 ]
               }
@@ -12318,7 +12306,16 @@
       "title": "Biochimie structurale",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "BIO-0150 ET CHM-0150 ET CHM-0160",
+        "tree": {
+          "all": [
+            "BIO-0150",
+            "CHM-0150",
+            "CHM-0160"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -12477,7 +12474,15 @@
       "title": "Biochimie et métabolisme",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "BIO-0150 ET CHM-0150",
+        "tree": {
+          "all": [
+            "BIO-0150",
+            "CHM-0150"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -13629,11 +13634,87 @@
       }
     },
     {
+      "code": "BIO-0110",
+      "title": "Introduction à la physiologie humaine",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82887",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "BIO-0150",
+      "title": "Biologie générale",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82888",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "14:30",
+                    "end": "17:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "14:30",
+                    "end": "17:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "BIO-1003",
       "title": "Microbiologie générale et laboratoire",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "BIO-0150 ET CHM-0150 ET CHM-0160 ET CHM-0170",
+        "tree": {
+          "all": [
+            "BIO-0150",
+            "CHM-0150",
+            "CHM-0160",
+            "CHM-0170"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -16500,11 +16581,186 @@
       }
     },
     {
+      "code": "CHM-0150",
+      "title": "Chimie générale",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83011",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "83012",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "83015",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CHM-0160",
+      "title": "Chimie des solutions",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": {
+        "raw": "CHM-0150 OU Examen Chimie générale avec résultat de N à P",
+        "tree": {
+          "any": [
+            "CHM-0150",
+            {
+              "raw": "Examen Chimie générale avec résultat de N à P"
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83016",
+                "section": null,
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  }
+                ]
+              },
+              {
+                "nrc": "83017",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "83016",
+                "section": null,
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  }
+                ]
+              },
+              {
+                "nrc": "83018",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "13:00",
+                    "end": "15:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CHM-0170",
+      "title": "Éléments de chimie générale et des solutions",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83019",
+                "section": null,
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              },
+              {
+                "nrc": "83020",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "saturday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "CHM-1000",
       "title": "Structure des atomes et des molécules",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "CHM-0150 ET CHM-0160 ET PHY-0150",
+        "tree": {
+          "all": [
+            "CHM-0150",
+            "CHM-0160",
+            "PHY-0150"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -16537,7 +16793,10 @@
       "title": "Introduction à la chimie analytique",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "CHM-0150",
+        "tree": "CHM-0150"
+      },
       "equivalents": [
         "CHM-1904"
       ],
@@ -16637,7 +16896,16 @@
       "title": "Chimie organique I",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "CHM-0150 ET CHM-0160 ET CHM-0170",
+        "tree": {
+          "all": [
+            "CHM-0150",
+            "CHM-0160",
+            "CHM-0170"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -16720,7 +16988,17 @@
       "title": "Chimie pour l'ingénierie",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "CHM-0150 ET CHM-0160 ET CHM-0170 ET PHY-0150",
+        "tree": {
+          "all": [
+            "CHM-0150",
+            "CHM-0160",
+            "CHM-0170",
+            "PHY-0150"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -16822,7 +17100,10 @@
       "title": "Laboratoire de chimie analytique",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "CHM-0150",
+        "tree": "CHM-0150"
+      },
       "equivalents": [
         "CHM-1001"
       ],
@@ -26382,9 +26663,9 @@
                 "mode": "in-person",
                 "slots": [
                   {
-                    "day": "tuesday",
-                    "start": "08:30",
-                    "end": "11:20"
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
                   },
                   {
                     "day": "thursday",
@@ -26468,9 +26749,9 @@
                 "mode": "in-person",
                 "slots": [
                   {
-                    "day": "tuesday",
-                    "start": "08:30",
-                    "end": "11:20"
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
                   },
                   {
                     "day": "thursday",
@@ -36383,6 +36664,34 @@
       }
     },
     {
+      "code": "ECN-0100",
+      "title": "Économie dans un contexte nord-américain",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84015",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "ECN-1000",
       "title": "Principes de microéconomie",
       "credits": 3,
@@ -37667,6 +37976,90 @@
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EDC-0100",
+      "title": "Ressources et stratégies pour l'apprentissage universitaire",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84062",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "84063",
+                "section": "Z3A",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "84064",
+                "section": "Z3B",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EDC-0911",
+      "title": "Apprentissage en contexte universitaire québécois",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84066",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
               }
             ]
           ]
@@ -47633,6 +48026,42 @@
       }
     },
     {
+      "code": "FRN-0100",
+      "title": "Français écrit",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84511",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "84512",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "FRN-1000",
       "title": "Grammaire du français écrit",
       "credits": 3,
@@ -50027,7 +50456,16 @@
       "title": "Introduction au génie des procédés",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "CHM-0150 ET CHM-0160 ET MAT-0150",
+        "tree": {
+          "all": [
+            "CHM-0150",
+            "CHM-0160",
+            "MAT-0150"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -50994,7 +51432,15 @@
       "title": "Statique",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0150 ET MAT-0260",
+        "tree": {
+          "all": [
+            "MAT-0150",
+            "MAT-0260"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -52248,11 +52694,23 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": {
-        "raw": "MAT-1900* OU PHY-1002*",
+        "raw": "(MAT-1900* OU PHY-1002*) ET (MAT-0130 ET MAT-0150 ET MAT-0260 ET PHY-0250)",
         "tree": {
-          "any": [
-            "MAT-1900",
-            "PHY-1002"
+          "all": [
+            {
+              "any": [
+                "MAT-1900",
+                "PHY-1002"
+              ]
+            },
+            {
+              "all": [
+                "MAT-0130",
+                "MAT-0150",
+                "MAT-0260",
+                "PHY-0250"
+              ]
+            }
           ]
         }
       },
@@ -52289,11 +52747,22 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": {
-        "raw": "GEL-1000* ET GEL-4799*",
+        "raw": "(GEL-1000* ET GEL-4799*) ET (MAT-0150 ET MAT-0260 ET PHY-0250)",
         "tree": {
           "all": [
-            "GEL-1000",
-            "GEL-4799"
+            {
+              "all": [
+                "GEL-1000",
+                "GEL-4799"
+              ]
+            },
+            {
+              "all": [
+                "MAT-0150",
+                "MAT-0260",
+                "PHY-0250"
+              ]
+            }
           ]
         }
       },
@@ -58224,7 +58693,17 @@
       "title": "Mécanique et ingénierie des matériaux",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0130 ET MAT-0150 ET MAT-0260 ET PHY-0150",
+        "tree": {
+          "all": [
+            "MAT-0130",
+            "MAT-0150",
+            "MAT-0260",
+            "PHY-0150"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -60741,7 +61220,17 @@
       "title": "Statique des corps rigides",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0130 ET MAT-0150 ET MAT-0260 ET PHY-0150",
+        "tree": {
+          "all": [
+            "MAT-0130",
+            "MAT-0150",
+            "MAT-0260",
+            "PHY-0150"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -63027,7 +63516,15 @@
       "title": "Matériaux pour l'ingénierie",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "CHM-0150 ET PHY-0250",
+        "tree": {
+          "all": [
+            "CHM-0150",
+            "PHY-0250"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -71008,6 +71505,34 @@
       }
     },
     {
+      "code": "HST-0101",
+      "title": "Dissertation historique",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85413",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "HST-1000",
       "title": "Lecture critique en histoire",
       "credits": 3,
@@ -72266,7 +72791,10 @@
       "title": "Informatique pour l'ingénierie",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0150",
+        "tree": "MAT-0150"
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -78135,11 +78663,335 @@
       }
     },
     {
+      "code": "MAT-0130",
+      "title": "Algèbre vectorielle",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85821",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85822",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85823",
+                "section": "C",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85824",
+                "section": "D",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85825",
+                "section": "E",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85826",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "85827",
+                "section": "Z4",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-0150",
+      "title": "Calcul différentiel",
+      "credits": 4,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85829",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85830",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85831",
+                "section": "C",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85832",
+                "section": "D",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "17:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "17:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85834",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "85835",
+                "section": "Z4",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-0250",
+      "title": "Calcul intégral et probabilités",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": {
+        "raw": "MAT-0150",
+        "tree": "MAT-0150"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85836",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-0260",
+      "title": "Calcul intégral",
+      "credits": 4,
+      "cycle": 0,
+      "prerequisites": {
+        "raw": "MAT-0150",
+        "tree": "MAT-0150"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85837",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85838",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85840",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-0310",
+      "title": "Introduction aux mathématiques des affaires I",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85842",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "MAT-1110",
       "title": "Calcul des fonctions de plusieurs variables",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0150 ET MAT-0260",
+        "tree": {
+          "all": [
+            "MAT-0150",
+            "MAT-0260"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -78172,7 +79024,10 @@
       "title": "Introduction à l'algèbre linéaire",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0130",
+        "tree": "MAT-0130"
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -78295,7 +79150,16 @@
       "title": "Mathématiques pour l'ingénierie I",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0130 ET MAT-0150 ET MAT-0260",
+        "tree": {
+          "all": [
+            "MAT-0130",
+            "MAT-0150",
+            "MAT-0260"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -78622,7 +79486,10 @@
       "title": "Mathématiques pour l'informatique",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0130",
+        "tree": "MAT-0130"
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -78670,7 +79537,16 @@
       "title": "Mathématiques pour scientifiques",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0130 ET MAT-0150 ET MAT-0260",
+        "tree": {
+          "all": [
+            "MAT-0130",
+            "MAT-0150",
+            "MAT-0260"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -79780,7 +80656,17 @@
       "title": "Microbiologie générale",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "BIO-0150 ET CHM-0150 ET CHM-0160 ET COM-1910",
+        "tree": {
+          "all": [
+            "BIO-0150",
+            "CHM-0150",
+            "CHM-0160",
+            "COM-1910"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -95258,6 +96144,39 @@
       }
     },
     {
+      "code": "MET-0100",
+      "title": "Initiation à la méthodologie de recherche en sciences humaines",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86427",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "MET-7900",
       "title": "Méthodologie de la recherche scientifique",
       "credits": 3,
@@ -99946,6 +100865,28 @@
                 "nrc": "86666",
                 "section": "DH1",
                 "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MNG-7001",
+      "title": "Lectures dirigées en management",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86667",
+                "section": "W",
+                "mode": "in-person",
                 "slots": []
               }
             ]
@@ -113788,6 +114729,42 @@
       }
     },
     {
+      "code": "PHI-0100",
+      "title": "Développement de la pensée critique",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87637",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "87639",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "PHI-1000",
       "title": "Platon",
       "credits": 3,
@@ -115847,11 +116824,144 @@
       }
     },
     {
+      "code": "PHY-0150",
+      "title": "Physique : mécanique classique",
+      "credits": 4,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87791",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "17:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "17:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "87792",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "87794",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHY-0250",
+      "title": "Physique : électricité et magnétisme",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": {
+        "raw": "PHY-0150",
+        "tree": "PHY-0150"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87795",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHY-0260",
+      "title": "Physique : ondes et corpuscules",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": {
+        "raw": "PHY-0150",
+        "tree": "PHY-0150"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87796",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "PHY-1000",
       "title": "Introduction à l'astrophysique",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0150 ET MAT-0260 ET MAT-0130 ET PHY-0150 ET PHY-0260",
+        "tree": {
+          "all": [
+            "MAT-0150",
+            "MAT-0260",
+            "MAT-0130",
+            "PHY-0150",
+            "PHY-0260"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -115884,7 +116994,16 @@
       "title": "Physique mathématique I",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0150 ET MAT-0260 ET MAT-0130",
+        "tree": {
+          "all": [
+            "MAT-0150",
+            "MAT-0260",
+            "MAT-0130"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -115922,7 +117041,16 @@
       "title": "Physique mathématique II",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0150 ET MAT-0260 ET MAT-0130",
+        "tree": {
+          "all": [
+            "MAT-0150",
+            "MAT-0260",
+            "MAT-0130"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -115960,7 +117088,17 @@
       "title": "Mécanique et relativité restreinte",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0150 ET MAT-0260 ET MAT-0130 ET PHY-0150",
+        "tree": {
+          "all": [
+            "MAT-0150",
+            "MAT-0260",
+            "MAT-0130",
+            "PHY-0150"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -117829,6 +118967,34 @@
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "POL-0100",
+      "title": "Concepts de base en science politique",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87876",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
               }
             ]
           ]
@@ -122706,6 +123872,28 @@
                 "nrc": "88176",
                 "section": "H1",
                 "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PSY-0100",
+      "title": "Introduction à la psychologie",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88187",
+                "section": "Z1",
+                "mode": "remote",
                 "slots": []
               }
             ]
@@ -133389,6 +134577,39 @@
       }
     },
     {
+      "code": "SOC-0100",
+      "title": "Introduction à la sociologie",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88756",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "SOC-1000",
       "title": "Introduction à la sociologie",
       "credits": 3,
@@ -135942,11 +137163,56 @@
       }
     },
     {
+      "code": "STT-0150",
+      "title": "Statistique",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88923",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "88925",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "STT-1000",
       "title": "Probabilités et statistique",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0150 ET MAT-0250 ET MAT-0260",
+        "tree": {
+          "all": [
+            "MAT-0150",
+            "MAT-0250",
+            "MAT-0260"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {
@@ -136026,7 +137292,15 @@
       "title": "Méthodes statistiques pour l'ingénierie",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0150 ET MAT-0260",
+        "tree": {
+          "all": [
+            "MAT-0150",
+            "MAT-0260"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {

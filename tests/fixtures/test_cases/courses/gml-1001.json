@@ -1,0 +1,53 @@
+{
+  "code": "GML-1001",
+  "title": "Matériaux pour l'ingénierie",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "CHM-0150 ET PHY-0250",
+    "tree": {
+      "all": [
+        "CHM-0150",
+        "PHY-0250"
+      ]
+    }
+  },
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "options": [
+        [
+          {
+            "nrc": "85107",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "08:30",
+                "end": "10:20"
+              },
+              {
+                "day": "thursday",
+                "start": "08:30",
+                "end": "10:20"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "winter": {
+      "options": [
+        [
+          {
+            "nrc": "15170",
+            "section": "Z1",
+            "mode": "remote",
+            "slots": []
+          }
+        ]
+      ]
+    }
+  }
+}

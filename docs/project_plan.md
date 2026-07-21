@@ -12,7 +12,7 @@ Toute nouvelle décision est documentée dans un fichier individuel sous `docs/c
 
 ### Acquisition des données (scraper)
 
-- Extraire des pages publiques de l'ULaval : le catalogue (~10 000 cours), les cours offerts par session (sections, NRC, plages horaires, pavillons, sections liées, préalables, programmes contributoires, équivalences) et les règles des programmes (crédits exigés, cours obligatoires, « Règle N – X crédits parmi »).
+- Extraire des pages publiques de l'ULaval : le catalogue (~10 000 cours), les cours offerts par session (sections, NRC, plages horaires, sections liées, préalables, programmes contributoires, équivalences) et les règles des programmes (crédits exigés, cours obligatoires, « Règle N – X crédits parmi »).
 - Produire un snapshot JSON par session (`a2026`, `h2027`, …) plus un fichier des programmes.
 - Conserver un snapshot par saison, jamais écrasé aveuglément : une session future sans horaire publié réutilise le plus récent de la même saison (hypothèse de Daniel).
 - Le scrape du catalogue est toujours complet — l'union des facettes matières, aucun mode scopé (ADR `2026-07-scraper-plein-catalogue-seulement`) ; seules les pages programmes se limitent aux programmes nécessaires.
@@ -37,7 +37,7 @@ Toute nouvelle décision est documentée dans un fichier individuel sous `docs/c
 - Quand un cours a un équivalent, utiliser l'horaire du plus récent des deux.
 - Le choix n'est pas opaque : les autres sections d'un cours restent visibles, et cliquer une section la force ; le reste se recalcule autour.
 - Mise en évidence des conflits d'horaire ; s'il n'existe aucune combinaison valide, les plages en conflit sont identifiées et surlignées.
-- Classement des combinaisons valides selon des préférences (journées compactes, matins libres, pause dîner, distance entre pavillons) — modèle exact à concevoir contre des données réelles.
+- Classement des combinaisons valides selon des préférences (journées compactes, matins libres, pause dîner) — modèle exact à concevoir contre des données réelles.
 - Présentation des cours du programme selon ses règles et profils, avec mise en évidence des règles pour chacun des cours.
 
 ##### Automatisation de la création d'horaire
@@ -84,12 +84,13 @@ Heures du mandat : cœur ≈ 24–34 h, vision complète ≈ 53–78 h ; le surc
   Quand la sortie attendue doit exister **avant** que le parseur sache la produire — un cas de test écrit d'abord —, elle est dérivée du HTML gelé par une implémentation de référence indépendante, validée sur les fixtures déjà figées, puis confrontée au parseur corrigé (ADR `2026-07-fixture-attendue-derivee-avant-le-parseur`).
 - Une saison d'un cours porte des **combinaisons d'inscription complètes** (`options`) et non des groupes de choix : on retient une option en entier et on unit les plages de ses sections, ce qui rend inconstruisible l'appariement d'une section avec un laboratoire qui n'est pas le sien (ADR `2026-07-sections-en-combinaisons-valides`).
   Les crédits d'un cours sont un nombre ou un intervalle `{min, max}` pour les stages que l'étudiant pondère (ADR `2026-07-credits-variables-en-enum`).
-  Le périmètre se décide deux fois : le filtre `0xxx`/`8xxx` du catalogue épargne une requête mais n'est pas exhaustif, le cycle lu sur la page fait autorité (ADR `2026-07-cycles-hors-perimetre-sans-erreur`).
+  Le périmètre se décide deux fois : le filtre `8xxx` du catalogue épargne une requête mais n'est pas exhaustif, le cycle lu sur la page fait autorité (ADR `2026-07-cycles-hors-perimetre-sans-erreur`).
+  Les cours `0xxx` sont réintégrés, leur cycle « Préuniversitaire » porté par un type `CourseCycle` propre au cours (ADR `2026-07-cours-dappoint-reintegres`, `2026-07-cycle-preuniversitaire-cours-seulement`).
 
 ### Produit
 
 - Utilisable par un non-technicien (Daniel) : un lien à ouvrir, aucun rituel de mise à jour, aucun binaire à installer.
-- Le domaine est français ; le vocabulaire du domaine reste français partout (`cours`, `cheminement`, `préalables`, `matière`, `session`, `jalon`, `pavillon`).
+- Le domaine est français ; le vocabulaire du domaine reste français partout (`cours`, `cheminement`, `préalables`, `matière`, `session`, `jalon`).
 - Fraîcheur requise : au changement de session seulement ; aucun suivi de changements en cours de session (décision explicite).
 - Chaque jalon est démontrable ; ~10 h/semaine ≈ un jalon par semaine.
 
@@ -206,7 +207,7 @@ Le bac complet : les sessions se remplissent automatiquement et restent modifiab
 | 7 | **Automatisation par organigramme** : format JSON provisoire de l'organigramme, ajout automatique des cours de la session visée, mise en évidence des cours qui rentreraient dans l'horaire | Charger un organigramme → l'horaire de la session se remplit tout seul |
 | 8 | **Couverture des règles** : satisfait / à combler / cours candidats pour un organigramme donné ; validation de l'ordre des cours selon les préalables (équivalences comprises) | L'organigramme signale un cours placé avant son préalable et ce qui manque pour diplômer |
 | 9 | **Génération de l'organigramme sous contraintes** : cours réussis, cours voulus, sessions remplies à la main, session à l'étranger ; règles et sessions d'offre respectées | Fournir ses contraintes → un organigramme complet et valide est proposé |
-| 10 | **Préférences et partage** : classement des combinaisons (journées compactes, matins libres, pause dîner, distance entre pavillons), partage d'un horaire par URL, contribution d'un cours manuel (fusion de `{session}.manuel.json` + bouton d'issue préremplie) ; polissage | Changer une préférence reclasse l'horaire ; l'URL copiée rouvre le même horaire ailleurs ; un cours proposé par Daniel apparaît pour tous après commit |
+| 10 | **Préférences et partage** : classement des combinaisons (journées compactes, matins libres, pause dîner), partage d'un horaire par URL, contribution d'un cours manuel (fusion de `{session}.manuel.json` + bouton d'issue préremplie) ; polissage | Changer une préférence reclasse l'horaire ; l'URL copiée rouvre le même horaire ailleurs ; un cours proposé par Daniel apparaît pour tous après commit |
 
 Le cœur (requis explicites de Daniel, voir « Portée ») = v0 + jalons 4–5 ; la vision complète s'achève avec la v2.
 

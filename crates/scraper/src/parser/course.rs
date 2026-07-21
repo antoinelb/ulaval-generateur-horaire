@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 use crate::parser::ParseError;
 use scraper::{ElementRef, Html, Selector};
 use ulaval_scheduler_core::{
-    Course, Credits, Cycle, Day, Mode, PrereqTree, Prerequisites,
+    Course, CourseCycle, Credits, Day, Mode, PrereqTree, Prerequisites,
     ProgramCredits, Season, SeasonOffering, Section, Slot, Time,
 };
 
@@ -29,6 +29,8 @@ static CYCLE_VALUE: LazyLock<Selector> =
     LazyLock::new(|| sel("ul.promo-entete--contenu li strong"));
 static PREALABLES: LazyLock<Selector> =
     LazyLock::new(|| sel("div.fe--prealables p.etiquette-container"));
+static FE_MESSAGE: LazyLock<Selector> =
+    LazyLock::new(|| sel("div.fe--message"));
 
 // only a card that links to a course page is a live equivalence; a bare
 // `li.bloc-cours` is an expired one (ADR
@@ -225,10 +227,10 @@ fn credits_of(raw: &str) -> Option<Credits> {
     }
 }
 
-// `None` for an activity above the second cycle: `Cycle` cannot hold it, and
-// the generator has no business scheduling a thesis milestone or a
+// `None` for an activity above the second cycle: `CourseCycle` cannot hold it,
+// and the generator has no business scheduling a thesis milestone or a
 // post-doctoral residency. Recognized, then dropped — not an error.
-fn parse_cycle(doc: &Html) -> Result<Option<Cycle>, ParseError> {
+fn parse_cycle(doc: &Html) -> Result<Option<CourseCycle>, ParseError> {
     let card = doc
         .select(&FAITS_RAPIDES)
         .find(|card| {
@@ -253,11 +255,15 @@ fn parse_cycle(doc: &Html) -> Result<Option<Cycle>, ParseError> {
 
     // « 2e et 3e cycle » collapses to 2 and stays in scope; only a course
     // whose *lowest* level is above the second falls out of it
-    Ok(Cycle::try_from(level).ok())
+    Ok(CourseCycle::try_from(level).ok())
 }
 
 fn cycle_level(text: &str) -> Result<u8, ParseError> {
     match text.trim() {
+        // CHM-0150, a « cours d'appoint » below the first cycle — in scope for
+        // a course, unlike a programme (ADR
+        // `2026-07-cycle-preuniversitaire-cours-seulement`)
+        "Préuniversitaire" => Ok(0),
         "Premier cycle" => Ok(1),
         "Deuxième cycle" => Ok(2),
         "Troisième cycle" => Ok(3),
@@ -276,9 +282,23 @@ fn parse_prerequisites(
     doc: &Html,
     anomalies: &mut Vec<ParseError>,
 ) -> Option<Prerequisites> {
-    let raw = doc.select(&PREALABLES).next().map(|element| {
-        element.text().collect::<String>().trim().to_string()
-    })?;
+    let regular = doc
+        .select(&PREALABLES)
+        .next()
+        .map(|element| element.text().collect::<String>().trim().to_string());
+    let preuniversitaire = parse_preuniversitaire_codes(doc, anomalies);
+
+    // a course with no préuniversitaire field keeps its raw byte-for-byte; the
+    // field only ever folds in as extra ET-operands (ADR
+    // `2026-07-prealables-preuniversitaires-fusionnes`)
+    let raw = match (regular, preuniversitaire.is_empty()) {
+        (Some(regular), true) => regular,
+        (None, true) => return None,
+        (None, false) => preuniversitaire.join(" ET "),
+        (Some(regular), false) => {
+            format!("({regular}) ET ({})", preuniversitaire.join(" ET "))
+        }
+    };
 
     match parse_prereq_tree(&raw) {
         Ok(tree) => Some(Prerequisites::Parsed { raw, tree }),
@@ -290,6 +310,67 @@ fn parse_prerequisites(
             Some(Prerequisites::Raw { raw })
         }
     }
+}
+
+// « Préalables préuniversitaires nécessaires s'il y a lieu : CHM-0150 et
+// PHY-0250. » sits in a `.fe--message` box (one per session offering) the
+// regular selector never reads — hence the silent drop this restores. The
+// sigles form a contiguous list after the colon, but the last is glued to the
+// prose that follows it by a bare period (« MAT-0150.Cette section… ») — so
+// each token yields its *leading* code, the « et » connectors are skipped, and
+// the first token that is neither stops the walk before the prose, which is
+// therefore never scanned for a stray code-shaped word. ADR
+// `2026-07-prealables-preuniversitaires-fusionnes`.
+fn parse_preuniversitaire_codes(
+    doc: &Html,
+    anomalies: &mut Vec<ParseError>,
+) -> Vec<String> {
+    let Some(tail) = doc
+        .select(&FE_MESSAGE)
+        .flat_map(|message| message.text())
+        .find(|node| {
+            node.to_lowercase()
+                .contains("préuniversitaires nécessaires")
+        })
+        .and_then(|node| node.split_once(':').map(|(_, tail)| tail))
+    else {
+        return Vec::new();
+    };
+
+    let mut codes: Vec<String> = Vec::new();
+    for token in tail.split_whitespace() {
+        if token == "et" || token == "ET" {
+            continue;
+        }
+        match leading_course_code(token) {
+            Some(code) => codes.push(code.to_string()),
+            None => break,
+        }
+    }
+
+    // the marker was there but yielded no sigle: surfaced, never dropped
+    if codes.is_empty() {
+        anomalies.push(ParseError::MalformedEntry {
+            selector: "préalables préuniversitaires".to_string(),
+            raw: tail.trim().to_string(),
+        });
+    }
+    codes
+}
+
+// The leading course code of a token — two to four uppercase letters, a
+// hyphen, four digits — or `None`. « MAT-0150.Cette » yields « MAT-0150 »: a
+// sigle can be glued to the prose that follows it by a bare period.
+fn leading_course_code(token: &str) -> Option<&str> {
+    let subject_len =
+        token.bytes().take_while(|b| b.is_ascii_uppercase()).count();
+    let end = subject_len + 5;
+    let is_code = (2..=4).contains(&subject_len)
+        && token.as_bytes().get(subject_len) == Some(&b'-')
+        && token
+            .get(subject_len + 1..end)
+            .is_some_and(|number| number.bytes().all(|b| b.is_ascii_digit()));
+    is_code.then(|| &token[..end])
 }
 
 // Only a broken structure — an unclosed group, an operator missing an
@@ -1256,9 +1337,9 @@ mod tests {
     fn a_course_above_the_second_cycle_is_out_of_scope_not_an_error() {
         // 2e-3e collapses to 2, but a course whose *lowest* listed level is
         // above the second is a doctoral or post-doctoral activity: nothing
-        // to schedule, and `Cycle` cannot hold it. Recognized, then dropped
-        // on purpose — hence `None` rather than an anomaly, which would fill
-        // the log with a case we understand perfectly.
+        // to schedule, and `CourseCycle` cannot hold it. Recognized, then
+        // dropped on purpose — hence `None` rather than an anomaly, which
+        // would fill the log with a case we understand perfectly.
         for level in ["Troisième cycle", "Études post-MDD"] {
             let doc = document(&cycle_card(&[level]));
             assert_eq!(
@@ -1270,10 +1351,25 @@ mod tests {
     }
 
     #[test]
+    fn a_preuniversitaire_course_is_in_scope() {
+        // a « cours d'appoint » (CHM-0150) declares « Préuniversitaire » — a
+        // cycle below the first, which `CourseCycle` holds and the périmètre
+        // keeps (ADR `2026-07-cours-dappoint-reintegres`)
+        let doc = document(&cycle_card(&["Préuniversitaire"]));
+        assert_eq!(
+            parse_cycle(&doc).expect("cycle"),
+            Some(CourseCycle::Preuniversity)
+        );
+    }
+
+    #[test]
     fn the_lowest_listed_cycle_wins() {
         let doc =
             document(&cycle_card(&["Troisième cycle", "Deuxième cycle"]));
-        assert_eq!(parse_cycle(&doc).expect("cycle"), Some(Cycle::Second));
+        assert_eq!(
+            parse_cycle(&doc).expect("cycle"),
+            Some(CourseCycle::Second)
+        );
     }
 
     // --- Préalables and equivalents ---
@@ -1339,6 +1435,109 @@ mod tests {
             anomalies.as_slice(),
             [ParseError::MalformedPrerequisites { .. }]
         ));
+    }
+
+    #[test]
+    fn preuniversitaire_prerequisites_merge_into_the_tree() {
+        // « Préalables préuniversitaires nécessaires s'il y a lieu : … » sits
+        // in a .fe--message box the regular selector never reads. The marker
+        // and its sigles share one text node; the following prose is a
+        // sibling node, so reading the element whole would glue
+        // « PHY-0250.Cette » and lose the second sigle (gml-1001).
+        let doc = document(
+            r#"<div class="fe--message"><p>Préalables préuniversitaires nécessaires s'il y a lieu : CHM-0150 et PHY-0250.</p><p>Cette section de cours est offerte à distance.</p></div>"#,
+        );
+        let mut anomalies = Vec::new();
+
+        assert_eq!(
+            parse_prerequisites(&doc, &mut anomalies),
+            Some(Prerequisites::Parsed {
+                raw: "CHM-0150 ET PHY-0250".to_string(),
+                tree: all(vec![course("CHM-0150"), course("PHY-0250")]),
+            })
+        );
+        assert!(anomalies.is_empty(), "got {anomalies:?}");
+    }
+
+    #[test]
+    fn regular_and_preuniversitaire_prerequisites_combine_with_et() {
+        // a regular préalable and a préuniversitaire one become a single
+        // « (<régulier>) ET (<préuniv>) » expression, folded by the existing
+        // grammar like any other course
+        let doc = document(
+            r#"<div class="fe--prealables"><p class="etiquette-container">GAE-1004 ET GAE-2000</p></div><div class="fe--message"><p>Préalables préuniversitaires nécessaires s'il y a lieu : CHM-0150 et PHY-0250.</p></div>"#,
+        );
+        let mut anomalies = Vec::new();
+
+        assert_eq!(
+            parse_prerequisites(&doc, &mut anomalies),
+            Some(Prerequisites::Parsed {
+                raw: "(GAE-1004 ET GAE-2000) ET (CHM-0150 ET PHY-0250)"
+                    .to_string(),
+                tree: all(vec![
+                    all(vec![course("GAE-1004"), course("GAE-2000")]),
+                    all(vec![course("CHM-0150"), course("PHY-0250")]),
+                ]),
+            })
+        );
+        assert!(anomalies.is_empty(), "got {anomalies:?}");
+    }
+
+    #[test]
+    fn a_preuniversitaire_marker_without_a_sigle_is_an_anomaly() {
+        // the marker is there but no sigle comes out: surfaced as an anomaly,
+        // never dropped in silence
+        let doc = document(
+            r#"<div class="fe--message"><p>Préalables préuniversitaires nécessaires s'il y a lieu : voir la direction.</p></div>"#,
+        );
+        let mut anomalies = Vec::new();
+
+        assert_eq!(parse_prerequisites(&doc, &mut anomalies), None);
+        assert_eq!(anomalies.len(), 1, "got {anomalies:?}");
+        assert_eq!(
+            malformed_entry(&anomalies[0]).0,
+            "préalables préuniversitaires"
+        );
+    }
+
+    #[test]
+    fn a_preuniversitaire_sigle_glued_to_prose_is_still_read() {
+        // ift-1903 / mat-1200: the marker, the sigle and the prose share one
+        // text node, the sigle glued to the prose by a bare period (no
+        // separator) — « MAT-0150.Cette section… ». Its leading code is read,
+        // and the prose that follows is not mistaken for a préalable.
+        let doc = document(
+            r#"<div class="fe--message"><p>Préalables préuniversitaires nécessaires s'il y a lieu : MAT-0150.Cette section de cours est offerte à distance.</p></div>"#,
+        );
+        let mut anomalies = Vec::new();
+
+        assert_eq!(
+            parse_prerequisites(&doc, &mut anomalies),
+            Some(Prerequisites::Parsed {
+                raw: "MAT-0150".to_string(),
+                tree: course("MAT-0150"),
+            })
+        );
+        assert!(anomalies.is_empty(), "got {anomalies:?}");
+    }
+
+    #[test]
+    fn an_unrelated_message_leaves_the_prerequisites_untouched() {
+        // a .fe--message that is not the préuniversitaire marker must not be
+        // read as one: the regular préalable stays exactly as before
+        let doc = document(
+            r#"<div class="fe--prealables"><p class="etiquette-container">GAE-1004 ET GAE-2000</p></div><div class="fe--message"><p>Cette section de cours est offerte à distance.</p></div>"#,
+        );
+        let mut anomalies = Vec::new();
+
+        assert_eq!(
+            parse_prerequisites(&doc, &mut anomalies),
+            Some(Prerequisites::Parsed {
+                raw: "GAE-1004 ET GAE-2000".to_string(),
+                tree: all(vec![course("GAE-1004"), course("GAE-2000")]),
+            })
+        );
+        assert!(anomalies.is_empty(), "got {anomalies:?}");
     }
 
     #[test]

@@ -12,13 +12,15 @@ pub struct CatalogueEntry {
 
 impl Catalogue {
     pub fn from_entries(mut entries: Vec<CatalogueEntry>) -> Self {
-        // removes 0xxx (remedial courses carrying no program credits) and 8xxx
-        // (phd research activities) courses, neither of which enters a schedule
+        // removes 8xxx (phd research activities), which never enter a
+        // schedule; 0xxx remedial courses are kept — they are the targets of
+        // « Préalables préuniversitaires » (ADR
+        // `2026-07-cours-dappoint-reintegres`)
         entries.retain(|entry| {
             !entry
                 .code
                 .split_once('-')
-                .is_some_and(|(_, number)| number.starts_with(['0', '8']))
+                .is_some_and(|(_, number)| number.starts_with('8'))
         });
         entries.sort_by(|a, b| a.code.cmp(&b.code));
         entries.dedup_by(|a, b| a.code == b.code);
@@ -92,13 +94,17 @@ mod tests {
     }
 
     #[test]
-    fn remedial_codes_are_dropped() {
-        // same first-digit rule as the graduate filter: MAT-1050 merely
-        // contains a 0 and stays (ADR `2026-07-cours-dappoint-hors-perimetre`)
+    fn remedial_codes_are_kept() {
+        // préuniversitaire (0xxx) courses are back in the catalogue: they are
+        // the targets of « Préalables préuniversitaires » (ADR
+        // `2026-07-cours-dappoint-reintegres`). Only 8xxx graduate-research
+        // codes are still dropped by prefix; MAT-1050 merely contains a 0 and,
+        // as before, stays.
         let catalogue = Catalogue::from_entries(vec![
             entry("MAT-0150"),
             entry("GCI-1000"),
             entry("FRN-0100"),
+            entry("GEX-8000"),
             entry("MAT-1050"),
         ]);
 
@@ -107,7 +113,7 @@ mod tests {
             .iter()
             .map(|course| course.code.as_str())
             .collect();
-        assert_eq!(codes, ["GCI-1000", "MAT-1050"]);
+        assert_eq!(codes, ["FRN-0100", "GCI-1000", "MAT-0150", "MAT-1050"]);
     }
 
     #[test]

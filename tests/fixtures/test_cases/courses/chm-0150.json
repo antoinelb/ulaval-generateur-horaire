@@ -1,0 +1,76 @@
+{
+  "code": "CHM-0150",
+  "title": "Chimie générale",
+  "credits": 3,
+  "cycle": 0,
+  "prerequisites": null,
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "options": [
+        [
+          {
+            "nrc": "83011",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "18:30",
+                "end": "21:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "83012",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "83015",
+            "section": "Z1",
+            "mode": "remote",
+            "slots": []
+          }
+        ]
+      ]
+    },
+    "winter": {
+      "options": [
+        [
+          {
+            "nrc": "13082",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "18:30",
+                "end": "21:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "13083",
+            "section": "Z1",
+            "mode": "remote",
+            "slots": []
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -48,6 +48,9 @@ mod tests {
 
     #[test]
     fn cycle_rejects_out_of_range() {
+        // a programme's cycle is first or second only: rejecting 0 means it
+        // can never be préuniversitaire — that level lives on `CourseCycle`
+        // (ADR `2026-07-cycle-preuniversitaire-cours-seulement`)
         assert!(serde_json::from_str::<Cycle>("0").is_err());
         assert!(serde_json::from_str::<Cycle>("3").is_err());
     }

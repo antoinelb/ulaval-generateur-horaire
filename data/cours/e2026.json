@@ -7100,6 +7100,28 @@
       }
     },
     {
+      "code": "BIO-0150",
+      "title": "Biologie générale",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "54560",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "BIO-2351",
       "title": "Conservation et biodiversité exotique II",
       "credits": 3,
@@ -23221,6 +23243,28 @@
       }
     },
     {
+      "code": "FRN-0100",
+      "title": "Français écrit",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "54623",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "FRN-1001",
       "title": "Maîtrise langagière à l'aide d'outils numériques",
       "credits": 3,
@@ -28840,7 +28884,17 @@
       "title": "Technologies d'excavation",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0130 ET MAT-0150 ET MAT-0260 ET PHY-0150",
+        "tree": {
+          "all": [
+            "MAT-0130",
+            "MAT-0150",
+            "MAT-0260",
+            "PHY-0150"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "summer": {
@@ -28905,8 +28959,22 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": {
-        "raw": "MAT-1900",
-        "tree": "MAT-1900"
+        "raw": "(MAT-1900) ET (CHM-0150 ET CHM-0160 ET MAT-0150 ET MAT-0260 ET PHY-0150 ET PHY-0250)",
+        "tree": {
+          "all": [
+            "MAT-1900",
+            {
+              "all": [
+                "CHM-0150",
+                "CHM-0160",
+                "MAT-0150",
+                "MAT-0260",
+                "PHY-0150",
+                "PHY-0250"
+              ]
+            }
+          ]
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -34494,11 +34562,136 @@
       }
     },
     {
+      "code": "MAT-0130",
+      "title": "Algèbre vectorielle",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "54700",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-0150",
+      "title": "Calcul différentiel",
+      "credits": 4,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "54702",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-0250",
+      "title": "Calcul intégral et probabilités",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": {
+        "raw": "MAT-0150",
+        "tree": "MAT-0150"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "54703",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-0260",
+      "title": "Calcul intégral",
+      "credits": 4,
+      "cycle": 0,
+      "prerequisites": {
+        "raw": "MAT-0150",
+        "tree": "MAT-0150"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "54704",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-0310",
+      "title": "Introduction aux mathématiques des affaires I",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "54705",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "MAT-1900",
       "title": "Mathématiques pour l'ingénierie I",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "MAT-0130 ET MAT-0150 ET MAT-0260",
+        "tree": {
+          "all": [
+            "MAT-0130",
+            "MAT-0150",
+            "MAT-0260"
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "summer": {
@@ -57543,6 +57736,28 @@
       }
     },
     {
+      "code": "PSY-0100",
+      "title": "Introduction à la psychologie",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52749",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "PSY-1007",
       "title": "Processus cognitifs",
       "credits": 3,
@@ -63282,6 +63497,28 @@
             [
               {
                 "nrc": "52952",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "STT-0150",
+      "title": "Statistique",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "54829",
                 "section": "Z1",
                 "mode": "remote",
                 "slots": []

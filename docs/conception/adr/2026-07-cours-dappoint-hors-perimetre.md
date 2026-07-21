@@ -1,5 +1,7 @@
 # Les cours d'appoint sont hors périmètre
 
+> **Remplacé par `2026-07-cours-dappoint-reintegres` (2026-07-21)** : les cours `0xxx` sont réintégrés au catalogue, à la demande du directeur, pour porter les préalables préuniversitaires.
+
 Date : 2026-07-20
 
 ## Contexte

@@ -16,10 +16,10 @@ const FIXTURE_DIR: &str = concat!(
 //   cso-6702  two top-level sections hanging off one common seminar NRC
 //   drt-7104  a stray `<b>` on the page, which HTML5 turns into a re-parent
 const FIXTURES: &[&str] = &[
-    "act-4114", "cso-6702", "drt-7104", "ecn-4901", "esp-1000", "frn-1112",
-    "gae-3008", "gci-1007", "gci-2010", "gci-2510", "gex-3100", "gex-3333",
-    "gex-4008", "gex-7002", "gmc-1590", "gmc-7000", "ift-1004", "med-1911",
-    "phi-7750",
+    "act-4114", "chm-0150", "cso-6702", "drt-7104", "ecn-4901", "esp-1000",
+    "frn-1112", "gae-3008", "gci-1007", "gci-2010", "gci-2510", "gex-3100",
+    "gex-3333", "gex-4008", "gex-7002", "gmc-1590", "gmc-7000", "gml-1001",
+    "ift-1004", "med-1911", "phi-7750",
 ];
 
 #[test]
