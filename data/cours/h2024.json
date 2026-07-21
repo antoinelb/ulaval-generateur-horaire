@@ -9,7 +9,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21538",
@@ -37,7 +37,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12717",
@@ -78,7 +78,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12747",
@@ -100,7 +100,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12773",
@@ -128,7 +128,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12793",
@@ -160,7 +160,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12815",
@@ -188,7 +188,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12826",
@@ -210,7 +210,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21733",
@@ -232,7 +232,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12841",
@@ -260,7 +260,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12893",
@@ -288,7 +288,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12906",
@@ -310,7 +310,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12923",
@@ -351,14 +351,16 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12998",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "12999",
                 "section": "B",
@@ -392,26 +394,32 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13000",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "13001",
                 "section": "B",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "13002",
                 "section": "C",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "13003",
                 "section": "D",
@@ -432,7 +440,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13010",
@@ -468,7 +476,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13013",
@@ -496,7 +504,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13014",
@@ -524,7 +532,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13015",
@@ -552,7 +560,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13016",
@@ -580,7 +588,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13018",
@@ -608,7 +616,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13019",
@@ -636,7 +644,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13020",
@@ -664,7 +672,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13123",
@@ -705,7 +713,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13130",
@@ -733,7 +741,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13164",
@@ -779,7 +787,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13178",
@@ -819,7 +827,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13200",
@@ -847,7 +855,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "11276",
@@ -869,7 +877,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13415",
@@ -899,7 +907,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13441",
@@ -929,7 +937,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13486",
@@ -964,7 +972,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13497",
@@ -997,7 +1005,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13526",
@@ -1019,7 +1027,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13527",
@@ -1047,7 +1055,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21294",
@@ -1083,20 +1091,24 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13643",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "21672",
                 "section": "B",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "21731",
                 "section": "C",
@@ -1117,7 +1129,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13747",
@@ -1145,7 +1157,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13757",
@@ -1173,7 +1185,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13794",
@@ -1204,7 +1216,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "13961",
@@ -1235,7 +1247,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14036",
@@ -1263,7 +1275,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14086",
@@ -1285,7 +1297,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14156",
@@ -1321,7 +1333,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21543",
@@ -1363,7 +1375,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14178",
@@ -1404,7 +1416,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14214",
@@ -1445,7 +1457,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14229",
@@ -1486,7 +1498,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14230",
@@ -1522,7 +1534,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14231",
@@ -1550,7 +1562,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14276",
@@ -1578,7 +1590,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21627",
@@ -1600,7 +1612,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14297",
@@ -1628,7 +1640,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14332",
@@ -1666,7 +1678,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14378",
@@ -1696,7 +1708,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14389",
@@ -1724,7 +1736,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14459",
@@ -1746,7 +1758,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14497",
@@ -1768,7 +1780,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14570",
@@ -1796,7 +1808,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21499",
@@ -1824,7 +1836,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14590",
@@ -1846,7 +1858,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "11446",
@@ -1879,7 +1891,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14600",
@@ -1907,7 +1919,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21791",
@@ -1929,7 +1941,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14831",
@@ -1951,7 +1963,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14832",
@@ -1981,7 +1993,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14866",
@@ -2003,7 +2015,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14929",
@@ -2025,7 +2037,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14939",
@@ -2053,7 +2065,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14944",
@@ -2075,7 +2087,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15085",
@@ -2114,7 +2126,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15121",
@@ -2152,7 +2164,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15135",
@@ -2192,7 +2204,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15149",
@@ -2230,7 +2242,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15153",
@@ -2255,7 +2267,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15157",
@@ -2279,7 +2291,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15160",
@@ -2307,7 +2319,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15167",
@@ -2335,7 +2347,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15168",
@@ -2363,7 +2375,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15283",
@@ -2385,7 +2397,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15287",
@@ -2413,7 +2425,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15292",
@@ -2443,7 +2455,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15323",
@@ -2495,7 +2507,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15453",
@@ -2547,7 +2559,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15455",
@@ -2620,7 +2632,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15501",
@@ -2662,7 +2674,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15520",
@@ -2698,7 +2710,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15570",
@@ -2746,7 +2758,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15573",
@@ -2782,7 +2794,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15589",
@@ -2818,7 +2830,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15595",
@@ -2842,7 +2854,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15600",
@@ -2875,7 +2887,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15755",
@@ -2897,7 +2909,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15811",
@@ -2925,7 +2937,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15813",
@@ -2953,7 +2965,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15830",
@@ -2981,7 +2993,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15840",
@@ -3009,7 +3021,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21354",
@@ -3037,7 +3049,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21353",
@@ -3065,7 +3077,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15841",
@@ -3093,7 +3105,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15843",
@@ -3121,7 +3133,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15904",
@@ -3149,7 +3161,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15908",
@@ -3177,7 +3189,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16037",
@@ -3205,7 +3217,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16039",
@@ -3233,7 +3245,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16048",
@@ -3261,7 +3273,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16053",
@@ -3289,7 +3301,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16058",
@@ -3317,7 +3329,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16061",
@@ -3353,7 +3365,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16071",
@@ -3389,7 +3401,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16078",
@@ -3417,7 +3429,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16095",
@@ -3445,7 +3457,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16099",
@@ -3473,7 +3485,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16101",
@@ -3501,7 +3513,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16120",
@@ -3532,7 +3544,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16157",
@@ -3560,7 +3572,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16172",
@@ -3588,7 +3600,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16173",
@@ -3616,7 +3628,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16178",
@@ -3644,7 +3656,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16181",
@@ -3672,7 +3684,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16186",
@@ -3703,7 +3715,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16207",
@@ -3725,7 +3737,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16208",
@@ -3756,7 +3768,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16249",
@@ -3799,7 +3811,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16268",
@@ -3834,7 +3846,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16282",
@@ -3867,7 +3879,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16292",
@@ -3900,7 +3912,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16294",
@@ -3928,7 +3940,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "11804",
@@ -3953,7 +3965,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16424",
@@ -3975,7 +3987,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "11965",
@@ -4015,7 +4027,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16707",
@@ -4040,7 +4052,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "11966",
@@ -4062,7 +4074,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "11970",
@@ -4093,7 +4105,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "11971",
@@ -4115,7 +4127,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16808",
@@ -4137,7 +4149,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16839",
@@ -4165,7 +4177,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16859",
@@ -4211,7 +4223,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16904",
@@ -4239,7 +4251,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16927",
@@ -4261,7 +4273,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16929",
@@ -4283,7 +4295,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16930",
@@ -4305,7 +4317,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16974",
@@ -4327,7 +4339,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16982",
@@ -4349,7 +4361,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17004",
@@ -4371,7 +4383,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21636",
@@ -4393,7 +4405,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "11994",
@@ -4426,7 +4438,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17111",
@@ -4448,7 +4460,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17112",
@@ -4473,7 +4485,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17276",
@@ -4486,7 +4498,9 @@
                     "end": "18:50"
                   }
                 ]
-              },
+              }
+            ],
+            [
               {
                 "nrc": "21639",
                 "section": "B",
@@ -4507,7 +4521,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17312",
@@ -4529,7 +4543,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21670",
@@ -4553,7 +4567,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17663",
@@ -4575,7 +4589,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17722",
@@ -4597,7 +4611,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17724",
@@ -4619,7 +4633,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17781",
@@ -4647,7 +4661,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17796",
@@ -4669,7 +4683,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12298",
@@ -4691,7 +4705,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12314",
@@ -4713,7 +4727,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21359",
@@ -4741,7 +4755,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17834",
@@ -4769,7 +4783,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17845",
@@ -4797,7 +4811,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17852",
@@ -4825,7 +4839,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17854",
@@ -4853,7 +4867,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17863",
@@ -4881,7 +4895,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17868",
@@ -4909,7 +4923,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17874",
@@ -4937,7 +4951,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17906",
@@ -4965,7 +4979,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17924",
@@ -4993,7 +5007,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17926",
@@ -5021,7 +5035,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12346",
@@ -5051,7 +5065,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12347",
@@ -5076,7 +5090,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17963",
@@ -5109,7 +5123,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17987",
@@ -5137,7 +5151,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18195",
@@ -5165,7 +5179,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18319",
@@ -5193,7 +5207,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12389",
@@ -5234,7 +5248,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18350",
@@ -5267,7 +5281,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18405",
@@ -5295,7 +5309,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18457",
@@ -5328,7 +5342,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18486",
@@ -5372,7 +5386,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18497",
@@ -5394,7 +5408,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21321",
@@ -5422,7 +5436,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18701",
@@ -5444,7 +5458,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18729",
@@ -5472,7 +5486,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18739",
@@ -5505,68 +5519,88 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12421",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "12422",
                 "section": "B",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "12423",
                 "section": "C",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "12424",
                 "section": "D",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "12425",
                 "section": "E",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "12426",
                 "section": "F",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "12427",
                 "section": "G",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "12428",
                 "section": "H",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "12429",
                 "section": "I",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "12430",
                 "section": "J",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "21674",
                 "section": "K",
@@ -5590,16 +5624,14 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18809",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
-              }
-            ],
-            [
+              },
               {
                 "nrc": "18810",
                 "section": "A1",
@@ -5630,7 +5662,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12488",
@@ -5652,7 +5684,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12491",
@@ -5677,14 +5709,16 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18813",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "21629",
                 "section": "B",
@@ -5708,7 +5742,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12493",
@@ -5733,7 +5767,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12494",
@@ -5755,7 +5789,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18924",
@@ -5777,7 +5811,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18950",
@@ -5810,7 +5844,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18959",
@@ -5838,7 +5872,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18960",
@@ -5871,7 +5905,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18961",
@@ -5899,7 +5933,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18966",
@@ -5932,7 +5966,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "19004",
@@ -5965,7 +5999,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "19005",
@@ -5993,7 +6027,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "19012",
@@ -6024,7 +6058,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "19110",
@@ -6054,7 +6088,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21552",
@@ -6089,7 +6123,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21326",
@@ -6124,7 +6158,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21328",
@@ -6157,7 +6191,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "19486",
@@ -6190,7 +6224,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "19493",
@@ -6226,7 +6260,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "19559",
@@ -6254,7 +6288,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "19606",

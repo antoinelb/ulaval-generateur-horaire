@@ -9,7 +9,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "23366",
@@ -31,7 +31,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12713",

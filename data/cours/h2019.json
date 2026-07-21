@@ -9,7 +9,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12823",
@@ -31,7 +31,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "12840",
@@ -53,7 +53,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "14088",
@@ -75,7 +75,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "15927",
@@ -99,7 +99,7 @@
       ],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21302",
@@ -121,7 +121,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16089",
@@ -146,7 +146,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "16328",
@@ -168,7 +168,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17325",
@@ -190,7 +190,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "17509",
@@ -212,7 +212,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "18098",
@@ -234,7 +234,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "19057",
@@ -256,7 +256,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "21498",
@@ -278,7 +278,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "19453",
@@ -300,7 +300,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "19566",

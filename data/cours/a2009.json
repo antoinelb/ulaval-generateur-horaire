@@ -9,14 +9,16 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "86442",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
-              },
+              }
+            ],
+            [
               {
                 "nrc": "86562",
                 "section": "B",
@@ -37,7 +39,7 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "groups": [
+          "options": [
             [
               {
                 "nrc": "83578",
