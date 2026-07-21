@@ -1,0 +1,12 @@
+{
+  "code": "MED-1911",
+  "title": "Stage-Externat",
+  "credits": {
+    "min": 6,
+    "max": 12
+  },
+  "cycle": 1,
+  "prerequisites": null,
+  "equivalents": [],
+  "seasons": {}
+}

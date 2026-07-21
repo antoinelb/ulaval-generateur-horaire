@@ -1,0 +1,29 @@
+[package]
+name = "ulaval-scheduler-scraper"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "ulaval-scraper"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+ulaval-scheduler-core = { workspace = true }
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+futures = "0.3"
+httpdate = "1"
+reqwest = "0.13"
+serde = { workspace = true }
+serde_json = { workspace = true }
+scraper = "0.27.0"
+thiserror = { workspace = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
+wiremock = "0.6"

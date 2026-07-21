@@ -1,0 +1,39 @@
+{
+  "code": "GCI-2510",
+  "title": "Séminaire de stage en génie civil I",
+  "credits": 0,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "Examen Formation obligatoire stage avec résultat de P",
+    "tree": {
+      "raw": "Examen Formation obligatoire stage avec résultat de P"
+    }
+  },
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "options": [
+        [
+          {
+            "nrc": "81375",
+            "section": "A",
+            "mode": "in-person",
+            "slots": []
+          }
+        ]
+      ]
+    },
+    "summer": {
+      "options": [
+        [
+          {
+            "nrc": "51240",
+            "section": "A",
+            "mode": "in-person",
+            "slots": []
+          }
+        ]
+      ]
+    }
+  }
+}

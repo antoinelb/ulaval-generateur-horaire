@@ -1,0 +1,885 @@
+{
+  "courses": [
+    {
+      "code": "AME-7002",
+      "title": "Sujets spéciaux (urbanisme)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52116",
+                "section": "C",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARC-6011",
+      "title": "Essai",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52146",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRI-6004",
+      "title": "Stage en développement rural intégré",
+      "credits": 4,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "DRI-6002 ET DRI-6003",
+        "tree": {
+          "all": [
+            "DRI-6002",
+            "DRI-6003"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52296",
+                "section": null,
+                "mode": "in-person",
+                "slots": []
+              },
+              {
+                "nrc": "52297",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETI-6003",
+      "title": "Stage",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ETI-6007",
+        "tree": "ETI-6007"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55723",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "55725",
+                "section": "C",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "55727",
+                "section": "E",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETI-6008",
+      "title": "Essai (études internationales)",
+      "credits": 9,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55667",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GCH-7019",
+      "title": "Sujets spéciaux",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "56345",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GCI-2510",
+      "title": "Séminaire de stage en génie civil I",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Examen Formation obligatoire stage avec résultat de P",
+        "tree": {
+          "raw": "Examen Formation obligatoire stage avec résultat de P"
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51240",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GIE-6106",
+      "title": "Court séjour-études à l'étranger",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51287",
+                "section": "W",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GRH-1605",
+      "title": "Qualité de vie au travail et bien-être",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55871",
+                "section": "DH",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-7311",
+      "title": "Histoire du Canada et du Québec II",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55611",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-7195",
+      "title": "Analyse (thèmes choisis)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "56073",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6007",
+      "title": "Sujets spéciaux I (sciences dentaires)",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51452",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6210",
+      "title": "Présentation de cas cliniques II",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51513",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6224",
+      "title": "Clinique d'endodontie IV",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "MDD-6223",
+        "tree": "MDD-6223"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51516",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MED-2760",
+      "title": "Suivi du développement des compétences III",
+      "credits": 1,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "MED-2750*",
+        "tree": "MED-2750"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51651",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MED-3507",
+      "title": "Stage en santé publique et médecine préventive (externat)",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "50776",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MED-3532",
+      "title": "Stage en anesthésiologie (externat)",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "50796",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MED-3536",
+      "title": "Synthèse, intégration et préparation aux examens",
+      "credits": 6,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "MED-3202",
+        "tree": "MED-3202"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "50800",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MED-3651",
+      "title": "Synthèse, intégration et préparation aux examens",
+      "credits": 4,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "50893",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "NUT-2500",
+      "title": "Initiation à la profession : stages dirigés",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "CSO-1904 ET NUT-2008 ET NUT-2009 ET NUT-3001 ET PHS-2901",
+        "tree": {
+          "all": [
+            "CSO-1904",
+            "NUT-2008",
+            "NUT-2009",
+            "NUT-3001",
+            "PHS-2901"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51670",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHA-6254",
+      "title": "Soins pharmaceutiques oncologiques en pharmacie communautaire II",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55729",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RLT-1914",
+      "title": "Éthique au travail",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55831",
+                "section": "DH",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RLT-3600",
+      "title": "Éthique et professionnalisme au travail",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "RLT, Crédits exigés : 15",
+        "tree": {
+          "program_credits": {
+            "program": "RLT",
+            "credits": 15
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55244",
+                "section": "DH",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-2329",
+      "title": "Expériences cliniques : médecine-chirurgie",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "SIN-1313 ET MED-2920* ET SIN-2307*",
+        "tree": {
+          "all": [
+            "SIN-1313",
+            "MED-2920",
+            "SIN-2307"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51928",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-4171",
+      "title": "Coopération, communs et économies transformatrices",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "SOC-7171"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55602",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-7171",
+      "title": "Coopération, communs et économies transformatrices",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "SOC-4171"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55603",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SVS-7003",
+      "title": "Méthodes de supervision pédagogique en intervention sociale",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55270",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-1009",
+      "title": "Christian spiritualities",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "THL-1003"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51977",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-1229",
+      "title": "Les Pères de l'Église I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "THL-1240"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "56001",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-1240",
+      "title": "Fathers of the Church I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "THL-1229"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "56091",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2015",
+      "title": "Jesus the Christ",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "THL-2001"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "56236",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2115",
+      "title": "Bible and Ministry",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "THL-2100"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "56002",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2201",
+      "title": "Bible et liturgie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51996",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-3010",
+      "title": "Séminaire de fin de baccalauréat",
+      "credits": 4,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "53236",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-6204",
+      "title": "Textes fondateurs : période des sept conciles",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "56083",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-6225",
+      "title": "Iconology and Religious Art",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "56348",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "courses": [
+    {
+      "code": "CRL-3701",
+      "title": "Travaux dirigés II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "56712",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ESP-3210",
+      "title": "Proyecto de investigación (literatura)",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "50276",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HAR-2201",
+      "title": "Architecture de la ville de Québec",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "57842",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SAC-7010",
+      "title": "Lectures dirigées",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55203",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2227",
+      "title": "History of the Church II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "58195",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THT-2152",
+      "title": "Projet étudiant II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "54014",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

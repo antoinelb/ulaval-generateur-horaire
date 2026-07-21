@@ -1,0 +1,26 @@
+{
+  "courses": [
+    {
+      "code": "AME-7005",
+      "title": "Sujets spéciaux (méthodes quantitatives)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52150",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

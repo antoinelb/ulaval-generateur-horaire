@@ -1,0 +1,2021 @@
+{
+  "courses": [
+    {
+      "code": "ACT-7118",
+      "title": "Méthodes d'inférence appliquées en actuariat",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21345",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "AGC-2500",
+      "title": "Stage en entreprise agricole I",
+      "credits": 1,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "AGC-1010*",
+        "tree": "AGC-1010"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12747",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ANT-1209",
+      "title": "Anthropologie du Tibet et de l'Himalaya",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13038",
+                "section": "H",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARL-2300",
+      "title": "Questions d'archéologie du Proche-Orient I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ARL, Crédits exigés : 21",
+        "tree": {
+          "program_credits": {
+            "program": "ARL",
+            "credits": 21
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13173",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "BIO-7021",
+      "title": "Écologie historique",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13386",
+                "section": "H",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CHM-7036",
+      "title": "Colloïdes et interfaces liquides",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13518",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CHM-7050",
+      "title": "Chimie des composés organofluorés",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13520",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-3002",
+      "title": "Champ de recherche et enjeux de la communication publique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "COM-1000 à 4999, Crédits exigés : 39",
+        "tree": {
+          "program_credits": {
+            "program": "COM",
+            "credits": 39
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13640",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-6041",
+      "title": "Projet de recherche",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13671",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-7008",
+      "title": "Séminaire thématique A",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13681",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-7012",
+      "title": "Séminaire thématique C",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13683",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-7013",
+      "title": "Séminaire thématique D",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13684",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CRL-2303",
+      "title": "Le métier d'écrivain",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13734",
+                "section": "DH",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DID-1060",
+      "title": "Communication orale et sensibilisation interculturelle",
+      "credits": 1,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14000",
+                "section": "Z3A",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-6141",
+      "title": "Droit international privé",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21351",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-7030",
+      "title": "Droit bancaire international",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "11365",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EAN-2400",
+      "title": "Thèmes choisis en études anciennes",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "20883",
+                "section": "DH",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EDC-7016",
+      "title": "Théorie de l'activité : un tour d'horizon",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14414",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ENP-1505",
+      "title": "Stage 1 en éducation au préscolaire",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "1000 à 4999 Crédits exigés : 12",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 12
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14449",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EPS-7013",
+      "title": "Préparation mentale en sport : une perspective holistique",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14595",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ESP-2000",
+      "title": "Culture espagnole",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "ESP-2009"
+      ],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14685",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ESP-2005",
+      "title": "Literatura hispanoamericana actual",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ESP-2001",
+        "tree": "ESP-2001"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14691",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETN-2005",
+      "title": "Pratiques professionnelles et culture",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "1000 à 4999 Crédits exigés : 18",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 18
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14755",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETN-2250",
+      "title": "Lectures dirigées",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14759",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FLS-2004",
+      "title": "Rédaction de textes académiques II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14824",
+                "section": "DHA",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FLS-3002",
+      "title": "Rédaction de textes académiques III",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14827",
+                "section": "DHA",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GAD-7013",
+      "title": "Sujets spéciaux (archivistique)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21564",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GAE-3004",
+      "title": "Projet d'ingénierie II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GAE-3003",
+        "tree": "GAE-3003"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15042",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GAL-3005",
+      "title": "Conception de procédés alimentaires",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15059",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEL-1799",
+      "title": "Dangers de l'électricité",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "GEL-4799",
+        "GEL-7799"
+      ],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "11669",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "21635",
+                "section": "Z4",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEL-7021",
+      "title": "Spectrométrie par transformation de Fourier",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15224",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-7005",
+      "title": "Notions avancées en hydraulique urbaine",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15256",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GGR-2515",
+      "title": "Géographie du Pacifique Sud",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15315",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GGR-7031",
+      "title": "Géopolitique de la gestion de l'eau",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15358",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GGR-7053",
+      "title": "Marques, labels et attractivité du territoire",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15362",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GLO-7050",
+      "title": "Apprentissage machine en pratique",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15472",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GPH-2003",
+      "title": "Laboratoire d'instrumentation",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GPH-1799 ET GPH-2006",
+        "tree": {
+          "all": [
+            "GPH-1799",
+            "GPH-2006"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15653",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HAR-1004",
+      "title": "L'art du XXe siècle, 1900-1960",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15816",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HAR-2050",
+      "title": "Iconographie de l'art chrétien",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15823",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HAR-2201",
+      "title": "Architecture de la ville de Québec",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15834",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-2432",
+      "title": "Genre et postcolonialisme au Québec : une histoire transatlantique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21102",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-2601",
+      "title": "Séminaire d'histoire européenne II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 21 ET HST-1010",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 21
+              }
+            },
+            "HST-1010"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21094",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-3900",
+      "title": "Québec-Canada (1763 à nos jours)",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "HST-1000",
+        "tree": "HST-1000"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15959",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-7210",
+      "title": "Histoire médiévale de l'Europe",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15975",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2184",
+      "title": "Littérature française du XXe siècle I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "16154",
+                "section": "DH",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2200",
+      "title": "Littérature universelle III",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "20865",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2302",
+      "title": "Littérature des femmes",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21404",
+                "section": "DH",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-7034",
+      "title": "Théâtrologie I",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "16196",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-7401",
+      "title": "Sujets spéciaux II",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21497",
+                "section": "DH",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LNG-7007",
+      "title": "Phonétique",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "16260",
+                "section": "DHA",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6207",
+      "title": "Revue de littérature en endodontie III",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "11893",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6225",
+      "title": "Clinique d'endodontie V",
+      "credits": 5,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "MDD-6224",
+        "tree": "MDD-6224"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "16532",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MEV-7025",
+      "title": "Modèles d'évaluation de programmes d'intervention",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "16700",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MNG-7007",
+      "title": "Sujets spéciaux en management",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21518",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MRK-6106",
+      "title": "Marketing stratégique",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "MRK-6003 OU MRK-6004",
+        "tree": {
+          "any": [
+            "MRK-6003",
+            "MRK-6004"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "16864",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MSL-6005",
+      "title": "Conservation des patrimoines",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "16880",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MUS-2002",
+      "title": "Histoire de la musique III",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12091",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MUS-2003",
+      "title": "Histoire de la musique IV",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12092",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MUS-2160",
+      "title": "Hautbois (principal)",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17013",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ORT-6005",
+      "title": "Méthodes de recherche en orthophonie et en audiologie",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12204",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ORT-6006",
+      "title": "Notions d'audiologie",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ORT-6007",
+        "tree": "ORT-6007"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17509",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ORT-6020",
+      "title": "Troubles développementaux du langage oral",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "ORT-6007 ET ORT-6127 ET ORT-6133 ET ORT-6141",
+        "tree": {
+          "all": [
+            "ORT-6007",
+            "ORT-6127",
+            "ORT-6133",
+            "ORT-6141"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17511",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHA-6255",
+      "title": "Approche pharmacothérapeutique adaptée à la femme enceinte et qui allaite",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17555",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-3106",
+      "title": "Théorie critique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17628",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-7007",
+      "title": "Philosophie de la médecine",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17639",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-7304",
+      "title": "Philosophie de l'action",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17645",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-7401",
+      "title": "Philosophie et projets",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17646",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHT-6521",
+      "title": "Stage d'intégration avancé B",
+      "credits": 10,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "PHT-6507 OU PHT-6511 OU PHT-6512 OU PHT-6513",
+        "tree": {
+          "any": [
+            "PHT-6507",
+            "PHT-6511",
+            "PHT-6512",
+            "PHT-6513"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21491",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "POL-2332",
+      "title": "Origines et conséquences du conflit israélo-palestinien",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17800",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PST-2000",
+      "title": "Supervision d'activités pastorales",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21201",
+                "section": "W1",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PST-2108",
+      "title": "Counseling and the Search for Meaning",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "PST-2102"
+      ],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21365",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RED-3000",
+      "title": "Stratégie informationnelle en environnement numérique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "RED-2000",
+        "tree": "RED-2000"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "18157",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RLT-3105",
+      "title": "Simulation de négociation collective",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "RLT-2003",
+        "tree": "RLT-2003"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "18194",
+                "section": "DH",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SAP-7020",
+      "title": "Mesure et santé : principes et applications",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "18349",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-2329",
+      "title": "Expériences cliniques : médecine-chirurgie",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "SIN-1313 ET MED-2920* ET SIN-2307*",
+        "tree": {
+          "all": [
+            "SIN-1313",
+            "MED-2920",
+            "SIN-2307"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12490",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "21565",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-2112",
+      "title": "Cours sur Marx",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12540",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-2126",
+      "title": "Démographie sociale",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12542",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-2153",
+      "title": "Lieux et espaces sociaux",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12543",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-7109",
+      "title": "Sujets spéciaux (sociologie)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "18622",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-7150",
+      "title": "Sociologie de la culture et des pratiques culturelles",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12560",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-7155",
+      "title": "Sociologie des problèmes sociaux",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12562",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-1232",
+      "title": "Éthique orthodoxe",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21498",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2015",
+      "title": "Jesus the Christ",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "THL-2001"
+      ],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21225",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2110",
+      "title": "Questions actuelles en théologie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21181",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-3010",
+      "title": "Séminaire de fin de baccalauréat",
+      "credits": 4,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "19009",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "21259",
+                "section": "W3",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

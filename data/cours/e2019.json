@@ -1,0 +1,122 @@
+{
+  "courses": [
+    {
+      "code": "ETN-2005",
+      "title": "Pratiques professionnelles et culture",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "1000 à 4999 Crédits exigés : 18",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 18
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "50862",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FOR-7034",
+      "title": "Sujets spéciaux en écologie fonctionnelle",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "50965",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GCI-7021",
+      "title": "Sujets spéciaux (génie civil)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52278",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHA-6232",
+      "title": "Pharmacothérapie ambulatoire en gériatrie II",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51592",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-6081",
+      "title": "Méthodes interprétatives en études bibliques",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55780",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

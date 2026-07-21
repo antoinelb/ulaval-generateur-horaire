@@ -1,0 +1,26 @@
+{
+  "courses": [
+    {
+      "code": "LIT-2135",
+      "title": "Littérature et reportage en littérature française",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "92240",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

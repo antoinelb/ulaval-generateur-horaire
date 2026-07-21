@@ -1,0 +1,158 @@
+{
+  "courses": [
+    {
+      "code": "GCH-7003",
+      "title": "Cinétique biochimique",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "81206",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MNG-6123",
+      "title": "La personne et l'équipe",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87770",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MNG-6127",
+      "title": "Management international",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88543",
+                "section": "W",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MNG-6128",
+      "title": "Gestion du développement durable",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88545",
+                "section": "W",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MNG-6129",
+      "title": "Gestion des crises et des changements dans les organisations",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88546",
+                "section": "W",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MRK-6103",
+      "title": "Stratégies marketing",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87771",
+                "section": "W",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIO-6033",
+      "title": "Rôle stratégique des SI dans l'organisation",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88544",
+                "section": "W",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

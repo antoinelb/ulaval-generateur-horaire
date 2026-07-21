@@ -1,0 +1,48 @@
+{
+  "courses": [
+    {
+      "code": "ESP-7000",
+      "title": "Teorìa del género narrativo",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "23366",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SCR-7014",
+      "title": "Séminaire sur les textes de Nag Hammadi",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12713",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

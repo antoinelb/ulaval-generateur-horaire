@@ -1,0 +1,1204 @@
+{
+  "courses": [
+    {
+      "code": "AME-7003",
+      "title": "Sujets spéciaux (développement régional)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55511",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "16:50"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "16:50"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "16:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "16:50"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "16:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ANT-6900",
+      "title": "Formation méthodologique à l'expérience en milieu ciblé EDI",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "54983",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "BIF-2590",
+      "title": "Stage en bio-informatique II",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "BIF-2580",
+        "tree": "BIF-2580"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55606",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CNS-6001",
+      "title": "Séminaire de recherche 1",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52042",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CNS-6003",
+      "title": "Séminaire de recherche 3",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52044",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-6024",
+      "title": "Stage",
+      "credits": 12,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "Crédits exigés : 24",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 24
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52051",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CRL-6050",
+      "title": "Questions de création littéraire",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55475",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CSO-7015",
+      "title": "Séminaire d'approfondissement",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52070",
+                "section": "A",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DID-1000",
+      "title": "Étude pratique du français écrit : grammaire, analyse et rédaction de textes",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "54744",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ENT-2148",
+      "title": "Design-led Entrepreneurship : Startup Fuze",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "ENT-2023",
+        "ENT-2147"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "50942",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "16:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ESI-6103",
+      "title": "Projet d'intervention 3 : communiquer et négocier",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55024",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ESI-6510",
+      "title": "Rapport d'intervention",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52222",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETI-6006",
+      "title": "Sujets spéciaux (études internationales)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52231",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GPL-7012",
+      "title": "Projet d'intégration interdisciplinaire",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "SLM-7000",
+        "tree": "SLM-7000"
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52416",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GRH-1601",
+      "title": "Transformation numérique et gestion des ressources humaines",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "RLT-3210"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55043",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-2603",
+      "title": "Séminaire d'histoire européenne IV",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 21 ET HST-1010",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 21
+              }
+            },
+            "HST-1010"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55047",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2605",
+      "title": "Édition collaborative de textes littéraires",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55473",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "17:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MCB-4100",
+      "title": "Biologie cellulaire et génétique des protozoaires",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "BIO-2007",
+        "tree": "BIO-2007"
+      },
+      "equivalents": [
+        "MCB-7013"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51229",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MCB-7013",
+      "title": "Biologie cellulaire et génétique des protozoaires",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "MCB-4100"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51232",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MRK-6096",
+      "title": "Strategic Marketing Management",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "MRK-6000 à 6999, Crédits exigés : 9",
+        "tree": {
+          "program_credits": {
+            "program": "MRK",
+            "credits": 9
+          }
+        }
+      },
+      "equivalents": [
+        "MRK-6086"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55370",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PSY-6101",
+      "title": "Sujets spéciaux (psychologie)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55118",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SCR-2300",
+      "title": "Université d'été en sciences des religions",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51724",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "51725",
+                "section": "W",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "sunday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SCR-6010",
+      "title": "Université d'été en sciences des religions",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51729",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "51730",
+                "section": "W",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "sunday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-6005",
+      "title": "Projet de stage",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "SIN-6017 ET SIN-7002 ET SIN-7009 ET SIN-7013",
+        "tree": {
+          "all": [
+            "SIN-6017",
+            "SIN-7002",
+            "SIN-7009",
+            "SIN-7013"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "52905",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-6036",
+      "title": "Examen clinique : périnatalité, enfant, adolescent",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "SIN-6058 ET SIN-6059",
+        "tree": {
+          "all": [
+            "SIN-6058",
+            "SIN-6059"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51748",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-1225",
+      "title": "Spiritualité orthodoxe I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "THL-1236"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55374",
+                "section": "Z3A",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "19:00",
+                    "end": "21:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "19:00",
+                    "end": "21:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2407",
+      "title": "Université d'été en théologie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51825",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "16:30"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-6224",
+      "title": "Selected Themes in Orthodox Spirituality",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "THL-6210"
+      ],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "51858",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "19:00",
+                    "end": "22:00"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "19:00",
+                    "end": "22:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TRD-3209",
+      "title": "Stage court de traduction ou de terminologie I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TRD-1005 ET TRD-1010",
+        "tree": {
+          "all": [
+            "TRD-1005",
+            "TRD-1010"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "53112",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TRD-3210",
+      "title": "Stage court de traduction ou de terminologie II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TRD-1005 ET TRD-1010",
+        "tree": {
+          "all": [
+            "TRD-1005",
+            "TRD-1010"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "53113",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TRD-3211",
+      "title": "Stage long de traduction ou de terminologie",
+      "credits": 6,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TRD-1005 ET TRD-1010",
+        "tree": {
+          "all": [
+            "TRD-1005",
+            "TRD-1010"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "53114",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TRD-6001",
+      "title": "Stage en traduction",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "53120",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TRD-6005",
+      "title": "Stage en traduction",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "53123",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

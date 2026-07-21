@@ -1,0 +1,56 @@
+{
+  "courses": [
+    {
+      "code": "AME-6034",
+      "title": "Sujets spéciaux (aménagement)",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86442",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "86562",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "POR-3600",
+      "title": "Projet étudiant en langue portugaise",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83578",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

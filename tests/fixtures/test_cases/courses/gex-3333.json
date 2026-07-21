@@ -1,0 +1,53 @@
+{
+  "code": "GEX-3333",
+  "title": "Projet intégrateur en génie des eaux I",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "(ECN-2901 OU ECN-4901) ET GCI-1011 ET GMC-3009 ET  Crédits exigés : 72",
+    "tree": {
+      "all": [
+        {
+          "any": [
+            "ECN-2901",
+            "ECN-4901"
+          ]
+        },
+        "GCI-1011",
+        "GMC-3009",
+        {
+          "program_credits": {
+            "program": null,
+            "credits": 72
+          }
+        }
+      ]
+    }
+  },
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "options": [
+        [
+          {
+            "nrc": "84787",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "12:30",
+                "end": "13:20"
+              },
+              {
+                "day": "friday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

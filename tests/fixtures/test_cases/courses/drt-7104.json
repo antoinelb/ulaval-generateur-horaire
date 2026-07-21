@@ -1,0 +1,42 @@
+{
+  "code": "DRT-7104",
+  "title": "Sujets spéciaux en droit des affaires I",
+  "credits": 3,
+  "cycle": 2,
+  "prerequisites": null,
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "options": [
+        [
+          {
+            "nrc": "84328",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "12:30",
+                "end": "15:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "84329",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "15:30",
+                "end": "18:20"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "courses": [
+    {
+      "code": "SIN-6004",
+      "title": "Sujets spéciaux (sciences infirmières)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "50950",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

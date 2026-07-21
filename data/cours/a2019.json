@@ -1,0 +1,542 @@
+{
+  "courses": [
+    {
+      "code": "ANT-2303",
+      "title": "Anthropologie et environnement",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83068",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "BVG-7042",
+      "title": "Anatomie et morphologie végétale",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83462",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CIN-1105",
+      "title": "Cinéma étatsunien",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83550",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DES-1610",
+      "title": "Studio : langage visuel, typographie et culture du design",
+      "credits": 6,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83972",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "83973",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "83974",
+                "section": "C",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "83975",
+                "section": "D",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "83976",
+                "section": "E",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DID-1060",
+      "title": "Communication orale et sensibilisation interculturelle",
+      "credits": 1,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91295",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "91296",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FLS-3300",
+      "title": "Projet étudiant I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84827",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GCI-2510",
+      "title": "Séminaire de stage en génie civil I",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Examen Formation obligatoire stage avec résultat de P",
+        "tree": {
+          "raw": "Examen Formation obligatoire stage avec résultat de P"
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "81375",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GLG-3002",
+      "title": "Excursion géologique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GLG-1002 ET GLG-1003 ET GLG-2000 ET GLG-2001 ET GLG-2002",
+        "tree": {
+          "all": [
+            "GLG-1002",
+            "GLG-1003",
+            "GLG-2000",
+            "GLG-2001",
+            "GLG-2002"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85345",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HAR-2152",
+      "title": "L'art gothique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85748",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-7312",
+      "title": "Histoire du Canada et du Québec III",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91622",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2210",
+      "title": "Essai francophone",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86108",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6085",
+      "title": "Stage en chirurgie buccale et maxillo-faciale V",
+      "credits": 16,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "MDD-6084",
+        "tree": "MDD-6084"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "81717",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MSL-6005",
+      "title": "Conservation des patrimoines",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87088",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MUS-2002",
+      "title": "Histoire de la musique III",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87216",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "POL-7027",
+      "title": "Partis politiques",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88192",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PST-2200",
+      "title": "Relecture et intégration de l'expérience",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88316",
+                "section": "W1",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PUN-7015",
+      "title": "Sujet spécial",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88517",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SAC-6015",
+      "title": "Essai",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91851",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-1229",
+      "title": "Les Pères de l'Église I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "THL-1240"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91425",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2600",
+      "title": "Animation spirituelle, engagement communautaire",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "89388",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TRD-2150",
+      "title": "Traduction espagnole (textes pratiques)",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ESG-2020 à 3799, Crédits exigés : 3 OU Examen Classement en espagnol avec résultat de 5 à 8",
+        "tree": {
+          "any": [
+            {
+              "program_credits": {
+                "program": "ESG",
+                "credits": 3
+              }
+            },
+            {
+              "raw": "Examen Classement en espagnol avec résultat de 5 à 8"
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "89497",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

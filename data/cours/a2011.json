@@ -1,0 +1,51 @@
+{
+  "courses": [
+    {
+      "code": "GAD-7016",
+      "title": "Sujets spéciaux (archivistique)",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88701",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "POL-6004",
+      "title": "Projet de mémoire",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "POL-7031*",
+        "tree": "POL-7031"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88117",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

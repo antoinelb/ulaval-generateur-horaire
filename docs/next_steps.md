@@ -1,0 +1,73 @@
+# Plan
+
+Test-first parser implementation — step 1 of the build order in `docs/project_plan.md`.
+The expected outputs in `tests/fixtures/test_cases/` are done; this plan makes them pass.
+Rhythm for each page type: freeze the real HTML → write the failing integration test → implement the parser until it matches the expected JSON → pin edge cases with inline unit tests.
+
+- [x] Build e2e test cases for the parser
+    - [x] All courses page (catalogue)
+    - [x] Course page
+    - [x] Program page
+- [x] Freeze HTML fixtures
+    - [x] Fetch (one-off `curl`, honest user agent) the real page behind each test case into `tests/fixtures/test_cases/courses/*.html` and `tests/fixtures/test_cases/programs/*.html`, same basename as the expected JSON
+    - [x] Freeze the catalogue pages into `tests/fixtures/test_cases/catalogue/`: `gex_{0,1,2}.html` (50 courses, 2 courses, 0 courses — ADR `2026-07-catalogue-teste-sur-html-gele`) and `all_last.html` (« Aucun résultat » variant — ADR `2026-07-page-aucun-resultat-et-total-optionnel`)
+    - Verify: every `test_cases/courses/*.json` and `test_cases/programs/*.json` has a same-named `.html` source, and the two catalogue pages are present
+- [x] Parser skeleton in `scraper`
+    - [x] Dependencies: `scraper` (HTML parsing), `thiserror` (library-side errors; `anyhow` stays at the binary frontier)
+    - [x] Module layout: `parse/` with `catalogue.rs`, `prerequisites.rs`, `course.rs`, `program.rs`, and a shared error type that carries the offending raw text (an anomaly is data, never a panic)
+    - Verify: `cargo check` passes with the empty module tree
+- [x] Catalogue parser (`parse/catalogue.rs`)
+    - [x] One page of HTML → `{code, title, url}` entries + `total_results: Option<usize>` (`None` on the « Aucun résultat » variant)
+    - [x] Termination signal: 0 entries **with** proof of page shape (`total-resultats` element **or** texte « Aucun résultat ») = end of results; neither = markup drift = error (ADR `2026-07-page-aucun-resultat-et-total-optionnel`)
+    - [x] Malformed entry → raw error line, never silently dropped
+    - Verify: integration test parses the four frozen catalogue pages, merges, sorts and dedups, and compares with `test_cases/catalogue/gex.json`; unit tests on inline snippets pin what the frozen pages never exercise (0 entries with neither marker = drift, malformed entry)
+- [x] Fetch module, up to complete catalogues (`fetch.rs`)
+    - [x] `Fetcher`: async client (honest user agent, 30 s timeout), shared throttle ~10 req/s (`fetch(&self)`, mutexed clock), bounded retries (3; transport, 5xx, 429), `Retry-After` honored (seconds + HTTP-date, 5 min cap, bumps the shared clock) — ADR `2026-07-conception-du-fetcher`
+    - [x] Everything testable: pure `should_retry` / `parse_retry_after` unit-tested, `wait_for_slot` on tokio's paused clock, full HTTP behavior (200, 503 + `Retry-After` then 200, permanent 404, retries exhausted) against `wiremock`
+    - [x] Two-step pagination per matière URL: page 0 gives total + page size → remaining pages fan out under the shared throttle; arithmetic reconciliation guarantees completeness (merged count == advertised total, per-page totals agree, hard page cap) — ADR `2026-07-pagination-du-catalogue-par-comptage`; the computed page count is an upper bound, trailing « Aucun résultat » pages tolerated when empty — ADR `2026-07-tolerance-des-pages-aucun-resultat-du-fan-out`; any mismatch = error that stops the run, never a silent truncation
+    - [x] Merge, sort, dedup entries across pages and matières (same shape as `test_cases/catalogue/gex.json`)
+    - [x] Full catalogue = the union of the matière facets: the site's index caps any query at 10 000 results, so page 0 provides the facet directory and one partition per matière fans out under the one shared throttle (bracketed `matieres%5B<id>%5D=<id>` form only — the flat form is silently ignored by the site); the banner total is ignored — the widget omitting 11 real courses is a ULaval bug the scraper doesn't work around — ADR `2026-07-partition-du-catalogue-par-matiere`, `2026-07-le-catalogue-est-lunion-des-facettes`
+    - [x] CLI wiring: a `catalogue` subcommand that writes the merged catalogue JSON (`anyhow` at the binary frontier) — clap 4 derive, exit code 2 on usage errors, `catalogue_errors.log` beside the artifact (ADR `2026-07-cli-dans-la-lib-et-style-derreurs`, `2026-07-adoption-de-clap`); optional `--output-dir`/`--url` flags with defaults `data` + the production URL, no scoped mode (ADR `2026-07-scraper-plein-catalogue-seulement`)
+    - Verify: `make test` green (unit + wiremock); run live on the full catalogue and spot-check the unique course count (~10 224, the facet union)
+- [x] Course page parser (`parse/course.rs`, préalables grammar included — drop `parse/prerequisites.rs`)
+    - [x] Préalables grammar (pure function in `course.rs`, raw text → `PrereqTree`, no HTML): ET/OU with parentheses → `all`/`any` trees; « Crédits exigés : N » → `program_credits` — tokenizer + explicit-stack state machine, no recursion (ADR `2026-07-conception-du-parseur-de-cours`)
+    - [x] Out-of-grammar text → kept raw-only and surfaced as an anomaly — `core::Prerequisites` is now an untagged enum `Parsed { raw, tree } | Raw { raw }` (ADR `2026-07-prealables-hors-grammaire-en-enum`)
+    - [x] Page HTML → `core::Course`: code, title, credits, cycle, prerequisites (raw + tree via the grammar), equivalents, seasons → choice groups → sections (NRC, section, mode) → slots (day, start, end); selector map and extraction rules in ADR `2026-07-extraction-html-de-la-page-cours`
+    - [x] Section model: `SeasonOffering { groups: Vec<Vec<Section>> }` — pick one section per group, union the slots; `ComponentKind` dropped, one-off « Date: » slots excluded, guard on «plusieurs sections + sections liées» (ADR `2026-07-sections-en-groupes-de-choix`)
+    - [x] Fold a grammar `Err` into `Prerequisites::Raw` + an anomaly at the assembly site (the grammar function itself returns `Result<PrereqTree, ParseError>`)
+    - Verify: unit tests per grammar rule plus rejection cases that fall back to raw; integration test parses each frozen `courses/*.html` and compares `serde_json::Value` with the matching `test_cases/courses/*.json`
+- [x] Program page parser (`parser/program.rs`)
+    - [x] Three more test cases frozen and expected: `baccalaureat-en-genie-physique`, `baccalaureat-en-genie-industriel`, `baccalaureat-en-genie-mecanique` — between them they exercise six constructions the first three pages never did
+    - [x] Page HTML → `core::Program`: groups (`div.fe-bloc-section`) → blocks (`div.collapsible-sections`) → accordions; « Cours obligatoires » → `mandatory`, « Règle N – \<contrainte\> » → `rules`, the `<h3>` naming the role of a group — and a group that has none read by its block count, with an anomaly (ADR `2026-07-blocs-de-la-page-programme`)
+    - [x] Constraint grammar: `Un cours parmi :` → `{count: 1}`, `X crédits` / `X à Y crédits` → `{min, max}`, the « parmi : » tail optional; an unreadable one leaves `constraint: None` rather than a made-up number (ADR `2026-07-contrainte-de-regle-optionnelle`)
+    - [x] `Concentration` gains `mandatory` (génie industriel, mécanique) and an optional `credits_required` (ADR `2026-07-cours-obligatoires-de-concentration`); a second program block feeds `Program.mandatory`, which retires the maîtrise's fabricated « Recherche » rule
+    - [x] Unrecognized rule text → `Raw` variant, surfaced, never ignored; `raw` carries the **whole** paragraph, the grammar matching only a prefix of it (ADR `2026-07-texte-brut-de-regle-paragraphe-complet`)
+    - [x] Prose no grammar covers — subgroup labels, English requirements, the stage exigé pour diplômer (GCI-2580, GEX-1580, GMC-2580) — kept in `notes` on rules and blocks, displayed and never interpreted (ADR `2026-07-notes-en-prose-conservees`)
+    - [x] The three hand-written fixtures regenerated from the frozen HTML: they predated it by four days and had lost ENT-4020/GEX-3501 and fabricated `{min:30,max:30}` (ADR `2026-07-fixtures-programmes-regenerees`)
+    - Verify: `make test` green at 100 % on `parser/program.rs`; the integration test parses each frozen `programs/*.html`, compares `serde_json::Value` with the matching `.json`, **and** pins the anomalies each page is expected to raise — an unlisted one fails
+- [x] Drive the program parser — `ulaval-scraper program <url>... [--output-dir data]`
+    - [x] The URLs are **mandatory positional arguments**: unlike `catalogue` and `courses`, this command has no derivable work queue — a program page URL is a slug no course code rebuilds, and only the programs whose rules are wanted need their page at all
+    - [x] One file per program, `data/programmes/{code}.json`, a bare `core::Program` — the very shape of the parser fixtures, so the integration test compares the written artifact byte for byte with `test_cases/programs/*.json` (ADR `2026-07-un-fichier-par-programme`)
+    - [x] A run writes only the programs it was named and sweeps nothing; `{code}.manuel.json` (the hand-encoded `cheminement_type`) is out of reach by construction (ADR `2026-07-cheminement-type-en-fichier-manuel`)
+    - [x] A failing URL is an anomaly in `data/programmes_errors.log`, never an abort — `collect`, not `try_collect`, with `write_error_log` warning on stderr (ADR `2026-07-echec-de-page-programme-non-bloquant`); no cache, the run is seconds not minutes
+    - Verify: `make test` green at 100 % on `scraper/src/program.rs`; live run over the six known programs, each output diffed against its fixture
+- [x] Next, out of parser scope (completes jalon 1): drive the course parser over the catalogue and write the session snapshots — `ulaval-scraper courses [--output-dir data] [--subjects gex gci]`
+    - [x] Work queue = `data/catalogue.json` (course URLs are slugs, not derivable from a code); `--subjects` narrows by code prefix, case-insensitive, and omitting it scrapes the whole catalogue; an unknown subject is a hard error
+    - [x] One `data/cours/{session}.json` per (season, year) found — `parse_seasons` now surfaces the year on `CoursePage.years`, `Course` stays keyed by season (ADR `2026-07-cours-par-session-et-annee`)
+    - [x] A failed page is an anomaly in `data/cours_errors.log`, never an abort — `collect`, not `try_collect` (ADR `2026-07-echec-de-page-cours-non-bloquant`)
+    - [x] Cache of parsed courses under `data/cache/cours/` (gitignored), written only for anomaly-free parses so a parser fix needs no manual purge (ADR `2026-07-cache-de-cours-parses`)
+    - [x] A full run removes session snapshots it no longer produces; a `--subjects` run and any `{session}.manuel.json` are left alone (ADR `2026-07-nettoyage-des-snapshots-perimes`)
+    - Verify: `make test` green at 100 % coverage; live GEX run writes `a2026.json`/`h2026.json`/`e2026.json` and a re-run issues no request for cached courses
+- [x] Close the parser gaps the first live run surfaced (see `cours_errors.log`) — GEX + GCI went from 40 anomalies to 1
+    - [x] Mode « Hybride »: kept as `Mode::Hybrid`; its « Sur Internet » plage carries no Journée/Horaire so `parse_slot` already drops it (ADR `2026-07-mode-hybride`), fixture `gex-3100`
+    - [x] « Crédits exigés : N » with no program: `ProgramCredits.program` is now `Option<String>` (ADR `2026-07-credits-exiges-sans-programme`), fixture `gex-3333`
+    - [x] `*`-suffixed sigles, and « Crédit » in the singular
+- [x] Close the parser gaps the GMC run surfaced (4 anomalies → 0); fixtures `gmc-7000`, `gmc-1590`, `act-4114`, `gci-2510`
+    - [x] Mode « À distance-hybride »: a second spelling of `Mode::Hybrid`, one `match` arm (ADR `2026-07-orthographe-a-distance-hybride`), GMC-7000
+    - [x] « 1000 à 4999 » bounding a credits requirement, bare (GMC-1590) or glued to a subject (« ACT-1000 à 4999, Crédits exigés : 39 », ACT-4114): stripped in `tokenize_prereq_raw` like the `*`s, leaving the two forms the grammar already reads (ADR `2026-07-credits-exiges-bornes-au-premier-cycle`)
+- [x] Courses with no credits card at all (GCI-2510, a « Stage » seminar: its `fe--faits-rapides` carries only « Cycle du cours » and « Modes d'enseignement ») — now `Ok(0)` rather than a hard error dropping the course; a card present but empty or unreadable stays an error (ADR `2026-07-cours-sans-carte-de-credits`)
+- [x] Close the parser gaps the catalogue-wide run surfaced; fixtures `phi-7750`, `esp-1000`, `frn-1112`, and `gci-2510` (now anomaly-free)
+    - [x] Any `dddd à dddd` bound on a credits requirement is stripped, not just the first-cycle one (« PHI-6000 à 8899, Crédits exigés : 12 », PHI-7750): the cycle it names is the cycle of the course carrying it, already in the snapshot (ADR `2026-07-bornes-de-credits-toutes-retirees`, replaces `2026-07-credits-exiges-bornes-au-premier-cycle`)
+    - [x] `PrereqTree::Raw { raw }` for any operand the planner cannot verify — an examination (FRN-1904), a range of courses (ESP-1000), a sigle the source mistyped (« FRN 19543 », FRN-1112), prose. Not recognized one by one: what is left when no checkable shape fits, and not an anomaly (ADR `2026-07-operande-non-verifiable-gardee-en-texte`)
+    - [x] `tokenize_prereq_raw` now splits on `(`, `)`, `ET`, `OU` and classifies each operand whole (`classify_operand`), one `match` arm per shape — the `skip` counters, the look-aheads and the `strip_credit_bounds` pre-pass are gone (ADR `2026-07-operande-reconnue-dun-seul-tenant`)
+- [ ] Resume across a killed process (jalon 5): the cache covers re-runs, not a run interrupted mid-flight

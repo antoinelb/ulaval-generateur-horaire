@@ -1,0 +1,686 @@
+{
+  "courses": [
+    {
+      "code": "CRL-3002",
+      "title": "Projet de création : poésie, essai, chanson ou prose poétique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "CRL-1000* ET (CRL-2002* OU CRL-2003* OU CRL-2005*)",
+        "tree": {
+          "all": [
+            "CRL-1000",
+            {
+              "any": [
+                "CRL-2002",
+                "CRL-2003",
+                "CRL-2005"
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13519",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-2653",
+      "title": "Sujet avancé en droit II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "DRT, Crédits exigés : 60",
+        "tree": {
+          "program_credits": {
+            "program": "DRT",
+            "credits": 60
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21309",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EAN-2150",
+      "title": "La vie quotidienne en Grèce et à Rome",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14074",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EAN-6010",
+      "title": "Sujets spéciaux",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14082",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETN-1107",
+      "title": "Patrimoine culturel des francophones de l'Amérique du Nord",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21058",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETN-3501",
+      "title": "Stage en milieu professionnel",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ETN-1000 ET ETN-1002",
+        "tree": {
+          "all": [
+            "ETN-1000",
+            "ETN-1002"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14444",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETN-7006",
+      "title": "Sujets spéciaux (ethnologie)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14445",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETN-7009",
+      "title": "Sujets spéciaux (ethnologie)",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14446",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "21223",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FPT-2100",
+      "title": "Approches et formules pédagogiques et didactiques II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "FPT-1004 ET FPT-1501",
+        "tree": {
+          "all": [
+            "FPT-1004",
+            "FPT-1501"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14582",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FPT-3000",
+      "title": "Formation professionnelle et technique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "FPT-1501 ET  Crédits exigés : 57",
+        "tree": {
+          "all": [
+            "FPT-1501",
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 57
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "14587",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HAR-2265",
+      "title": "Cubismes et futurisme",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15513",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-2456",
+      "title": "Histoire sociale du Québec",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15592",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2104",
+      "title": "Littérature française du Moyen Âge II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "20623",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2126",
+      "title": "Les Lumières et leur héritage",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15818",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2195",
+      "title": "Approches du sujet",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15841",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LOA-2050",
+      "title": "Initiation à la langue sanskrite II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "LOA-1050",
+        "tree": "LOA-1050"
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "15970",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MED-3952",
+      "title": "Démarche clinique en pratique infirmière avancée en santé mentale",
+      "credits": 4,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "11840",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-2133",
+      "title": "Introduction à la philosophie française contemporaine",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17512",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "POL-2315",
+      "title": "Guerres et paix au Moyen-Orient",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17679",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PST-2051",
+      "title": "Pédagogie de l'expérience spirituelle",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "17880",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SAC-6015",
+      "title": "Essai",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "18228",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-6003",
+      "title": "Lectures dirigées",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "18411",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-2113",
+      "title": "Sociologie de la culture",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "18516",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SVS-3500",
+      "title": "Stage II",
+      "credits": 9,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "SVS-2500 ET SVS-3100",
+        "tree": {
+          "all": [
+            "SVS-2500",
+            "SVS-3100"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12317",
+                "section": null,
+                "mode": "in-person",
+                "slots": []
+              },
+              {
+                "nrc": "12318",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2500",
+      "title": "Stage 1",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12362",
+                "section": null,
+                "mode": "in-person",
+                "slots": []
+              },
+              {
+                "nrc": "12363",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2510",
+      "title": "Stage 2",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "18913",
+                "section": null,
+                "mode": "in-person",
+                "slots": []
+              },
+              {
+                "nrc": "18914",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TXM-2103",
+      "title": "Intervenir en contexte de troubles concomitants",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12382",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

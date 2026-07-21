@@ -1,0 +1,61 @@
+{
+  "code": "GMC-1590",
+  "title": "Stage en génie mécanique I",
+  "credits": 9,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "GMC-1003 ET GMC-1024 ET GMC-2001 ET  1000 à 4999 Crédits exigés : 15",
+    "tree": {
+      "all": [
+        "GMC-1003",
+        "GMC-1024",
+        "GMC-2001",
+        {
+          "program_credits": {
+            "program": null,
+            "credits": 15
+          }
+        }
+      ]
+    }
+  },
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "options": [
+        [
+          {
+            "nrc": "81315",
+            "section": "A",
+            "mode": "in-person",
+            "slots": []
+          }
+        ]
+      ]
+    },
+    "winter": {
+      "options": [
+        [
+          {
+            "nrc": "11510",
+            "section": "A",
+            "mode": "in-person",
+            "slots": []
+          }
+        ]
+      ]
+    },
+    "summer": {
+      "options": [
+        [
+          {
+            "nrc": "51216",
+            "section": "A",
+            "mode": "in-person",
+            "slots": []
+          }
+        ]
+      ]
+    }
+  }
+}

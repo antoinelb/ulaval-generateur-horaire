@@ -1,0 +1,300 @@
+{
+  "code": "baccalaureat-en-genie-civil",
+  "title": "Baccalauréat en génie civil",
+  "cycle": 1,
+  "credits_required": 120,
+  "mandatory": [
+    "GCI-1000",
+    "GCI-1001",
+    "GCI-1010",
+    "GCI-1011",
+    "GLG-1000",
+    "MAT-1900",
+    "GCI-2000",
+    "IFT-1903",
+    "MAT-1910",
+    "GCI-1003",
+    "GCI-1007",
+    "GCI-2001",
+    "GCI-2002",
+    "GCI-2003",
+    "GCI-1004",
+    "GCI-2004",
+    "GCI-2006",
+    "GCI-2007",
+    "GCI-3008",
+    "GMC-3009",
+    "STT-1900",
+    "GCI-2008",
+    "GCI-2009",
+    "GCI-3000",
+    "ECN-4901",
+    "GCI-2010",
+    "GCI-2011",
+    "GCI-2012",
+    "GCI-3009",
+    "GCI-3333",
+    "PHI-2910",
+    "PHI-3900"
+  ],
+  "rules": [
+    {
+      "title": "Règle 1",
+      "constraint": {
+        "count": 1
+      },
+      "courses": [
+        "GMN-2901",
+        "GMN-2902",
+        "MED-1100"
+      ]
+    },
+    {
+      "title": "Autres exigences – Règle 1",
+      "constraint": {
+        "min": 3,
+        "max": 3
+      },
+      "courses": [
+        "ANL-2020",
+        "ANL-3010",
+        "ANL-3020",
+        "ANL-3900",
+        "ANL-3905",
+        "EDC-1001",
+        "FLS-2093",
+        "FRN-1113",
+        "FRN-1914",
+        "PHI-1900"
+      ],
+      "notes": [
+        "Pour la personne francophone, la réussite du ANL-2020 Intermediate English II (VEPT: 53) est requise pour diplômer.",
+        "Pour la personne non-francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP : 400 et TCF-TP/ÉÉ: 14) est requise pour diplômer."
+      ]
+    },
+    {
+      "title": "Autres exigences – Règle 2",
+      "constraint": {
+        "min": 3,
+        "max": 3
+      },
+      "courses": "any",
+      "raw": "tous les cours de premier cycle, à l’exception des cours correctifs de français. Si le profil développement durable fait partie de votre cheminement, vous devez suivre DDU-1000."
+    }
+  ],
+  "concentrations": [
+    {
+      "title": "Cheminement sans concentration",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 15,
+            "max": 15
+          },
+          "courses": [
+            "FOR-2020",
+            "GAE-3006",
+            "GBO-2040",
+            "GBO-4015",
+            "GBO-4070",
+            "GCI-2101",
+            "GCI-3003",
+            "GCI-3101",
+            "GCI-3300",
+            "GCI-4007",
+            "GCI-4074",
+            "GCI-4090",
+            "GCI-4093",
+            "GCI-4004",
+            "GCI-4100",
+            "GCI-4101",
+            "GCI-4201",
+            "GCI-4301",
+            "GCI-4401",
+            "GEX-1000",
+            "GEX-2001",
+            "GEX-3001",
+            "GGL-2600",
+            "GMN-2000",
+            "GMN-2001"
+          ],
+          "notes": [
+            "Si le profil développement durable fait partie de votre cheminement, vous devez suivre 2 cours parmi GAE-3006, GCI-4201 et GBO-2040 et 1 cours parmi GCI-3101 et GCI-4301."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Eau et environnement",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 12,
+            "max": 12
+          },
+          "courses": [
+            "FOR-2020",
+            "GAE-3006",
+            "GCI-3101",
+            "GCI-4004",
+            "GCI-4201",
+            "GCI-4301",
+            "GEX-1000",
+            "GEX-2001",
+            "GEX-3001",
+            "GGL-2600"
+          ],
+          "notes": [
+            "Si le profil développement durable fait partie de votre cheminement, vous devez suivre GCI-4201 et 1 cours parmi GCI-3101 ou GCI-4301."
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
+          "courses": {
+            "concentration": "Cheminement sans concentration",
+            "rule": "Règle 1"
+          },
+          "raw": "tous les cours de la Règle 1 du cheminement sans concentration."
+        }
+      ]
+    },
+    {
+      "title": "Géotechnique",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 12,
+            "max": 12
+          },
+          "courses": [
+            "FOR-2020",
+            "GCI-2101",
+            "GCI-4004",
+            "GCI-4007",
+            "GCI-4101",
+            "GCI-4201",
+            "GEX-3001",
+            "GGL-2600",
+            "GMN-2000",
+            "GMN-2001"
+          ],
+          "notes": [
+            "Si le profil développement durable fait partie de votre cheminement, vous devez suivre GCI-4201."
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
+          "courses": {
+            "concentration": "Cheminement sans concentration",
+            "rule": "Règle 1"
+          },
+          "raw": "tous les cours de la Règle 1 du cheminement sans concentration."
+        }
+      ]
+    },
+    {
+      "title": "Structures et matériaux",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 12,
+            "max": 12
+          },
+          "courses": [
+            "FOR-2020",
+            "GBO-2040",
+            "GBO-4015",
+            "GBO-4070",
+            "GCI-3003",
+            "GCI-3300",
+            "GCI-4004",
+            "GCI-4074",
+            "GCI-4090",
+            "GCI-4100",
+            "GCI-4401",
+            "GEX-3001"
+          ],
+          "notes": [
+            "Si le profil développement durable fait partie de votre cheminement, vous devez suivre GBO-2040."
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
+          "courses": {
+            "concentration": "Cheminement sans concentration",
+            "rule": "Règle 1"
+          },
+          "raw": "tous les cours de la Règle 1 du cheminement sans concentration."
+        }
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "title": "Profil développement durable",
+      "credits_required": 12,
+      "mandatory": [
+        "DDU-1000"
+      ],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 6,
+            "max": 6
+          },
+          "courses": [
+            "GAE-3006",
+            "GCI-4201",
+            "GBO-2040"
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
+          "courses": [
+            "GCI-3101",
+            "GCI-4301"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Profil international",
+      "mandatory": [
+        "EHE-1GCI"
+      ],
+      "rules": []
+    }
+  ],
+  "notes": [
+    "En plus des cours obligatoires du programme, vous devez réussir le stage de formation pratique GCI-2580 pour diplômer. Vous pouvez également suivre trois autres stages de formation pratique optionnels : GCI-2590, GCI-3590, GCI-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
+  ]
+}

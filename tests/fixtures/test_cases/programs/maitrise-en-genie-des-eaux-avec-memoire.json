@@ -1,0 +1,46 @@
+{
+  "code": "maitrise-en-genie-des-eaux-avec-memoire",
+  "title": "Maîtrise en génie des eaux - avec mémoire",
+  "cycle": 2,
+  "credits_required": 45,
+  "mandatory": [
+    "GCI-7077",
+    "GEX-6001",
+    "GEX-6811",
+    "GEX-6812",
+    "GEX-6813",
+    "GEX-6814"
+  ],
+  "rules": [
+    {
+      "title": "Règle 1",
+      "constraint": {
+        "min": 12,
+        "max": 12
+      },
+      "courses": [
+        "GCI-7004",
+        "GCI-7010",
+        "GCI-7021",
+        "GCI-7030",
+        "GEX-7002",
+        "GEX-7004",
+        "GEX-7005",
+        "GEX-7007",
+        "GEX-7008",
+        "GEX-7013",
+        "GEX-7040",
+        "GEX-7042",
+        "GEX-7050",
+        "GEX-7061",
+        "GEX-7070",
+        "GEX-7078"
+      ]
+    }
+  ],
+  "concentrations": [],
+  "profiles": [],
+  "notes": [
+    "Réaliser toutes les activités de recherche prévues au programme. Si nécessaire, il est possible de prolonger ses études pour finaliser son mémoire en s'inscrivant aux activités suivantes, qui confèrent le régime d'études à temps complet à un coût fixe : TRE-6800 Poursuite de la recherche – mémoire 1 (maximum 1 inscription) ou TRE-6801 Poursuite de la recherche – mémoire 2 (maximum 4 inscriptions)."
+  ]
+}

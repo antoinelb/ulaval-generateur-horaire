@@ -1,0 +1,146 @@
+{
+  "code": "baccalaureat-en-genie-des-eaux",
+  "title": "Baccalauréat en génie des eaux",
+  "cycle": 1,
+  "credits_required": 120,
+  "mandatory": [
+    "CHM-1903",
+    "GCI-1000",
+    "GCI-1003",
+    "GEX-1002",
+    "GSC-1000",
+    "MAT-1900",
+    "GCI-1004",
+    "GGL-2600",
+    "IFT-1903",
+    "MAT-1910",
+    "STT-1900",
+    "GCI-1007",
+    "GCI-1010",
+    "GCI-1011",
+    "GCI-2008",
+    "GCI-2009",
+    "MCB-1907",
+    "GCI-1900",
+    "GCI-2010",
+    "GEX-1000",
+    "MAT-2910",
+    "GCI-2012",
+    "GCI-4301",
+    "GEX-2004",
+    "GMC-3009",
+    "ECN-4901",
+    "GEX-2001",
+    "GEX-2003",
+    "GEX-3001",
+    "DRT-1721",
+    "GEX-3333",
+    "PHI-2910",
+    "GEX-3335",
+    "PHI-3900"
+  ],
+  "rules": [
+    {
+      "title": "Règle 1",
+      "constraint": {
+        "count": 1
+      },
+      "courses": [
+        "MED-1100",
+        "GMN-2901",
+        "GMN-2902"
+      ]
+    },
+    {
+      "title": "Règle 2",
+      "constraint": {
+        "min": 3,
+        "max": 9
+      },
+      "courses": [
+        "GCI-3101",
+        "GEX-3500",
+        "GEX-3502",
+        "GGL-4001"
+      ]
+    },
+    {
+      "title": "Règle 3",
+      "constraint": {
+        "min": 3,
+        "max": 9
+      },
+      "courses": [
+        "GAE-3006",
+        "GAE-3007",
+        "GAE-3008",
+        "GCI-3001",
+        "GCI-4201",
+        "GEX-4002",
+        "GEX-4008",
+        "GGL-2609",
+        "GMN-2005"
+      ]
+    },
+    {
+      "title": "Règle 4",
+      "constraint": {
+        "min": 3,
+        "max": 3
+      },
+      "courses": [
+        "DDU-2000",
+        "ENT-1000",
+        "ENT-4020",
+        "GEX-3501",
+        "GGL-2601",
+        "IFT-4902",
+        "ANL-2020",
+        "FLS-2093",
+        "FRN-1914",
+        "ENT-1000",
+        "ENT-3020",
+        "MCB-4003",
+        "BIO-1008",
+        "BIO-1904",
+        "PLG-2104",
+        "DDU-2000",
+        "GGL-2601",
+        "GGR-1006",
+        "GGR-2307"
+      ],
+      "notes": [
+        "Programmation",
+        "Langue et communication",
+        "Entrepreneuriat",
+        "Biologie",
+        "Territoire",
+        "Changements climatiques",
+        "Pour la personne francophone, la réussite du cours ANL-2020 Intermediate English II (VEPT: 53) est requise pour diplômer.",
+        "Pour la personne non-francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP: 400 et TCF-TP/ÉÉ: 14) est requise pour diplômer."
+      ]
+    },
+    {
+      "title": "Règle 5",
+      "constraint": {
+        "min": 3,
+        "max": 3
+      },
+      "courses": "any",
+      "raw": "tous les cours de premier cycle, à l’exception des cours correctifs de français."
+    }
+  ],
+  "concentrations": [],
+  "profiles": [
+    {
+      "title": "Profil international",
+      "mandatory": [
+        "EHE-1GEX"
+      ],
+      "rules": []
+    }
+  ],
+  "notes": [
+    "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GEX-1580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GEX-2590, GEX-2591 et GEX-3590. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
+  ]
+}

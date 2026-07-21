@@ -1,0 +1,331 @@
+{
+  "code": "baccalaureat-en-genie-physique",
+  "title": "Baccalauréat en génie physique",
+  "cycle": 1,
+  "credits_required": 120,
+  "mandatory": [
+    "GLO-1901",
+    "GMC-1000",
+    "GPH-1000",
+    "PHY-1001",
+    "PHY-1002",
+    "PHY-1003",
+    "GEL-1001",
+    "GPH-2006",
+    "PHY-1004",
+    "PHY-1005",
+    "PHY-1007",
+    "GEL-2005",
+    "GEL-4799",
+    "GIF-1002",
+    "GMC-1002",
+    "GML-1001",
+    "GPH-1799",
+    "PHY-2001",
+    "GMC-1003",
+    "GPH-2004",
+    "GPH-2005",
+    "GPH-2104",
+    "PHY-1006",
+    "ECN-4901",
+    "GMC-3005",
+    "GPH-3004",
+    "PHI-3900",
+    "STT-2920",
+    "GMC-2001",
+    "GPH-2002",
+    "GPH-3110",
+    "GPH-3000",
+    "GPH-3001",
+    "PHI-2910",
+    "PHY-3003",
+    "PHY-3500"
+  ],
+  "rules": [
+    {
+      "title": "Autres exigences – Règle 1",
+      "constraint": {
+        "min": 3,
+        "max": 3
+      },
+      "raw": "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues peut choisir un cours d'anglais de niveau supérieur ou, s'il a acquis le niveau Advanced English II (VEPT : 63), un cours d'une autre langue moderne ou tout autre cours jugé pertinent par la direction du programme, à l'exclusion de tout cours contribuant déjà au programme."
+    },
+    {
+      "title": "Autres exigences – Règle 2",
+      "constraint": {
+        "min": 3,
+        "max": 15
+      },
+      "courses": [
+        "GCI-3005",
+        "GEL-2003",
+        "GEL-3006",
+        "GMC-2005",
+        "GML-4103",
+        "GPH-4101",
+        "GPH-4102",
+        "GPH-4104"
+      ]
+    },
+    {
+      "title": "Autres exigences – Règle 3",
+      "constraint": {
+        "min": 0,
+        "max": 12
+      },
+      "courses": [
+        "BPH-2001",
+        "ENT-4020",
+        "GCI-1901",
+        "GCI-3001",
+        "GEL-2001",
+        "GEL-2002",
+        "GEL-3000",
+        "GEL-3001",
+        "GEL-3003",
+        "GEL-4072",
+        "GEL-4102",
+        "GEL-4150",
+        "GEL-4151",
+        "GEL-4152",
+        "GEL-4200",
+        "GEL-4201",
+        "GEL-4202",
+        "GEL-4203",
+        "GGL-2600",
+        "GGL-2602",
+        "GGL-2609",
+        "GIF-4100",
+        "GMC-2008",
+        "GMC-3012",
+        "GMC-3015",
+        "GMC-4054",
+        "GMC-4055",
+        "GMC-4150",
+        "GMC-4151",
+        "GMC-4250",
+        "GMC-4350",
+        "GML-2003",
+        "GML-2007",
+        "GML-2251",
+        "GML-3001",
+        "GML-3020",
+        "GML-3250",
+        "GML-4150",
+        "GML-4151",
+        "GPH-3003",
+        "GPH-4100",
+        "GPH-4103",
+        "PHY-4000"
+      ]
+    },
+    {
+      "title": "Autres exigences – Règle 4",
+      "constraint": {
+        "count": 1
+      },
+      "courses": [
+        "GMN-2900",
+        "GMN-2901",
+        "GMN-2902",
+        "MED-1100"
+      ]
+    }
+  ],
+  "concentrations": [
+    {
+      "title": "Aéronautique et aérospatiale",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 15,
+            "max": 15
+          },
+          "courses": [
+            "GMC-2005",
+            "GMC-2008",
+            "GMC-4054",
+            "GMC-4150",
+            "GMC-4151",
+            "GMC-4250",
+            "GML-3020",
+            "GML-3250"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Électricité, électronique et puissance",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 15,
+            "max": 15
+          },
+          "courses": [
+            "GEL-2002",
+            "GEL-2003",
+            "GEL-3000",
+            "GEL-3001",
+            "GEL-4102",
+            "GEL-4150",
+            "GEL-4151",
+            "GEL-4152"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Environnement",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 15,
+            "max": 15
+          },
+          "courses": [
+            "GCI-1901",
+            "GCI-3001",
+            "GCI-3005",
+            "GGL-2600",
+            "GGL-2602",
+            "GGL-2609"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Génie médical et biophotonique",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 15,
+            "max": 15
+          },
+          "courses": [
+            "BPH-2001",
+            "GEL-4072",
+            "GML-4103",
+            "GML-4151",
+            "GPH-3003",
+            "GPH-4101",
+            "GPH-4102",
+            "GPH-4104",
+            "PHY-4000"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Photonique",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 15,
+            "max": 15
+          },
+          "courses": [
+            "GEL-2001",
+            "GEL-4201",
+            "GEL-4203",
+            "GPH-4100",
+            "GPH-4101",
+            "GPH-4102",
+            "GPH-4103",
+            "GPH-4104"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Génie des matériaux",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 15,
+            "max": 15
+          },
+          "courses": [
+            "GML-2003",
+            "GML-2007",
+            "GML-2251",
+            "GML-3001",
+            "GML-3020",
+            "GML-4103",
+            "GML-4150"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Signaux et communications",
+      "credits_required": 15,
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 15,
+            "max": 15
+          },
+          "courses": [
+            "GEL-2001",
+            "GEL-3003",
+            "GEL-3006",
+            "GEL-4200",
+            "GEL-4201",
+            "GEL-4202",
+            "GPH-4104"
+          ]
+        }
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "title": "Profil distinction",
+      "mandatory": [],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 12,
+            "max": 12
+          },
+          "raw": "Le profil est satisfait par la réussite des cours convenus entre la direction de programme et l'étudiante ou l'étudiant."
+        }
+      ],
+      "notes": [
+        "Conditions requises : avoir acquis 60 crédits du programme et présenter la moyenne de programme exigée par l'entente. Le choix de cours doit être établi de concert avec la direction de programme, selon l'entente de profil distinction."
+      ]
+    },
+    {
+      "title": "Profil international",
+      "mandatory": [
+        "EHE-1GPH"
+      ],
+      "rules": []
+    }
+  ],
+  "notes": [
+    "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GPH-2591 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GPH-2590, GPH-3590, GPH-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
+  ]
+}

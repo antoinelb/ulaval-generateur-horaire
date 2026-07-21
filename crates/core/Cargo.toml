@@ -1,0 +1,19 @@
+[package]
+name = "ulaval-scheduler-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[[test]]
+name = "integration"
+path = "tests/integration/main.rs"

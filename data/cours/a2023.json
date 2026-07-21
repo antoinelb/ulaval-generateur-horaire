@@ -1,0 +1,4492 @@
+{
+  "courses": [
+    {
+      "code": "ADM-7000",
+      "title": "Méthodologie et éthique",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91145",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ADS-7025",
+      "title": "Analyse de modèles d'établissements scolaires",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82743",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "16:30",
+                    "end": "19:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ALL-3101",
+      "title": "Praktisches Deutsch",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ALL-2020 OU Examen Classement en allemand avec résultat de 5 à 5",
+        "tree": {
+          "any": [
+            "ALL-2020",
+            {
+              "raw": "Examen Classement en allemand avec résultat de 5 à 5"
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82830",
+                "section": "R",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "AME-7002",
+      "title": "Sujets spéciaux (urbanisme)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82843",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "AME-7070",
+      "title": "Aménagement de milieux de vie durables",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82854",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ANG-7154",
+      "title": "Special Subjects IV",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82915",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ANI-2100",
+      "title": "Image de synthèse III : effets 3D",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "(ANI-1018 OU (ANI-1030 ET ANI-1031))",
+        "tree": {
+          "any": [
+            "ANI-1018",
+            {
+              "all": [
+                "ANI-1030",
+                "ANI-1031"
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82958",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ANM-1004",
+      "title": "Anatomie fonctionnelle 1",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ERG-1500* OU PHT-1000*",
+        "tree": {
+          "any": [
+            "ERG-1500",
+            "PHT-1000"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83020",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "83021",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ANM-1008",
+      "title": "Aspects pratiques en anatomie fonctionnelle 1",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ERG-1500* OU PHT-1000*",
+        "tree": {
+          "any": [
+            "ERG-1500",
+            "PHT-1000"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83022",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "83023",
+                "section": "H2",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "83024",
+                "section": "H3",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "83025",
+                "section": "H4",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ANT-2321",
+      "title": "Approche anthropologique de la situation coloniale",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83040",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ANT-2327",
+      "title": "Notions de personne et corporéité",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83041",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARC-2007",
+      "title": "Conception de structures",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ARC-2021",
+        "tree": "ARC-2021"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83083",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARC-7002",
+      "title": "Travaux pratiques",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83140",
+                "section": "A1",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARC-7006",
+      "title": "Stage",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83144",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARL-1300",
+      "title": "Archéologie du Levant",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83168",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARV-2125",
+      "title": "Estampe numérique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ARV-1012 ET ARV-1401 ET ARV-1402 ET ARV-1411 ET ARV-1412",
+        "tree": {
+          "all": [
+            "ARV-1012",
+            "ARV-1401",
+            "ARV-1402",
+            "ARV-1411",
+            "ARV-1412"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83207",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARV-3000",
+      "title": "Lectures et conférences",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ARV, Crédits exigés : 24",
+        "tree": {
+          "program_credits": {
+            "program": "ARV",
+            "credits": 24
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83225",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARV-3205",
+      "title": "Art actif, réactif et interactif",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ARV-1012 ET ARV-1401 ET ARV-1402 ET ARV-1411 ET ARV-1412",
+        "tree": {
+          "all": [
+            "ARV-1012",
+            "ARV-1401",
+            "ARV-1402",
+            "ARV-1411",
+            "ARV-1412"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83234",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CAT-1002",
+      "title": "Bible et catéchèse",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83447",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CHM-7010",
+      "title": "Synthèse totale de produits naturels",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83508",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CIN-2104",
+      "title": "Analyse filmique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "CIN-1000*",
+        "tree": "CIN-1000"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83533",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CNS-6001",
+      "title": "Séminaire de recherche 1",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83569",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CNS-6003",
+      "title": "Séminaire de recherche 3",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83571",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-6024",
+      "title": "Stage",
+      "credits": 12,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "Crédits exigés : 24",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 24
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83640",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "83641",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-7035",
+      "title": "Communication sociale, environnementale et transformations de la société",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83661",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CRI-1111",
+      "title": "Prévention de la criminalité",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83677",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CSO-7034",
+      "title": "Pratiques éducatives émancipatrices en orientation",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83786",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DES-2704",
+      "title": "Design, sensorialité et esthétique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "DES, Crédits exigés : 24 OU ANI, Crédits exigés : 24",
+        "tree": {
+          "any": [
+            {
+              "program_credits": {
+                "program": "DES",
+                "credits": 24
+              }
+            },
+            {
+              "program_credits": {
+                "program": "ANI",
+                "credits": 24
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83947",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DID-1000",
+      "title": "Étude pratique du français écrit : grammaire, analyse et rédaction de textes",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83993",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "16:30",
+                    "end": "19:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRI-6004",
+      "title": "Stage en développement rural intégré",
+      "credits": 4,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "DRI-6002 ET DRI-6003",
+        "tree": {
+          "all": [
+            "DRI-6002",
+            "DRI-6003"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84128",
+                "section": null,
+                "mode": "in-person",
+                "slots": []
+              },
+              {
+                "nrc": "84129",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-7033",
+      "title": "Droit de l'énergie",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91184",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "DRT-7104",
+      "title": "Sujets spéciaux en droit des affaires I",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84328",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "84329",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EAN-2150",
+      "title": "La vie quotidienne en Grèce et à Rome",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84369",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EAN-3500",
+      "title": "Sujets spéciaux",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84374",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ECN-2120",
+      "title": "Analyse de projets",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ECN-2000",
+        "tree": "ECN-2000"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84395",
+                "section": "A",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ECN-3110",
+      "title": "Organisation industrielle",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ECN-2020",
+        "tree": "ECN-2020"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84403",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EPS-2101",
+      "title": "Éducation à la santé I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84574",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "EPS-2104",
+      "title": "Intégration didactique pour l'enseignement d'activités sociomotrices",
+      "credits": 1,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84575",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "84576",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ERG-1500",
+      "title": "Profession ergothérapie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ANM-1004*",
+        "tree": "ANM-1004"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84599",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ESP-2003",
+      "title": "Culture de l'Amérique latine",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84655",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETI-6006",
+      "title": "Sujets spéciaux (études internationales)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84690",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETN-7000",
+      "title": "Coutumes et rituels",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84709",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FOR-2009",
+      "title": "Enjeux sylvicoles en forêt boréale",
+      "credits": 1,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "FOR-2007",
+        "tree": "FOR-2007"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84770",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FPT-2500",
+      "title": "Stage d'enseignement : développement professionnel III",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "FPT-1501 ET  Crédits exigés : 27",
+        "tree": {
+          "all": [
+            "FPT-1501",
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 27
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84819",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FPT-2501",
+      "title": "Stage d'enseignement : développement professionnel IV",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "FPT-1501 ET PPG-2900 ET  Crédits exigés : 24",
+        "tree": {
+          "all": [
+            "FPT-1501",
+            "PPG-2900",
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 24
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84820",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FPT-2502",
+      "title": "Stage d'enseignement : développement professionnel V",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "FPT-1501 ET  Crédits exigés : 27",
+        "tree": {
+          "all": [
+            "FPT-1501",
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 27
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84821",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FPT-2510",
+      "title": "Stage en milieu de travail III",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 30",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 30
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84822",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FPT-3002",
+      "title": "Chef-d'oeuvre de fin d'études",
+      "credits": 6,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 102",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 102
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84823",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FPT-3500",
+      "title": "Stage d'enseignement : développement professionnel VI",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 60",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 60
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84824",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FPT-3501",
+      "title": "Stage d'enseignement : développement professionnel VII",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 60",
+        "tree": {
+          "program_credits": {
+            "program": null,
+            "credits": 60
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84825",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FRN-1909",
+      "title": "Grammaire du texte",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84858",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GAD-7004",
+      "title": "Conservation de l'information",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84885",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GBO-6000",
+      "title": "Présentation de projet de maîtrise",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84936",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "10:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GCI-3002",
+      "title": "Gestion des eaux",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85008",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GCI-7075",
+      "title": "Propriétés mécaniques du béton",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85029",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEL-7100",
+      "title": "Random Processes",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "GEL-7000"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85103",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GGR-3304",
+      "title": "Paléogéographie du Quaternaire",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85174",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GGR-3306",
+      "title": "Environnements aquatiques",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85176",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GMT-2015",
+      "title": "Levés aéroportés et terrestres",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "GMT-4000",
+        "tree": "GMT-4000"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85463",
+                "section": "H",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "13:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "13:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GMT-7015",
+      "title": "SIG et analyse spatiale",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "GMT-4015",
+        "GMT-7025"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85502",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "17:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "17:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GRH-1203",
+      "title": "Gestion des avantages sociaux",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85585",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "19:00",
+                    "end": "22:05"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HAR-2102",
+      "title": "Séminaire III",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "HAR-1000 ET HAR, Crédits exigés : 27",
+        "tree": {
+          "all": [
+            "HAR-1000",
+            {
+              "program_credits": {
+                "program": "HAR",
+                "credits": 27
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85707",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HAR-2181",
+      "title": "Baroque européen et colonial",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91278",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HAR-2210",
+      "title": "Histoire de l'architecture moderne en Amérique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85708",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HAR-2455",
+      "title": "Séminaire pratique en milieu professionnel II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "HAR-1000 ET HAR, Crédits exigés : 42",
+        "tree": {
+          "all": [
+            "HAR-1000",
+            {
+              "program_credits": {
+                "program": "HAR",
+                "credits": 42
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85709",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-2102",
+      "title": "Monde hellénistique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85730",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-2158",
+      "title": "Crises et dynamiques de la fin du Moyen Âge (Angleterre, France, Italie, Empire, XIIIe-XVe siècles)",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85731",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-2606",
+      "title": "Séminaire d'histoire des Amériques I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 21 ET HST-1010",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 21
+              }
+            },
+            "HST-1010"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85738",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-2616",
+      "title": "Séminaire d'histoire non occidentale V",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "Crédits exigés : 21 ET HST-1010",
+        "tree": {
+          "all": [
+            {
+              "program_credits": {
+                "program": null,
+                "credits": 21
+              }
+            },
+            "HST-1010"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85739",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-7102",
+      "title": "Question d'histoire",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85748",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-7210",
+      "title": "Histoire médiévale de l'Europe",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91355",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "KIN-3602",
+      "title": "Intégration II",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "KIN-3601",
+        "tree": "KIN-3601"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85847",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85848",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2112",
+      "title": "Renaissances et littérature médiévale",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85890",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2157",
+      "title": "Roman français au XIXe siècle",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85907",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2160",
+      "title": "Roman français au XXe siècle II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85908",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2200",
+      "title": "Littérature universelle III",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85923",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2400",
+      "title": "Littératures autochtones au Québec",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85933",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-3121",
+      "title": "Littérature et technologie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "LIT-1103 OU LIT-2000",
+        "tree": {
+          "any": [
+            "LIT-1103",
+            "LIT-2000"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85945",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-3124",
+      "title": "Littérature et éthique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "LIT-1103 OU LIT-2000",
+        "tree": {
+          "any": [
+            "LIT-1103",
+            "LIT-2000"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85946",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-7039",
+      "title": "Théories et questions littéraires II",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85965",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-7047",
+      "title": "Lectures dirigées",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85970",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-7106",
+      "title": "Littérature, théâtre et cinéma III",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85974",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LNG-2101",
+      "title": "Psychomécanique du langage",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "LNG-1000",
+        "tree": "LNG-1000"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86007",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LNG-3100",
+      "title": "Phonologie II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "LNG-2000",
+        "tree": "LNG-2000"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86012",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LNG-7010",
+      "title": "Syntaxe",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86027",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-3130",
+      "title": "Courbes et surfaces",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "MAT-1200 ET MAT-2100* ET (MAT-1910 OU MAT-2110)",
+        "tree": {
+          "all": [
+            "MAT-1200",
+            "MAT-2100",
+            {
+              "any": [
+                "MAT-1910",
+                "MAT-2110"
+              ]
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86129",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "10:30",
+                    "end": "12:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "10:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6010",
+      "title": "Parodontie II",
+      "credits": 1,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "MDD-6009",
+        "tree": "MDD-6009"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86223",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "13:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MDD-6226",
+      "title": "Clinique d'endodontie VI",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "MDD-6225",
+        "tree": "MDD-6225"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91333",
+                "section": "C4",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "91334",
+                "section": "C5",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "91335",
+                "section": "C6",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MED-3205",
+      "title": "Synthèse",
+      "credits": 7,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "81981",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "10:00",
+                    "end": "12:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "11:30",
+                    "end": "13:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "14:30",
+                    "end": "15:50"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "14:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "22:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "12:00",
+                    "end": "15:50"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "14:30",
+                    "end": "16:00"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "12:00",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "11:30",
+                    "end": "13:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "14:30",
+                    "end": "16:20"
+                  }
+                ]
+              },
+              {
+                "nrc": "81960",
+                "section": "G1",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "17:30",
+                    "end": "19:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "17:30",
+                    "end": "19:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MED-3909",
+      "title": "Stage de soutien à l'externat X",
+      "credits": 6,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91609",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MNG-1002",
+      "title": "Management",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "MNG-1000"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86595",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MNG-2070",
+      "title": "Préparation d'une mission de recrutement à l'étranger",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82011",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "07:00",
+                    "end": "08:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "12:00",
+                    "end": "17:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MNG-6070",
+      "title": "Préparation d'une mission de recrutement à l'étranger",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82012",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "07:00",
+                    "end": "08:30"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "12:00",
+                    "end": "17:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MRK-3107",
+      "title": "Simulation : Development of Global Markets",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "MRK-3101* OU MRK-3102*",
+        "tree": {
+          "any": [
+            "MRK-3101",
+            "MRK-3102"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86758",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MRK-6019",
+      "title": "Simulation : Development of Global Markets",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "MRK-6022* OU MRK-6088*",
+        "tree": {
+          "any": [
+            "MRK-6022",
+            "MRK-6088"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86768",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MRK-6501",
+      "title": "Stage d'intégration en marketing analytique",
+      "credits": 12,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86775",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MUS-1177",
+      "title": "Batterie (secondaire)",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86863",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MUS-2166",
+      "title": "Trombone (principal)",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86951",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MUS-3281",
+      "title": "Composition des musiques populaires",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "MUS-3280 OU MUS, Crédits exigés : 60",
+        "tree": {
+          "any": [
+            "MUS-3280",
+            {
+              "program_credits": {
+                "program": "MUS",
+                "credits": 60
+              }
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91304",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MUS-7023",
+      "title": "Sujets spéciaux (musique)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91566",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MUS-7089",
+      "title": "Fondements philosophiques de l'éducation musicale",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87512",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PAT-6907",
+      "title": "Physiopathologie et traitement des problèmes de santé courants IPS-PL",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "PAT-6901",
+        "tree": "PAT-6901"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87709",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PAT-6908",
+      "title": "Physiopathologie et traitement des problèmes de santé chez l'adulte",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "PAT-6901",
+        "tree": "PAT-6901"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87710",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHA-6103",
+      "title": "Gestion optimale des magistrales non stériles",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87731",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-1133",
+      "title": "Philosophie de l'existence",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87769",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-1135",
+      "title": "Bergson",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87771",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-1139",
+      "title": "Le stoïcisme",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87773",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-7007",
+      "title": "Philosophie de la médecine",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87855",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-7304",
+      "title": "Philosophie de l'action",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87865",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-7401",
+      "title": "Philosophie et projets",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87868",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHT-1009",
+      "title": "Physiothérapie, santé et société",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82331",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHY-7005",
+      "title": "Théorie quantique des champs II",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "PHY-7006",
+        "tree": "PHY-7006"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91518",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHY-7010",
+      "title": "Sujets spéciaux (physique)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87943",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "13:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHY-7026",
+      "title": "Galaxies",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91512",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHY-7048",
+      "title": "Bases de l'optique",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87960",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "POL-2314",
+      "title": "Politiques et institutions de l'Union européenne",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "POL-1005",
+        "tree": "POL-1005"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88034",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PSE-2101",
+      "title": "Intervention en déficience intellectuelle",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88202",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PST-2104",
+      "title": "Foi, religion, spiritualité et monde des jeunes",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88277",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "14:00",
+                    "end": "16:50"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "14:00",
+                    "end": "16:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PST-2301",
+      "title": "Stage d'observation et d'intervention",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88286",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PSY-7023",
+      "title": "Sujets spéciaux",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88350",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RLT-3210",
+      "title": "Intelligence artificielle appliquée à la gestion des ressources humaines",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "RLT-1006 OU RLT-1700",
+        "tree": {
+          "any": [
+            "RLT-1006",
+            "RLT-1700"
+          ]
+        }
+      },
+      "equivalents": [
+        "GRH-1601"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88458",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SCR-2002",
+      "title": "Spiritualités, religions et société de consommation",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88623",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-6005",
+      "title": "Projet de stage",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "SIN-6017 ET SIN-7002 ET SIN-7009 ET SIN-7013",
+        "tree": {
+          "all": [
+            "SIN-6017",
+            "SIN-7002",
+            "SIN-7009",
+            "SIN-7013"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88729",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-6020",
+      "title": "Stages",
+      "credits": 9,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "SIN-6005",
+        "tree": "SIN-6005"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88731",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              },
+              {
+                "nrc": "88732",
+                "section": "A1",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "91745",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              },
+              {
+                "nrc": "91746",
+                "section": "B1",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-6051",
+      "title": "Démarche clinique en soins de première ligne",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "PAT-6907* ET PHA-6904 ET SIN-6036",
+        "tree": {
+          "all": [
+            "PAT-6907",
+            "PHA-6904",
+            "SIN-6036"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88735",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-6055",
+      "title": "Démarche clinique en soins à la clientèle adulte",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "PHA-6904 ET SIN-6058 ET SIN-6059 ET SIN-6042 ET SIN-6053 ET PAT-6908*",
+        "tree": {
+          "all": [
+            "PHA-6904",
+            "SIN-6058",
+            "SIN-6059",
+            "SIN-6042",
+            "SIN-6053",
+            "PAT-6908"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88736",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIN-6901",
+      "title": "Formation complémentaire IPS en santé cardiométabolique",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91749",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SIO-2106",
+      "title": "Fondements de réalisation des SIO",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "IFT-1004 OU SIO-1000 OU SIO-1001 OU SIO-1101",
+        "tree": {
+          "any": [
+            "IFT-1004",
+            "SIO-1000",
+            "SIO-1001",
+            "SIO-1101"
+          ]
+        }
+      },
+      "equivalents": [
+        "IFT-2007"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88763",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-2167",
+      "title": "Organisations de santé et enjeux professionnels",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91190",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-2172",
+      "title": "Religion et société",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88883",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-2200",
+      "title": "Théorie sociologique : la sociologie compréhensive",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88885",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-7163",
+      "title": "Production sociale de l'espace",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88933",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SOC-7176",
+      "title": "Sociologie des savoirs et des pratiques expertes",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88935",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "STT-7720",
+      "title": "Sujets spéciaux II",
+      "credits": 2,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91570",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "STT-7750",
+      "title": "Sujets spéciaux (biostatistique)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "89036",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SVS-6700",
+      "title": "Interventions organisationnelles en diversité sexuelle et de genre",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "89094",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "SVS-7013",
+      "title": "Organisation communautaire, perspectives critiques et mouvements sociaux",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "89108",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-1067",
+      "title": "The Trinity God",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "THL-1007"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91507",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-1239",
+      "title": "Introduction to the Old Testament",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "89197",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "19:00",
+                    "end": "21:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-6206",
+      "title": "Fondements bibliques de la tradition orthodoxe",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82613",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "19:00",
+                    "end": "21:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THT-2210",
+      "title": "Atelier interdisciplinaire",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "89405",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TRD-2211",
+      "title": "Traduction et adaptation audiovisuelles",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TRD-1005",
+        "tree": "TRD-1005"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "89436",
+                "section": "DHA",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TRD-7013",
+      "title": "Traduction spécialisée français-anglais",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "89470",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

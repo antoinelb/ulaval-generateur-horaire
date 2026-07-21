@@ -1,0 +1,54 @@
+{
+  "code": "CSO-6702",
+  "title": "Stage de counseling humaniste-existentiel II",
+  "credits": 6,
+  "cycle": 2,
+  "prerequisites": null,
+  "equivalents": [],
+  "seasons": {
+    "winter": {
+      "options": [
+        [
+          {
+            "nrc": "13450",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          },
+          {
+            "nrc": "13449",
+            "section": null,
+            "mode": "in-person",
+            "slots": []
+          }
+        ],
+        [
+          {
+            "nrc": "13451",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          },
+          {
+            "nrc": "13449",
+            "section": null,
+            "mode": "in-person",
+            "slots": []
+          }
+        ]
+      ]
+    }
+  }
+}

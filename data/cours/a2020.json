@@ -1,0 +1,790 @@
+{
+  "courses": [
+    {
+      "code": "AME-6018",
+      "title": "Stage (non rémunéré)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "AME, Crédits exigés : 12",
+        "tree": {
+          "program_credits": {
+            "program": "AME",
+            "credits": 12
+          }
+        }
+      },
+      "equivalents": [
+        "AME-6014"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82856",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ANT-1307",
+      "title": "Ethnographie des dynamiques interactionnelles",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83074",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARC-4102",
+      "title": "Théories et interprétation en architecture",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "ARC-7048"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83160",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARC-7048",
+      "title": "Théories et interprétation en architecture",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "ARC-4102"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83195",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ARV-2003",
+      "title": "Sujet spécial en art",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ARV-1012 ET ARV-1401 ET ARV-1402 ET ARV-1411 ET ARV-1412",
+        "tree": {
+          "all": [
+            "ARV-1012",
+            "ARV-1401",
+            "ARV-1402",
+            "ARV-1411",
+            "ARV-1412"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91646",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-3002",
+      "title": "Champ de recherche et enjeux de la communication publique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "COM-1000 à 4999, Crédits exigés : 39",
+        "tree": {
+          "program_credits": {
+            "program": "COM",
+            "credits": 39
+          }
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83685",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-7012",
+      "title": "Séminaire thématique C",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83751",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "COM-7013",
+      "title": "Séminaire thématique D",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83752",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CSO-7015",
+      "title": "Séminaire d'approfondissement",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83892",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ENP-1515",
+      "title": "Stage 2 en éducation au préscolaire - partie 1",
+      "credits": 2,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ENP-1500 ET ENP-1505 ET MAT-1905",
+        "tree": {
+          "all": [
+            "ENP-1500",
+            "ENP-1505",
+            "MAT-1905"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84542",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ESP-2300",
+      "title": "Sujets spéciaux en cultures hispaniques",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ESP-1001 ET ESP-1003",
+        "tree": {
+          "all": [
+            "ESP-1001",
+            "ESP-1003"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91212",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ETN-3501",
+      "title": "Stage en milieu professionnel",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ETN-1000 ET ETN-1002",
+        "tree": {
+          "all": [
+            "ETN-1000",
+            "ETN-1002"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84806",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FLS-2004",
+      "title": "Rédaction de textes académiques II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84869",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEL-1799",
+      "title": "Dangers de l'électricité",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "GEL-4799",
+        "GEL-7799"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "81447",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GGR-3101",
+      "title": "Géographie historique environnementale",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "81471",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GMC-7000",
+      "title": "Combustion",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85480",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-1904",
+      "title": "Christianity from Antiquity to the High Middle Ages",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [
+        "HST-1900"
+      ],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91210",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "HST-7016",
+      "title": "Sujets spéciaux (histoire)",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85956",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "85957",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2310",
+      "title": "Corpus français",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86146",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "LIT-2360",
+      "title": "Enjeux d'histoire littéraire au Québec",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86147",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MED-2760",
+      "title": "Suivi du développement des compétences III",
+      "credits": 1,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "MED-2750*",
+        "tree": "MED-2750"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "81972",
+                "section": "DH",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MED-3507",
+      "title": "Stage en santé publique et médecine préventive (externat)",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86663",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MUS-2160",
+      "title": "Hautbois (principal)",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87186",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHI-7005",
+      "title": "Études en philosophie médiévale",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87869",
+                "section": "ZA",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHY-7006",
+      "title": "Théorie quantique des champs I",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87949",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "PHY-7020",
+      "title": "Optique de la matière condensée",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87956",
+                "section": "A",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "POL-2329",
+      "title": "Guerres mondiales et Guerre froide",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88046",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "POL-7074",
+      "title": "Crise et renouvellement des démocraties contemporaines",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88134",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "RLT-3405",
+      "title": "Sécurité sociale",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ECN-2902 OU RLT-2005",
+        "tree": {
+          "any": [
+            "ECN-2902",
+            "RLT-2005"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "88450",
+                "section": "DH",
+                "mode": "hybrid",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-1230",
+      "title": "La Bible dans l'orthodoxie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91839",
+                "section": "W",
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-2201",
+      "title": "Bible et liturgie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "89195",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "THL-6074",
+      "title": "Le christianisme et les autres religions",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "91179",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

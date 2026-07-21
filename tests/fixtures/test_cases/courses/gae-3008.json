@@ -1,0 +1,46 @@
+{
+  "code": "GAE-3008",
+  "title": "Aménagement des cours d'eau et conservation des sols",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "((GAE-1004 ET GAE-2000) OU GCI-2009)",
+    "tree": {
+      "any": [
+        {
+          "all": [
+            "GAE-1004",
+            "GAE-2000"
+          ]
+        },
+        "GCI-2009"
+      ]
+    }
+  },
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "options": [
+        [
+          {
+            "nrc": "84578",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "10:30",
+                "end": "12:20"
+              },
+              {
+                "day": "wednesday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

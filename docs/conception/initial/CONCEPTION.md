@@ -27,9 +27,9 @@ Vérifié sur GCI-1007 (cas compliqué de référence, cours + laboratoires), la
 
 - **Les pages cours sont rendues côté serveur** : session (« Automne 2026 »), NRC, capacité, enseignant, type (En classe/Laboratoire), dates, journée, plage horaire, pavillon, et les sections liées (A, B, …) avec leurs propres NRC sont tous dans le HTML d'un simple GET.
   Pas besoin de navigateur headless ; un parseur HTML suffit.
-- **Le catalogue est un listing Drupal paginé** : ~205 pages × 50 cours ≈ 10 000 cours, liens rendus côté serveur, pagination par `?page=N`, facettes de filtrage par matière disponibles.
+- **Le catalogue est un catalogue Drupal paginé** : ~205 pages × 50 cours ≈ 10 000 cours, liens rendus côté serveur, pagination par `?page=N`, facettes de filtrage par matière disponibles.
 - **Volume** : un scrape complet ≈ 10 000 requêtes ; à une requête/seconde (politesse), ~3 h de roulage — d'où l'importance des filtres et de la reprise sur erreur.
-- La matière étant le préfixe du code de cours (GCI-, GEX-), filtrer par matière ne demande aucune facette : on filtre les URL du listing.
+- La matière étant le préfixe du code de cours (GCI-, GEX-), filtrer par matière ne demande aucune facette : on filtre les URL du catalogue.
 - **La page programme est aussi rendue côté serveur et machine-lisible** : total de crédits exigés (« 120 crédits exigés »), bloc « Cours obligatoires » (code, titre, crédits), puis blocs « Règle N – \<contrainte\> parmi : » avec la liste de cours, parfois divisée en sous-groupes thématiques (Programmation, Langue et communication, Entrepreneuriat).
   Les contraintes observées : « Un cours parmi », « 3 crédits parmi », « 3 à 9 crédits parmi ».
 - **Les préalables sont des expressions structurées** dont trois formes ont été observées :
@@ -40,7 +40,7 @@ Vérifié sur GCI-1007 (cas compliqué de référence, cours + laboratoires), la
 
 ## Données
 
-### `donnees/cours/{session}.json` (ex. `a2026.json`)
+### `data/cours/{session}.json` (ex. `a2026.json`)
 
 Pour chaque cours offert à cette session :
 
@@ -49,7 +49,7 @@ Pour chaque cours offert à cette session :
 - programmes contributoires (depuis « Cette activité est contributoire dans : ») et cours équivalents
 - sections : NRC, type (en classe, laboratoire, forum…), capacité, enseignant, plages horaires (jour, heure début/fin, plage de dates, pavillon), sections liées et leur caractère obligatoire
 
-### `donnees/programmes.json`
+### `data/programmes.json`
 
 Scrapé des pages programmes (voir section suivante) : crédits exigés, cours obligatoires, règles.
 Le cheminement type (quel cours dans quelle session, l'organigramme A1→H8) n'apparaît pas sur la page programme ; il reste encodé à la main pour GEX.
