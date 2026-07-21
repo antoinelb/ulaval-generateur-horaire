@@ -1,0 +1,457 @@
+{
+  "code": "baccalaureat-en-anthropologie",
+  "title": "Baccalauréat en anthropologie",
+  "cycle": 1,
+  "credits_required": 90,
+  "mandatory": [
+    "ANT-1000",
+    "ANT-1001",
+    "ANT-1002",
+    "ANT-1004",
+    "ANT-2001",
+    "ANT-3000",
+    "ANT-3001",
+    "ANT-3002",
+    "ANT-3003",
+    "ANT-3004"
+  ],
+  "rules": [
+    {
+      "title": "Cheminement sans concentration – Règle 1",
+      "constraint": {
+        "min": 9,
+        "max": 9
+      },
+      "courses": [
+        "ANT-1010",
+        "ANT-1200",
+        "ANT-1201",
+        "ANT-1202",
+        "ANT-1203",
+        "ANT-1205",
+        "ANT-1206",
+        "ANT-1207",
+        "ANT-1209",
+        "ANT-1211",
+        "ANT-1212",
+        "ANT-1213",
+        "ANT-1214",
+        "ANT-1215",
+        "ANT-1216",
+        "ANT-1500",
+        "ANT-1701",
+        "ANT-2004",
+        "ANT-2200"
+      ],
+      "notes": [
+        "Cultures et sociétés"
+      ]
+    },
+    {
+      "title": "Cheminement sans concentration – Règle 2",
+      "constraint": {
+        "min": 30,
+        "max": 36
+      },
+      "courses": [
+        "ANT-1005",
+        "ANT-1006",
+        "ANT-1007",
+        "ANT-1008",
+        "ANT-1009",
+        "ANT-1100",
+        "ANT-1101",
+        "ANT-1102",
+        "ANT-1103",
+        "ANT-1105",
+        "ANT-1302",
+        "ANT-1304",
+        "ANT-1306",
+        "ANT-1307",
+        "ANT-1501",
+        "ANT-1502",
+        "ANT-1503",
+        "ANT-1601",
+        "ANT-1602",
+        "ANT-1604",
+        "ANT-1751",
+        "ANT-2000",
+        "ANT-2003",
+        "ANT-2005",
+        "ANT-2100",
+        "ANT-2101",
+        "ANT-2103",
+        "ANT-2300",
+        "ANT-2304",
+        "ANT-2307",
+        "ANT-2309",
+        "ANT-2310",
+        "ANT-2312",
+        "ANT-2314",
+        "ANT-2317",
+        "ANT-2321",
+        "ANT-2322",
+        "ANT-2323",
+        "ANT-2324",
+        "ANT-2326",
+        "ANT-2327",
+        "ANT-2328",
+        "ANT-2329",
+        "ANT-2330",
+        "ANT-2331",
+        "ANT-2600",
+        "ETN-1004",
+        "ETN-3001",
+        "POL-2000",
+        "SOC-1001",
+        "ANT-2740"
+      ],
+      "notes": [
+        "Recherches spécialisées",
+        "Autre cours"
+      ]
+    },
+    {
+      "title": "Cheminement sans concentration – Règle 3",
+      "constraint": {
+        "min": 0,
+        "max": 6
+      },
+      "courses": [
+        "ANL-2020",
+        "ANL-3010",
+        "ANL-3020",
+        "ANL-3030",
+        "FLS-2093"
+      ],
+      "notes": [
+        "et les cours de langue moderne portant les sigles ALL, ARA, CHN, ESG, ITL, JAP, POR et RUS.",
+        "Pour la personne francophone, la réussite du cours ANL-3010 Advance English I (VEPT : 58) est requise pour diplômer.",
+        "Pour la personne non francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP : 400 et TCF-TP/ÉÉ : 14) est requise pour diplômer."
+      ]
+    },
+    {
+      "title": "Cheminement sans concentration – Règle 4",
+      "constraint": {
+        "min": 9,
+        "max": 18
+      },
+      "courses": [
+        "GIE-4111",
+        "GMT-1005",
+        "GPL-3610",
+        "MNG-2003",
+        "MNG-3111",
+        "POL-2508",
+        "POL-2509",
+        "SVS-1119"
+      ],
+      "notes": [
+        "et tous les cours de premier cycle, à l’exception des cours portant le sigle ANT et des cours correctifs de français."
+      ]
+    }
+  ],
+  "concentrations": [
+    {
+      "title": "Environnement",
+      "credits_required": 60,
+      "mandatory": [
+        "ANT-2303"
+      ],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 9,
+            "max": 9
+          },
+          "courses": [
+            "ANT-1200",
+            "ANT-1201",
+            "ANT-1202",
+            "ANT-1203",
+            "ANT-1205",
+            "ANT-1206",
+            "ANT-1207",
+            "ANT-1209",
+            "ANT-1211",
+            "ANT-1212",
+            "ANT-1213",
+            "ANT-1214",
+            "ANT-1215",
+            "ANT-1500",
+            "ANT-1701",
+            "ANT-2200"
+          ],
+          "notes": [
+            "Cultures et sociétés"
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "min": 30,
+            "max": 36
+          },
+          "courses": [
+            "ANT-1105",
+            "ANT-1007",
+            "ANT-2304",
+            "ANT-2314",
+            "ANT-2324",
+            "ANT-2328",
+            "ANT-1005",
+            "ANT-1009",
+            "ANT-1100",
+            "ANT-1101",
+            "ANT-1102",
+            "ANT-1103",
+            "ANT-1302",
+            "ANT-1304",
+            "ANT-1306",
+            "ANT-1307",
+            "ANT-1501",
+            "ANT-1502",
+            "ANT-1503",
+            "ANT-1601",
+            "ANT-1602",
+            "ANT-1604",
+            "ANT-1751",
+            "ANT-2000",
+            "ANT-2005",
+            "ANT-2100",
+            "ANT-2101",
+            "ANT-2300",
+            "ANT-2307",
+            "ANT-2309",
+            "ANT-2310",
+            "ANT-2312",
+            "ANT-2317",
+            "ANT-2321",
+            "ANT-2322",
+            "ANT-2323",
+            "ANT-2326",
+            "ANT-2327",
+            "ANT-2329",
+            "ANT-2330",
+            "ANT-2331",
+            "ANT-2600",
+            "ETN-1004",
+            "ETN-3001",
+            "POL-2000",
+            "SOC-1001",
+            "ANT-2740"
+          ],
+          "notes": [
+            "Recherches spécialisées",
+            "Cours à prioriser",
+            "Autres cours",
+            "Cours individualisé"
+          ]
+        },
+        {
+          "title": "Règle 3",
+          "constraint": {
+            "min": 0,
+            "max": 6
+          },
+          "courses": [
+            "ANL-2020",
+            "ANL-3010",
+            "ANL-3020",
+            "ANL-3030",
+            "FLS-2093"
+          ],
+          "notes": [
+            "et parmi un cours de langue moderne ALL, ARA, CHN, ESG, ITL, JAP, POR et RUS.",
+            "Pour la personne francophone, la réussite du cours ANL-3010 Advance English I (VEPT : 58) est requise pour diplômer.",
+            "Pour la personne non francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP : 400 et TCF-TP/ÉÉ : 14) est requise pour diplômer."
+          ]
+        },
+        {
+          "title": "Règle 4",
+          "constraint": {
+            "min": 9,
+            "max": 18
+          },
+          "courses": [
+            "BIO-1910",
+            "BIO-4900",
+            "BIO-4901",
+            "DRT-1721",
+            "ENV-1010",
+            "FOR-2020",
+            "GGR-1008",
+            "GGR-3101",
+            "GGR-3400",
+            "GLG-1000",
+            "GPL-3610",
+            "MNG-2003",
+            "PHI-1140",
+            "POL-2207",
+            "POL-2508",
+            "POL-2509",
+            "SOC-2114"
+          ],
+          "notes": [
+            "et tous les cours de premier cycle, à l’exception des cours portant le sigle ANT et des cours correctifs de français."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Études autochtones",
+      "credits_required": 60,
+      "mandatory": [
+        "ANT-1500",
+        "ANT-1501",
+        "ANT-2307"
+      ],
+      "rules": [
+        {
+          "title": "Règle 1",
+          "constraint": {
+            "min": 3,
+            "max": 3
+          },
+          "courses": [
+            "ANT-1200",
+            "ANT-1201",
+            "ANT-1202",
+            "ANT-1203",
+            "ANT-1205",
+            "ANT-1206",
+            "ANT-1207",
+            "ANT-1209",
+            "ANT-1211",
+            "ANT-1212",
+            "ANT-1213",
+            "ANT-1214",
+            "ANT-1215",
+            "ANT-1604",
+            "ANT-2004",
+            "ANT-2200"
+          ],
+          "notes": [
+            "Cultures et sociétés"
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "min": 30,
+            "max": 36
+          },
+          "courses": [
+            "ANT-1502",
+            "ANT-1503",
+            "ANT-1701",
+            "ANT-2005",
+            "ANT-2312",
+            "ANT-2321",
+            "ANT-2326",
+            "ANT-1005",
+            "ANT-1009",
+            "ANT-1100",
+            "ANT-1101",
+            "ANT-1102",
+            "ANT-1103",
+            "ANT-1105",
+            "ANT-1302",
+            "ANT-1304",
+            "ANT-1306",
+            "ANT-1307",
+            "ANT-1601",
+            "ANT-1602",
+            "ANT-1604",
+            "ANT-1751",
+            "ANT-2000",
+            "ANT-2100",
+            "ANT-2101",
+            "ANT-2300",
+            "ANT-2304",
+            "ANT-2309",
+            "ANT-2310",
+            "ANT-2314",
+            "ANT-2317",
+            "ANT-2322",
+            "ANT-2323",
+            "ANT-2324",
+            "ANT-2327",
+            "ANT-2328",
+            "ANT-2329",
+            "ANT-2330",
+            "ANT-2331",
+            "ANT-2600",
+            "ETN-1004",
+            "ETN-3001",
+            "POL-2000",
+            "SOC-1001",
+            "ANT-2740"
+          ],
+          "notes": [
+            "Recherches spécialisées",
+            "Cours à prioriser",
+            "Autres cours",
+            "Cours individualisé"
+          ]
+        },
+        {
+          "title": "Règle 3",
+          "constraint": {
+            "min": 0,
+            "max": 6
+          },
+          "courses": [
+            "ANL-2020",
+            "ANL-3010",
+            "ANL-3020",
+            "ANL-3030",
+            "FLS-2093"
+          ],
+          "notes": [
+            "et les cours de langue moderne portant les sigles ALL, ARA, CHN, ESG, ITL, JAP, POR et RUS.",
+            "Pour la personne francophone, la réussite du cours ANL-3010 Advance English I (VEPT : 58) est requise pour diplômer.",
+            "Pour la personne non francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP : 400 et TCF-TP/ÉÉ : 14) est requise pour diplômer."
+          ]
+        },
+        {
+          "title": "Règle 4",
+          "constraint": {
+            "min": 9,
+            "max": 18
+          },
+          "courses": [
+            "ARL-1101",
+            "ARL-1103",
+            "CRI-2110",
+            "DRT-1725",
+            "FOR-4045",
+            "GGR-3102",
+            "GPL-3610",
+            "MNG-2003",
+            "MSL-1000",
+            "POL-2209",
+            "POL-2508",
+            "POL-2509"
+          ],
+          "notes": [
+            "et tous les cours de premier cycle, à l’exception des cours portant le sigle ANT et des cours correctifs de français."
+          ]
+        }
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "title": "Profil international",
+      "mandatory": [
+        "EHE-1ANT"
+      ],
+      "rules": []
+    }
+  ],
+  "notes": [
+    "La formation pratique (ANT-3000 à ANT-3002) doit porter sur le domaine de la concentration choisie."
+  ]
+}
