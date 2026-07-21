@@ -1,0 +1,198 @@
+{
+  "code": "IFT-1004",
+  "title": "Algorithmique et programmation",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": null,
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "options": [
+        [
+          {
+            "nrc": "85469",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "09:30",
+                "end": "12:20"
+              }
+            ]
+          },
+          {
+            "nrc": "85470",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "10:30",
+                "end": "12:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "85469",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "09:30",
+                "end": "12:20"
+              }
+            ]
+          },
+          {
+            "nrc": "85471",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
+                "start": "14:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "85472",
+            "section": "Z3",
+            "mode": "remote",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "18:30",
+                "end": "19:50"
+              },
+              {
+                "day": "thursday",
+                "start": "18:30",
+                "end": "19:50"
+              },
+              {
+                "day": "friday",
+                "start": "14:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "winter": {
+      "options": [
+        [
+          {
+            "nrc": "15516",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "09:30",
+                "end": "12:20"
+              }
+            ]
+          },
+          {
+            "nrc": "15517",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
+                "start": "14:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "15516",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "09:30",
+                "end": "12:20"
+              }
+            ]
+          },
+          {
+            "nrc": "15518",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
+                "start": "16:30",
+                "end": "18:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "15519",
+            "section": "Z3",
+            "mode": "remote",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "18:30",
+                "end": "19:50"
+              },
+              {
+                "day": "wednesday",
+                "start": "18:30",
+                "end": "19:50"
+              },
+              {
+                "day": "friday",
+                "start": "14:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "summer": {
+      "options": [
+        [
+          {
+            "nrc": "54683",
+            "section": "Z3",
+            "mode": "remote",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "13:00",
+                "end": "14:50"
+              },
+              {
+                "day": "friday",
+                "start": "08:30",
+                "end": "10:20"
+              },
+              {
+                "day": "friday",
+                "start": "18:00",
+                "end": "20:20"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

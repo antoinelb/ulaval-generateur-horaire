@@ -2,6 +2,8 @@
 
 Date : 2026-07-19
 
+Étendu le 2026-07-20 par `2026-07-cache-du-verdict-hors-perimetre` : le cache porte aussi le verdict « hors périmètre », une seconde forme de fichier `{"out_of_scope": …}` lue *untagged* à côté de `{"course": …}`.
+
 ## Contexte
 
 Un scrape complet des pages cours dure ~15 min sous le throttle.

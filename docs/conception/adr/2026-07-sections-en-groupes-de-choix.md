@@ -2,6 +2,8 @@
 
 Date : 2026-07-19
 
+**Points 2 et 5 remplacés le 2026-07-20 par `2026-07-sections-en-combinaisons-valides`** : l'hypothèse falsifiable du §5 a été falsifiée par 22 cours du catalogue complet, et le modèle plat du §2 devient `options: Vec<Vec<Section>>`, une liste d'inscriptions complètes. Les points 1, 3, 4 et 6 restent en vigueur — le §6 en particulier, dont la réconciliation arithmétique a débusqué le bogue de `2026-07-sections-de-premier-niveau-par-ascendance`. L'affirmation du contexte selon laquelle un NRC ne peut pas se répéter d'un groupe à l'autre est également fausse (CSO-6702, PSE-3501).
+
 ## Contexte
 
 Le modèle initial découpait l'offre d'une saison en `Component { type: lecture | laboratory, sections }`, le `type` étant lu dans l'étiquette « Type: » de la page.

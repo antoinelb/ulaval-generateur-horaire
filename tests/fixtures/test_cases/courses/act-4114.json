@@ -23,7 +23,7 @@
   ],
   "seasons": {
     "winter": {
-      "groups": [
+      "options": [
         [
           {
             "nrc": "12305",

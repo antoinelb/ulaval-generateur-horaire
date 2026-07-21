@@ -22,7 +22,7 @@
   "equivalents": [],
   "seasons": {
     "fall": {
-      "groups": [
+      "options": [
         [
           {
             "nrc": "81315",
@@ -34,7 +34,7 @@
       ]
     },
     "winter": {
-      "groups": [
+      "options": [
         [
           {
             "nrc": "11510",
@@ -46,7 +46,7 @@
       ]
     },
     "summer": {
-      "groups": [
+      "options": [
         [
           {
             "nrc": "51216",

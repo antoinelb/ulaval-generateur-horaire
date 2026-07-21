@@ -6,13 +6,25 @@ use crate::common::Cycle;
 pub struct Course {
     pub code: String,
     pub title: String,
-    pub credits: u32,
+    pub credits: Credits,
     pub cycle: Cycle,
     #[serde(default)]
     pub prerequisites: Option<Prerequisites>,
     #[serde(default)]
     pub equivalents: Vec<String>,
     pub seasons: BTreeMap<Season, SeasonOffering>,
+}
+
+// Almost every course states one number. A stage the student weights
+// himself states a span instead — MED-1911 « Stage-Externat » is worth
+// « 6 à 12 » credits — which is a fact about the course, not markup drift.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize,
+)]
+#[serde(untagged)]
+pub enum Credits {
+    Fixed(u32),
+    Range { min: u32, max: u32 },
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -48,7 +60,11 @@ pub struct ProgramCredits {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SeasonOffering {
-    pub groups: Vec<Vec<Section>>,
+    // one *complete* enrolment per entry: take all of an option's sections
+    // together and union their slots. A lecture offering a choice of labs
+    // appears once per lab, so a section with no lab of its own can still be
+    // taken alone (ADR `2026-07-sections-en-combinaisons-valides`).
+    pub options: Vec<Vec<Section>>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -277,18 +293,56 @@ mod tests {
     }
 
     #[test]
-    fn season_offering_holds_choice_groups() {
-        // Each inner array is one choice: pick exactly one section per group
-        // and union the slots. GCI-1007's shape — the lecture is forced (a
-        // one-element group), one of two labs is chosen.
-        let json = r#"{"groups":[[{"nrc":"84664","section":null,"mode":"in-person","slots":[]}],[{"nrc":"84665","section":"A","mode":"in-person","slots":[]},{"nrc":"84666","section":"B","mode":"in-person","slots":[]}]]}"#;
+    fn season_offering_holds_whole_enrolment_options() {
+        // Each inner array is one *complete* enrolment: take all of its
+        // sections together and union their slots. GCI-1007's shape — the
+        // lecture rides along with whichever lab is chosen, so it appears in
+        // both options.
+        let json = r#"{"options":[[{"nrc":"84664","section":null,"mode":"in-person","slots":[]},{"nrc":"84665","section":"A","mode":"in-person","slots":[]}],[{"nrc":"84664","section":null,"mode":"in-person","slots":[]},{"nrc":"84666","section":"B","mode":"in-person","slots":[]}]]}"#;
         let offering: SeasonOffering =
             serde_json::from_str(json).expect("offering");
-        assert_eq!(offering.groups.len(), 2);
-        assert_eq!(offering.groups[0].len(), 1);
-        assert_eq!(offering.groups[1].len(), 2);
+        assert_eq!(offering.options.len(), 2);
+        assert_eq!(offering.options[0].len(), 2);
+        assert_eq!(offering.options[0][0].nrc, offering.options[1][0].nrc);
         assert_eq!(
             serde_json::to_value(&offering).expect("ser"),
+            as_value(json)
+        );
+    }
+
+    // An NRC may repeat *across* options — CSO-6702 hangs its two sections
+    // off the same common seminar 13449 — because options are alternatives,
+    // never held at once. Only a repeat *inside* one option would be a
+    // contradiction.
+    #[test]
+    fn one_nrc_may_appear_in_several_options() {
+        let json = r#"{"options":[[{"nrc":"13450","section":"A","mode":"in-person","slots":[]},{"nrc":"13449","section":null,"mode":"in-person","slots":[]}],[{"nrc":"13451","section":"B","mode":"in-person","slots":[]},{"nrc":"13449","section":null,"mode":"in-person","slots":[]}]]}"#;
+        let offering: SeasonOffering =
+            serde_json::from_str(json).expect("offering");
+        assert_eq!(offering.options[0][1].nrc, offering.options[1][1].nrc);
+        assert_eq!(
+            serde_json::to_value(&offering).expect("ser"),
+            as_value(json)
+        );
+    }
+
+    // --- Credits: a bare number, or a range the student picks within ---
+
+    #[test]
+    fn credits_round_trip_as_a_bare_number() {
+        let credits: Credits = serde_json::from_str("3").expect("credits");
+        assert_eq!(credits, Credits::Fixed(3));
+        assert_eq!(serde_json::to_string(&credits).expect("ser"), "3");
+    }
+
+    #[test]
+    fn credits_round_trip_as_a_range() {
+        // MED-1911 « Stage-Externat » is worth « 6 à 12 » credits
+        let json = r#"{"min":6,"max":12}"#;
+        let credits: Credits = serde_json::from_str(json).expect("credits");
+        assert_eq!(credits, Credits::Range { min: 6, max: 12 });
+        assert_eq!(
+            serde_json::to_value(credits).expect("ser"),
             as_value(json)
         );
     }
@@ -480,14 +534,15 @@ mod tests {
 
     #[test]
     fn course_deserializes_season_keyed_map() {
-        let json = r#"{"code":"GEX-7002","title":"x","credits":3,"cycle":2,"prerequisites":null,"equivalents":[],"seasons":{"winter":{"groups":[[{"nrc":"14856","section":"A","mode":"in-person","slots":[{"day":"friday","start":"08:30","end":"11:20"}]}]]}}}"#;
+        let json = r#"{"code":"GEX-7002","title":"x","credits":3,"cycle":2,"prerequisites":null,"equivalents":[],"seasons":{"winter":{"options":[[{"nrc":"14856","section":"A","mode":"in-person","slots":[{"day":"friday","start":"08:30","end":"11:20"}]}]]}}}"#;
         let course: Course = serde_json::from_str(json).expect("course");
         assert_eq!(course.cycle, Cycle::Second);
+        assert_eq!(course.credits, Credits::Fixed(3));
         let winter = course
             .seasons
             .get(&Season::Winter)
             .expect("winter offering");
-        assert_eq!(winter.groups.len(), 1);
-        assert_eq!(winter.groups[0][0].nrc, "14856");
+        assert_eq!(winter.options.len(), 1);
+        assert_eq!(winter.options[0][0].nrc, "14856");
     }
 }

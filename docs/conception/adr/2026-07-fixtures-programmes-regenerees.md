@@ -2,6 +2,8 @@
 
 Date : 2026-07-20
 
+**Portée des points 1 et 2 précisée le 2026-07-20 par `2026-07-fixture-attendue-derivee-avant-le-parseur`** : la régénération par le parseur reste la règle quand il lit déjà la page. Quand la sortie attendue doit exister *avant* que le parseur sache la produire (cas de test écrit d'abord), elle est dérivée par une implémentation de référence indépendante, puis confrontée au parseur corrigé. Une page hors périmètre est gelée en `.html` seul, sans `.json`.
+
 ## Contexte
 
 Les trois fixtures programmes attendues ont été écrites à la main le 2026-07-13 (`aa0d051`) ; le HTML correspondant n'a été gelé que le 2026-07-17 (`b7319a0`).

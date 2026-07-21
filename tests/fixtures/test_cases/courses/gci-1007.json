@@ -16,7 +16,7 @@
   "equivalents": [],
   "seasons": {
     "fall": {
-      "groups": [
+      "options": [
         [
           {
             "nrc": "84664",
@@ -29,9 +29,7 @@
                 "end": "15:20"
               }
             ]
-          }
-        ],
-        [
+          },
           {
             "nrc": "84665",
             "section": "A",
@@ -39,6 +37,20 @@
             "slots": [
               {
                 "day": "wednesday",
+                "start": "12:30",
+                "end": "15:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "84664",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
                 "start": "12:30",
                 "end": "15:20"
               }

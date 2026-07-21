@@ -2,6 +2,8 @@
 
 Date : 2026-07-19
 
+**Amendé le 2026-07-20 par `2026-07-cycles-hors-perimetre-sans-erreur`** : la décision tient, mais la prémisse « ces activités portent un numéro `8xxx` » est fausse (PSY-7851 à 7854), donc le filtre du §4 est un raccourci avant requête HTTP et non une règle exhaustive. L'exclusion passe désormais par `Ok(None)` plutôt que par une erreur, et couvre aussi « Études post-MDD ».
+
 ## Contexte
 
 La carte « Cycle du cours » de la page cours porte une **liste** de valeurs, pas une valeur unique : GEX-7002 annonce « Deuxième cycle » *et* « Troisième cycle ».

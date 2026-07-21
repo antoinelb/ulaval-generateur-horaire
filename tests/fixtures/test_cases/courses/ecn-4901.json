@@ -9,7 +9,7 @@
   ],
   "seasons": {
     "winter": {
-      "groups": [
+      "options": [
         [
           {
             "nrc": "20907",
@@ -21,7 +21,7 @@
       ]
     },
     "summer": {
-      "groups": [
+      "options": [
         [
           {
             "nrc": "55293",

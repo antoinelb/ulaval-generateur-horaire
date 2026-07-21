@@ -63,6 +63,13 @@ impl Task {
         self.finished = true;
     }
 
+    // for a closing message the task could not know when it opened — a
+    // tally of the work it just did
+    pub fn done_with(mut self, done_msg: &str) {
+        self.done_msg = done_msg.to_string();
+        self.done()
+    }
+
     pub fn increment(&self) {
         let mut state = lock_state();
         if let Some(progress) =

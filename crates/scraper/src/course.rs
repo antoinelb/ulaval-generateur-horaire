@@ -6,7 +6,7 @@ use futures::stream::{self, StreamExt};
 use crate::fetch::{FetchError, Fetcher};
 use crate::parser::{self, ParseError};
 use crate::print;
-use ulaval_scheduler_core::{CatalogueEntry, Course, Season};
+use ulaval_scheduler_core::{CatalogueEntry, Course, Cycle, Season};
 
 const n_concurrent: usize = 32;
 
@@ -40,11 +40,55 @@ pub struct CachedCourse {
     pub years: BTreeMap<Season, u16>,
 }
 
+// A cache file is one of two disjoint shapes, read untagged: a parsed
+// course (`{course, years}`), or the verdict that a page yields none —
+// stamped with the scope rule that reached it. Untagged is safe because the
+// two carry disjoint required fields, the same argument as `Credits`; a file
+// matching neither is a miss, so a corrupt cache refetches rather than lies.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(untagged)]
+enum CacheEntry {
+    Course(CachedCourse),
+    // an out-of-scope page has no `Course` to hold, so caching it needs its
+    // own shape; `out_of_scope` is the scope fingerprint at write time
+    OutOfScope { out_of_scope: String },
+}
+
+// A fingerprint of the in-scope rule as it stands in the code — the cycle
+// levels `Cycle` accepts — not an enumeration of reality. A sentinel is
+// trusted only while its fingerprint still matches: add a third cycle and
+// every sentinel written under « first and second only » stops matching, so
+// those pages are read again instead of staying wrongly excluded, with no
+// hand-purge of the cache. Bounded scan over `u8`, no recursion.
+fn scope_tag() -> String {
+    (0u8..=u8::MAX)
+        .filter(|&level| Cycle::try_from(level).is_ok())
+        .map(|level| level.to_string())
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+// Where one course came from. A cache the parser can no longer read — a
+// format change invalidates every file at once — behaves exactly like a
+// cold cache, so the run has to be able to say which it was.
+enum Origin {
+    Cache,
+    Network,
+}
+
+// What a whole course scrape cost, for its closing line.
+pub struct CacheTally {
+    pub cached: usize,
+    pub fetched: usize,
+}
+
 // One `data/cours/{session}.json`, mirroring the catalogue's shape. A
 // struct rather than a `json!` literal so serde keeps `Course`'s field
 // order: these snapshots are committed, and alphabetized keys would churn
 // the diffs and diverge from the `courses/*.json` fixtures.
-#[derive(Default, serde::Serialize)]
+// `Deserialize` too: a `--subjects` run reads back the snapshot it is about
+// to rewrite, to keep the subjects it knows nothing about.
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct SessionSnapshot {
     pub courses: Vec<Course>,
 }
@@ -53,7 +97,7 @@ pub async fn scrape(
     fetcher: &Fetcher,
     entries: &[CatalogueEntry],
     cache_dir: &Path,
-) -> (Vec<CachedCourse>, Vec<CourseError>) {
+) -> (Vec<CachedCourse>, Vec<CourseError>, CacheTally) {
     let task = print::progress_task(
         "Scraping courses...",
         "Scraped courses.",
@@ -64,7 +108,7 @@ pub async fn scrape(
     // `collect`, not `try_collect` as the catalogue does: at ~10 req/s a
     // full run is ~17 min, and one unreachable page must not throw all of
     // it away (ADR `2026-07-echec-de-page-cours-non-bloquant`)
-    let scraped: Vec<(Option<CachedCourse>, Vec<CourseError>)> =
+    let scraped: Vec<(Option<CachedCourse>, Vec<CourseError>, Origin)> =
         stream::iter(entries)
             .map(|entry| async move {
                 let scraped = scrape_course(fetcher, entry, cache_dir).await;
@@ -78,37 +122,72 @@ pub async fn scrape(
 
     let mut courses = Vec::with_capacity(scraped.len());
     let mut anomalies = Vec::new();
-    for (course, mut errors) in scraped {
+    let mut tally = CacheTally {
+        cached: 0,
+        fetched: 0,
+    };
+    for (course, mut errors, origin) in scraped {
         courses.extend(course);
         anomalies.append(&mut errors);
+        match origin {
+            Origin::Cache => tally.cached += 1,
+            Origin::Network => tally.fetched += 1,
+        }
     }
-    (courses, anomalies)
+    (courses, anomalies, tally)
 }
 
 async fn scrape_course(
     fetcher: &Fetcher,
     entry: &CatalogueEntry,
     cache_dir: &Path,
-) -> (Option<CachedCourse>, Vec<CourseError>) {
+) -> (Option<CachedCourse>, Vec<CourseError>, Origin) {
     let path = cache_path(cache_dir, &entry.code);
-    if let Some(cached) = read_cache(&path) {
-        return (Some(cached), Vec::new());
+    match read_cache(&path) {
+        Some(CacheEntry::Course(cached)) => {
+            return (Some(cached), Vec::new(), Origin::Cache);
+        }
+        // the verdict holds only while the rule that produced it does; a
+        // stale fingerprint falls through and the page is fetched again
+        Some(CacheEntry::OutOfScope { out_of_scope })
+            if out_of_scope == scope_tag() =>
+        {
+            return (None, Vec::new(), Origin::Cache);
+        }
+        _ => {}
     }
 
     let html = match fetcher.fetch(&entry.url).await {
         Ok(html) => html,
-        Err(source) => return (None, vec![source.into()]),
+        Err(source) => return (None, vec![source.into()], Origin::Network),
     };
     // an unrecognized page shape yields no course at all, so nothing is
     // cached and the next run fetches it again
     let page = match parser::course::parse(&html) {
-        Ok(page) => page,
+        Ok(Some(page)) => page,
+        // a page read perfectly and dropped on purpose — a doctoral or
+        // post-doctoral activity — is no course, but its verdict is cached
+        // so the next run skips the request (ADR
+        // `2026-07-cache-du-verdict-hors-perimetre`)
+        Ok(None) => {
+            let sentinel = CacheEntry::OutOfScope {
+                out_of_scope: scope_tag(),
+            };
+            let anomalies = match write_cache(&path, &sentinel) {
+                Ok(()) => Vec::new(),
+                Err(source) => vec![CourseError::Cache {
+                    path: path.display().to_string(),
+                    source,
+                }],
+            };
+            return (None, anomalies, Origin::Network);
+        }
         Err(source) => {
             let error = CourseError::Parse {
                 url: entry.url.clone(),
                 source,
             };
-            return (None, vec![error]);
+            return (None, vec![error], Origin::Network);
         }
     };
 
@@ -137,14 +216,14 @@ async fn scrape_course(
         }
     }
 
-    (Some(course), anomalies)
+    (Some(course), anomalies, Origin::Network)
 }
 
 fn cache_path(cache_dir: &Path, code: &str) -> PathBuf {
     cache_dir.join(format!("{}.json", code.to_lowercase()))
 }
 
-fn read_cache(path: &Path) -> Option<CachedCourse> {
+fn read_cache(path: &Path) -> Option<CacheEntry> {
     // a missing, truncated or outdated-format file is a miss, not a
     // failure: the page is fetched again and the file overwritten, which
     // is also why the write below needs no temp-file dance
@@ -152,14 +231,17 @@ fn read_cache(path: &Path) -> Option<CachedCourse> {
     serde_json::from_str(&raw).ok()
 }
 
-fn write_cache(
+// generic over what is cached: a `CachedCourse` writes `{course, years}`, a
+// `CacheEntry::OutOfScope` writes `{out_of_scope}`, and `read_cache` reads
+// either back through the untagged enum
+fn write_cache<T: serde::Serialize>(
     path: &Path,
-    course: &CachedCourse,
+    value: &T,
 ) -> Result<(), std::io::Error> {
     // expect over `?`: serializing strings, maps and vecs provably cannot
     // fail
-    let json = serde_json::to_string(course)
-        .expect("CachedCourse serialization always succeeds");
+    let json = serde_json::to_string(value)
+        .expect("cache entry serialization always succeeds");
     std::fs::write(path, json)
 }
 
@@ -223,7 +305,7 @@ pub(crate) mod tests {
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     use super::*;
-    use ulaval_scheduler_core::{Cycle, SeasonOffering};
+    use ulaval_scheduler_core::{Credits, Cycle, SeasonOffering};
 
     #[test]
     fn a_session_is_named_by_its_season_letter_and_year() {
@@ -336,6 +418,9 @@ pub(crate) mod tests {
             .unwrap_or_else(|e| panic!("write the cache file: {e}"));
 
         let read = read_cache(&path).expect("the file was just written");
+        let CacheEntry::Course(read) = read else {
+            panic!("a course file must read back as a course, not a verdict");
+        };
         assert_eq!(read.course, course.course);
         assert_eq!(read.years, course.years);
         cleanup(&dir);
@@ -361,7 +446,8 @@ pub(crate) mod tests {
         mount(&server, "/gex-1000", course_html("GEX-1000"), 1).await;
         let dir = test_dir("scrape-happy");
 
-        let (courses, anomalies) = scrape_one(&server, "GEX-1000", &dir).await;
+        let (courses, anomalies, _) =
+            scrape_one(&server, "GEX-1000", &dir).await;
 
         assert!(anomalies.is_empty(), "{anomalies:?}");
         assert_eq!(courses[0].course.code, "GEX-1000");
@@ -386,10 +472,34 @@ pub(crate) mod tests {
         )
         .unwrap_or_else(|e| panic!("prime the cache: {e}"));
 
-        let (courses, anomalies) = scrape_one(&server, "GEX-1000", &dir).await;
+        let (courses, anomalies, _) =
+            scrape_one(&server, "GEX-1000", &dir).await;
 
         assert!(anomalies.is_empty(), "{anomalies:?}");
         assert_eq!(courses[0].course.code, "GEX-1000");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn the_tally_separates_cache_hits_from_requests() {
+        // a cache the parser can no longer read is a cold run wearing a
+        // full cache directory; the totals alone cannot tell them apart
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        mount(&server, "/gex-1000", course_html("GEX-1000"), 0).await;
+        mount(&server, "/gex-2000", course_html("GEX-2000"), 1).await;
+        let dir = test_dir("scrape-tally");
+        write_cache(
+            &dir.join("gex-1000.json"),
+            &cached_course("GEX-1000", &[(Season::Fall, 2026)]),
+        )
+        .unwrap_or_else(|e| panic!("prime the cache: {e}"));
+        let entries = [entry(&server, "GEX-1000"), entry(&server, "GEX-2000")];
+
+        let (_, anomalies, tally) = scrape_with(&entries, &dir).await;
+
+        assert!(anomalies.is_empty(), "{anomalies:?}");
+        assert_eq!((tally.cached, tally.fetched), (1, 1));
         cleanup(&dir);
     }
 
@@ -402,7 +512,7 @@ pub(crate) mod tests {
         let dir = test_dir("scrape-404");
         let entries = [entry(&server, "GEX-1000"), entry(&server, "GEX-9999")];
 
-        let (courses, anomalies) = scrape_with(&entries, &dir).await;
+        let (courses, anomalies, _) = scrape_with(&entries, &dir).await;
 
         assert_eq!(courses.len(), 1, "the reachable course still lands");
         assert!(
@@ -421,7 +531,8 @@ pub(crate) mod tests {
         mount(&server, "/gex-1000", "<html></html>".to_string(), 1).await;
         let dir = test_dir("scrape-unparseable");
 
-        let (courses, anomalies) = scrape_one(&server, "GEX-1000", &dir).await;
+        let (courses, anomalies, _) =
+            scrape_one(&server, "GEX-1000", &dir).await;
 
         assert!(courses.is_empty(), "no course can be built from the page");
         assert!(
@@ -430,6 +541,85 @@ pub(crate) mod tests {
             "got {anomalies:?}"
         );
         assert!(!dir.join("gex-1000.json").exists());
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn a_page_out_of_scope_yields_no_course_and_no_anomaly() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        // a doctoral activity (PSY-7851's shape): recognized, then dropped
+        // on purpose, so there is nothing to log — but the verdict is cached
+        let html = course_html("PSY-7851")
+            .replace("Premier cycle", "Troisième cycle");
+        mount(&server, "/psy-7851", html, 1).await;
+        let dir = test_dir("scrape-out-of-scope");
+
+        let (courses, anomalies, _) =
+            scrape_one(&server, "PSY-7851", &dir).await;
+
+        assert!(courses.is_empty(), "nothing this generator schedules");
+        assert!(
+            anomalies.is_empty(),
+            "dropping on purpose is not an anomaly: {anomalies:?}"
+        );
+        // the verdict is cached under the scope fingerprint that reached it
+        let cached = read_cache(&dir.join("psy-7851.json"))
+            .expect("the verdict is cached");
+        assert!(
+            matches!(cached, CacheEntry::OutOfScope { out_of_scope }
+                if out_of_scope == scope_tag()),
+            "a cached verdict carries the live scope fingerprint"
+        );
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn a_cached_out_of_scope_verdict_skips_the_request() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        // expect(1): the second scrape must be served from the sentinel, so
+        // the out-of-scope pages stop refetching every run
+        let html = course_html("PSY-7851")
+            .replace("Premier cycle", "Troisième cycle");
+        mount(&server, "/psy-7851", html, 1).await;
+        let dir = test_dir("scrape-out-of-scope-cached");
+
+        let (_, _, first) = scrape_one(&server, "PSY-7851", &dir).await;
+        assert_eq!((first.cached, first.fetched), (0, 1), "cold: fetched");
+
+        let (courses, anomalies, second) =
+            scrape_one(&server, "PSY-7851", &dir).await;
+        assert_eq!((second.cached, second.fetched), (1, 0), "warm: cached");
+        assert!(courses.is_empty() && anomalies.is_empty());
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn a_verdict_under_a_stale_scope_fingerprint_is_refetched() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        // a sentinel left by an older scope rule: the page is read again so
+        // a rule change never leaves a page wrongly excluded, no hand-purge
+        let html = course_html("PSY-7851")
+            .replace("Premier cycle", "Troisième cycle");
+        mount(&server, "/psy-7851", html, 1).await;
+        let dir = test_dir("scrape-out-of-scope-stale");
+        write_cache(
+            &dir.join("psy-7851.json"),
+            &CacheEntry::OutOfScope {
+                out_of_scope: "1,2,3".to_string(),
+            },
+        )
+        .unwrap_or_else(|e| panic!("plant a stale sentinel: {e}"));
+
+        let (_, _, tally) = scrape_one(&server, "PSY-7851", &dir).await;
+
+        assert_eq!(
+            (tally.cached, tally.fetched),
+            (0, 1),
+            "a stale fingerprint must not be trusted"
+        );
         cleanup(&dir);
     }
 
@@ -444,7 +634,8 @@ pub(crate) mod tests {
         mount(&server, "/gex-1000", html, 1).await;
         let dir = test_dir("scrape-soft-anomaly");
 
-        let (courses, anomalies) = scrape_one(&server, "GEX-1000", &dir).await;
+        let (courses, anomalies, _) =
+            scrape_one(&server, "GEX-1000", &dir).await;
 
         assert_eq!(courses[0].course.code, "GEX-1000", "the course is kept");
         assert_eq!(anomalies.len(), 1, "and its anomaly is surfaced");
@@ -464,7 +655,8 @@ pub(crate) mod tests {
         std::fs::create_dir_all(dir.join("gex-1000.json"))
             .unwrap_or_else(|e| panic!("block the cache path: {e}"));
 
-        let (courses, anomalies) = scrape_one(&server, "GEX-1000", &dir).await;
+        let (courses, anomalies, _) =
+            scrape_one(&server, "GEX-1000", &dir).await;
 
         assert_eq!(courses.len(), 1, "the course is still produced");
         assert!(
@@ -475,18 +667,42 @@ pub(crate) mod tests {
         cleanup(&dir);
     }
 
+    #[tokio::test]
+    async fn a_failing_sentinel_write_is_an_anomaly() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        let html = course_html("PSY-7851")
+            .replace("Premier cycle", "Troisième cycle");
+        mount(&server, "/psy-7851", html, 1).await;
+        let dir = test_dir("scrape-sentinel-blocked");
+        std::fs::create_dir_all(dir.join("psy-7851.json"))
+            .unwrap_or_else(|e| panic!("block the cache path: {e}"));
+
+        let (courses, anomalies, _) =
+            scrape_one(&server, "PSY-7851", &dir).await;
+
+        assert!(courses.is_empty(), "still out of scope, no course");
+        assert!(
+            matches!(&anomalies[0], CourseError::Cache { path, .. }
+                if path.contains("psy-7851")),
+            "a sentinel that cannot be written is logged like any cache miss \
+             to write: {anomalies:?}"
+        );
+        cleanup(&dir);
+    }
+
     async fn scrape_one(
         server: &MockServer,
         code: &str,
         cache_dir: &Path,
-    ) -> (Vec<CachedCourse>, Vec<CourseError>) {
+    ) -> (Vec<CachedCourse>, Vec<CourseError>, CacheTally) {
         scrape_with(&[entry(server, code)], cache_dir).await
     }
 
     async fn scrape_with(
         entries: &[CatalogueEntry],
         cache_dir: &Path,
-    ) -> (Vec<CachedCourse>, Vec<CourseError>) {
+    ) -> (Vec<CachedCourse>, Vec<CourseError>, CacheTally) {
         // zero intervals: throttle timing is unit-tested on a virtual
         // clock in fetch.rs; these tests assert orchestration and must
         // stay fast
@@ -564,14 +780,19 @@ pub(crate) mod tests {
             course: Course {
                 code: code.to_string(),
                 title: format!("Cours {code}"),
-                credits: 3,
+                credits: Credits::Fixed(3),
                 cycle: Cycle::First,
                 prerequisites: None,
                 equivalents: Vec::new(),
                 seasons: years
                     .iter()
                     .map(|(season, _)| {
-                        (*season, SeasonOffering { groups: Vec::new() })
+                        (
+                            *season,
+                            SeasonOffering {
+                                options: Vec::new(),
+                            },
+                        )
                     })
                     .collect(),
             },

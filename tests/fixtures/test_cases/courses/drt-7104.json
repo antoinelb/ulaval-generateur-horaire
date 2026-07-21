@@ -1,40 +1,37 @@
 {
-  "code": "GCI-2010",
-  "title": "Laboratoire d'hydraulique",
+  "code": "DRT-7104",
+  "title": "Sujets spéciaux en droit des affaires I",
   "credits": 3,
-  "cycle": 1,
-  "prerequisites": {
-    "raw": "GCI-2008",
-    "tree": "GCI-2008"
-  },
+  "cycle": 2,
+  "prerequisites": null,
   "equivalents": [],
   "seasons": {
-    "winter": {
+    "fall": {
       "options": [
         [
           {
-            "nrc": "14733",
+            "nrc": "84328",
             "section": "A",
             "mode": "in-person",
             "slots": [
               {
-                "day": "friday",
-                "start": "09:00",
-                "end": "11:50"
+                "day": "tuesday",
+                "start": "12:30",
+                "end": "15:20"
               }
             ]
           }
         ],
         [
           {
-            "nrc": "14734",
+            "nrc": "84329",
             "section": "B",
             "mode": "in-person",
             "slots": [
               {
-                "day": "friday",
-                "start": "12:00",
-                "end": "14:50"
+                "day": "monday",
+                "start": "15:30",
+                "end": "18:20"
               }
             ]
           }

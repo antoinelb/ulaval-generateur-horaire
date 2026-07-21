@@ -81,6 +81,10 @@ Heures du mandat : cœur ≈ 24–34 h, vision complète ≈ 53–78 h ; le surc
   Un bloc rend ses « Cours obligatoires » en `mandatory` (y compris dans une concentration — ADR `2026-07-cours-obligatoires-de-concentration`) ; une contrainte de règle illisible reste absente plutôt qu'inventée (ADR `2026-07-contrainte-de-regle-optionnelle`) ; la prose qu'aucune grammaire ne couvre — étiquettes de sous-groupes, stages exigés pour diplômer — est conservée en `notes` et affichée, jamais interprétée (ADR `2026-07-notes-en-prose-conservees`, `2026-07-texte-brut-de-regle-paragraphe-complet`).
 - La dérive du markup ULaval est une certitude, pas un risque : on ne la prévient pas, on la rend bruyante (tests sur fixtures, alertes CI) et peu coûteuse à réparer.
   Une sortie attendue est **produite par le parseur** depuis le HTML gelé puis relue, jamais écrite à la main : les trois premières fixtures programmes, saisies à la main quatre jours avant le gel du HTML, avaient silencieusement perdu deux cours et fabriqué une contrainte (ADR `2026-07-fixtures-programmes-regenerees`).
+  Quand la sortie attendue doit exister **avant** que le parseur sache la produire — un cas de test écrit d'abord —, elle est dérivée du HTML gelé par une implémentation de référence indépendante, validée sur les fixtures déjà figées, puis confrontée au parseur corrigé (ADR `2026-07-fixture-attendue-derivee-avant-le-parseur`).
+- Une saison d'un cours porte des **combinaisons d'inscription complètes** (`options`) et non des groupes de choix : on retient une option en entier et on unit les plages de ses sections, ce qui rend inconstruisible l'appariement d'une section avec un laboratoire qui n'est pas le sien (ADR `2026-07-sections-en-combinaisons-valides`).
+  Les crédits d'un cours sont un nombre ou un intervalle `{min, max}` pour les stages que l'étudiant pondère (ADR `2026-07-credits-variables-en-enum`).
+  Le périmètre se décide deux fois : le filtre `0xxx`/`8xxx` du catalogue épargne une requête mais n'est pas exhaustif, le cycle lu sur la page fait autorité (ADR `2026-07-cycles-hors-perimetre-sans-erreur`).
 
 ### Produit
 
@@ -134,6 +138,11 @@ Aucun serveur nulle part dans le chemin.
 En parallèle, `data/cours/{session}.manuel.json` (cours sans source machine-lisible, jamais touché par le scraper) est fusionné au chargement avec le snapshot, entrées marquées `source: "manuel"` et scrapé prioritaire en cas de collision de code — ADR `2026-07-contribution-de-cours-manuels`.
 
 Entre les deux phases, `data/cache/cours/{code}.json` (gitignoré) garde les cours déjà parsés sans anomalie, pour qu'une relance ne refasse que les pages qui en ont besoin — ADR `2026-07-cache-de-cours-parses`.
+Un changement de format du `Course` sérialisé périme d'un coup tout le cache : chaque fichier redevient un défaut, silencieusement, et la relance est froide sans le dire.
+La ligne de clôture du scrape annonce donc la répartition (`Scraped 8826 courses (8518 cached, 308 fetched).`) — sans elle, un cache périmé est indiscernable d'un throttle mal placé.
+Le cache porte aussi le verdict « hors périmètre » (les ~20 pages `MDD-5xxx`/`PSY-785x` qui ne donnent aucun cours), stampé de l'empreinte de la règle de périmètre et retesté à la lecture, si bien qu'une relance en cache fait 0 requête sans jamais rester périmée si la règle change — ADR `2026-07-cache-du-verdict-hors-perimetre`.
+
+Un run restreint (`--subjects gex`) **fusionne** dans les snapshots existants au lieu de les remplacer : il réécrit exactement les cours de ses matières et laisse les autres intacts, en triant par code comme le ferait un run complet — ADR `2026-07-run-par-matiere-fusionne-dans-le-snapshot`.
 
 Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par de simples GET (ni session, ni POST de formulaire) ; le cookie store de `reqwest` reste un repli si certaines pages l'exigent (à vérifier à la semaine 1).
 

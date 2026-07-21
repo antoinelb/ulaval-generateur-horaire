@@ -1,11 +1,11 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::LazyLock;
 
 use crate::parser::ParseError;
 use scraper::{ElementRef, Html, Selector};
 use ulaval_scheduler_core::{
-    Course, Cycle, Day, Mode, PrereqTree, Prerequisites, ProgramCredits,
-    Season, SeasonOffering, Section, Slot, Time,
+    Course, Credits, Cycle, Day, Mode, PrereqTree, Prerequisites,
+    ProgramCredits, Season, SeasonOffering, Section, Slot, Time,
 };
 
 const CODE_CSS: &str = "span.fe--titre-type";
@@ -124,7 +124,11 @@ enum Nesting {
     Linked,
 }
 
-pub fn parse(html: &str) -> Result<CoursePage, ParseError> {
+// `None` is a page the parser read perfectly and then dropped on purpose: a
+// doctoral or post-doctoral activity is nothing this generator schedules, so
+// it yields no course — and no anomaly either, since nothing was lost by
+// accident.
+pub fn parse(html: &str) -> Result<Option<CoursePage>, ParseError> {
     let doc = Html::parse_document(html);
 
     let mut anomalies = Vec::new();
@@ -132,7 +136,9 @@ pub fn parse(html: &str) -> Result<CoursePage, ParseError> {
     let code = parse_element(&doc, &CODE, CODE_CSS)?;
     let title = parse_element(&doc, &TITLE, TITLE_CSS)?;
     let credits = parse_credits(&doc)?;
-    let cycle = parse_cycle(&doc)?;
+    let Some(cycle) = parse_cycle(&doc)? else {
+        return Ok(None);
+    };
     let prerequisites = parse_prerequisites(&doc, &mut anomalies);
     let equivalents = parse_equivalents(&doc)?;
     let sessions = parse_seasons(&doc, &mut anomalies);
@@ -146,7 +152,7 @@ pub fn parse(html: &str) -> Result<CoursePage, ParseError> {
         .map(|(season, (_, offering))| (season, offering))
         .collect();
 
-    Ok(CoursePage {
+    Ok(Some(CoursePage {
         course: Course {
             code,
             title,
@@ -158,7 +164,7 @@ pub fn parse(html: &str) -> Result<CoursePage, ParseError> {
         },
         years,
         anomalies,
-    })
+    }))
 }
 
 fn parse_element(
@@ -174,7 +180,7 @@ fn parse_element(
         })
 }
 
-fn parse_credits(doc: &Html) -> Result<u32, ParseError> {
+fn parse_credits(doc: &Html) -> Result<Credits, ParseError> {
     // a course can carry no credits card at all — GCI-2510, a « Stage »
     // seminar, lists only its cycle and its modes. It is worth no credits,
     // which is a fact about the course, not markup drift: the page is
@@ -188,7 +194,7 @@ fn parse_credits(doc: &Html) -> Result<u32, ParseError> {
                 .starts_with("Crédit")
         })
     }) else {
-        return Ok(0);
+        return Ok(Credits::Fixed(0));
     };
     let raw = card
         .select(&CREDITS_VALUE)
@@ -197,16 +203,32 @@ fn parse_credits(doc: &Html) -> Result<u32, ParseError> {
         .ok_or_else(|| ParseError::MissingElement {
             selector: CREDITS_VALUE_CSS.to_string(),
         })?;
+    let raw = raw.trim();
 
-    raw.trim()
-        .parse::<u32>()
-        .map_err(|_| ParseError::MalformedEntry {
-            selector: "credits".to_string(),
-            raw,
-        })
+    credits_of(raw).ok_or_else(|| ParseError::MalformedEntry {
+        selector: "credits".to_string(),
+        raw: raw.to_string(),
+    })
 }
 
-fn parse_cycle(doc: &Html) -> Result<Cycle, ParseError> {
+// « 3 », or « 6 à 12 » for a stage the student weights himself (MED-1911).
+// A span running backwards states a bound no student can satisfy, so it is
+// markup drift rather than a fact about the course.
+fn credits_of(raw: &str) -> Option<Credits> {
+    match raw.split_whitespace().collect::<Vec<_>>().as_slice() {
+        [count] => Some(Credits::Fixed(count.parse().ok()?)),
+        [min, "à", max] => {
+            let (min, max) = (min.parse().ok()?, max.parse().ok()?);
+            (min <= max).then_some(Credits::Range { min, max })
+        }
+        _ => None,
+    }
+}
+
+// `None` for an activity above the second cycle: `Cycle` cannot hold it, and
+// the generator has no business scheduling a thesis milestone or a
+// post-doctoral residency. Recognized, then dropped — not an error.
+fn parse_cycle(doc: &Html) -> Result<Option<Cycle>, ParseError> {
     let card = doc
         .select(&FAITS_RAPIDES)
         .find(|card| {
@@ -218,7 +240,8 @@ fn parse_cycle(doc: &Html) -> Result<Cycle, ParseError> {
             selector: format!("{} = Cycle", CYCLE_LABEL_CSS),
         })?;
 
-    card.select(&CYCLE_VALUE)
+    let level = card
+        .select(&CYCLE_VALUE)
         .map(|value| cycle_level(&value.text().collect::<String>()))
         .collect::<Result<Vec<u8>, ParseError>>()?
         .into_iter()
@@ -226,15 +249,11 @@ fn parse_cycle(doc: &Html) -> Result<Cycle, ParseError> {
         .ok_or_else(|| ParseError::MalformedEntry {
             selector: "cycle values".to_string(),
             raw: card.html(),
-        })
-        .and_then(|level| {
-            Cycle::try_from(level).map_err(|error| {
-                ParseError::MalformedEntry {
-                    selector: "cycle".to_string(),
-                    raw: error,
-                }
-            })
-        })
+        })?;
+
+    // « 2e et 3e cycle » collapses to 2 and stays in scope; only a course
+    // whose *lowest* level is above the second falls out of it
+    Ok(Cycle::try_from(level).ok())
 }
 
 fn cycle_level(text: &str) -> Result<u8, ParseError> {
@@ -242,6 +261,10 @@ fn cycle_level(text: &str) -> Result<u8, ParseError> {
         "Premier cycle" => Ok(1),
         "Deuxième cycle" => Ok(2),
         "Troisième cycle" => Ok(3),
+        // MDD-5101, a post-doctoral dental residency: the page words its
+        // level as a programme rather than a cycle, and it sits above the
+        // third — in grammar, and out of scope
+        "Études post-MDD" => Ok(4),
         other => Err(ParseError::MalformedEntry {
             selector: "cycle".to_string(),
             raw: other.to_string(),
@@ -535,7 +558,7 @@ fn parse_seasons(
         }
 
         let offering = parse_offering(session, &heading, anomalies);
-        if !offering.groups.is_empty() {
+        if !offering.options.is_empty() {
             latest.insert(season, (year, offering));
         }
     }
@@ -569,21 +592,8 @@ fn parse_offering(
     heading: &str,
     anomalies: &mut Vec<ParseError>,
 ) -> SeasonOffering {
-    let top = children(session, &TOGGLE_SECTION);
-    let linked: Vec<ElementRef> = top
-        .iter()
-        .flat_map(|section| linked_sections(*section))
-        .collect();
+    let top = top_level_sections(session);
 
-    if top.len() > 1 && !linked.is_empty() {
-        anomalies.push(ParseError::MalformedEntry {
-            selector: TOGGLE_SECTION_CSS.to_string(),
-            raw: format!(
-                "{heading}: linked sections under {} top-level sections",
-                top.len()
-            ),
-        });
-    }
     if advertised_section_count(heading) != Some(top.len()) {
         anomalies.push(ParseError::MalformedEntry {
             selector: "p.controls-title".to_string(),
@@ -591,15 +601,71 @@ fn parse_offering(
         });
     }
 
-    let groups = [
-        collect_sections(top, Nesting::TopLevel, anomalies),
-        collect_sections(linked, Nesting::Linked, anomalies),
-    ]
-    .into_iter()
-    .filter(|group| !group.is_empty())
-    .collect();
+    let options = top
+        .into_iter()
+        .flat_map(|section| enrolment_options(section, anomalies))
+        .collect();
 
-    SeasonOffering { groups }
+    SeasonOffering { options }
+}
+
+// A stray tag can re-parent a section out of the session's direct children —
+// DRT-7104 writes `<b>…<b>` where it means `</b>`, and HTML5 rebuilds the
+// unclosed elements around everything that follows. Only a `.dark` wrapper
+// makes a section belong to another, so every other descendant is top-level
+// whatever depth it ended up at (ADR
+// `2026-07-sections-de-premier-niveau-par-ascendance`).
+fn top_level_sections(session: ElementRef) -> Vec<ElementRef> {
+    let linked: HashSet<_> = session
+        .select(&LINKED_WRAPPER)
+        .flat_map(|dark| dark.select(&TOGGLE_SECTION))
+        .map(|section| section.id())
+        .collect();
+
+    session
+        .select(&TOGGLE_SECTION)
+        .filter(|section| !linked.contains(&section.id()))
+        .collect()
+}
+
+// One entry per way of enrolling: a section offering a choice of labs
+// appears once per lab and carries the lecture along, while a section with
+// no lab of its own stands alone. The flat model this replaces — one group
+// of lectures, one of labs — paired every lecture with every lab, which
+// invents enrolments the page never offered (IFT-1004; ADR
+// `2026-07-sections-en-combinaisons-valides`).
+fn enrolment_options(
+    section: ElementRef,
+    anomalies: &mut Vec<ParseError>,
+) -> Vec<Vec<Section>> {
+    let parsed = match parse_section(section, Nesting::TopLevel) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            anomalies.push(error);
+            return Vec::new();
+        }
+    };
+
+    let offered = linked_sections(section);
+    let ties_a_lab = !offered.is_empty();
+    let linked = collect_sections(offered, Nesting::Linked, anomalies);
+
+    if linked.is_empty() {
+        // A section the page ties to a lab cannot be taken without one, so a
+        // section whose labs are *all* unreadable yields no option at all:
+        // handing back the lecture alone would invent an enrolment nobody
+        // offers, and the anomaly above already says what was lost.
+        return if ties_a_lab {
+            Vec::new()
+        } else {
+            vec![vec![parsed]]
+        };
+    }
+
+    linked
+        .into_iter()
+        .map(|linked| vec![parsed.clone(), linked])
+        .collect()
 }
 
 fn collect_sections(
@@ -823,17 +889,6 @@ fn child<'a>(
         .find(|element| selector.matches(element))
 }
 
-fn children<'a>(
-    parent: ElementRef<'a>,
-    selector: &Selector,
-) -> Vec<ElementRef<'a>> {
-    parent
-        .children()
-        .filter_map(ElementRef::wrap)
-        .filter(|element| selector.matches(element))
-        .collect()
-}
-
 fn sel(selector: &str) -> Selector {
     Selector::parse(selector).expect("Static selector is valid")
 }
@@ -996,7 +1051,9 @@ mod tests {
             cycle_card(&["Premier cycle"]),
         );
 
-        let page = parse(&html).expect("complete page");
+        let page = parse(&html)
+            .expect("complete page")
+            .expect("a first-cycle course is in scope");
         assert_eq!(page.course.code, "GEX-4008");
         assert!(page.course.seasons.is_empty());
         assert!(page.anomalies.is_empty());
@@ -1095,7 +1152,56 @@ mod tests {
         // the cycle card exists, so the scan runs and finds no « Crédits »
         // — GCI-2510, a seminar, is that shape and must survive the parse
         let doc = document(&cycle_card(&["Premier cycle"]));
-        assert_eq!(parse_credits(&doc).unwrap_or_else(|e| panic!("{e}")), 0);
+        assert_eq!(
+            parse_credits(&doc).unwrap_or_else(|e| panic!("{e}")),
+            Credits::Fixed(0)
+        );
+    }
+
+    #[test]
+    fn a_credits_range_keeps_both_bounds() {
+        // « N à M » is a stage the student weights himself (MED-1911 is
+        // « 6 à 12 »), not markup drift — dropping the page would cost the
+        // course its whole schedule
+        for (raw, expected) in [
+            ("6 à 12", Credits::Range { min: 6, max: 12 }),
+            ("2 à 4", Credits::Range { min: 2, max: 4 }),
+            ("0 à 6", Credits::Range { min: 0, max: 6 }),
+            ("3", Credits::Fixed(3)),
+        ] {
+            let doc = document(&credits_card(raw));
+            assert_eq!(
+                parse_credits(&doc).unwrap_or_else(|e| panic!("{raw}: {e}")),
+                expected,
+                "for {raw:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_credits_range_running_backwards_is_a_malformed_entry() {
+        // no page states one, and reading it as a range would let a bound
+        // no student can satisfy pass for a fact about the course
+        let doc = document(&credits_card("4 à 2"));
+        let error = parse_credits(&doc).expect_err("descending range");
+        assert_eq!(malformed_entry(&error), ("credits", "4 à 2"));
+    }
+
+    #[test]
+    fn a_credits_card_of_an_unknown_shape_is_a_malformed_entry() {
+        // neither one number nor « N à M »: an empty card, anything wordier,
+        // and a bound that is not a number are drift, never a silent zero
+        for raw in ["", "de 3 à 6", "3 à 6 à 9", "trois à 6", "6 à trois"]
+        {
+            let doc = document(&credits_card(raw));
+            let error =
+                parse_credits(&doc).expect_err("unknown credits shape");
+            assert_eq!(
+                malformed_entry(&error),
+                ("credits", raw),
+                "for {raw:?}"
+            );
+        }
     }
 
     #[test]
@@ -1147,20 +1253,27 @@ mod tests {
     }
 
     #[test]
-    fn a_third_cycle_only_course_has_no_representation() {
-        // 2e-3e collapses to 2, but a pure 3e is a doctoral research
-        // activity: out of scope, and `Cycle` cannot hold it (ADR
-        // `2026-07-troisieme-cycle-hors-perimetre`)
-        let doc = document(&cycle_card(&["Troisième cycle"]));
-        let error = parse_cycle(&doc).expect_err("third cycle alone");
-        assert_eq!(malformed_entry(&error).0, "cycle");
+    fn a_course_above_the_second_cycle_is_out_of_scope_not_an_error() {
+        // 2e-3e collapses to 2, but a course whose *lowest* listed level is
+        // above the second is a doctoral or post-doctoral activity: nothing
+        // to schedule, and `Cycle` cannot hold it. Recognized, then dropped
+        // on purpose — hence `None` rather than an anomaly, which would fill
+        // the log with a case we understand perfectly.
+        for level in ["Troisième cycle", "Études post-MDD"] {
+            let doc = document(&cycle_card(&[level]));
+            assert_eq!(
+                parse_cycle(&doc).unwrap_or_else(|e| panic!("{level}: {e}")),
+                None,
+                "for {level:?}"
+            );
+        }
     }
 
     #[test]
     fn the_lowest_listed_cycle_wins() {
         let doc =
             document(&cycle_card(&["Troisième cycle", "Deuxième cycle"]));
-        assert_eq!(parse_cycle(&doc).expect("cycle"), Cycle::Second);
+        assert_eq!(parse_cycle(&doc).expect("cycle"), Some(Cycle::Second));
     }
 
     // --- Préalables and equivalents ---
@@ -1295,7 +1408,7 @@ mod tests {
             let (year, offering) = &seasons[&Season::Fall];
             assert_eq!(*year, 2026, "the 2026 session wins ({order})");
             assert_eq!(
-                offering.groups[0][0].nrc, "22222",
+                offering.options[0][0].nrc, "22222",
                 "the 2026 session wins ({order})"
             );
             assert!(anomalies.is_empty(), "{order}: {anomalies:?}");
@@ -1339,7 +1452,7 @@ mod tests {
         let mut anomalies = Vec::new();
 
         let seasons = parse_seasons(&doc, &mut anomalies);
-        assert_eq!(seasons[&Season::Winter].1.groups.len(), 1);
+        assert_eq!(seasons[&Season::Winter].1.options.len(), 1);
         assert_eq!(malformed_entry(&anomalies[0]).0, "p.controls-title");
     }
 
@@ -1361,7 +1474,7 @@ mod tests {
             let mut anomalies = Vec::new();
 
             let seasons = parse_seasons(&doc, &mut anomalies);
-            assert_eq!(seasons[&Season::Fall].1.groups.len(), 1);
+            assert_eq!(seasons[&Season::Fall].1.options.len(), 1);
             assert_eq!(
                 malformed_entry(&anomalies[0]).0,
                 "p.controls-title",
@@ -1394,32 +1507,122 @@ mod tests {
     }
 
     #[test]
-    fn linked_sections_under_several_top_level_sections_are_an_anomaly() {
-        // the flat model cannot say « lab 1-2 belong to section A »; no known
-        // page does this, and the guard makes the assumption falsifiable
-        // (ADR `2026-07-sections-en-groupes-de-choix`)
-        let linked =
-            toggle_section(&["A", "En classe"], &nrc_block("84665"), "");
-        let with_linked = toggle_section(
+    fn a_linked_section_belongs_to_the_section_that_holds_it() {
+        // The shape IFT-1004 exhibits and the old flat model could not
+        // express: 84664 offers a choice of two labs, 84667 offers none.
+        // Reading this as « one of {84664, 84667} and one of {84665, 84666} »
+        // would pair 84667 with a lab that is not its own, and would have no
+        // way to say « 84667 alone ».
+        let labs = format!(
+            "{}{}",
+            toggle_section(&["A", "En classe"], &nrc_block("84665"), ""),
+            toggle_section(&["B", "En classe"], &nrc_block("84666"), ""),
+        );
+        let with_labs = toggle_section(
             &["GCI-1007", "", "En classe"],
             &nrc_block("84664"),
-            &linked,
+            &labs,
         );
-        let plain = toggle_section(
-            &["GCI-1007", "B", "En classe"],
+        let alone = toggle_section(
+            &["GCI-1007", "Z3", "À distance"],
             &nrc_block("84667"),
             "",
         );
         let doc = document(&session(
             "Automne 2026 – 2 sections offertes",
-            &format!("{with_linked}{plain}"),
+            &format!("{with_labs}{alone}"),
         ));
         let mut anomalies = Vec::new();
 
         let seasons = parse_seasons(&doc, &mut anomalies);
-        assert_eq!(seasons[&Season::Fall].1.groups.len(), 2);
+
+        let nrcs: Vec<Vec<&str>> = seasons[&Season::Fall]
+            .1
+            .options
+            .iter()
+            .map(|option| {
+                option.iter().map(|s| s.nrc.as_str()).collect::<Vec<_>>()
+            })
+            .collect();
+        assert_eq!(
+            nrcs,
+            vec![
+                vec!["84664", "84665"],
+                vec!["84664", "84666"],
+                vec!["84667"],
+            ]
+        );
+        assert!(anomalies.is_empty(), "got {anomalies:?}");
+    }
+
+    #[test]
+    fn a_top_level_section_re_parented_by_a_stray_tag_is_still_found() {
+        // DRT-7104 writes `<b>…<b>` where it means `</b>`. HTML5 rebuilds the
+        // unclosed formatting elements around everything that follows, so the
+        // second section is no longer a *direct* child of the session — a
+        // direct-children scan silently loses it, schedule and all. Only the
+        // `.dark` wrapper may hide a section from this level.
+        //
+        // The newline after the stray tag is load-bearing: the tree builder
+        // reconstructs the open `<b>`s when it inserts *character* data, not
+        // when it inserts a `<div>`. Remove it and the markup parses clean,
+        // which would make this test pass against the very bug it pins.
+        let sections = format!(
+            "{}\n<div class=\"fe--message\"><p><b>note<b></p></div>\n{}",
+            toggle_section(
+                &["DRT-7104", "A", "En classe"],
+                &nrc_block("84328"),
+                "",
+            ),
+            toggle_section(
+                &["DRT-7104", "B", "En classe"],
+                &nrc_block("84329"),
+                "",
+            ),
+        );
+        let doc = document(&session(
+            "Automne 2023 – 2 sections offertes",
+            &sections,
+        ));
+        let mut anomalies = Vec::new();
+
+        let seasons = parse_seasons(&doc, &mut anomalies);
+
+        let nrcs: Vec<&str> = seasons[&Season::Fall]
+            .1
+            .options
+            .iter()
+            .flatten()
+            .map(|s| s.nrc.as_str())
+            .collect();
+        assert_eq!(nrcs, vec!["84328", "84329"]);
+        assert!(anomalies.is_empty(), "got {anomalies:?}");
+    }
+
+    #[test]
+    fn a_section_whose_labs_are_all_unreadable_offers_no_enrolment() {
+        // The page ties this lecture to a lab, so it cannot be taken alone.
+        // Handing it back bare would invent an enrolment nobody offers; the
+        // anomaly is what makes the loss recoverable.
+        let broken_lab = toggle_section(&["A", "En classe"], "", "");
+        let with_labs = toggle_section(
+            &["GCI-1007", "", "En classe"],
+            &nrc_block("84664"),
+            &broken_lab,
+        );
+        let doc =
+            document(&session("Automne 2026 – 1 section offerte", &with_labs));
+        let mut anomalies = Vec::new();
+
         assert!(
-            malformed_entry(&anomalies[0]).1.contains("linked sections"),
+            parse_seasons(&doc, &mut anomalies).is_empty(),
+            "the lecture alone is not an enrolment the page offers"
+        );
+        assert!(
+            anomalies.iter().any(|anomaly| matches!(
+                anomaly,
+                ParseError::MissingElement { selector } if selector == NRC_CSS
+            )),
             "got {anomalies:?}"
         );
     }
@@ -1506,7 +1709,7 @@ mod tests {
         let seasons = parse_seasons(&doc, &mut anomalies);
 
         assert!(anomalies.is_empty(), "{anomalies:?}");
-        let section = &seasons[&Season::Fall].1.groups[0][0];
+        let section = &seasons[&Season::Fall].1.options[0][0];
         assert_eq!(section.mode, Mode::Hybrid);
         assert_eq!(
             section.slots.len(),

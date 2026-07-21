@@ -161,9 +161,16 @@ async fn get_courses(
     // needs an injected bad builder — seam-tested in fetch.rs)
     let fetcher = Fetcher::new(min_interval, backoff)
         .expect("static fetcher config always builds");
-    let (courses, anomalies) =
+    let (courses, anomalies, tally) =
         course::scrape(&fetcher, &entries, &cache_dir).await;
-    task.done();
+    // the split, not just the total: a cache the parser can no longer read
+    // is silently a cold run, and only this line tells the two apart
+    task.done_with(&format!(
+        "Scraped {} courses ({} cached, {} fetched).",
+        entries.len(),
+        tally.cached,
+        tally.fetched,
+    ));
 
     Ok((course::group_by_session(courses), anomalies))
 }
@@ -211,12 +218,14 @@ fn filter_by_subject(
 
     Ok(entries
         .into_iter()
-        .filter(|entry| {
-            subject_of(&entry.code).is_some_and(|subject| {
-                wanted.iter().any(|wanted| wanted == subject)
-            })
-        })
+        .filter(|entry| has_wanted_subject(&entry.code, &wanted))
         .collect())
+}
+
+// `wanted` holds upper-case subjects, as course codes do
+fn has_wanted_subject(code: &str, wanted: &[String]) -> bool {
+    subject_of(code)
+        .is_some_and(|subject| wanted.iter().any(|wanted| wanted == subject))
 }
 
 // « matière » = the course-code prefix, so filtering needs no facet
@@ -238,14 +247,17 @@ fn write_courses(
     );
 
     // only a full run has seen the whole catalogue, so only a full run may
-    // remove what it did not produce: a `--subjects` run knows nothing of
-    // the other subjects' sessions and must leave their files alone.
-    // Listed before writing, deleted after, so nothing is lost if the run
-    // dies midway.
-    let stale = if subjects.is_empty() {
-        stale_sessions(&sessions_dir, &sessions)
+    // replace a snapshot outright or remove one it did not produce. A
+    // `--subjects` run knows nothing of the other subjects' courses, so it
+    // merges its own into what is already on disk instead of overwriting.
+    // Stale files are listed before writing and deleted after, so nothing
+    // is lost if the run dies midway.
+    let (sessions, stale) = if subjects.is_empty() {
+        let stale = stale_sessions(&sessions_dir, &sessions);
+        (sessions, stale)
     } else {
-        Vec::new()
+        let merged = merge_into_existing(&sessions_dir, sessions, subjects)?;
+        (merged, Vec::new())
     };
     std::fs::create_dir_all(&sessions_dir)?;
 
@@ -266,6 +278,47 @@ fn write_courses(
     Ok(())
 }
 
+// A `--subjects` run rewrites exactly its own subjects' courses inside each
+// snapshot, and nothing else. Every existing session is read, not only the
+// ones this run produced: a course that left a session has to disappear
+// from the file it used to sit in.
+fn merge_into_existing(
+    dir: &Path,
+    produced: BTreeMap<String, SessionSnapshot>,
+    subjects: &[String],
+) -> anyhow::Result<BTreeMap<String, SessionSnapshot>> {
+    let wanted: Vec<String> =
+        subjects.iter().map(|s| s.to_uppercase()).collect();
+    let mut merged = produced;
+
+    for (session, path) in session_files(dir) {
+        let kept = read_snapshot(&path)?
+            .courses
+            .into_iter()
+            .filter(|course| !has_wanted_subject(&course.code, &wanted));
+        merged.entry(session).or_default().courses.extend(kept);
+    }
+
+    // the order a full run writes (`course::group_by_session`), so a
+    // subject run leaves a diff holding its own courses and nothing else
+    for snapshot in merged.values_mut() {
+        snapshot.courses.sort_by(|a, b| a.code.cmp(&b.code));
+    }
+    Ok(merged)
+}
+
+// an unreadable snapshot stops the run: merging on regardless would drop
+// every subject the file held, which is the very loss the merge exists to
+// prevent
+fn read_snapshot(path: &Path) -> anyhow::Result<SessionSnapshot> {
+    let raw = std::fs::read_to_string(path).map_err(|source| {
+        anyhow::anyhow!("Reading {}: {source}", path.display())
+    })?;
+    serde_json::from_str(&raw).map_err(|source| {
+        anyhow::anyhow!("Parsing {}: {source}", path.display())
+    })
+}
+
 // A course moves session when its offering changes — GCI-7077 sat in
 // `a2020.json` only because its Automne 2026 block was unreadable — so a
 // snapshot the run no longer produces is stale, and leaving it behind
@@ -274,22 +327,29 @@ fn stale_sessions(
     dir: &Path,
     produced: &BTreeMap<String, SessionSnapshot>,
 ) -> Vec<PathBuf> {
-    // a missing directory (first run) simply holds nothing stale
+    session_files(dir)
+        .into_iter()
+        .filter(|(session, _)| !produced.contains_key(session))
+        .map(|(_, path)| path)
+        .collect()
+}
+
+// `{session}.manuel.json` is hand-maintained and never touched by the
+// scraper (ADR `2026-07-contribution-de-cours-manuels`); a missing
+// directory (first run) simply holds nothing
+fn session_files(dir: &Path) -> Vec<(String, PathBuf)> {
     std::fs::read_dir(dir)
         .into_iter()
         .flatten()
         .flatten()
-        .filter(|entry| {
+        .filter_map(|entry| {
             let name = entry.file_name();
             let name = name.to_string_lossy();
-            // `{session}.manuel.json` is hand-maintained and never touched
-            // by the scraper (ADR `2026-07-contribution-de-cours-manuels`)
-            !name.ends_with(".manuel.json")
-                && name
-                    .strip_suffix(".json")
-                    .is_some_and(|session| !produced.contains_key(session))
+            if name.ends_with(".manuel.json") {
+                return None;
+            }
+            Some((name.strip_suffix(".json")?.to_string(), entry.path()))
         })
-        .map(|entry| entry.path())
         .collect()
 }
 
@@ -693,19 +753,80 @@ mod tests {
         std::fs::create_dir_all(&cours)
             .unwrap_or_else(|e| panic!("create cours dir: {e}"));
         // another subject's session, invisible to a --subjects gex run
-        std::fs::write(cours.join("h2024.json"), "other subjects")
-            .unwrap_or_else(|e| panic!("plant h2024: {e}"));
+        plant_snapshot(&cours, "h2024", &["GCI-1000"]);
 
         run(courses_args(&dir, &["gex"]))
             .await
             .unwrap_or_else(|e| panic!("scoped scrape: {e}"));
 
-        assert!(
-            cours.join("h2024.json").exists(),
+        assert_eq!(
+            snapshot_codes(&cours, "h2024"),
+            ["GCI-1000"],
             "a scoped run has not seen the other subjects' courses, so it \
              must not judge their snapshots stale"
         );
         cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn a_scoped_run_rewrites_its_own_subject_inside_a_shared_snapshot() {
+        // the regression: writing the filtered snapshot whole deleted every
+        // other subject in the file — 4151 courses down to 15 on a real run
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        mount_course(&server, "GEX-1000").await;
+        let dir = test_dir("courses-scoped-merge");
+        plant_catalogue(&dir, &server, &["GEX-1000"]);
+        let cours = dir.join("cours");
+        std::fs::create_dir_all(&cours)
+            .unwrap_or_else(|e| panic!("create cours dir: {e}"));
+        // GEX-9999 no longer belongs to the session; the two others are not
+        // this run's business and must survive it. They bracket GEX-1000
+        // alphabetically, so appending instead of merging would show.
+        plant_snapshot(&cours, "a2026", &["GCI-1000", "GEX-9999", "GZZ-1000"]);
+
+        run(courses_args(&dir, &["gex"]))
+            .await
+            .unwrap_or_else(|e| panic!("scoped scrape: {e}"));
+
+        assert_eq!(
+            snapshot_codes(&cours, "a2026"),
+            ["GCI-1000", "GEX-1000", "GZZ-1000"],
+            "a scoped run replaces its own subject's courses and sorts by \
+             code, exactly as a full run writes the file"
+        );
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn a_scoped_run_over_an_unreadable_snapshot_is_an_error() {
+        // merging on regardless would drop every subject the file held —
+        // the loss the merge exists to prevent. Unparsable and unreadable
+        // are the two arms of the same guard, so both are planted; a
+        // directory under a snapshot's name gives the second.
+        let _guard = lock_print();
+        for (name, plant) in [("unparsable", true), ("unreadable", false)] {
+            let server = MockServer::start().await;
+            mount_course(&server, "GEX-1000").await;
+            let dir = test_dir(&format!("courses-scoped-{name}"));
+            plant_catalogue(&dir, &server, &["GEX-1000"]);
+            let cours = dir.join("cours");
+            std::fs::create_dir_all(&cours)
+                .unwrap_or_else(|e| panic!("create cours dir: {e}"));
+            let path = cours.join("a2026.json");
+            if plant {
+                std::fs::write(&path, "not a snapshot")
+                    .unwrap_or_else(|e| panic!("plant {name}: {e}"));
+            } else {
+                std::fs::create_dir(&path)
+                    .unwrap_or_else(|e| panic!("plant {name}: {e}"));
+            }
+
+            let result = run(courses_args(&dir, &["gex"])).await;
+
+            assert!(result.is_err(), "an {name} snapshot must fail the run");
+            cleanup(&dir);
+        }
     }
 
     #[tokio::test]
@@ -844,6 +965,35 @@ mod tests {
             .unwrap_or_else(|e| panic!("serialize the catalogue: {e}"));
         std::fs::write(dir.join("catalogue.json"), json)
             .unwrap_or_else(|e| panic!("plant the catalogue: {e}"));
+    }
+
+    // an earlier run's output: only the codes matter to a merge, so the
+    // courses carry the bare minimum `Course` deserializes from
+    fn plant_snapshot(cours: &Path, session: &str, codes: &[&str]) {
+        let courses: Vec<String> = codes
+            .iter()
+            .map(|code| {
+                format!(
+                    r#"{{"code":"{code}","title":"x","credits":3,"cycle":1,"seasons":{{}}}}"#
+                )
+            })
+            .collect();
+        let json = format!(r#"{{"courses":[{}]}}"#, courses.join(","));
+        std::fs::write(cours.join(format!("{session}.json")), json)
+            .unwrap_or_else(|e| panic!("plant the {session} snapshot: {e}"));
+    }
+
+    fn snapshot_codes(cours: &Path, session: &str) -> Vec<String> {
+        let path = cours.join(format!("{session}.json"));
+        let raw = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read the {session} snapshot: {e}"));
+        let snapshot: SessionSnapshot = serde_json::from_str(&raw)
+            .unwrap_or_else(|e| panic!("parse the {session} snapshot: {e}"));
+        snapshot
+            .courses
+            .into_iter()
+            .map(|course| course.code)
+            .collect()
     }
 
     async fn mount_course(server: &MockServer, code: &str) {
