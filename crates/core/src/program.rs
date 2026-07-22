@@ -1,10 +1,12 @@
 use crate::common::Cycle;
 
 // A block of the « Structure du programme » section, in its three roles. The
-// prose a block carries — thematic subgroup labels, stage requirements, the
-// English-level note — is understood by no grammar, so it rides along in
-// `notes`: displayed to the student, never interpreted (ADR
-// `2026-07-notes-en-prose-conservees`).
+// prose a block carries — thematic subgroup labels, stage requirements — is
+// understood by no grammar, so it rides along in `notes`: displayed to the
+// student, never interpreted (ADR `2026-07-notes-en-prose-conservees`). The
+// one exception is the language requirement, a course-or-test graduation gate
+// lifted out into `language_requirement` (ADR
+// `2026-07-exigence-linguistique-champ-dedie`).
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Program {
     pub code: String,
@@ -17,6 +19,8 @@ pub struct Program {
     pub profiles: Vec<Profile>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub notes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language_requirement: Option<LanguageRequirement>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -74,7 +78,9 @@ pub enum RuleCourses {
     // the same scraped page; resolution to a course list happens in core, and
     // a reference whose target is itself a reference is an error, not a chase.
     Reference { courses: RuleReference, raw: String },
-    Any { courses: Keyword, raw: String },
+    // "any" and "negotiated" share the {courses, raw} shape, so one variant
+    // carries both, told apart by the keyword value
+    Keyword { courses: Keyword, raw: String },
     Raw { raw: String },
 }
 
@@ -91,6 +97,42 @@ pub struct RuleReference {
 pub enum Keyword {
     // "tous les cours de premier cycle, ..." — any course satisfies the rule
     Any,
+    // "convenus avec la direction", "requis par sa concentration", passage
+    // intégré — no fixed list, resolved by agreement; recognized, not flagged
+    // (ADR `2026-07-regles-negociees-reconnues`)
+    Negotiated,
+}
+
+// A course-or-test graduation requirement (ADR
+// `2026-07-exigence-linguistique-champ-dedie`): the placement-test score
+// dispenses from the course, and the page states the two audiences apart.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct LanguageRequirement {
+    pub francophone: LanguageQualification,
+    // only the two-box page layout spells out the non-francophone (French)
+    // branch; the prose layout states the English one alone
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub non_francophone: Option<LanguageQualification>,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct LanguageQualification {
+    // course to pass when the test threshold is not met (ANL-2020 / FLS-2093)
+    pub course: String,
+    // placement thresholds that dispense from the course, ANDed together
+    // (FLS-2093 carries two: TCF-TP: 400 and TCF-TP/ÉÉ: 14)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tests: Vec<PlacementTest>,
+    // the full source sentence: keeps the upgrade path (« VEPT : 63 → autre
+    // langue moderne ») and the École de langues exemption, which the two
+    // fields above do not carry
+    pub raw: String,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PlacementTest {
+    pub name: String,
+    pub score: i64,
 }
 
 #[cfg(test)]
@@ -163,8 +205,23 @@ mod tests {
         let rule = assert_rule_round_trips(json);
         assert!(matches!(
             rule.courses,
-            RuleCourses::Any {
+            RuleCourses::Keyword {
                 courses: Keyword::Any,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn rule_with_negotiated_keyword_round_trips() {
+        // « cours convenus avec la direction », « requis par sa
+        // concentration », passage intégré : reconnu, gardé en raw, non signalé
+        let json = r#"{"title":"Règle 1","courses":"negotiated","raw":"Réussir les cours requis par sa concentration."}"#;
+        let rule = assert_rule_round_trips(json);
+        assert!(matches!(
+            rule.courses,
+            RuleCourses::Keyword {
+                courses: Keyword::Negotiated,
                 ..
             }
         ));
@@ -247,5 +304,64 @@ mod tests {
             serde_json::from_str(json).expect("concentration");
         assert_eq!(concentration.credits_required, None);
         assert_eq!(serde_json::to_string(&concentration).expect("ser"), json);
+    }
+
+    // --- LanguageRequirement: exigence linguistique en champ dédié ---
+
+    #[test]
+    fn language_requirement_with_both_branches_round_trips() {
+        // génie des eaux: francophone -> ANL-2020 (VEPT 53), non-francophone
+        // -> FLS-2093 (TCF-TP 400 ET TCF-TP/ÉÉ 14 — deux seuils ET-liés)
+        let json = r#"{"francophone":{"course":"ANL-2020","tests":[{"name":"VEPT","score":53}],"raw":"Pour la personne francophone, la réussite du cours ANL-2020 Intermediate English II (VEPT: 53) est requise pour diplômer."},"non_francophone":{"course":"FLS-2093","tests":[{"name":"TCF-TP","score":400},{"name":"TCF-TP/ÉÉ","score":14}],"raw":"Pour la personne non-francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP: 400 et TCF-TP/ÉÉ: 14) est requise pour diplômer."}}"#;
+        let requirement: LanguageRequirement =
+            serde_json::from_str(json).expect("requirement");
+        assert_eq!(requirement.francophone.course, "ANL-2020");
+        assert_eq!(
+            requirement.francophone.tests,
+            vec![PlacementTest {
+                name: "VEPT".to_string(),
+                score: 53
+            }]
+        );
+        let french = requirement
+            .non_francophone
+            .as_ref()
+            .expect("non_francophone");
+        assert_eq!(french.course, "FLS-2093");
+        assert_eq!(french.tests.len(), 2, "TCF-TP: 400 et TCF-TP/ÉÉ: 14");
+        assert_eq!(
+            serde_json::to_value(&requirement).expect("ser"),
+            serde_json::from_str::<serde_json::Value>(json).expect("value")
+        );
+    }
+
+    #[test]
+    fn language_requirement_francophone_only_omits_non_francophone() {
+        // the prose page layout (génie physique) states only the English branch
+        let json = r#"{"francophone":{"course":"ANL-2020","tests":[{"name":"VEPT","score":53}],"raw":"Réussir le cours ANL-2020 Intermediate English II."}}"#;
+        let requirement: LanguageRequirement =
+            serde_json::from_str(json).expect("requirement");
+        assert_eq!(requirement.non_francophone, None);
+        assert_eq!(serde_json::to_string(&requirement).expect("ser"), json);
+    }
+
+    #[test]
+    fn language_qualification_without_tests_omits_the_key() {
+        // raw is always kept; tests is empty when no threshold is parsed
+        let json = r#"{"course":"ANL-2020","raw":"Réussir le cours ANL-2020 Intermediate English II."}"#;
+        let qualification: LanguageQualification =
+            serde_json::from_str(json).expect("qualification");
+        assert!(qualification.tests.is_empty());
+        assert_eq!(serde_json::to_string(&qualification).expect("ser"), json);
+    }
+
+    #[test]
+    fn program_without_language_requirement_omits_the_key() {
+        let json = r#"{"code":"x","title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
+        let program: Program = serde_json::from_str(json).expect("program");
+        assert_eq!(program.language_requirement, None);
+        assert!(!serde_json::to_string(&program)
+            .expect("ser")
+            .contains("language_requirement"));
     }
 }

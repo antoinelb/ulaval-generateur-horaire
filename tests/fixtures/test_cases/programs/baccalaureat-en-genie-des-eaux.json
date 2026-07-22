@@ -115,9 +115,7 @@
         "Entrepreneuriat",
         "Biologie",
         "Territoire",
-        "Changements climatiques",
-        "Pour la personne francophone, la réussite du cours ANL-2020 Intermediate English II (VEPT: 53) est requise pour diplômer.",
-        "Pour la personne non-francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP: 400 et TCF-TP/ÉÉ: 14) est requise pour diplômer."
+        "Changements climatiques"
       ]
     },
     {
@@ -142,5 +140,31 @@
   ],
   "notes": [
     "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GEX-1580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GEX-2590, GEX-2591 et GEX-3590. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
-  ]
+  ],
+  "language_requirement": {
+    "francophone": {
+      "course": "ANL-2020",
+      "tests": [
+        {
+          "name": "VEPT",
+          "score": 53
+        }
+      ],
+      "raw": "Pour la personne francophone, la réussite du cours ANL-2020 Intermediate English II (VEPT: 53) est requise pour diplômer."
+    },
+    "non_francophone": {
+      "course": "FLS-2093",
+      "tests": [
+        {
+          "name": "TCF-TP",
+          "score": 400
+        },
+        {
+          "name": "TCF-TP/ÉÉ",
+          "score": 14
+        }
+      ],
+      "raw": "Pour la personne non-francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP: 400 et TCF-TP/ÉÉ: 14) est requise pour diplômer."
+    }
+  }
 }

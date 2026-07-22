@@ -66,10 +66,6 @@
         "FRN-1113",
         "FRN-1914",
         "PHI-1900"
-      ],
-      "notes": [
-        "Pour la personne francophone, la réussite du ANL-2020 Intermediate English II (VEPT: 53) est requise pour diplômer.",
-        "Pour la personne non-francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP : 400 et TCF-TP/ÉÉ: 14) est requise pour diplômer."
       ]
     },
     {
@@ -296,5 +292,31 @@
   ],
   "notes": [
     "En plus des cours obligatoires du programme, vous devez réussir le stage de formation pratique GCI-2580 pour diplômer. Vous pouvez également suivre trois autres stages de formation pratique optionnels : GCI-2590, GCI-3590, GCI-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
-  ]
+  ],
+  "language_requirement": {
+    "francophone": {
+      "course": "ANL-2020",
+      "tests": [
+        {
+          "name": "VEPT",
+          "score": 53
+        }
+      ],
+      "raw": "Pour la personne francophone, la réussite du ANL-2020 Intermediate English II (VEPT: 53) est requise pour diplômer."
+    },
+    "non_francophone": {
+      "course": "FLS-2093",
+      "tests": [
+        {
+          "name": "TCF-TP",
+          "score": 400
+        },
+        {
+          "name": "TCF-TP/ÉÉ",
+          "score": 14
+        }
+      ],
+      "raw": "Pour la personne non-francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP : 400 et TCF-TP/ÉÉ: 14) est requise pour diplômer."
+    }
+  }
 }

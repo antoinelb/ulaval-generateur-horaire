@@ -2,8 +2,9 @@ use std::sync::LazyLock;
 
 use scraper::{ElementRef, Html, Selector};
 use ulaval_scheduler_core::{
-    Concentration, Constraint, Cycle, Keyword, Profile, Program, Rule,
-    RuleCourses, RuleReference,
+    Concentration, Constraint, Cycle, Keyword, LanguageQualification,
+    LanguageRequirement, PlacementTest, Profile, Program, Rule, RuleCourses,
+    RuleReference,
 };
 
 use crate::parser::ParseError;
@@ -143,20 +144,21 @@ pub fn parse(html: &str) -> Result<ProgramPage, ParseError> {
     let credits_required = parse_credits_required(&doc)?;
     let structure = parse_structure(&doc, &mut anomalies)?;
 
-    Ok(ProgramPage {
-        program: Program {
-            code,
-            title,
-            cycle,
-            credits_required,
-            mandatory: structure.mandatory,
-            rules: structure.rules,
-            concentrations: structure.concentrations,
-            profiles: structure.profiles,
-            notes: structure.notes,
-        },
-        anomalies,
-    })
+    let mut program = Program {
+        code,
+        title,
+        cycle,
+        credits_required,
+        mandatory: structure.mandatory,
+        rules: structure.rules,
+        concentrations: structure.concentrations,
+        profiles: structure.profiles,
+        notes: structure.notes,
+        language_requirement: None,
+    };
+    extract_language_requirement(&mut program);
+
+    Ok(ProgramPage { program, anomalies })
 }
 
 // the source breaks the heading across lines (« Baccalauréat en\n\t\tgénie
@@ -534,7 +536,10 @@ fn parse_rule_heading(
     };
 
     let parsed = parse_constraint(constraint);
-    if parsed.is_none() {
+    // a constraint slot with no digit is prose (« Réussir la scolarité de » of
+    // the passage intégré), not markup drift: carried as no constraint rather
+    // than flagged (ADR `2026-07-regles-negociees-reconnues`)
+    if parsed.is_none() && has_constraint_shape(constraint) {
         anomalies.push(ParseError::MalformedEntry {
             selector: "constraint".to_string(),
             raw: heading.to_string(),
@@ -601,8 +606,24 @@ fn classify_prose(
     anomalies: &mut Vec<ParseError>,
 ) -> RuleCourses {
     if raw.starts_with(ANY_PROSE) {
-        return RuleCourses::Any {
+        return RuleCourses::Keyword {
             courses: Keyword::Any,
+            raw,
+        };
+    }
+
+    // the language requirement is lifted into `program.language_requirement`
+    // afterwards (`extract_language_requirement`): kept whole here, without an
+    // anomaly, then removed — so the two predicates stay in lockstep
+    if is_language_prose(&raw) {
+        return RuleCourses::Raw { raw };
+    }
+
+    // no fixed list but recognized — convenus avec la direction, requis par la
+    // concentration, passage intégré : kept raw, not flagged as an anomaly
+    if is_negotiated_prose(&raw) {
+        return RuleCourses::Keyword {
+            courses: Keyword::Negotiated,
             raw,
         };
     }
@@ -641,6 +662,197 @@ fn parse_reference(
             concentration: title.clone(),
             rule: rule.trim().to_string(),
         })
+}
+
+// The language requirement hides in whatever rule or note the page wrote it
+// in; it is a course-or-test graduation gate, not a course choice, so it is
+// lifted into its own program field (ADR
+// `2026-07-exigence-linguistique-champ-dedie`). What it leaves in `raw` stays
+// displayable.
+fn extract_language_requirement(program: &mut Program) {
+    let mut francophone = None;
+    let mut non_francophone = None;
+
+    // prose form (physique, industriel, mécanique): a whole rule whose body is
+    // the English requirement, repeated once per concentration on mécanique
+    take_language_rules(&mut program.rules, &mut francophone);
+    for concentration in &mut program.concentrations {
+        take_language_rules(&mut concentration.rules, &mut francophone);
+    }
+    for profile in &mut program.profiles {
+        take_language_rules(&mut profile.rules, &mut francophone);
+    }
+
+    // two-box form (génie des eaux): a sentence per audience riding in a rule's
+    // notes. Block-level notes are scanned too, defensively.
+    for notes in note_vectors(program) {
+        take_language_notes(notes, &mut francophone, &mut non_francophone);
+    }
+
+    // the francophone (English) branch anchors the requirement; a page stating
+    // only the non-francophone one has never been seen
+    program.language_requirement =
+        francophone.map(|francophone| LanguageRequirement {
+            francophone,
+            non_francophone,
+        });
+}
+
+// every notes vector of the program, as disjoint mutable borrows: the two-box
+// form has only ever ridden in a rule's notes, but a block's own note is
+// cheap to cover
+fn note_vectors(program: &mut Program) -> Vec<&mut Vec<String>> {
+    let mut vectors = vec![&mut program.notes];
+    for rule in &mut program.rules {
+        vectors.push(&mut rule.notes);
+    }
+    for concentration in &mut program.concentrations {
+        vectors.push(&mut concentration.notes);
+        for rule in &mut concentration.rules {
+            vectors.push(&mut rule.notes);
+        }
+    }
+    for profile in &mut program.profiles {
+        vectors.push(&mut profile.notes);
+        for rule in &mut profile.rules {
+            vectors.push(&mut rule.notes);
+        }
+    }
+    vectors
+}
+
+// A prose rule whose body is the English requirement becomes the program
+// field, so it is dropped here; every other rule is kept in place.
+fn take_language_rules(
+    rules: &mut Vec<Rule>,
+    francophone: &mut Option<LanguageQualification>,
+) {
+    for rule in std::mem::take(rules) {
+        match &rule.courses {
+            RuleCourses::Raw { raw } if is_language_prose(raw) => {
+                set_language(francophone, raw.clone());
+            }
+            _ => rules.push(rule),
+        }
+    }
+}
+
+// A note stating a per-audience graduation requirement becomes the program
+// field; every other note is kept in place.
+fn take_language_notes(
+    notes: &mut Vec<String>,
+    francophone: &mut Option<LanguageQualification>,
+    non_francophone: &mut Option<LanguageQualification>,
+) {
+    for note in std::mem::take(notes) {
+        match language_note_audience(&note) {
+            Some(Audience::Francophone) => set_language(francophone, note),
+            Some(Audience::NonFrancophone) => {
+                set_language(non_francophone, note);
+            }
+            None => notes.push(note),
+        }
+    }
+}
+
+// The prose form repeats once per concentration (mécanique): the first wins,
+// the rest are the same requirement and are dropped.
+fn set_language(slot: &mut Option<LanguageQualification>, raw: String) {
+    if slot.is_none() {
+        *slot = Some(language_qualification(raw));
+    }
+}
+
+enum Audience {
+    Francophone,
+    NonFrancophone,
+}
+
+fn language_note_audience(note: &str) -> Option<Audience> {
+    // « non-francophone » contains « francophone », so it is tested first
+    if note.starts_with("Pour la personne non-francophone") {
+        Some(Audience::NonFrancophone)
+    } else if note.starts_with("Pour la personne francophone") {
+        Some(Audience::Francophone)
+    } else {
+        None
+    }
+}
+
+fn language_qualification(raw: String) -> LanguageQualification {
+    LanguageQualification {
+        course: first_course_code(&raw).unwrap_or_default(),
+        tests: placement_tests(&raw),
+        raw,
+    }
+}
+
+// the English requirement always names the École de langues test that
+// dispenses from the course; the two-box notes name it in parentheses
+fn is_language_prose(raw: &str) -> bool {
+    raw.contains("VEPT") || raw.contains("École de langues")
+}
+
+fn is_negotiated_prose(raw: &str) -> bool {
+    raw.contains("convenus entre la direction")
+        || raw.contains("requis par sa concentration")
+        || raw.contains("deuxième cycle suivante")
+}
+
+// a header stating a countable constraint always writes a digit; a slot with
+// none is prose, not markup drift
+fn has_constraint_shape(text: &str) -> bool {
+    text.chars().any(|c| c.is_ascii_digit())
+}
+
+// the first « LLL-DDDD » sigle in the sentence — the course to pass
+fn first_course_code(text: &str) -> Option<String> {
+    text.split_whitespace()
+        .map(|token| token.trim_matches(|c: char| !c.is_ascii_alphanumeric()))
+        .find(|token| is_course_code(token))
+        .map(str::to_string)
+}
+
+fn is_course_code(token: &str) -> bool {
+    match token.split_once('-') {
+        Some((prefix, number)) => {
+            prefix.len() == 3
+                && prefix.chars().all(|c| c.is_ascii_uppercase())
+                && number.len() == 4
+                && number.chars().all(|c| c.is_ascii_digit())
+        }
+        None => false,
+    }
+}
+
+// the thresholds inside the first parenthetical: « (VEPT : 53) » → one,
+// « (TCF-TP : 400 et TCF-TP/ÉÉ : 14) » → two. A later « (VEPT : 63) » is an
+// upgrade tier, not a threshold, and stays in `raw`.
+fn placement_tests(text: &str) -> Vec<PlacementTest> {
+    let Some(inside) = first_parenthetical(text) else {
+        return Vec::new();
+    };
+
+    let segments: Vec<&str> = inside.split(':').collect();
+    segments
+        .windows(2)
+        .filter_map(|pair| {
+            // name is the word before the colon, score the word after
+            let name = pair[0].split_whitespace().last()?;
+            let score = pair[1].split_whitespace().next()?.parse().ok()?;
+            Some(PlacementTest {
+                name: name.to_string(),
+                score,
+            })
+        })
+        .collect()
+}
+
+fn first_parenthetical(text: &str) -> Option<&str> {
+    let start = text.find('(')?;
+    let rest = &text[start + 1..];
+    let end = rest.find(')')?;
+    Some(&rest[..end])
 }
 
 // every text the page writes is broken across lines and padded with tabs,
@@ -1121,9 +1333,11 @@ mod tests {
     }
 
     #[test]
-    fn an_unreadable_constraint_leaves_the_rule_without_one() {
-        // « Règle 1 – Réussir la scolarité de » (génie mécanique): the
-        // header is cut off mid-sentence and names no number at all
+    fn a_passage_integre_header_is_recognized_not_flagged() {
+        // « Règle 1 – Réussir la scolarité de » / « deuxième cycle suivante : »
+        // (génie mécanique): the header names no number and the body no course
+        // list — recognized as negotiated, carried without a constraint, and
+        // not flagged (ADR `2026-07-regles-negociees-reconnues`)
         let page = parsed(&group(
             Some(PROFILES_HEADING),
             &block(
@@ -1141,17 +1355,32 @@ mod tests {
         assert_eq!(rule.constraint, None);
         assert_eq!(
             rule.courses,
-            RuleCourses::Raw {
+            RuleCourses::Keyword {
+                courses: Keyword::Negotiated,
                 raw: "deuxième cycle suivante :".to_string()
             }
         );
         assert!(
-            page.anomalies
-                .iter()
-                .any(|a| malformed_entry(a).0 == "constraint"),
-            "got {:?}",
+            page.anomalies.is_empty(),
+            "recognized, so nothing is flagged: {:?}",
             page.anomalies
         );
+    }
+
+    #[test]
+    fn a_constraint_with_a_number_it_cannot_read_is_flagged() {
+        // a digit is there, so it is meant to be a countable constraint: an
+        // unreadable one is markup drift, not prose, and is flagged
+        let mut anomalies = no_anomalies();
+
+        let (name, constraint) = parse_rule_heading(
+            "Règle 1 – 3 à neuf crédits parmi :",
+            &mut anomalies,
+        );
+
+        assert_eq!(name, "Règle 1");
+        assert_eq!(constraint, None);
+        assert_eq!(malformed_entry(&anomalies[0]).0, "constraint");
     }
 
     // --- Rule bodies ---
@@ -1210,7 +1439,7 @@ mod tests {
 
         assert_eq!(
             courses,
-            RuleCourses::Any {
+            RuleCourses::Keyword {
                 courses: Keyword::Any,
                 raw: raw.to_string()
             }
@@ -1320,5 +1549,161 @@ mod tests {
             malformed_entry(&page.anomalies[0]).0,
             ACCORDION_HEADING_CSS
         );
+    }
+
+    // --- Language requirement field extraction ---
+
+    #[test]
+    fn placement_tests_reads_every_threshold_of_the_first_parenthetical() {
+        // one, in the space-before-colon spelling of the prose form
+        assert_eq!(
+            placement_tests("… (VEPT : 53) …"),
+            vec![PlacementTest {
+                name: "VEPT".to_string(),
+                score: 53
+            }]
+        );
+        // two, ANDed: TCF-TP and its /ÉÉ sub-score
+        assert_eq!(
+            placement_tests("… (TCF-TP: 400 et TCF-TP/ÉÉ: 14) …"),
+            vec![
+                PlacementTest {
+                    name: "TCF-TP".to_string(),
+                    score: 400
+                },
+                PlacementTest {
+                    name: "TCF-TP/ÉÉ".to_string(),
+                    score: 14
+                },
+            ]
+        );
+        // only the first parenthetical: a later « (VEPT : 63) » is ignored
+        assert_eq!(
+            placement_tests("… (VEPT : 53) … (VEPT : 63) …"),
+            vec![PlacementTest {
+                name: "VEPT".to_string(),
+                score: 53
+            }]
+        );
+        // malformed parentheticals degrade to no threshold, never a panic
+        for degenerate in [
+            "Réussir le cours ANL-2020.", // no parenthetical at all
+            "(VEPT : 53",                 // no closing parenthesis
+            "( : 53)",                    // no test name before the colon
+            "(VEPT: )",                   // no score after the colon
+            "(VEPT: x)",                  // the score is not a number
+        ] {
+            assert!(
+                placement_tests(degenerate).is_empty(),
+                "for {degenerate:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn first_course_code_finds_the_sigle_or_nothing() {
+        assert_eq!(
+            first_course_code("Réussir le cours ANL-2020 Intermediate"),
+            Some("ANL-2020".to_string())
+        );
+        // trailing punctuation is trimmed off the token
+        assert_eq!(
+            first_course_code("… du cours FLS-2093, requis."),
+            Some("FLS-2093".to_string())
+        );
+        // a dash alone is not a LLL-DDDD sigle
+        assert_eq!(first_course_code("(TCF-TP/ÉÉ: 14)"), None);
+        assert_eq!(first_course_code("aucun sigle ici"), None);
+    }
+
+    #[test]
+    fn a_whole_page_lifts_the_two_box_requirement_and_keeps_negotiated_raw() {
+        // the two-box requirement rides in a rule's notes beside its course
+        // cards; a negotiated rule sits next to it
+        let regle4 = accordion(
+            "Règle 4 – 3 crédits parmi :",
+            &format!(
+                "{}{}{}",
+                cards(&["ANL-2020", "FLS-2093"]),
+                line("Pour la personne francophone, la réussite du cours ANL-2020 Intermediate English II (VEPT : 53) est requise pour diplômer."),
+                line("Pour la personne non-francophone, la réussite du cours FLS-2093 Rédaction (TCF-TP : 400 et TCF-TP/ÉÉ : 14) est requise pour diplômer."),
+            ),
+        );
+        let negotiated = accordion(
+            "Règle 5 – 3 crédits parmi :",
+            &line("Réussir les cours requis par sa concentration."),
+        );
+        let page = parsed(&group(
+            None,
+            &block("Génie des eaux", None, &format!("{regle4}{negotiated}")),
+        ));
+
+        let requirement =
+            page.program.language_requirement.expect("requirement");
+        assert_eq!(requirement.francophone.course, "ANL-2020");
+        assert_eq!(
+            requirement.francophone.tests,
+            vec![PlacementTest {
+                name: "VEPT".to_string(),
+                score: 53
+            }]
+        );
+        assert_eq!(
+            requirement
+                .non_francophone
+                .expect("non_francophone")
+                .tests
+                .len(),
+            2
+        );
+        // the two language notes are lifted out; the course cards stay
+        assert!(page.program.rules[0].notes.is_empty());
+        assert!(matches!(
+            page.program.rules[0].courses,
+            RuleCourses::List { .. }
+        ));
+        // the negotiated rule keeps its raw and raises no anomaly
+        assert!(matches!(
+            page.program.rules[1].courses,
+            RuleCourses::Keyword {
+                courses: Keyword::Negotiated,
+                ..
+            }
+        ));
+        assert!(page.anomalies.is_empty(), "got {:?}", page.anomalies);
+    }
+
+    #[test]
+    fn a_prose_english_rule_becomes_the_requirement_once() {
+        // prose form (génie physique/industriel/mécanique): the whole rule
+        // body is the requirement; repeated in a concentration (mécanique),
+        // the first wins
+        let english = accordion(
+            "Règle 2 – 3 crédits parmi :",
+            &line("Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues peut choisir un cours d'anglais de niveau supérieur."),
+        );
+        let page = parsed(&format!(
+            "{}{}",
+            group(None, &block("Génie des eaux", None, &english)),
+            group(
+                Some(CONCENTRATIONS_HEADING),
+                &block("Robotique", Some("18 crédits exigés"), &english)
+            ),
+        ));
+
+        assert!(page.program.rules.is_empty());
+        assert!(page.program.concentrations[0].rules.is_empty());
+        let requirement =
+            page.program.language_requirement.expect("requirement");
+        assert_eq!(requirement.francophone.course, "ANL-2020");
+        assert_eq!(
+            requirement.francophone.tests,
+            vec![PlacementTest {
+                name: "VEPT".to_string(),
+                score: 53
+            }]
+        );
+        assert!(requirement.non_francophone.is_none());
+        assert!(page.anomalies.is_empty(), "got {:?}", page.anomalies);
     }
 }

@@ -65,19 +65,12 @@
       ]
     },
     {
-      "title": "Autres exigences – Règle 1",
-      "constraint": {
-        "min": 3,
-        "max": 3
-      },
-      "raw": "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues doit choisir un cours d'anglais de niveau supérieur. S'il a acquis le niveau Advanced English II (VEPT : 63), il peut choisir un cours d'une autre langue moderne."
-    },
-    {
       "title": "Autres exigences – Règle 2",
       "constraint": {
         "min": 15,
         "max": 15
       },
+      "courses": "negotiated",
       "raw": "Réussir les cours requis par sa concentration."
     }
   ],
@@ -393,5 +386,17 @@
   ],
   "notes": [
     "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GIN-3580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GIN-3590, GIN-3591 et GIN-3592. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
-  ]
+  ],
+  "language_requirement": {
+    "francophone": {
+      "course": "ANL-2020",
+      "tests": [
+        {
+          "name": "VEPT",
+          "score": 53
+        }
+      ],
+      "raw": "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues doit choisir un cours d'anglais de niveau supérieur. S'il a acquis le niveau Advanced English II (VEPT : 63), il peut choisir un cours d'une autre langue moderne."
+    }
+  }
 }

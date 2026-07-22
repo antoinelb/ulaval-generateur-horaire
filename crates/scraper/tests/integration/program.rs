@@ -13,33 +13,18 @@ const FIXTURE_DIR: &str = concat!(
 const FIXTURES: &[(&str, &[&str])] = &[
     ("baccalaureat-en-genie-civil", &[]),
     ("baccalaureat-en-genie-des-eaux", &[]),
-    (
-        "baccalaureat-en-genie-industriel",
-        &[
-            "Réussir le cours ANL-2020",
-            "Réussir les cours requis par sa concentration",
-        ],
-    ),
+    // the ANL-2020 requirement now becomes `language_requirement` and « requis
+    // par sa concentration » a recognized `negotiated` rule: neither is an
+    // anomaly anymore (ADR `2026-07-exigence-linguistique-champ-dedie`,
+    // `2026-07-regles-negociees-reconnues`)
+    ("baccalaureat-en-genie-industriel", &[]),
     (
         "baccalaureat-en-genie-mecanique",
-        &[
-            // its concentrations sit under no <h3> at all
-            "3 blocks under no heading",
-            "Réussir le cours ANL-2020",
-            "Réussir le cours ANL-2020",
-            "Réussir le cours ANL-2020",
-            // a heading cut off mid-sentence, naming no number
-            "Règle 1 – Réussir la scolarité de",
-            "deuxième cycle suivante :",
-        ],
+        // the three ANL-2020 rules and the passage intégré are handled now;
+        // only the concentrations sitting under no <h3> remain an anomaly
+        &["3 blocks under no heading"],
     ),
-    (
-        "baccalaureat-en-genie-physique",
-        &[
-            "Réussir le cours ANL-2020",
-            "Le profil est satisfait par la réussite",
-        ],
-    ),
+    ("baccalaureat-en-genie-physique", &[]),
     ("maitrise-en-genie-des-eaux-avec-memoire", &[]),
 ];
 
@@ -142,7 +127,69 @@ fn every_course_group_of_a_rule_reaches_the_course_list() {
     assert_eq!(courses.len(), 19);
     assert!(courses.contains(&"ENT-4020".to_string()));
     assert!(courses.contains(&"GEX-3501".to_string()));
-    assert_eq!(rule.notes.len(), 8, "six subgroup labels and two notes");
+    assert_eq!(
+        rule.notes.len(),
+        6,
+        "six subgroup labels; the two language notes moved to \
+         program.language_requirement"
+    );
+}
+
+// The language requirement is a course-or-test graduation gate lifted out of
+// the rules/notes it hid in into its own field (ADR
+// `2026-07-exigence-linguistique-champ-dedie`).
+#[test]
+fn the_language_requirement_becomes_its_own_field() {
+    use ulaval_scheduler_core::PlacementTest;
+
+    // two-box layout: both audiences, FLS-2093 carrying two ANDed thresholds
+    let eaux = parse_fixture("baccalaureat-en-genie-des-eaux");
+    let requirement = eaux
+        .program
+        .language_requirement
+        .expect("génie des eaux states a language requirement");
+    assert_eq!(requirement.francophone.course, "ANL-2020");
+    assert_eq!(
+        requirement.francophone.tests,
+        vec![PlacementTest {
+            name: "VEPT".to_string(),
+            score: 53
+        }]
+    );
+    let french = requirement
+        .non_francophone
+        .expect("the two-box layout spells out the non-francophone branch");
+    assert_eq!(french.course, "FLS-2093");
+    assert_eq!(
+        french.tests,
+        vec![
+            PlacementTest {
+                name: "TCF-TP".to_string(),
+                score: 400
+            },
+            PlacementTest {
+                name: "TCF-TP/ÉÉ".to_string(),
+                score: 14
+            },
+        ]
+    );
+
+    // prose layout: francophone only, and only the first threshold — the later
+    // « (VEPT : 63) » upgrade tier stays in raw
+    let physique = parse_fixture("baccalaureat-en-genie-physique");
+    let requirement = physique
+        .program
+        .language_requirement
+        .expect("génie physique states a language requirement");
+    assert_eq!(
+        requirement.francophone.tests,
+        vec![PlacementTest {
+            name: "VEPT".to_string(),
+            score: 53
+        }]
+    );
+    assert!(requirement.non_francophone.is_none());
+    assert!(requirement.francophone.raw.contains("VEPT : 63"));
 }
 
 fn parse_fixture(name: &str) -> parser::program::ProgramPage {
