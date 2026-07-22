@@ -1,5 +1,7 @@
 # Plan — le cœur solveur
 
+**Avant toute chose, faire en sorte que rouler `programs` sans url rafraîchit l'ensemble des programmes déjà dans `data`.**
+
 Étape 2 (« Cœur ») de l'ordre de construction de `docs/project_plan.md` — l'étape 1 (scraper) est livrée, son plan test-first vit dans l'historique git de ce fichier.
 Fondements, mathématiques et justifications complètes dans `docs/conception/solveur-conception.md` — **le lire avant d'écrire du code**.
 Ce plan-ci porte le *quoi faire*, dans quel ordre ; le doc de conception porte le *pourquoi*.
