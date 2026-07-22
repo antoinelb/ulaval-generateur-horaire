@@ -1,73 +1,118 @@
-# Plan
+# Plan — le cœur solveur
 
-Test-first parser implementation — step 1 of the build order in `docs/project_plan.md`.
-The expected outputs in `tests/fixtures/test_cases/` are done; this plan makes them pass.
-Rhythm for each page type: freeze the real HTML → write the failing integration test → implement the parser until it matches the expected JSON → pin edge cases with inline unit tests.
+Étape 2 (« Cœur ») de l'ordre de construction de `docs/project_plan.md` — l'étape 1 (scraper) est livrée, son plan test-first vit dans l'historique git de ce fichier.
+Fondements, mathématiques et justifications complètes dans `docs/conception/solveur-conception.md` — **le lire avant d'écrire du code**.
+Ce plan-ci porte le *quoi faire*, dans quel ordre ; le doc de conception porte le *pourquoi*.
 
-- [x] Build e2e test cases for the parser
-    - [x] All courses page (catalogue)
-    - [x] Course page
-    - [x] Program page
-- [x] Freeze HTML fixtures
-    - [x] Fetch (one-off `curl`, honest user agent) the real page behind each test case into `tests/fixtures/test_cases/courses/*.html` and `tests/fixtures/test_cases/programs/*.html`, same basename as the expected JSON
-    - [x] Freeze the catalogue pages into `tests/fixtures/test_cases/catalogue/`: `gex_{0,1,2}.html` (50 courses, 2 courses, 0 courses — ADR `2026-07-catalogue-teste-sur-html-gele`) and `all_last.html` (« Aucun résultat » variant — ADR `2026-07-page-aucun-resultat-et-total-optionnel`)
-    - Verify: every `test_cases/courses/*.json` and `test_cases/programs/*.json` has a same-named `.html` source, and the two catalogue pages are present
-- [x] Parser skeleton in `scraper`
-    - [x] Dependencies: `scraper` (HTML parsing), `thiserror` (library-side errors; `anyhow` stays at the binary frontier)
-    - [x] Module layout: `parse/` with `catalogue.rs`, `prerequisites.rs`, `course.rs`, `program.rs`, and a shared error type that carries the offending raw text (an anomaly is data, never a panic)
-    - Verify: `cargo check` passes with the empty module tree
-- [x] Catalogue parser (`parse/catalogue.rs`)
-    - [x] One page of HTML → `{code, title, url}` entries + `total_results: Option<usize>` (`None` on the « Aucun résultat » variant)
-    - [x] Termination signal: 0 entries **with** proof of page shape (`total-resultats` element **or** texte « Aucun résultat ») = end of results; neither = markup drift = error (ADR `2026-07-page-aucun-resultat-et-total-optionnel`)
-    - [x] Malformed entry → raw error line, never silently dropped
-    - Verify: integration test parses the four frozen catalogue pages, merges, sorts and dedups, and compares with `test_cases/catalogue/gex.json`; unit tests on inline snippets pin what the frozen pages never exercise (0 entries with neither marker = drift, malformed entry)
-- [x] Fetch module, up to complete catalogues (`fetch.rs`)
-    - [x] `Fetcher`: async client (honest user agent, 30 s timeout), shared throttle ~10 req/s (`fetch(&self)`, mutexed clock), bounded retries (3; transport, 5xx, 429), `Retry-After` honored (seconds + HTTP-date, 5 min cap, bumps the shared clock) — ADR `2026-07-conception-du-fetcher`
-    - [x] Everything testable: pure `should_retry` / `parse_retry_after` unit-tested, `wait_for_slot` on tokio's paused clock, full HTTP behavior (200, 503 + `Retry-After` then 200, permanent 404, retries exhausted) against `wiremock`
-    - [x] Two-step pagination per matière URL: page 0 gives total + page size → remaining pages fan out under the shared throttle; arithmetic reconciliation guarantees completeness (merged count == advertised total, per-page totals agree, hard page cap) — ADR `2026-07-pagination-du-catalogue-par-comptage`; the computed page count is an upper bound, trailing « Aucun résultat » pages tolerated when empty — ADR `2026-07-tolerance-des-pages-aucun-resultat-du-fan-out`; any mismatch = error that stops the run, never a silent truncation
-    - [x] Merge, sort, dedup entries across pages and matières (same shape as `test_cases/catalogue/gex.json`)
-    - [x] Full catalogue = the union of the matière facets: the site's index caps any query at 10 000 results, so page 0 provides the facet directory and one partition per matière fans out under the one shared throttle (bracketed `matieres%5B<id>%5D=<id>` form only — the flat form is silently ignored by the site); the banner total is ignored — the widget omitting 11 real courses is a ULaval bug the scraper doesn't work around — ADR `2026-07-partition-du-catalogue-par-matiere`, `2026-07-le-catalogue-est-lunion-des-facettes`
-    - [x] CLI wiring: a `catalogue` subcommand that writes the merged catalogue JSON (`anyhow` at the binary frontier) — clap 4 derive, exit code 2 on usage errors, `catalogue_errors.log` beside the artifact (ADR `2026-07-cli-dans-la-lib-et-style-derreurs`, `2026-07-adoption-de-clap`); optional `--output-dir`/`--url` flags with defaults `data` + the production URL, no scoped mode (ADR `2026-07-scraper-plein-catalogue-seulement`)
-    - Verify: `make test` green (unit + wiremock); run live on the full catalogue and spot-check the unique course count (~10 224, the facet union)
-- [x] Course page parser (`parse/course.rs`, préalables grammar included — drop `parse/prerequisites.rs`)
-    - [x] Préalables grammar (pure function in `course.rs`, raw text → `PrereqTree`, no HTML): ET/OU with parentheses → `all`/`any` trees; « Crédits exigés : N » → `program_credits` — tokenizer + explicit-stack state machine, no recursion (ADR `2026-07-conception-du-parseur-de-cours`)
-    - [x] Out-of-grammar text → kept raw-only and surfaced as an anomaly — `core::Prerequisites` is now an untagged enum `Parsed { raw, tree } | Raw { raw }` (ADR `2026-07-prealables-hors-grammaire-en-enum`)
-    - [x] Page HTML → `core::Course`: code, title, credits, cycle, prerequisites (raw + tree via the grammar), equivalents, seasons → choice groups → sections (NRC, section, mode) → slots (day, start, end); selector map and extraction rules in ADR `2026-07-extraction-html-de-la-page-cours`
-    - [x] Section model: `SeasonOffering { groups: Vec<Vec<Section>> }` — pick one section per group, union the slots; `ComponentKind` dropped, one-off « Date: » slots excluded, guard on «plusieurs sections + sections liées» (ADR `2026-07-sections-en-groupes-de-choix`)
-    - [x] Fold a grammar `Err` into `Prerequisites::Raw` + an anomaly at the assembly site (the grammar function itself returns `Result<PrereqTree, ParseError>`)
-    - Verify: unit tests per grammar rule plus rejection cases that fall back to raw; integration test parses each frozen `courses/*.html` and compares `serde_json::Value` with the matching `test_cases/courses/*.json`
-- [x] Program page parser (`parser/program.rs`)
-    - [x] Three more test cases frozen and expected: `baccalaureat-en-genie-physique`, `baccalaureat-en-genie-industriel`, `baccalaureat-en-genie-mecanique` — between them they exercise six constructions the first three pages never did
-    - [x] Page HTML → `core::Program`: groups (`div.fe-bloc-section`) → blocks (`div.collapsible-sections`) → accordions; « Cours obligatoires » → `mandatory`, « Règle N – \<contrainte\> » → `rules`, the `<h3>` naming the role of a group — and a group that has none read by its block count, with an anomaly (ADR `2026-07-blocs-de-la-page-programme`)
-    - [x] Constraint grammar: `Un cours parmi :` → `{count: 1}`, `X crédits` / `X à Y crédits` → `{min, max}`, the « parmi : » tail optional; an unreadable one leaves `constraint: None` rather than a made-up number (ADR `2026-07-contrainte-de-regle-optionnelle`)
-    - [x] `Concentration` gains `mandatory` (génie industriel, mécanique) and an optional `credits_required` (ADR `2026-07-cours-obligatoires-de-concentration`); a second program block feeds `Program.mandatory`, which retires the maîtrise's fabricated « Recherche » rule
-    - [x] Unrecognized rule text → `Raw` variant, surfaced, never ignored; `raw` carries the **whole** paragraph, the grammar matching only a prefix of it (ADR `2026-07-texte-brut-de-regle-paragraphe-complet`)
-    - [x] Prose no grammar covers — subgroup labels, English requirements, the stage exigé pour diplômer (GCI-2580, GEX-1580, GMC-2580) — kept in `notes` on rules and blocks, displayed and never interpreted (ADR `2026-07-notes-en-prose-conservees`)
-    - [x] The three hand-written fixtures regenerated from the frozen HTML: they predated it by four days and had lost ENT-4020/GEX-3501 and fabricated `{min:30,max:30}` (ADR `2026-07-fixtures-programmes-regenerees`)
-    - Verify: `make test` green at 100 % on `parser/program.rs`; the integration test parses each frozen `programs/*.html`, compares `serde_json::Value` with the matching `.json`, **and** pins the anomalies each page is expected to raise — an unlisted one fails
-- [x] Drive the program parser — `ulaval-scraper program <url>... [--output-dir data]`
-    - [x] The URLs are **mandatory positional arguments**: unlike `catalogue` and `courses`, this command has no derivable work queue — a program page URL is a slug no course code rebuilds, and only the programs whose rules are wanted need their page at all
-    - [x] One file per program, `data/programmes/{code}.json`, a bare `core::Program` — the very shape of the parser fixtures, so the integration test compares the written artifact byte for byte with `test_cases/programs/*.json` (ADR `2026-07-un-fichier-par-programme`)
-    - [x] A run writes only the programs it was named and sweeps nothing; `{code}.manuel.json` (the hand-encoded `cheminement_type`) is out of reach by construction (ADR `2026-07-cheminement-type-en-fichier-manuel`)
-    - [x] A failing URL is an anomaly in `data/programmes_errors.log`, never an abort — `collect`, not `try_collect`, with `write_error_log` warning on stderr (ADR `2026-07-echec-de-page-programme-non-bloquant`); no cache, the run is seconds not minutes
-    - Verify: `make test` green at 100 % on `scraper/src/program.rs`; live run over the six known programs, each output diffed against its fixture
-- [x] Next, out of parser scope (completes jalon 1): drive the course parser over the catalogue and write the session snapshots — `ulaval-scraper courses [--output-dir data] [--subjects gex gci]`
-    - [x] Work queue = `data/catalogue.json` (course URLs are slugs, not derivable from a code); `--subjects` narrows by code prefix, case-insensitive, and omitting it scrapes the whole catalogue; an unknown subject is a hard error
-    - [x] One `data/cours/{session}.json` per (season, year) found — `parse_seasons` now surfaces the year on `CoursePage.years`, `Course` stays keyed by season (ADR `2026-07-cours-par-session-et-annee`)
-    - [x] A failed page is an anomaly in `data/cours_errors.log`, never an abort — `collect`, not `try_collect` (ADR `2026-07-echec-de-page-cours-non-bloquant`)
-    - [x] Cache of parsed courses under `data/cache/cours/` (gitignored), written only for anomaly-free parses so a parser fix needs no manual purge (ADR `2026-07-cache-de-cours-parses`)
-    - [x] A full run removes session snapshots it no longer produces; a `--subjects` run and any `{session}.manuel.json` are left alone (ADR `2026-07-nettoyage-des-snapshots-perimes`)
-    - Verify: `make test` green at 100 % coverage; live GEX run writes `a2026.json`/`h2026.json`/`e2026.json` and a re-run issues no request for cached courses
-- [x] Close the parser gaps the first live run surfaced (see `cours_errors.log`) — GEX + GCI went from 40 anomalies to 1
-    - [x] Mode « Hybride »: kept as `Mode::Hybrid`; its « Sur Internet » plage carries no Journée/Horaire so `parse_slot` already drops it (ADR `2026-07-mode-hybride`), fixture `gex-3100`
-    - [x] « Crédits exigés : N » with no program: `ProgramCredits.program` is now `Option<String>` (ADR `2026-07-credits-exiges-sans-programme`), fixture `gex-3333`
-    - [x] `*`-suffixed sigles, and « Crédit » in the singular
-- [x] Close the parser gaps the GMC run surfaced (4 anomalies → 0); fixtures `gmc-7000`, `gmc-1590`, `act-4114`, `gci-2510`
-    - [x] Mode « À distance-hybride »: a second spelling of `Mode::Hybrid`, one `match` arm (ADR `2026-07-orthographe-a-distance-hybride`), GMC-7000
-    - [x] « 1000 à 4999 » bounding a credits requirement, bare (GMC-1590) or glued to a subject (« ACT-1000 à 4999, Crédits exigés : 39 », ACT-4114): stripped in `tokenize_prereq_raw` like the `*`s, leaving the two forms the grammar already reads (ADR `2026-07-credits-exiges-bornes-au-premier-cycle`)
-- [x] Courses with no credits card at all (GCI-2510, a « Stage » seminar: its `fe--faits-rapides` carries only « Cycle du cours » and « Modes d'enseignement ») — now `Ok(0)` rather than a hard error dropping the course; a card present but empty or unreadable stays an error (ADR `2026-07-cours-sans-carte-de-credits`)
-- [x] Close the parser gaps the catalogue-wide run surfaced; fixtures `phi-7750`, `esp-1000`, `frn-1112`, and `gci-2510` (now anomaly-free)
-    - [x] Any `dddd à dddd` bound on a credits requirement is stripped, not just the first-cycle one (« PHI-6000 à 8899, Crédits exigés : 12 », PHI-7750): the cycle it names is the cycle of the course carrying it, already in the snapshot (ADR `2026-07-bornes-de-credits-toutes-retirees`, replaces `2026-07-credits-exiges-bornes-au-premier-cycle`)
-    - [x] `PrereqTree::Raw { raw }` for any operand the planner cannot verify — an examination (FRN-1904), a range of courses (ESP-1000), a sigle the source mistyped (« FRN 19543 », FRN-1112), prose. Not recognized one by one: what is left when no checkable shape fits, and not an anomaly (ADR `2026-07-operande-non-verifiable-gardee-en-texte`)
-    - [x] `tokenize_prereq_raw` now splits on `(`, `)`, `ET`, `OU` and classifies each operand whole (`classify_operand`), one `match` arm per shape — the `skip` counters, the look-aheads and the `strip_credit_bounds` pre-pass are gone (ADR `2026-07-operande-reconnue-dun-seul-tenant`)
-- [ ] Resume across a killed process (jalon 5): the cache covers re-runs, not a run interrupted mid-flight
+Deux solveurs distincts qui partagent un squelette : **A** (horaire hebdomadaire, jalon 2) et **B** (organigramme, jalons 7–9).
+Les deux sont faits main (ADR `2026-07-b-placement-par-satisfaction-fait-main` : placement seul, pas d'optimisation ; l'embranchement Pumpkin est fermé, Pumpkin reste le repli documenté en conception §5.2–§6) et B retourne **toutes** les solutions faisables, bornées par le budget de nœuds (ADR `2026-07-b-enumere-toutes-les-solutions`).
+**B place une liste de cours donnée — il ne choisit jamais de cours** : l'étudiant (ou le directeur pour une base générale) fournit la liste, possiblement partielle ; la couverture des règles et la validation de la sélection sont une fonction pure séparée de `core` consommée par l'UI.
+
+**Conventions (rappel `CLAUDE.md`).** Test-first : écrire le test qui échoue, puis l'implémentation jusqu'au vert.
+`make test` (couverture `cargo +nightly llvm-cov`, cible 100 % hors `lib.rs`/`mod.rs`/`main.rs`) et `make static` (fmt + clippy `-D warnings`) verts à chaque tâche.
+**Ni boucle `while` ni récursion** (itérateurs, `fold`).
+**Éviter `expect` en production.**
+Le code est en anglais, le domaine en français dans la prose.
+Toute décision prise en cours de route = un ADR individuel sous `docs/conception/adr/`, jamais laissée dans la conversation seule.
+L'absence de perte silencieuse s'applique partout : une règle, un préalable ou une opérande hors grammaire est remonté, jamais ignoré.
+
+**Dépendances nouvelles attendues.** `core` : aucune ; `proptest` en `dev-dependencies` pour les tests de propriété (liberté de conflit).
+
+---
+
+## Phase 0 — Fondations partagées
+
+- [ ] `week.rs` : encodage du temps
+    - [ ] `WeekMask([u64; 32])` — semaine à seaux de 5 min (7 × 288 = 2016 bits ; exact, toutes les plages réelles sont multiples de 5 min) ; `overlaps` (ET mot à mot), `merge` (OU mot à mot), `is_empty`
+    - [ ] `slots_to_mask(&[Slot]) -> WeekMask` : `Day` + `Time` → index de seau ; une `Section` sans plage (à distance) donne le masque vide
+    - [ ] Opérations de préférence sur bits : `before_noon_free`, `has_midday_gap`, `day_transitions` (journées compactes) — signatures d'abord, sémantique à préciser avec le classement de A (voir « Encore à planifier »)
+    - Verify : tests unitaires sur des plages réelles (p. ex. GCI-1007) ; propriété : `overlaps` symétrique, `merge` associatif/commutatif, `slots_to_mask` d'une option entièrement à distance = vide
+
+- [ ] Construction du domaine de A (dans `weekly.rs`, fonction pure)
+    - [ ] `build_domain(course, season) -> Vec<Opt>` où `Opt = { nrc_set, mask }` : une entrée par `options[i]`, masque = union de ses sections
+    - [ ] Équivalences : cours à `equivalents` → retenir l'offre de la plus récente des deux saisons
+    - [ ] Section forcée : `force_nrc(domain, nrc)` restreint aux options dont l'ensemble de sections **contient** le NRC (jamais « l'option k » — un NRC peut être dans plusieurs options ; cf. test `one_nrc_may_appear_in_several_options`)
+    - [ ] Crédits en intervalle : la pondération choisie par l'étudiant entre en paramètre (`2026-07-credits-variables-en-enum`)
+    - Verify : tests sur un cours multi-options réel ; forcer un NRC partagé par deux options en garde deux ; forcer un NRC absent vide le domaine
+
+---
+
+## Phase 1 — Solveur A (jalon 2, arrêté, fait main)
+
+- [ ] `weekly.rs` : la recherche
+    - [ ] `enumerate` : produit incrémental élagué par `fold` sur les cours (ni `while` ni récursion), élagage par `overlaps`, collecte **toutes** les feuilles valides (le classement en a besoin)
+    - [ ] `is_feasible(&[Vec<Opt>]) -> bool` (le veto pour B) — **court-circuite** (`try_fold`, arrêt dès que les préfixes se vident), sans payer la collecte complète — et `best_schedule(&[Vec<Opt>]) -> Option<(Schedule, Score)>` (le score)
+    - [ ] `Schedule` (ensemble de NRC choisis, partageable en URL plus tard) et `Score`
+    - Verify (propriétés `proptest`) : tout `Schedule` renvoyé est sans conflit ; `is_feasible` ⇔ `best_schedule.is_some()` ; ajouter un cours ne peut jamais rendre faisable un ensemble infaisable
+
+- [ ] Rapport de conflit (cas infaisable)
+    - [ ] Quand `is_feasible` est faux, identifier les plages en conflit à surligner (au minimum : les paires de cours sans aucune combinaison d'options compatible ; forme Max-CSP « moins de conflits » à préciser si l'on veut un ensemble minimal — voir doc §1.1 et §7)
+    - Verify : sur un ensemble fabriqué sans solution, les plages rapportées couvrent bien le conflit ; sur un ensemble faisable, rapport vide ; **cas piège** : un ensemble infaisable dont toutes les paires sont compatibles (conflit à trois cours multi-options) produit quand même un rapport non vide
+
+- [ ] Harnais CLI (livrable du jalon 2)
+    - [ ] Imprime un horaire valide pour une liste de codes de cours d'une session (`anyhow` à la frontière binaire)
+    - Verify : `make test` vert ; le harnais imprime un horaire sans conflit pour des codes GEX réels ; liberté de conflit testée par propriétés
+
+---
+
+## Phase 2 — Substrat de B
+
+- [ ] Modèle du domaine de B (`organigramme.rs`)
+    - [ ] Entrée = **liste de cours fournie** (possiblement partielle — tronc seul, ou base du directeur), sessions `{1,…,8}`, saison de chaque session, crédits, plafond ; B ne dérive jamais de candidats depuis les règles
+    - [ ] Contraintes de l'utilisateur → **réductions de domaine à des singletons** : cours réussis (retirés, crédits précomptés), cours voulus (forcés — p. ex. avec un ami), sessions remplies à la main, session à l'étranger (puits de crédits). Un seul mécanisme pour « à partir de zéro » *et* « avec cours fixés »
+    - Verify : un cours épinglé a un domaine singleton ; un cours réussi ne figure plus dans les candidats mais compte dans les crédits et les préalables ; une liste partielle se place sans erreur
+
+- [ ] Vérificateur de règles (`rules.rs` — l'API produit, cœur pur, consommée par l'UI ; jalon 8)
+    - [ ] Couverture d'une sélection : par règle, **satisfait / à combler / candidats** ; `Constraint::Count{n}` exige `n` choisis, `Constraint::Credits{min,max}` une somme dans l'intervalle ; obligatoires manquants signalés
+    - [ ] Candidats pour combler une règle = sa liste de cours, filtrée par `weekly::is_feasible` contre l'horaire ouvert de la session visée (A suffit — aucun cheminement à vérifier)
+    - [ ] `RuleCourses::{Reference, Keyword, Raw}` (`Keyword::{Any, Negotiated}`) et toute règle `constraint: None` **remontées à l'étudiant, jamais inventées** (`2026-07-contrainte-de-regle-optionnelle`, `2026-07-regles-negociees-reconnues`) ; la règle 5 GEX est `Keyword::Any` (domaine = tout le catalogue) → choix de l'étudiant, jamais énumérée
+    - Verify : sur les règles réelles du bac GEX (1 parmi 3 ; 3–9 cr parmi 4 ; 3–9 cr parmi 9 ; 3 cr parmi 19 ; règle 5 `Keyword::Any` remontée), le rapport accepte des sélections conformes fabriquées et signale les non conformes avec la règle fautive ; une règle `constraint: None` (fixture synthétique — aucune dans GEX) produit une note, pas un verdict
+
+- [ ] Filtres structurels (chacun en O(cours), à appliquer dans cet ordre)
+    - [ ] Offre par saison ; précédence par parcours du `PrereqTree` (`All` = chaque enfant strictement avant ; `Any` = au moins un avant ; `ProgramCredits` = crédits accumulés avant ≥ seuil ; opérandes `Raw`/non vérifiables **remontées, jamais imposées** — `2026-07-operande-non-verifiable-gardee-en-texte`) ; capacité de crédits par session
+    - [ ] Option « concomitants » : relâche « strictement avant » en « avant ou identique »
+    - Verify : un cours placé avant son préalable est rejeté ; un arbre OU satisfait par un seul enfant passe ; une saison non offerte est rejetée ; un dépassement de plafond est rejeté
+
+- [ ] Oracle de faisabilité mémoïsé (`feasibility.rs`)
+    - [ ] `term_feasible(cache, (Season, BTreeSet<code>), snapshot) -> bool` appelant `weekly::is_feasible` sur le domaine construit, clé canonique indépendante de l'ordre
+    - Verify : deux candidats partageant l'ensemble de cours d'une session ne calculent la faisabilité qu'une fois (compteur d'appels sous-jacents)
+
+---
+
+## Phase 3 — Solveur B (fait main, placement seul, toutes les solutions)
+
+- [ ] `organigramme.rs` : la recherche de placement
+    - [ ] Affectation systématique **complète** cours par cours (frontière par `fold`, ni `while` ni récursion), élaguée par les filtres structurels à chaque extension
+    - [ ] Ordre de valeurs = session du `cheminement_type` de référence d'abord, puis sessions voisines ; sans seed (autre programme, base du directeur) : plus tôt offerte d'abord — la première solution de la liste ressemble au cheminement de référence
+    - [ ] A-veto mémoïsé (`term_feasible`) dès qu'une session est complète, pas seulement aux feuilles
+    - [ ] Budget de nœuds explicite, qui borne aussi la taille de l'ensemble retourné (mémoire WASM) : recherche épuisée sans solution = « aucun cheminement faisable » **prouvé** ; budget atteint = « budget épuisé », jamais confondus
+    - [ ] **Rejet, jamais réparation** : un préfixe qui échoue est abandonné, jamais corrigé sur place
+    - [ ] Sortie : **toutes les solutions faisables trouvées**, dans l'ordre de la recherche (ADR `2026-07-b-enumere-toutes-les-solutions`) — recherche épuisée = ensemble complet prouvé (vide = infaisable) ; budget atteint = ensemble partiel, signalé ; l'utilisateur édite, on replace
+    - Verify : sur le bac GEX complet (34 obligatoires + électifs choisis), l'énumération complète sort en bien moins d'une seconde ; **mesure consignée** : le nombre de solutions du bac complet *et* d'une liste partielle (tronc seul) — tout raffinement (dédoublonnage d'électifs interchangeables) attend cette donnée ; propriétés — chaque solution de l'ensemble respecte précédence, offre, capacité, singletons épinglés, et chaque session est horaire-faisable via A ; sur entrée sur-contrainte fabriquée sans solution, sortie « infaisable » prouvée (pas de plantage, pas de faux positif) ; un budget minuscule forcé rapporte « budget épuisé » avec ensemble partiel, jamais « infaisable »
+
+---
+
+## Phase 4 — Intégration et harnais
+
+- [ ] Harnais CLI/test de B
+    - [ ] Fournir des contraintes (réussis, voulus, sessions manuelles, étranger) et une liste de cours → le premier organigramme imprimé en entier, le compte total de solutions affiché ; avec une liste partielle, le rapport de couverture des règles imprimé à côté
+    - Verify : `make test` vert à couverture cible ; un organigramme signalant un cours placé avant son préalable et ce qui manque pour diplômer (jalon 8, via le vérificateur)
+
+- [ ] Tests de propriété transverses de B
+    - Verify : sur des contraintes et listes générées, toute solution de l'ensemble retourné respecte précédence, offre, capacité, et chaque session est horaire-faisable via A ; le vérificateur de règles est cohérent (une sélection déclarée conforme ne perd aucune règle)
+
+- [ ] Câblage `ui` (jalon 7+ ; hors cœur) : `core` piloté depuis Dioxus, snapshot chargé au navigateur — **aucune règle métier dans la vue** (invariant) : couverture des règles, candidats et validation viennent tous de `core`. Lire `.claude/dioxus.md` avant tout code Dioxus 0.7
+
+---
+
+## Encore à planifier (à faire remonter, pas à inventer)
+
+Ces points sont des **décisions ou des données manquantes**, pas des tâches d'implémentation ; les trancher avec l'utilisateur et les consigner en ADR avant de coder ce qui en dépend.
+
+- **Plafond de crédits par session** : dur (17 ?) ou cible molle — le chiffre n'a aucune source documentée, à confirmer avec le directeur.
+- **Pondération des crédits en intervalle** : requise d'emblée, ou défaut à la borne basse.
+- **Sémantique exacte des préférences de A** (journées compactes, matins libres, pause dîner) — pour le classement du jalon 10, à calibrer contre des données réelles (Phase 0 laisse les signatures ouvertes) ; B n'a plus d'objectif.
+- **Interaction règles × profils** (jalon 6) — désormais côté vérificateur/affichage, plus côté solveur.
+- **Format JSON de l'organigramme** échangé entre « Cours pour le programme » et l'horaire hebdomadaire — question ouverte du plan, provisoire.
+- **Forme minimale du rapport de conflit** de A (paires suffisantes, ou ensemble minimal Max-CSP — le cas « paires compatibles, ensemble infaisable » doit être couvert quelle que soit la forme).
+- **Présentation des solutions multiples de B dans l'UI** : la première est proposée ; comment (et si) offrir les autres — et si la mesure révèle une explosion de variantes interchangeables, la forme du dédoublonnage.

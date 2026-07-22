@@ -1,7 +1,7 @@
 # PLAN — Générateur d'horaire / planificateur de cheminement
 
 **Date :** juillet 2026.
-**Statut :** conception terminée, implémentation non commencée.
+**Statut :** scraper (étape 1) livré ; cœur solveur (étape 2) conçu, implémentation à venir — conception dans `docs/conception/solveur-conception.md`, plan d'implémentation dans `docs/next_steps.md`.
 **Rôle de ce document :** point d'entrée du projet, autonome — tout ce qu'il faut pour implémenter est ici.
 Les documents de conception d'origine sont archivés dans `docs/conception/` ; ils gardent le détail supplémentaire (grammaires, exemples de formats JSON, résultats du spike, alternatives rejetées), mais en cas de contradiction, ce document a préséance.
 Toute nouvelle décision est documentée dans un fichier individuel sous `docs/conception/adr/`, et ce document est mis à jour en conséquence : le plan porte le *quoi*, l'ADR conserve le *pourquoi*.
@@ -149,10 +149,10 @@ Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par
 
 ### Ordre de construction
 
-1. **Scraper d'abord** — tue le plus gros risque externe (la forme réelle des données) avant que du code n'en dépende ; démarche test-first (voir `docs/next_steps.md`) : fixtures e2e des pages catalogue/cours/programme → parseur validé → tests unitaires.
+1. **Scraper d'abord** — tue le plus gros risque externe (la forme réelle des données) avant que du code n'en dépende ; démarche test-first : fixtures e2e des pages catalogue/cours/programme → parseur validé → tests unitaires.
    Les sorties attendues vivent dans `tests/fixtures/test_cases/` (`catalogue/`, `classes/`, `programs/`) ; pour le catalogue, la vérité terrain est le catalogue fusionné de la facette GEX (`catalogue/gex.json`), comparé au parsing de pages HTML gelées, les comportements par page (page vide, `total_results` optionnel) étant épinglés par des tests unitaires (ADR `2026-07-catalogue-artefact-commite`, révisé par `2026-07-catalogue-teste-sur-html-gele`).
    Livrable : `data/{session}.json` + fixtures HTML + tests du parseur.
-2. **Cœur ensuite** — Rust pur contre les vraies données de l'étape 1 : combinaison de sections, préférences, préalables, génération d'organigramme.
+2. **Cœur ensuite** — Rust pur contre les vraies données de l'étape 1 : combinaison de sections, préférences, préalables, génération d'organigramme (démarche détaillée : `docs/next_steps.md`).
    Livrable : un harnais CLI/test qui imprime des horaires valides pour des codes de cours donnés, absence de conflit testée par propriétés.
 3. **UI en dernier** — à ce stade c'est un problème de rendu, pas de conception.
 4. **Cron CI** — ~30 lignes de YAML autour du binaire existant + notifications d'échec.
@@ -184,7 +184,7 @@ Entrer des codes de cours pour une session : l'horaire se crée automatiquement 
 
 | Semaine | Jalon | Démonstration |
 |---|---|---|
-| 1 | **Scraper d'une session** (test-first, voir `docs/next_steps.md`) : workspace Cargo, types du domaine dans `core`, fixtures e2e des pages catalogue et cours, parseur validé, snapshot `data/cours/a2026.json` pour les matières GEX | Le JSON de GCI-1007 (cours + laboratoires + sections liées) est correct |
+| 1 | **Scraper d'une session** (test-first) : workspace Cargo, types du domaine dans `core`, fixtures e2e des pages catalogue et cours, parseur validé, snapshot `data/cours/a2026.json` pour les matières GEX | Le JSON de GCI-1007 (cours + laboratoires + sections liées) est correct |
 | 2 | **Cœur solveur** : détection de conflits, combinaison automatique de sections (backtracking borné, une section de chaque type, sections liées incluses), harnais CLI | Le harnais imprime un horaire valide pour une liste de codes de cours ; absence de conflit testée par propriétés |
 | 3 | **UI minimale de l'horaire** : app Dioxus servie en statique, ajout/retrait de cours par code, grille hebdomadaire, combinaison automatique affichée, plages en conflit surlignées quand aucune combinaison n'existe, nombre total de crédits affiché | Le requis central de Daniel de bout en bout : entrer des codes de cours d'une session → l'horaire se monte tout de suite, crédits et conflits visibles |
 
@@ -206,7 +206,7 @@ Le bac complet : les sessions se remplissent automatiquement et restent modifiab
 |---|---|---|
 | 7 | **Automatisation par organigramme** : format JSON provisoire de l'organigramme, ajout automatique des cours de la session visée, mise en évidence des cours qui rentreraient dans l'horaire | Charger un organigramme → l'horaire de la session se remplit tout seul |
 | 8 | **Couverture des règles** : satisfait / à combler / cours candidats pour un organigramme donné ; validation de l'ordre des cours selon les préalables (équivalences comprises) | L'organigramme signale un cours placé avant son préalable et ce qui manque pour diplômer |
-| 9 | **Génération de l'organigramme sous contraintes** : cours réussis, cours voulus, sessions remplies à la main, session à l'étranger ; règles et sessions d'offre respectées | Fournir ses contraintes → un organigramme complet et valide est proposé |
+| 9 | **Génération de l'organigramme sous contraintes** : cours réussis, cours voulus, sessions remplies à la main, session à l'étranger ; préalables, offre et plafond respectés ; **placement seul, fait main, toutes les solutions retournées** (bornées par le budget de nœuds) — le solveur ne choisit jamais de cours, l'étudiant fournit la liste et le vérificateur de règles (`core`) valide la sélection et affiche la couverture (ADR `2026-07-b-placement-par-satisfaction-fait-main`, sortie révisée par `2026-07-b-enumere-toutes-les-solutions`) | Fournir ses contraintes et sa liste de cours → tous les organigrammes complets et valides sont énumérés, le premier (le plus proche du cheminement de référence) proposé |
 | 10 | **Préférences et partage** : classement des combinaisons (journées compactes, matins libres, pause dîner), partage d'un horaire par URL, contribution d'un cours manuel (fusion de `{session}.manuel.json` + bouton d'issue préremplie) ; polissage | Changer une préférence reclasse l'horaire ; l'URL copiée rouvre le même horaire ailleurs ; un cours proposé par Daniel apparaît pour tous après commit |
 
 Le cœur (requis explicites de Daniel, voir « Portée ») = v0 + jalons 4–5 ; la vision complète s'achève avec la v2.
@@ -236,7 +236,8 @@ Inchangé et toujours contraignant : hypothèse des snapshots par saison, format
 - Format de l'organigramme JSON et son intégration entre « Cours pour le programme » et l'horaire hebdomadaire (produit par l'un, consommé par l'autre? édité à la main au début?).
 - Agencement des écrans (pas nécessairement un écran unique) — à explorer une fois les fonctionnalités gelées.
 - Le catalogue est-il joignable sans identifiants depuis le CI? (Détermine la gestion de secrets — à résoudre au jalon 1.)
-- Modèle exact de préférences/scoring — à concevoir contre des données réelles à l'étape 2.
+- Modèle exact de préférences/scoring — structure arrêtée dans `docs/conception/solveur-conception.md` (opérations sur bits + somme pondérée) ; poids et sémantique fine à calibrer contre des données réelles.
+- Plafond de crédits par session : dur (17 ?) ou cible molle — aucun chiffre documenté, à confirmer avec le directeur.
 - Cadence du cron (hebdomadaire vs quotidien) et canal de notification d'échec.
 - Cheminements types d'autres programmes que GEX : qui les fournit, le cas échéant?
 - Niveau de couverture des cas particuliers exigé avant livraison (stages, cours multi-sessions, formation à distance, formes de préalables non observées) — principal risque résiduel d'estimation.

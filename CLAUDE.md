@@ -9,13 +9,12 @@ The whole domain is French: keep domain vocabulary in French (`cours`, `cheminem
 
 **Code is English.** All identifiers (variables, functions, types), error messages, and data keys (JSON) are in English — as the test fixtures already do: `title`/`credits`/`prerequisites`/`mandatory`/`rules`, never `titre`/`crédits`/`préalables`/`obligatoires`/`regles`. French domain terms belong in prose and displayed text, not in code or serialized keys.
 
-**Current state: pre-implementation.**
-No source code yet — only planning documents and parser test cases.
+**Current state: scraper (étape 1) shipped; solver (étape 2) designed, not yet implemented.**
 
 ## Documents
 
 - `docs/project_plan.md` — **the standalone source of truth**: functionality, constraints, implementation, weekly jalons, revised decisions, open questions. Read it before writing code.
-- `docs/next_steps.md` — the immediate task list (test-first scraper/parser).
+- `docs/next_steps.md` — the step-2 task list (solver A/B, phases); design rationale in `docs/conception/solveur-conception.md` — read both before writing solver code. The finished step-1 scraper task list lives in this file's git history.
 - `docs/conception/` — the design history (original conception documents, deliverable plan, initial ADR, request emails). Consult only for extra detail (full grammar specs, worked JSON examples, spike results, rejected-alternative reasoning); where it contradicts `docs/project_plan.md`, the plan wins.
 - `tests/fixtures/test_cases/` — expected parser outputs: `courses/*.json` (course pages) and `programs/*.json` (program pages). Shared across crates; see ADR `2026-07-structure-des-tests-et-fixtures`.
 
@@ -65,3 +64,4 @@ Ten weekly demonstrable jalons (`docs/project_plan.md` § Versions et jalons heb
 - Don't hesitate to delegate to a cheaper model when it makes sense
 - Never use while loops
 - Code should be structured to avoid expect in the production code as much as possible
+- Running `make test` should give 100% coverage once a feature is done implementing
