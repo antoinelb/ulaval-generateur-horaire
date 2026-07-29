@@ -25,6 +25,30 @@ pub enum Credits {
     Range { min: u32, max: u32 },
 }
 
+impl Credits {
+    // The credits a course actually counts for. A `Range` is a stage the
+    // student weights himself, so no total exists without his choice; a
+    // chosen value reaching a `Fixed` course is an upstream bug, surfaced
+    // rather than absorbed (ADR `2026-07-resolution-des-credits-choisis`).
+    pub fn resolve(self, chosen: Option<u32>) -> Result<u32, String> {
+        match (self, chosen) {
+            (Credits::Fixed(n), None) => Ok(n),
+            (Credits::Fixed(n), Some(c)) => Err(format!(
+                "credits are fixed at {n}, no choice applies : {c}"
+            )),
+            (Credits::Range { min, max }, Some(c)) if min <= c && c <= max => {
+                Ok(c)
+            }
+            (Credits::Range { min, max }, Some(c)) => {
+                Err(format!("chosen credits out of range {min}-{max} : {c}"))
+            }
+            (Credits::Range { min, max }, None) => Err(format!(
+                "variable credits {min}-{max} require a chosen value"
+            )),
+        }
+    }
+}
+
 // A course can sit below the first cycle: a préuniversitaire « cours
 // d'appoint » (CHM-0150) fills a collegial prerequisite missing at admission.
 // A programme never can — a diploma is a bachelor's, a master's, a doctorate —
@@ -416,6 +440,43 @@ mod tests {
             serde_json::to_value(credits).expect("ser"),
             as_value(json)
         );
+    }
+
+    #[test]
+    fn fixed_credits_resolve_without_a_choice() {
+        assert_eq!(Credits::Fixed(3).resolve(None), Ok(3));
+    }
+
+    #[test]
+    fn fixed_credits_reject_any_chosen_value() {
+        // a chosen value reaching a fixed-credit course is an upstream bug,
+        // surfaced rather than absorbed — even when it happens to match
+        assert!(Credits::Fixed(3).resolve(Some(3)).is_err());
+        assert!(Credits::Fixed(3).resolve(Some(6)).is_err());
+    }
+
+    #[test]
+    fn range_credits_resolve_a_choice_within_bounds() {
+        let range = Credits::Range { min: 6, max: 12 };
+        assert_eq!(range.resolve(Some(6)), Ok(6));
+        assert_eq!(range.resolve(Some(9)), Ok(9));
+        assert_eq!(range.resolve(Some(12)), Ok(12));
+    }
+
+    #[test]
+    fn range_credits_reject_a_choice_outside_bounds() {
+        let range = Credits::Range { min: 6, max: 12 };
+        assert!(range.resolve(Some(5)).is_err());
+        assert!(range.resolve(Some(13)).is_err());
+    }
+
+    #[test]
+    fn range_credits_require_a_choice() {
+        // whether planning may default to the lower bound is an open
+        // question of `docs/next_steps.md` — until it is settled, no total
+        // is computed without the student's weighting
+        let range = Credits::Range { min: 6, max: 12 };
+        assert!(range.resolve(None).is_err());
     }
 
     // --- PrereqTree: untagged ET/OU tree, each variant round-trips exactly ---

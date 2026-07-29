@@ -9,6 +9,7 @@ authors = ["Antoine Lefebvre-Brossard <antoinelb@proton.me>"]
 
 [workspace.dependencies]
 ulaval-scheduler-core = { path = "crates/core" }
+proptest = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

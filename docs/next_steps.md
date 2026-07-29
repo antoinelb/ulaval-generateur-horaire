@@ -24,18 +24,18 @@ L'absence de perte silencieuse s'applique partout : une règle, un préalable ou
 
 ## Phase 0 — Fondations partagées
 
-- [ ] `week.rs` : encodage du temps
-    - [ ] `WeekMask([u64; 32])` — semaine à seaux de 5 min (7 × 288 = 2016 bits ; exact, toutes les plages réelles sont multiples de 5 min) ; `overlaps` (ET mot à mot), `merge` (OU mot à mot), `is_empty`
-    - [ ] `slots_to_mask(&[Slot]) -> WeekMask` : `Day` + `Time` → index de seau ; une `Section` sans plage (à distance) donne le masque vide
-    - [ ] Opérations de préférence sur bits : `before_noon_free`, `has_midday_gap`, `day_transitions` (journées compactes) — signatures d'abord, sémantique à préciser avec le classement de A (voir « Encore à planifier »)
-    - Verify : tests unitaires sur des plages réelles (p. ex. GCI-1007) ; propriété : `overlaps` symétrique, `merge` associatif/commutatif, `slots_to_mask` d'une option entièrement à distance = vide
+- [x] `week.rs` : encodage du temps
+    - [x] `WeekMask([u64; 32])` — semaine à seaux de 5 min (7 × 288 = 2016 bits ; 5 min nécessaires et suffisants, mesuré sur les 24 042 bornes de tout `data/cours/` — ADR `2026-07-encodage-semaine-en-seaux-de-5-minutes`) ; `overlaps` (ET mot à mot), `merge` (OU mot à mot), `is_empty`
+    - [x] `slots_to_mask(&[Slot]) -> WeekMask` : `Day` + `Time` → index de seau ; une `Section` sans plage (à distance) donne le masque vide
+    - Opérations de préférence sur bits (`before_noon_free`, `has_midday_gap`, `day_transitions`) : **reportées au jalon 10** — rien d'écrit, la sémantique se calibre avec le classement de A (ADR `2026-07-preferences-de-a-reportees-au-jalon-10`)
+    - Verify : ✅ tests unitaires sur des plages réelles (GCI-1007) ; propriétés `proptest` : `overlaps` symétrique, `merge` associatif/commutatif, plages sans horaire = masque vide
 
-- [ ] Construction du domaine de A (dans `weekly.rs`, fonction pure)
-    - [ ] `build_domain(course, season) -> Vec<Opt>` où `Opt = { nrc_set, mask }` : une entrée par `options[i]`, masque = union de ses sections
-    - [ ] Équivalences : cours à `equivalents` → retenir l'offre de la plus récente des deux saisons
-    - [ ] Section forcée : `force_nrc(domain, nrc)` restreint aux options dont l'ensemble de sections **contient** le NRC (jamais « l'option k » — un NRC peut être dans plusieurs options ; cf. test `one_nrc_may_appear_in_several_options`)
-    - [ ] Crédits en intervalle : la pondération choisie par l'étudiant entre en paramètre (`2026-07-credits-variables-en-enum`)
-    - Verify : tests sur un cours multi-options réel ; forcer un NRC partagé par deux options en garde deux ; forcer un NRC absent vide le domaine
+- [x] Construction du domaine de A (dans `weekly.rs`, fonction pure)
+    - [x] `build_domain(offering) -> Vec<Opt>` où `Opt = { nrc_set, mask }` : une entrée par `options[i]`, masque = union de ses sections ; prend l'offre déjà résolue
+    - [x] Équivalences : `resolve_offering` retient l'offre au millésime de session le plus récent, année fournie par l'appelant, égalité → le cours (ADR `2026-07-equivalences-par-millesime-de-session`)
+    - [x] Section forcée : `force_nrc(domain, nrc)` restreint aux options dont l'ensemble de sections **contient** le NRC (jamais « l'option k » — un NRC peut être dans plusieurs options ; cf. test `one_nrc_may_appear_in_several_options`)
+    - [x] Crédits en intervalle : `Credits::resolve(chosen)` — la pondération choisie par l'étudiant entre en paramètre, séparée du domaine (ADR `2026-07-resolution-des-credits-choisis`)
+    - Verify : ✅ tests sur GCI-1007 (multi-options réel) ; forcer le NRC 13449 partagé de CSO-6702 en garde deux ; forcer un NRC absent vide le domaine
 
 ---
 
@@ -116,5 +116,5 @@ Ces points sont des **décisions ou des données manquantes**, pas des tâches d
 - **Sémantique exacte des préférences de A** (journées compactes, matins libres, pause dîner) — pour le classement du jalon 10, à calibrer contre des données réelles (Phase 0 laisse les signatures ouvertes) ; B n'a plus d'objectif.
 - **Interaction règles × profils** (jalon 6) — désormais côté vérificateur/affichage, plus côté solveur.
 - **Format JSON de l'organigramme** échangé entre « Cours pour le programme » et l'horaire hebdomadaire — question ouverte du plan, provisoire.
-- **Forme minimale du rapport de conflit** de A (paires suffisantes, ou ensemble minimal Max-CSP — le cas « paires compatibles, ensemble infaisable » doit être couvert quelle que soit la forme).
+- **Forme minimale du rapport de conflit** de A — tranchée au niveau cours : marquage optionnel `valid: false` par cours et par alternative (sémantique swap), contrat et cas de test figés dans `tests/fixtures/test_cases/schedules/` (ADR `2026-07-contrat-horaire-hebdomadaire-vers-ui`) ; reste ouvert le raffinement « ensemble minimal » Max-CSP pour le cas infaisable (le cas « paires compatibles, ensemble infaisable » est couvert par `triple-infeasible-pairwise-ok.json`).
 - **Présentation des solutions multiples de B dans l'UI** : la première est proposée ; comment (et si) offrir les autres — et si la mesure révèle une explosion de variantes interchangeables, la forme du dédoublonnage.
