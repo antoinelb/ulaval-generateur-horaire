@@ -1,0 +1,166 @@
+{
+  "season": "fall",
+  "courses": [
+    {
+      "code": "GML-1001",
+      "title": "Matériaux pour l'ingénierie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "83002",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ESP-1000",
+      "title": "Estructuras del español I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "87001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "87002",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "courses": [
+      {
+        "code": "GML-1001",
+        "selected": [
+          {
+            "nrc": "83001",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "sections": [
+              {
+                "nrc": "83002",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            "valid": false
+          }
+        ]
+      },
+      {
+        "code": "ESP-1000",
+        "selected": [
+          {
+            "nrc": "87001",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "09:00",
+                "end": "11:50"
+              }
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "sections": [
+              {
+                "nrc": "87002",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ],
+            "valid": false
+          }
+        ]
+      }
+    ]
+  }
+}

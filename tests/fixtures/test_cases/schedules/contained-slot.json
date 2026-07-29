@@ -1,0 +1,104 @@
+{
+  "season": "fall",
+  "courses": [
+    {
+      "code": "CHM-0150",
+      "title": "Chimie générale",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ESP-1000",
+      "title": "Estructuras del español I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83002",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "10:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "valid": false,
+    "courses": [
+      {
+        "code": "CHM-0150",
+        "valid": false,
+        "selected": [
+          {
+            "nrc": "85001",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "08:30",
+                "end": "15:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "code": "ESP-1000",
+        "valid": false,
+        "selected": [
+          {
+            "nrc": "83002",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "10:30",
+                "end": "12:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      }
+    ]
+  }
+}

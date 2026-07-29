@@ -1,0 +1,168 @@
+{
+  "season": "fall",
+  "courses": [
+    {
+      "code": "IFT-1004",
+      "title": "Algorithmique et programmation",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "81234",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "81235",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CHM-0150",
+      "title": "Chimie générale",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "85001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "10:30",
+                    "end": "13:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85002",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:00",
+                    "end": "10:00"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "valid": false,
+    "courses": [
+      {
+        "code": "IFT-1004",
+        "valid": false,
+        "selected": [
+          {
+            "nrc": "81234",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "sections": [
+              {
+                "nrc": "81235",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ],
+            "valid": false
+          }
+        ]
+      },
+      {
+        "code": "CHM-0150",
+        "valid": false,
+        "selected": [
+          {
+            "nrc": "85001",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "10:30",
+                "end": "13:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "sections": [
+              {
+                "nrc": "85002",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:00",
+                    "end": "10:00"
+                  }
+                ]
+              }
+            ],
+            "valid": false
+          }
+        ]
+      }
+    ]
+  }
+}

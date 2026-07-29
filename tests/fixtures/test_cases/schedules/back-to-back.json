@@ -1,0 +1,102 @@
+{
+  "season": "fall",
+  "courses": [
+    {
+      "code": "GML-1001",
+      "title": "Matériaux pour l'ingénierie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "ESP-1000",
+      "title": "Estructuras del español I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83002",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "11:20",
+                    "end": "14:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "courses": [
+      {
+        "code": "GML-1001",
+        "selected": [
+          {
+            "nrc": "83001",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "code": "ESP-1000",
+        "selected": [
+          {
+            "nrc": "83002",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "11:20",
+                "end": "14:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      }
+    ]
+  }
+}

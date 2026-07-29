@@ -1,0 +1,102 @@
+{
+  "season": "winter",
+  "courses": [
+    {
+      "code": "ECN-4901",
+      "title": "Analyse économique en ingénierie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "20907",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        },
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55293",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GCI-2010",
+      "title": "Laboratoire d'hydraulique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "20001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "courses": [
+      {
+        "code": "ECN-4901",
+        "selected": [
+          {
+            "nrc": "20907",
+            "section": "Z1",
+            "mode": "remote",
+            "slots": []
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "code": "GCI-2010",
+        "selected": [
+          {
+            "nrc": "20001",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,174 @@
+{
+  "season": "winter",
+  "courses": [
+    {
+      "code": "ACT-4114",
+      "title": "Apprentissage statistique en actuariat",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "24001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "24002",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-4008",
+      "title": "Approvisionnement en eau dans les communautés nordiques",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "25001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "25002",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "chosen": {
+    "ACT-4114": [
+      "24002"
+    ],
+    "GEX-4008": [
+      "25002"
+    ]
+  },
+  "expected": {
+    "valid": false,
+    "courses": [
+      {
+        "code": "ACT-4114",
+        "valid": false,
+        "selected": [
+          {
+            "nrc": "24002",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "sections": [
+              {
+                "nrc": "24001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GEX-4008",
+        "valid": false,
+        "selected": [
+          {
+            "nrc": "25002",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "09:30",
+                "end": "12:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "sections": [
+              {
+                "nrc": "25001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

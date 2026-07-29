@@ -1,0 +1,104 @@
+{
+  "season": "fall",
+  "courses": [
+    {
+      "code": "GEX-3100",
+      "title": "Projet de gestion de l'eau par bassin versant",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "86001",
+                "section": "DH1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GEX-3333",
+      "title": "Projet intégrateur en génie des eaux I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "09:30",
+                    "end": "12:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "valid": false,
+    "courses": [
+      {
+        "code": "GEX-3100",
+        "valid": false,
+        "selected": [
+          {
+            "nrc": "86001",
+            "section": "DH1",
+            "mode": "hybrid",
+            "slots": [
+              {
+                "day": "thursday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "code": "GEX-3333",
+        "valid": false,
+        "selected": [
+          {
+            "nrc": "84001",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "thursday",
+                "start": "09:30",
+                "end": "12:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      }
+    ]
+  }
+}

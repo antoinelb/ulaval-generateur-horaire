@@ -1,0 +1,158 @@
+{
+  "season": "winter",
+  "courses": [
+    {
+      "code": "CSO-6702",
+      "title": "Stage de counseling humaniste-existentiel II",
+      "credits": 6,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "13450",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              },
+              {
+                "nrc": "13449",
+                "section": null,
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "13451",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              },
+              {
+                "nrc": "13449",
+                "section": null,
+                "mode": "in-person",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "FRN-1112",
+      "title": "Introduction à la lexicologie et à la lexicographie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "21001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "09:00",
+                    "end": "11:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "courses": [
+      {
+        "code": "CSO-6702",
+        "selected": [
+          {
+            "nrc": "13451",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "thursday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          },
+          {
+            "nrc": "13449",
+            "section": null,
+            "mode": "in-person",
+            "slots": []
+          }
+        ],
+        "alternatives": [
+          {
+            "sections": [
+              {
+                "nrc": "13450",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              },
+              {
+                "nrc": "13449",
+                "section": null,
+                "mode": "in-person",
+                "slots": []
+              }
+            ],
+            "valid": false
+          }
+        ]
+      },
+      {
+        "code": "FRN-1112",
+        "selected": [
+          {
+            "nrc": "21001",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "09:00",
+                "end": "11:50"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      }
+    ]
+  }
+}

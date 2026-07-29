@@ -1,0 +1,124 @@
+{
+  "season": "fall",
+  "courses": [
+    {
+      "code": "IFT-1004",
+      "title": "Algorithmique et programmation",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "81234",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "13:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GML-1001",
+      "title": "Matériaux pour l'ingénierie",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "83001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "14:30",
+                    "end": "16:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "valid": false,
+    "courses": [
+      {
+        "code": "IFT-1004",
+        "valid": false,
+        "selected": [
+          {
+            "nrc": "81234",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "08:30",
+                "end": "10:20"
+              },
+              {
+                "day": "wednesday",
+                "start": "13:30",
+                "end": "15:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "code": "GML-1001",
+        "valid": false,
+        "selected": [
+          {
+            "nrc": "83001",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "08:30",
+                "end": "10:20"
+              },
+              {
+                "day": "wednesday",
+                "start": "14:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      }
+    ]
+  }
+}

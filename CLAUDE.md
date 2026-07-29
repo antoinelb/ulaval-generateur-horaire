@@ -16,7 +16,7 @@ The whole domain is French: keep domain vocabulary in French (`cours`, `cheminem
 - `docs/project_plan.md` — **the standalone source of truth**: functionality, constraints, implementation, weekly jalons, revised decisions, open questions. Read it before writing code.
 - `docs/next_steps.md` — the step-2 task list (solver A/B, phases); design rationale in `docs/conception/solveur-conception.md` — read both before writing solver code. The finished step-1 scraper task list lives in this file's git history.
 - `docs/conception/` — the design history (original conception documents, deliverable plan, initial ADR, request emails). Consult only for extra detail (full grammar specs, worked JSON examples, spike results, rejected-alternative reasoning); where it contradicts `docs/project_plan.md`, the plan wins.
-- `tests/fixtures/test_cases/` — expected parser outputs: `courses/*.json` (course pages) and `programs/*.json` (program pages). Shared across crates; see ADR `2026-07-structure-des-tests-et-fixtures`.
+- `tests/fixtures/test_cases/` — expected parser outputs: `courses/*.json` (course pages) and `programs/*.json` (program pages), plus `schedules/*.json` — input (courses, season, pinned choices) and expected output of the weekly-schedule function the UI will call (ADR `2026-07-contrat-horaire-hebdomadaire-vers-ui`). Shared across crates; see ADR `2026-07-structure-des-tests-et-fixtures`.
 
 ## Decision records (ADR) — required practice
 

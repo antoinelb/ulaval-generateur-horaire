@@ -1,0 +1,102 @@
+{
+  "season": "fall",
+  "courses": [
+    {
+      "code": "GAE-3008",
+      "title": "Aménagement des cours d'eau et conservation des sols",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "GCI-1007",
+      "title": "Mécanique des sols",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84664",
+                "section": null,
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "courses": [
+      {
+        "code": "GAE-3008",
+        "selected": [
+          {
+            "nrc": "82001",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "code": "GCI-1007",
+        "selected": [
+          {
+            "nrc": "84664",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
+                "start": "12:30",
+                "end": "15:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      }
+    ]
+  }
+}

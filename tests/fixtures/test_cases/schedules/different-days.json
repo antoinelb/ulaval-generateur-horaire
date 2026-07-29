@@ -1,0 +1,102 @@
+{
+  "season": "fall",
+  "courses": [
+    {
+      "code": "GCI-1007",
+      "title": "Mécanique des sols",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "84664",
+                "section": null,
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "IFT-1004",
+      "title": "Algorithmique et programmation",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "81234",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "courses": [
+      {
+        "code": "GCI-1007",
+        "selected": [
+          {
+            "nrc": "84664",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "friday",
+                "start": "12:30",
+                "end": "15:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      },
+      {
+        "code": "IFT-1004",
+        "selected": [
+          {
+            "nrc": "81234",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "monday",
+                "start": "08:30",
+                "end": "11:20"
+              }
+            ]
+          }
+        ],
+        "alternatives": []
+      }
+    ]
+  }
+}
