@@ -1,6 +1,6 @@
 # Plan — le cœur solveur
 
-**Avant toute chose, faire en sorte que rouler `programs` sans url rafraîchit l'ensemble des programmes déjà dans `data`.**
+~~**Avant toute chose, faire en sorte que rouler `programs` sans url rafraîchit l'ensemble des programmes déjà dans `data`.**~~ — fait (ADR `2026-07-programs-sans-url-rafraichit-par-slug`, `2026-07-annee-de-programme-selon-la-date-de-scrape` : les snapshots sont désormais `{code}-{year}.json`).
 
 Étape 2 (« Cœur ») de l'ordre de construction de `docs/project_plan.md` — l'étape 1 (scraper) est livrée, son plan test-first vit dans l'historique git de ce fichier.
 Fondements, mathématiques et justifications complètes dans `docs/conception/solveur-conception.md` — **le lire avant d'écrire du code**.
@@ -41,19 +41,19 @@ L'absence de perte silencieuse s'applique partout : une règle, un préalable ou
 
 ## Phase 1 — Solveur A (jalon 2, arrêté, fait main)
 
-- [ ] `weekly.rs` : la recherche
-    - [ ] `enumerate` : produit incrémental élagué par `fold` sur les cours (ni `while` ni récursion), élagage par `overlaps`, collecte **toutes** les feuilles valides (le classement en a besoin)
-    - [ ] `is_feasible(&[Vec<Opt>]) -> bool` (le veto pour B) — **court-circuite** (`try_fold`, arrêt dès que les préfixes se vident), sans payer la collecte complète — et `best_schedule(&[Vec<Opt>]) -> Option<(Schedule, Score)>` (le score)
-    - [ ] `Schedule` (ensemble de NRC choisis, partageable en URL plus tard) et `Score`
-    - Verify (propriétés `proptest`) : tout `Schedule` renvoyé est sans conflit ; `is_feasible` ⇔ `best_schedule.is_some()` ; ajouter un cours ne peut jamais rendre faisable un ensemble infaisable
+- [x] `weekly.rs` : la recherche
+    - [x] `enumerate` : produit incrémental élagué par `fold` sur les cours (ni `while` ni récursion), élagage par `overlaps`, collecte **toutes** les feuilles valides (le classement en a besoin) — feuilles en indices d'option, l'ordre du snapshot que `Opt.nrc_set` perd
+    - [x] `is_feasible(&[Vec<Opt>]) -> bool` (le veto pour B) — **court-circuite** (`try_fold`, arrêt dès que les préfixes se vident), sans payer la collecte complète — et `best_schedule(&[Vec<Opt>]) -> Option<Schedule>` (le « premier horaire faisable » du contrat ; `Score` naît au jalon 10 — ADR `2026-07-score-de-a-reporte-au-jalon-10`)
+    - [x] `Schedule` (ensemble de NRC choisis, partageable en URL plus tard)
+    - Verify : ✅ propriétés `proptest` — toute feuille d'`enumerate` est sans conflit ; `is_feasible` ⇔ `best_schedule.is_some()` ⇔ énumération non vide ; ajouter un cours ne peut jamais rendre faisable un ensemble infaisable
 
-- [ ] Rapport de conflit (cas infaisable)
-    - [ ] Quand `is_feasible` est faux, identifier les plages en conflit à surligner (au minimum : les paires de cours sans aucune combinaison d'options compatible ; forme Max-CSP « moins de conflits » à préciser si l'on veut un ensemble minimal — voir doc §1.1 et §7)
-    - Verify : sur un ensemble fabriqué sans solution, les plages rapportées couvrent bien le conflit ; sur un ensemble faisable, rapport vide ; **cas piège** : un ensemble infaisable dont toutes les paires sont compatibles (conflit à trois cours multi-options) produit quand même un rapport non vide
+- [x] Rapport de conflit (cas infaisable)
+    - [x] `schedule_report(courses, season, chosen)` — la fonction pure du contrat UI gelé : sélection « premier faisable, épinglés gardés », marquage `valid: false` par cours et par alternative (sémantique swap) ; le raffinement Max-CSP « ensemble minimal » reste ouvert (doc §1.1 et §7)
+    - Verify : ✅ les 18 fixtures `tests/fixtures/test_cases/schedules/` reproduites à l'identique (`crates/core/tests/integration/schedule.rs`), **cas piège** `triple-infeasible-pairwise-ok` inclus ; les entrées hors contrat (cours non offert, zéro option, épinglage inconnu ou sans option) sont des `ScheduleError` typées, jamais inventées
 
-- [ ] Harnais CLI (livrable du jalon 2)
-    - [ ] Imprime un horaire valide pour une liste de codes de cours d'une session (`anyhow` à la frontière binaire)
-    - Verify : `make test` vert ; le harnais imprime un horaire sans conflit pour des codes GEX réels ; liberté de conflit testée par propriétés
+- [x] Harnais CLI (livrable du jalon 2)
+    - [x] `crates/cli` (binaire `ulaval-scheduler`, ADR `2026-07-harnais-cli-en-crate-dedie`) : imprime l'horaire d'une liste de codes d'une session (`anyhow` à la frontière binaire), équivalences résolues par `resolve_offering`, total de crédits, sortie 2 + cours fautifs si conflit
+    - Verify : ✅ `make test` vert (100 %) ; `ulaval-scheduler schedule a2026 GEX-1002 GEX-2003 GCI-1007` imprime un horaire sans conflit (GCI-1007 bascule visiblement sur son option B du vendredi) ; liberté de conflit testée par propriétés
 
 ---
 
