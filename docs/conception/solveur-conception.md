@@ -213,6 +213,10 @@ fn best_schedule(courses: &[Vec<Opt>]) -> Option<(Schedule, Score)>; // le score
 `is_feasible` court-circuite (`try_fold` : arrêt dès que l'ensemble des préfixes se vide) plutôt que de payer la collecte complète — c'est le chemin chaud du veto de B, même mémoïsé.
 Quand `is_feasible` est faux, A rapporte les plages en conflit pour le surlignage « aucune combinaison valide » du plan (forme complète en §1.1 et §7).
 
+**Révision (2026-07-29, à l'implémentation).** `best_schedule` retourne `Option<Schedule>` sans `Score` : la sémantique du score est celle des préférences du jalon 10, et une signature sans sémantique testée ne peut pas exister dans ce dépôt (ADR `2026-07-score-de-a-reporte-au-jalon-10`, s'appuyant sur `2026-07-preferences-de-a-reportees-au-jalon-10`).
+En attendant, « meilleur » = la première feuille de l'énumération, exactement la règle « premier horaire faisable » du contrat UI (ADR `2026-07-contrat-horaire-hebdomadaire-vers-ui`) — dont le rapport de conflit prend la forme gelée au niveau cours (`schedule_report` : `valid: false` par cours et par alternative en sémantique swap), le raffinement Max-CSP « ensemble minimal » restant ouvert.
+`enumerate` retourne aussi les feuilles en **indices d'option** plutôt qu'en `Schedule` : le contrat exige les sections dans l'ordre du snapshot, que l'ensemble `Opt.nrc_set` perd.
+
 ---
 
 ## 5. Problème B — la conception et la décision d'outillage

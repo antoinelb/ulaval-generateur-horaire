@@ -5,3 +5,4 @@
 mod catalogue;
 mod course;
 mod program;
+mod schedule;
