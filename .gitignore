@@ -8,3 +8,8 @@
 
 # Scraper scratch: re-derivable from the course pages, never a deliverable
 data/cache/
+
+organigramme_*.pdf
+
+# Bytecode of the solver-B reference scripts (tests/reference/)
+__pycache__/

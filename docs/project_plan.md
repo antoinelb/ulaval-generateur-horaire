@@ -236,6 +236,7 @@ Inchangé et toujours contraignant : hypothèse des snapshots par saison, format
 ## Questions ouvertes
 
 - Format de l'organigramme JSON et son intégration entre « Cours pour le programme » et l'horaire hebdomadaire (produit par l'un, consommé par l'autre? édité à la main au début?).
+  Forme provisoire concrète depuis les fixtures du solveur B : liste ordonnée de saisons de sessions + solution en carte cours → numéro de session (ADR `2026-07-schema-des-fixtures-de-placement`) ; l'intégration UI reste ouverte.
 - Agencement des écrans (pas nécessairement un écran unique) — à explorer une fois les fonctionnalités gelées.
 - Le catalogue est-il joignable sans identifiants depuis le CI? (Détermine la gestion de secrets — à résoudre au jalon 1.)
 - Modèle exact de préférences/scoring — structure arrêtée dans `docs/conception/solveur-conception.md` (opérations sur bits + somme pondérée) ; poids et sémantique fine à calibrer contre des données réelles.

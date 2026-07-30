@@ -1,0 +1,122 @@
+{
+  "sessions": [
+    "fall",
+    "winter"
+  ],
+  "credit_cap": 9,
+  "courses": [
+    {
+      "code": "TST-1901",
+      "title": "Cours de test 1901",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "90019",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "90019",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-1902",
+      "title": "Cours de test 1902",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "90020",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "90020",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "complete": true,
+    "solutions": [
+      {
+        "TST-1901": 1,
+        "TST-1902": 1
+      },
+      {
+        "TST-1901": 1,
+        "TST-1902": 2
+      },
+      {
+        "TST-1901": 2,
+        "TST-1902": 1
+      },
+      {
+        "TST-1901": 2,
+        "TST-1902": 2
+      }
+    ]
+  }
+}

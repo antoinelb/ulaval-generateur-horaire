@@ -1,0 +1,164 @@
+{
+  "sessions": [
+    "fall",
+    "winter",
+    "fall"
+  ],
+  "credit_cap": 12,
+  "courses": [
+    {
+      "code": "TST-1001",
+      "title": "Cours de test 1001",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "90001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "90001",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-1002",
+      "title": "Cours de test 1002",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TST-1001",
+        "tree": "TST-1001"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "90002",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "90002",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-1003",
+      "title": "Cours de test 1003",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TST-1002",
+        "tree": "TST-1002"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "90003",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "90003",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "complete": true,
+    "solutions": [
+      {
+        "TST-1001": 1,
+        "TST-1002": 2,
+        "TST-1003": 3
+      }
+    ]
+  }
+}

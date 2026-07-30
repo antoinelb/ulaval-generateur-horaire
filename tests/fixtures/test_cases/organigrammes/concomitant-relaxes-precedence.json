@@ -1,0 +1,77 @@
+{
+  "sessions": [
+    "fall"
+  ],
+  "credit_cap": 6,
+  "concomitant": true,
+  "courses": [
+    {
+      "code": "TST-2201",
+      "title": "Cours de test 2201",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "90021",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-2202",
+      "title": "Cours de test 2202",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TST-2201",
+        "tree": "TST-2201"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "90022",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "complete": true,
+    "solutions": [
+      {
+        "TST-2201": 1,
+        "TST-2202": 1
+      }
+    ]
+  }
+}

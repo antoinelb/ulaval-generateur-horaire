@@ -1,0 +1,96 @@
+{
+  "sessions": [
+    "fall"
+  ],
+  "credit_cap": 6,
+  "passed": [
+    "TST-1401"
+  ],
+  "courses": [
+    {
+      "code": "TST-1401",
+      "title": "Cours de test 1401",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "90010",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "90010",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-1402",
+      "title": "Cours de test 1402",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TST-1401",
+        "tree": "TST-1401"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "90011",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "complete": true,
+    "solutions": [
+      {
+        "TST-1402": 1
+      }
+    ]
+  }
+}

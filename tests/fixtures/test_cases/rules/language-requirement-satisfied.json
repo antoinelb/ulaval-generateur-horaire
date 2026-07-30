@@ -1,0 +1,1538 @@
+{
+  "program": {
+    "code": "baccalaureat-en-genie-des-eaux",
+    "year": 2026,
+    "title": "Baccalauréat en génie des eaux",
+    "cycle": 1,
+    "credits_required": 120,
+    "mandatory": [
+      "CHM-1903",
+      "GCI-1000",
+      "GCI-1003",
+      "GEX-1002",
+      "GSC-1000",
+      "MAT-1900",
+      "GCI-1004",
+      "GGL-2600",
+      "IFT-1903",
+      "MAT-1910",
+      "STT-1900",
+      "GCI-1007",
+      "GCI-1010",
+      "GCI-1011",
+      "GCI-2008",
+      "GCI-2009",
+      "MCB-1907",
+      "GCI-1900",
+      "GCI-2010",
+      "GEX-1000",
+      "MAT-2910",
+      "GCI-2012",
+      "GCI-4301",
+      "GEX-2004",
+      "GMC-3009",
+      "ECN-4901",
+      "GEX-2001",
+      "GEX-2003",
+      "GEX-3001",
+      "DRT-1721",
+      "GEX-3333",
+      "PHI-2910",
+      "GEX-3335",
+      "PHI-3900"
+    ],
+    "rules": [
+      {
+        "title": "Règle 1",
+        "constraint": {
+          "count": 1
+        },
+        "courses": [
+          "MED-1100",
+          "GMN-2901",
+          "GMN-2902"
+        ]
+      },
+      {
+        "title": "Règle 2",
+        "constraint": {
+          "min": 3,
+          "max": 9
+        },
+        "courses": [
+          "GCI-3101",
+          "GEX-3500",
+          "GEX-3502",
+          "GGL-4001"
+        ]
+      },
+      {
+        "title": "Règle 3",
+        "constraint": {
+          "min": 3,
+          "max": 9
+        },
+        "courses": [
+          "GAE-3006",
+          "GAE-3007",
+          "GAE-3008",
+          "GCI-3001",
+          "GCI-4201",
+          "GEX-4002",
+          "GEX-4008",
+          "GGL-2609",
+          "GMN-2005"
+        ]
+      },
+      {
+        "title": "Règle 4",
+        "constraint": {
+          "min": 3,
+          "max": 3
+        },
+        "courses": [
+          "DDU-2000",
+          "ENT-1000",
+          "ENT-4020",
+          "GEX-3501",
+          "GGL-2601",
+          "IFT-4902",
+          "ANL-2020",
+          "FLS-2093",
+          "FRN-1914",
+          "ENT-1000",
+          "ENT-3020",
+          "MCB-4003",
+          "BIO-1008",
+          "BIO-1904",
+          "PLG-2104",
+          "DDU-2000",
+          "GGL-2601",
+          "GGR-1006",
+          "GGR-2307"
+        ],
+        "notes": [
+          "Programmation",
+          "Langue et communication",
+          "Entrepreneuriat",
+          "Biologie",
+          "Territoire",
+          "Changements climatiques"
+        ]
+      },
+      {
+        "title": "Règle 5",
+        "constraint": {
+          "min": 3,
+          "max": 3
+        },
+        "courses": "any",
+        "raw": "tous les cours de premier cycle, à l’exception des cours correctifs de français."
+      }
+    ],
+    "concentrations": [],
+    "profiles": [
+      {
+        "title": "Profil international",
+        "mandatory": [
+          "EHE-1GEX"
+        ],
+        "rules": []
+      }
+    ],
+    "notes": [
+      "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GEX-1580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GEX-2590, GEX-2591 et GEX-3590. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
+    ],
+    "language_requirement": {
+      "francophone": {
+        "course": "ANL-2020",
+        "tests": [
+          {
+            "name": "VEPT",
+            "score": 53
+          }
+        ],
+        "raw": "Pour la personne francophone, la réussite du cours ANL-2020 Intermediate English II (VEPT: 53) est requise pour diplômer."
+      },
+      "non_francophone": {
+        "course": "FLS-2093",
+        "tests": [
+          {
+            "name": "TCF-TP",
+            "score": 400
+          },
+          {
+            "name": "TCF-TP/ÉÉ",
+            "score": 14
+          }
+        ],
+        "raw": "Pour la personne non-francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP: 400 et TCF-TP/ÉÉ: 14) est requise pour diplômer."
+      }
+    }
+  },
+  "selection": [
+    "ANL-2020"
+  ],
+  "courses": [
+    {
+      "code": "ANL-2020",
+      "title": "Intermediate English II",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "ANL-2010 OU Examen TOEFL - version IBT avec résultat de 57 à 63 OU Examen Versant English Placement Test avec résultat de 48 à 52",
+        "tree": {
+          "any": [
+            "ANL-2010",
+            {
+              "raw": "Examen TOEFL - version IBT avec résultat de 57 à 63"
+            },
+            {
+              "raw": "Examen Versant English Placement Test avec résultat de 48 à 52"
+            }
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "options": [
+            [
+              {
+                "nrc": "82558",
+                "section": "C",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "82559",
+                "section": "D",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "82560",
+                "section": "G",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "82561",
+                "section": "M",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "82562",
+                "section": "Q",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "82563",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "82564",
+                "section": "Z3A",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "82565",
+                "section": "Z3B",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "82566",
+                "section": "Z3C",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "82567",
+                "section": "Z3D",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "options": [
+            [
+              {
+                "nrc": "12612",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "12613",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "12614",
+                "section": "C",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "12615",
+                "section": "D",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "12616",
+                "section": "M",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "12617",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "12618",
+                "section": "Z3A",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "12619",
+                "section": "Z3B",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "12620",
+                "section": "Z3C",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "12621",
+                "section": "Z3D",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "12622",
+                "section": "Z3E",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "12623",
+                "section": "Z3F",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "summer": {
+          "options": [
+            [
+              {
+                "nrc": "55179",
+                "section": "G",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "55180",
+                "section": "H1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "55181",
+                "section": "H2",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "55182",
+                "section": "H3",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "55183",
+                "section": "H4",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "55184",
+                "section": "H5",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "55185",
+                "section": "H6",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "55265",
+                "section": "H10",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "55266",
+                "section": "H11",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "55267",
+                "section": "H8",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "55268",
+                "section": "H9",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "21:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "55460",
+                "section": "H12",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "mandatory": [
+      {
+        "scope": "program",
+        "satisfied": [],
+        "missing": [
+          "CHM-1903",
+          "DRT-1721",
+          "ECN-4901",
+          "GCI-1000",
+          "GCI-1003",
+          "GCI-1004",
+          "GCI-1007",
+          "GCI-1010",
+          "GCI-1011",
+          "GCI-1900",
+          "GCI-2008",
+          "GCI-2009",
+          "GCI-2010",
+          "GCI-2012",
+          "GCI-4301",
+          "GEX-1000",
+          "GEX-1002",
+          "GEX-2001",
+          "GEX-2003",
+          "GEX-2004",
+          "GEX-3001",
+          "GEX-3333",
+          "GEX-3335",
+          "GGL-2600",
+          "GMC-3009",
+          "GSC-1000",
+          "IFT-1903",
+          "MAT-1900",
+          "MAT-1910",
+          "MAT-2910",
+          "MCB-1907",
+          "PHI-2910",
+          "PHI-3900",
+          "STT-1900"
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "scope": "program",
+        "title": "Règle 1",
+        "status": "incomplete",
+        "counted": [],
+        "missing": {
+          "count": 1
+        },
+        "candidates": [
+          "GMN-2901",
+          "GMN-2902",
+          "MED-1100"
+        ]
+      },
+      {
+        "scope": "program",
+        "title": "Règle 2",
+        "status": "incomplete",
+        "counted": [],
+        "missing": {
+          "credits": 3
+        },
+        "candidates": [
+          "GCI-3101",
+          "GEX-3500",
+          "GEX-3502",
+          "GGL-4001"
+        ]
+      },
+      {
+        "scope": "program",
+        "title": "Règle 3",
+        "status": "incomplete",
+        "counted": [],
+        "missing": {
+          "credits": 3
+        },
+        "candidates": [
+          "GAE-3006",
+          "GAE-3007",
+          "GAE-3008",
+          "GCI-3001",
+          "GCI-4201",
+          "GEX-4002",
+          "GEX-4008",
+          "GGL-2609",
+          "GMN-2005"
+        ]
+      },
+      {
+        "scope": "program",
+        "title": "Règle 4",
+        "status": "satisfied",
+        "counted": [
+          "ANL-2020"
+        ],
+        "candidates": [
+          "BIO-1008",
+          "BIO-1904",
+          "DDU-2000",
+          "ENT-1000",
+          "ENT-3020",
+          "ENT-4020",
+          "FLS-2093",
+          "FRN-1914",
+          "GEX-3501",
+          "GGL-2601",
+          "GGR-1006",
+          "GGR-2307",
+          "IFT-4902",
+          "MCB-4003",
+          "PLG-2104"
+        ]
+      },
+      {
+        "scope": "program",
+        "title": "Règle 5",
+        "status": "reported",
+        "raw": "tous les cours de premier cycle, à l’exception des cours correctifs de français."
+      }
+    ],
+    "language_requirement": {
+      "status": "satisfied"
+    }
+  }
+}
