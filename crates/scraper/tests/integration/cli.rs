@@ -214,7 +214,7 @@ async fn a_program_is_written_exactly_as_the_parser_fixture_expects() {
         .unwrap_or_else(|e| panic!("scrape a program: {e}"));
 
     assert_eq!(
-        read(&dir.join("programmes/baccalaureat-en-genie-civil.json")),
+        read(&dir.join("programmes/baccalaureat-en-genie-civil-2026.json")),
         read(&program_fixture("baccalaureat-en-genie-civil.json")),
     );
     assert!(
@@ -249,7 +249,9 @@ async fn a_run_leaves_the_programs_it_was_not_given_alone() {
         .await
         .unwrap_or_else(|e| panic!("scrape one program: {e}"));
 
-    assert!(programmes.join("baccalaureat-en-genie-civil.json").exists());
+    assert!(programmes
+        .join("baccalaureat-en-genie-civil-2026.json")
+        .exists());
     for name in untouched {
         assert_eq!(
             read(&programmes.join(name)),
@@ -301,6 +303,8 @@ async fn the_binary_scrapes_a_program_end_to_end() {
             "program",
             "--output-dir",
             &dir.display().to_string(),
+            "--year",
+            "2026",
             &server.uri(),
         ])
         .output()
@@ -308,7 +312,7 @@ async fn the_binary_scrapes_a_program_end_to_end() {
 
     assert!(output.status.success(), "{output:?}");
     assert!(dir
-        .join("programmes/baccalaureat-en-genie-civil.json")
+        .join("programmes/baccalaureat-en-genie-civil-2026.json")
         .exists());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Wrote programs"), "{stdout}");
@@ -316,17 +320,19 @@ async fn the_binary_scrapes_a_program_end_to_end() {
 }
 
 #[test]
-fn the_binary_rejects_program_without_a_url_with_exit_code_2() {
-    // the URL list is the whole work queue: there is nothing to default to
+fn the_binary_rejects_program_with_nothing_to_refresh_with_exit_code_2() {
+    // no URLs falls back to refreshing the existing snapshots — and an
+    // empty directory leaves nothing to do, which must be said
+    let dir = test_dir("e2e-program-nothing");
     let output = Command::new(env!("CARGO_BIN_EXE_ulaval-scraper"))
-        .arg("program")
+        .args(["program", "--output-dir", &dir.display().to_string()])
         .output()
         .unwrap_or_else(|e| panic!("run the scraper binary: {e}"));
 
     assert_eq!(output.status.code(), Some(2));
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("required"), "{stderr}");
-    assert!(stderr.contains("URLS"), "{stderr}");
+    assert!(stderr.contains("programmes"), "{stderr}");
+    // nothing to clean: the run fails before creating anything
 }
 
 #[test]
@@ -377,10 +383,14 @@ async fn run_catalogue(dir: &Path, url: &str) -> anyhow::Result<()> {
 }
 
 async fn run_program(dir: &Path, urls: &[String]) -> anyhow::Result<()> {
+    // --year 2026: the byte-exact comparisons target fixtures frozen under
+    // that vintage, whatever date the suite runs on
     let mut args = vec![
         "program".to_string(),
         "--output-dir".to_string(),
         dir.display().to_string(),
+        "--year".to_string(),
+        "2026".to_string(),
     ];
     args.extend(urls.iter().cloned());
     cli::run(args).await

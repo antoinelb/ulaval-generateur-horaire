@@ -25,6 +25,7 @@ pub enum ProgramError {
 pub async fn scrape(
     fetcher: &Fetcher,
     urls: &[String],
+    year: u16,
 ) -> (Vec<Program>, Vec<ProgramError>) {
     let task = print::progress_task(
         "Scraping programs...",
@@ -39,7 +40,7 @@ pub async fn scrape(
     let scraped: Vec<(Option<Program>, Vec<ProgramError>)> =
         stream::iter(urls)
             .map(|url| async move {
-                let scraped = scrape_program(fetcher, url).await;
+                let scraped = scrape_program(fetcher, url, year).await;
                 progress.increment();
                 scraped
             })
@@ -60,6 +61,7 @@ pub async fn scrape(
 async fn scrape_program(
     fetcher: &Fetcher,
     url: &str,
+    year: u16,
 ) -> (Option<Program>, Vec<ProgramError>) {
     let html = match fetcher.fetch(url).await {
         Ok(html) => html,
@@ -67,7 +69,7 @@ async fn scrape_program(
     };
     // a page whose skeleton is missing yields no program at all: there is
     // nothing to write a file from
-    let page = match parser::program::parse(&html) {
+    let page = match parser::program::parse(&html, year) {
         Ok(page) => page,
         Err(source) => {
             let error = ProgramError::Parse {
@@ -117,6 +119,7 @@ pub(crate) mod tests {
 
         assert!(anomalies.is_empty(), "{anomalies:?}");
         assert_eq!(programs[0].code, "genie-civil");
+        assert_eq!(programs[0].year, 2026, "the caller's year is stamped");
         assert_eq!(programs[0].mandatory, ["GEX-1000"]);
     }
 
@@ -189,7 +192,7 @@ pub(crate) mod tests {
         // in fetch.rs; these tests assert orchestration and must stay fast
         let fetcher = Fetcher::new(Duration::ZERO, Duration::ZERO)
             .unwrap_or_else(|e| panic!("build fetcher: {e}"));
-        scrape(&fetcher, urls).await
+        scrape(&fetcher, urls, 2026).await
     }
 
     fn url(server: &MockServer, slug: &str) -> String {

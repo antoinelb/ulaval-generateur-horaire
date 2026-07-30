@@ -57,11 +57,23 @@ enum Command {
     Program {
         #[arg(long, default_value = "data")]
         output_dir: String,
-        // Required, unlike every other work queue in this binary: a program
-        // page URL is a slug no course code can rebuild, and only the
-        // programs whose rules are wanted need their page scraped at all —
-        // so the list is the caller's to give.
-        #[arg(required = true, num_args = 1..)]
+        // the academic year the run captures — defaults to the scrape
+        // date's rule (`academic_year`); an explicit value pins re-runs
+        // and byte-exact tests to a frozen vintage
+        #[arg(long)]
+        year: Option<u16>,
+        // where slugs resolve to pages; overridable so a refresh can be
+        // tested against a mock server
+        #[arg(
+            long,
+            default_value = "https://www.ulaval.ca/etudes/programmes"
+        )]
+        base_url: String,
+        // A program page URL is a slug no course code can rebuild — but a
+        // snapshot's file name carries it, so an empty list means « refresh
+        // every program already in the directory » (ADR
+        // `2026-07-programs-sans-url-rafraichit-par-slug`).
+        #[arg(num_args = 1..)]
         urls: Vec<String>,
     },
 }
@@ -95,8 +107,21 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
                 get_courses(&output_dir, &subjects).await?;
             write_courses(sessions, anomalies, &output_dir, &subjects)
         }
-        Command::Program { output_dir, urls } => {
-            let (programs, anomalies) = get_programs(&urls).await;
+        Command::Program {
+            output_dir,
+            year,
+            base_url,
+            urls,
+        } => {
+            let year = year.unwrap_or_else(|| {
+                academic_year(std::time::SystemTime::now())
+            });
+            let urls = if urls.is_empty() {
+                refresh_urls(&output_dir, &base_url)?
+            } else {
+                urls
+            };
+            let (programs, anomalies) = get_programs(&urls, year).await;
             write_programs(programs, anomalies, &output_dir)
         }
     }
@@ -355,18 +380,120 @@ fn session_files(dir: &Path) -> Vec<(String, PathBuf)> {
 
 // no `Result`, unlike its two siblings: there is no work queue to read and
 // no cache directory to create, so nothing can fail before the first request
-async fn get_programs(urls: &[String]) -> (Vec<Program>, Vec<ProgramError>) {
+// An empty URL list means « refresh what is already there »: every snapshot
+// file name is `{slug}-{year}.json` and the slug is the page URL's last
+// segment, so the directory itself is the work queue (ADR
+// `2026-07-programs-sans-url-rafraichit-par-slug`). Nothing to refresh is an
+// error, never a silent no-op.
+fn refresh_urls(
+    output_dir: &str,
+    base_url: &str,
+) -> anyhow::Result<Vec<String>> {
+    let dir = Path::new(output_dir).join("programmes");
+    let slugs = program_slugs(&dir);
+    anyhow::ensure!(
+        !slugs.is_empty(),
+        "No urls given and no programs to refresh in {}.",
+        dir.display()
+    );
+    Ok(slugs
+        .into_iter()
+        .map(|slug| format!("{base_url}/{slug}"))
+        .collect())
+}
+
+// `{slug}.manuel.json` is hand-maintained and never scraped (ADR
+// `2026-07-cheminement-type-en-fichier-manuel`); several vintages of one
+// program fold into a single slug; a missing directory holds nothing
+fn program_slugs(dir: &Path) -> std::collections::BTreeSet<String> {
+    std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if name.ends_with(".manuel.json") {
+                return None;
+            }
+            Some(program_slug(name.strip_suffix(".json")?))
+        })
+        .collect()
+}
+
+// a stem without the `-{year}` suffix is kept whole: a legacy file still
+// names its program, and refreshing it writes the suffixed name from now on
+fn program_slug(stem: &str) -> String {
+    match stem.rsplit_once('-') {
+        Some((slug, year))
+            if year.len() == 4 && year.chars().all(|c| c.is_ascii_digit()) =>
+        {
+            slug.to_string()
+        }
+        _ => stem.to_string(),
+    }
+}
+
+// The academic year a scrape captures. The program changes over winter for
+// the next fall at no precise date; the scraper runs at the start of each
+// session, so the May run is the first that can see the new version:
+// May–December files under the current civil year, January–April under the
+// previous one (ADR `2026-07-annee-de-programme-selon-la-date-de-scrape`).
+fn academic_year(now: std::time::SystemTime) -> u16 {
+    // a pre-1970 clock is a broken host; flooring it to day zero keeps the
+    // rule total and the bogus year visible in the file name
+    let days = now
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|since| since.as_secs() / 86_400)
+        .unwrap_or(0);
+    let (year, month) = civil_from_days(days);
+    if month >= 5 {
+        year
+    } else {
+        year - 1
+    }
+}
+
+// days since 1970-01-01 → (civil year, month), by Howard Hinnant's
+// `civil_from_days` (branchless era arithmetic, exact for any day ≥ 0)
+fn civil_from_days(days: u64) -> (u16, u64) {
+    let z = days + 719_468;
+    let era = z / 146_097;
+    let day_of_era = z % 146_097;
+    let year_of_era = (day_of_era - day_of_era / 1_460 + day_of_era / 36_524
+        - day_of_era / 146_096)
+        / 365;
+    let day_of_year =
+        day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    let shifted_month = (5 * day_of_year + 2) / 153;
+    // the algorithm's year starts in March; January and February belong to
+    // the next civil year
+    let month = if shifted_month < 10 {
+        shifted_month + 3
+    } else {
+        shifted_month - 9
+    };
+    let year = year_of_era + era * 400 + u64::from(month <= 2);
+    (year as u16, month)
+}
+
+async fn get_programs(
+    urls: &[String],
+    year: u16,
+) -> (Vec<Program>, Vec<ProgramError>) {
     // expect over `?`: this static config provably builds (the failure path
     // needs an injected bad builder — seam-tested in fetch.rs)
     let fetcher = Fetcher::new(min_interval, backoff)
         .expect("static fetcher config always builds");
-    program::scrape(&fetcher, urls).await
+    program::scrape(&fetcher, urls, year).await
 }
 
 // One file per program rather than one snapshot holding them all: a run is
 // restricted to the URLs it was handed, so it writes exactly those and
 // leaves every other program's file — including the hand-maintained
 // `{code}.manuel.json` — alone (ADR `2026-07-un-fichier-par-programme`).
+// The name carries the academic year so students keep the version they
+// enrolled under (ADR `2026-07-annee-de-programme-selon-la-date-de-scrape`).
 fn write_programs(
     programs: Vec<Program>,
     anomalies: Vec<ProgramError>,
@@ -385,7 +512,8 @@ fn write_programs(
         // cannot fail
         let json = serde_json::to_string_pretty(&program)
             .expect("Program serialization always succeeds");
-        let path = programs_dir.join(format!("{}.json", program.code));
+        let path = programs_dir
+            .join(format!("{}-{}.json", program.code, program.year));
         write_atomic(&path, &(json + "\n"))?;
     }
     write_error_log(&dir.join("programmes_errors.log"), &anomalies)?;
@@ -1010,6 +1138,42 @@ mod tests {
             .await;
     }
 
+    #[test]
+    fn a_stem_without_a_year_suffix_is_already_a_slug() {
+        // pre-vintage snapshot names still resolve to their program
+        assert_eq!(
+            program_slug("baccalaureat-en-genie-civil-2026"),
+            "baccalaureat-en-genie-civil"
+        );
+        assert_eq!(
+            program_slug("baccalaureat-en-genie-civil"),
+            "baccalaureat-en-genie-civil"
+        );
+        assert_eq!(program_slug("maitrise"), "maitrise", "no dash at all");
+    }
+
+    #[test]
+    fn the_academic_year_flips_in_may() {
+        // the program changes over winter for the next fall; the May run is
+        // the first that can capture the new version
+        for (date, secs, expected) in [
+            ("2026-04-30", 1_777_507_200_u64, 2025),
+            ("2026-05-01", 1_777_593_600, 2026),
+            ("2026-12-31", 1_798_675_200, 2026),
+            ("2027-01-01", 1_798_761_600, 2026),
+        ] {
+            let now =
+                std::time::UNIX_EPOCH + std::time::Duration::from_secs(secs);
+            assert_eq!(academic_year(now), expected, "on {date}");
+        }
+    }
+
+    #[test]
+    fn a_pre_epoch_clock_floors_to_day_zero_instead_of_panicking() {
+        let now = std::time::UNIX_EPOCH - std::time::Duration::from_secs(1);
+        assert_eq!(academic_year(now), 1969, "January 1970 → previous year");
+    }
+
     #[tokio::test]
     async fn scraped_programs_are_written_one_file_each() {
         let _guard = lock_print();
@@ -1029,11 +1193,16 @@ mod tests {
         .unwrap_or_else(|e| panic!("scrape two programs: {e}"));
 
         let programmes = dir.join("programmes");
-        let civil =
-            std::fs::read_to_string(programmes.join("genie-civil.json"))
-                .unwrap_or_else(|e| panic!("read the program file: {e}"));
+        let year = academic_year(std::time::SystemTime::now());
+        let civil = std::fs::read_to_string(
+            programmes.join(format!("genie-civil-{year}.json")),
+        )
+        .unwrap_or_else(|e| panic!("read the program file: {e}"));
         assert!(civil.contains("genie-civil"), "{civil}");
-        assert!(programmes.join("genie-des-eaux.json").exists());
+        assert!(civil.contains(&format!("\"year\": {year}")), "{civil}");
+        assert!(programmes
+            .join(format!("genie-des-eaux-{year}.json"))
+            .exists());
         // declaration order, not alphabetical: these files are committed and
         // the diffs have to stay readable
         assert!(civil.find("\"code\"") < civil.find("\"title\""), "{civil}");
@@ -1042,16 +1211,82 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn program_without_any_url_is_a_usage_error() {
-        // there is no work queue to fall back on, so an empty list can only
-        // mean the caller forgot — never « scrape everything »
-        let error = run(vec!["program".to_string()])
-            .await
-            .expect_err("the URL list is mandatory");
+    async fn program_without_urls_refreshes_every_existing_program() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        // expect(1): two vintages of the same slug must fold into a single
+        // fetch, and the server itself proves it
+        Mock::given(method("GET"))
+            .and(wiremock::matchers::path("/genie-civil"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                crate::program::tests::program_html("genie-civil"),
+            ))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let dir = test_dir("programs-refresh");
+        let programmes = dir.join("programmes");
+        std::fs::create_dir_all(&programmes)
+            .unwrap_or_else(|e| panic!("create the programs dir: {e}"));
+        for name in ["genie-civil-2024.json", "genie-civil-2025.json"] {
+            std::fs::write(programmes.join(name), "stale\n")
+                .unwrap_or_else(|e| panic!("plant {name}: {e}"));
+        }
+        std::fs::write(
+            programmes.join("genie-civil.manuel.json"),
+            "by hand\n",
+        )
+        .unwrap_or_else(|e| panic!("plant the manuel file: {e}"));
+        std::fs::write(programmes.join("notes.txt"), "not a snapshot\n")
+            .unwrap_or_else(|e| panic!("plant the stray file: {e}"));
+
+        run(vec![
+            "program".to_string(),
+            "--output-dir".to_string(),
+            dir.display().to_string(),
+            "--year".to_string(),
+            "2026".to_string(),
+            "--base-url".to_string(),
+            server.uri(),
+        ])
+        .await
+        .unwrap_or_else(|e| panic!("refresh the programs: {e}"));
+
+        let refreshed =
+            std::fs::read_to_string(programmes.join("genie-civil-2026.json"))
+                .unwrap_or_else(|e| panic!("read the refreshed file: {e}"));
+        assert!(refreshed.contains("\"year\": 2026"), "{refreshed}");
+        // earlier vintages are history, not targets: they survive untouched
+        for name in ["genie-civil-2024.json", "genie-civil-2025.json"] {
+            let content = std::fs::read_to_string(programmes.join(name))
+                .unwrap_or_else(|e| panic!("read {name}: {e}"));
+            assert_eq!(content, "stale\n", "{name} must survive a refresh");
+        }
+        let manuel = std::fs::read_to_string(
+            programmes.join("genie-civil.manuel.json"),
+        )
+        .unwrap_or_else(|e| panic!("read the manuel file: {e}"));
+        assert_eq!(manuel, "by hand\n", "hand-maintained, never scraped");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn program_without_urls_and_no_existing_programs_is_an_error() {
+        // an empty refresh list can only mean the caller pointed at the
+        // wrong directory — never a silent no-op
+        let dir = test_dir("programs-refresh-empty");
+
+        let error = run(vec![
+            "program".to_string(),
+            "--output-dir".to_string(),
+            dir.display().to_string(),
+        ])
+        .await
+        .expect_err("nothing to refresh must be said");
 
         let message = error.to_string();
-        assert!(message.contains("URLS"), "{message}");
-        assert!(message.contains("required"), "{message}");
+        assert!(message.contains("programmes"), "{message}");
+        cleanup(&dir);
     }
 
     #[tokio::test]
@@ -1082,8 +1317,11 @@ mod tests {
         .await
         .unwrap_or_else(|e| panic!("a 404 must not fail the run: {e}"));
 
+        let year = academic_year(std::time::SystemTime::now());
         assert!(
-            dir.join("programmes").join("genie-civil.json").exists(),
+            dir.join("programmes")
+                .join(format!("genie-civil-{year}.json"))
+                .exists(),
             "the reachable program still lands"
         );
         let logged =
@@ -1118,8 +1356,10 @@ mod tests {
         mount_program(&server, "genie-civil").await;
         let dir = test_dir("programs-blocked-file");
         // a directory at the target path makes the rename fail
+        let year = academic_year(std::time::SystemTime::now());
         std::fs::create_dir_all(
-            dir.join("programmes").join("genie-civil.json"),
+            dir.join("programmes")
+                .join(format!("genie-civil-{year}.json")),
         )
         .unwrap_or_else(|e| panic!("block the program path: {e}"));
 

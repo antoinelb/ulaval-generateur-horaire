@@ -10,6 +10,11 @@ use crate::common::Cycle;
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Program {
     pub code: String,
+    // the academic year the snapshot describes — programs change over
+    // winter for the next fall, so a scrape dates its capture (ADR
+    // `2026-07-annee-de-programme-selon-la-date-de-scrape`); students keep
+    // the version of the year they enrolled under
+    pub year: u16,
     pub title: String,
     pub cycle: Cycle,
     pub credits_required: i64,
@@ -357,7 +362,7 @@ mod tests {
 
     #[test]
     fn program_without_language_requirement_omits_the_key() {
-        let json = r#"{"code":"x","title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
+        let json = r#"{"code":"x","year":2026,"title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
         let program: Program = serde_json::from_str(json).expect("program");
         assert_eq!(program.language_requirement, None);
         assert!(!serde_json::to_string(&program)

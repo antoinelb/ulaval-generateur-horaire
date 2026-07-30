@@ -133,7 +133,9 @@ struct Structure {
     notes: Vec<String>,
 }
 
-pub fn parse(html: &str) -> Result<ProgramPage, ParseError> {
+// the page nowhere states which academic year it describes, so the caller
+// dates the capture (ADR `2026-07-annee-de-programme-selon-la-date-de-scrape`)
+pub fn parse(html: &str, year: u16) -> Result<ProgramPage, ParseError> {
     let doc = Html::parse_document(html);
 
     let mut anomalies = Vec::new();
@@ -146,6 +148,7 @@ pub fn parse(html: &str) -> Result<ProgramPage, ParseError> {
 
     let mut program = Program {
         code,
+        year,
         title,
         cycle,
         credits_required,
@@ -951,7 +954,8 @@ mod tests {
     }
 
     fn parsed(groups: &str) -> ProgramPage {
-        parse(&page(groups)).unwrap_or_else(|e| panic!("valid page: {e}"))
+        parse(&page(groups), 2026)
+            .unwrap_or_else(|e| panic!("valid page: {e}"))
     }
 
     fn malformed_entry(error: &ParseError) -> (&str, &str) {
@@ -991,7 +995,7 @@ mod tests {
         ] {
             let html = format!("<html><body>{body}</body></html>");
             assert!(
-                parse(&html).is_err(),
+                parse(&html, 2026).is_err(),
                 "a page missing {missing} was accepted"
             );
         }
@@ -1021,7 +1025,7 @@ mod tests {
             structure(""),
         );
 
-        let page = parse(&html).expect("valid page");
+        let page = parse(&html, 2026).expect("valid page");
         assert_eq!(page.program.title, "Baccalauréat en génie des eaux");
     }
 
@@ -1061,7 +1065,7 @@ mod tests {
             r#"<link rel="canonical" href="///">"#,
         );
 
-        let error = parse(&html).expect_err("no slug");
+        let error = parse(&html, 2026).expect_err("no slug");
         assert_eq!(malformed_entry(&error).0, CANONICAL_CSS);
     }
 
@@ -1075,7 +1079,7 @@ mod tests {
         );
 
         assert!(matches!(
-            parse(&html),
+            parse(&html, 2026),
             Err(ParseError::MissingElement { selector }) if selector == PROMO_VALUE_CSS
         ));
     }
