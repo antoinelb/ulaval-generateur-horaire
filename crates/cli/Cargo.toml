@@ -1,0 +1,19 @@
+[package]
+name = "ulaval-scheduler-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "ulaval-scheduler"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+ulaval-scheduler-core = { workspace = true }
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
