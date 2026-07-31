@@ -59,49 +59,48 @@ L'absence de perte silencieuse s'applique partout : une règle, un préalable ou
 
 ## Phase 2 — Substrat de B
 
-- [ ] Modèle du domaine de B (`organigramme.rs`)
-    - [ ] Entrée = **liste de cours fournie** (possiblement partielle — tronc seul, ou base du directeur), sessions `{1,…,8}`, saison de chaque session, crédits, plafond ; B ne dérive jamais de candidats depuis les règles
-    - [ ] Contraintes de l'utilisateur → **réductions de domaine à des singletons** : cours réussis (retirés, crédits précomptés), cours voulus (forcés — p. ex. avec un ami), sessions remplies à la main, session à l'étranger (puits de crédits). Un seul mécanisme pour « à partir de zéro » *et* « avec cours fixés »
-    - Verify : un cours épinglé a un domaine singleton ; un cours réussi ne figure plus dans les candidats mais compte dans les crédits et les préalables ; une liste partielle se place sans erreur
+- [x] Modèle du domaine de B (`organigramme.rs`)
+    - [x] Entrée = **liste de cours fournie** (`PlacementRequest` : sessions en saisons ordonnées, plafond, concomitance, réussis, épinglés, seed d'ordre) ; B ne dérive jamais de candidats depuis les règles
+    - [x] Contraintes de l'utilisateur → **réductions de domaine à des singletons** : réussis retirés et précomptés, épinglés en singleton, entrées contradictoires ou orphelines en `PlacementError` typées
+    - Verify : ✅ tests en ligne (épinglé = singleton ; réussi absent du placement, compté aux crédits et aux préalables ; liste partielle sans erreur ; tout-réussi = une solution vide)
 
-- [ ] Vérificateur de règles (`rules.rs` — l'API produit, cœur pur, consommée par l'UI ; jalon 8)
-    - [ ] Couverture d'une sélection : par règle, **satisfait / à combler / candidats** ; `Constraint::Count{n}` exige `n` choisis, `Constraint::Credits{min,max}` une somme dans l'intervalle ; obligatoires manquants signalés
-    - [ ] Candidats pour combler une règle = sa liste de cours, filtrée par `weekly::is_feasible` contre l'horaire ouvert de la session visée (A suffit — aucun cheminement à vérifier)
-    - [ ] `RuleCourses::{Reference, Keyword, Raw}` (`Keyword::{Any, Negotiated}`) et toute règle `constraint: None` **remontées à l'étudiant, jamais inventées** (`2026-07-contrainte-de-regle-optionnelle`, `2026-07-regles-negociees-reconnues`) ; la règle 5 GEX est `Keyword::Any` (domaine = tout le catalogue) → choix de l'étudiant, jamais énumérée
-    - Verify : les 14 fixtures gelées de `tests/fixtures/test_cases/rules/` reproduites à l'identique (schéma : ADR `2026-07-schema-du-rapport-de-couverture-en-fixtures`) — règles réelles du bac GEX (1 parmi 3 ; 3–9 cr parmi 4 ; 3–9 cr parmi 9 ; 3 cr parmi 19, doublons dédoublonnés ; règle 5 `Keyword::Any` remontée), référence résolue (génie civil), `negotiated` (génie physique), et une règle `constraint: None` **réelle** (génie mécanique, profil Passage intégré — la fixture synthétique prévue est inutile) qui produit une note, pas un verdict
+- [x] Vérificateur de règles (`rules.rs` — l'API produit, cœur pur, consommée par l'UI ; jalon 8)
+    - [x] Couverture d'une sélection : par portée (programme + concentration/profil choisis), obligatoires satisfaits/manquants, règles `satisfied`/`incomplete`/`reported` avec `missing` miroir de `Constraint` ; somme > `max` = erreur typée (ADR `2026-07-somme-au-dessus-du-max-en-erreur-typee`) ; crédits `Range` à la borne basse (ADR `2026-07-credits-range-borne-basse-en-planification`)
+    - [x] `RuleCourses::{Reference, Keyword, Raw}` et toute règle `constraint: None` **remontées, jamais inventées** ; `Reference` résolue avant le verdict (une référence brisée reste une erreur) ; candidats **non filtrés** par faisabilité (couche comptable — la composition avec A viendra avec sa forme d'entrée)
+    - Verify : ✅ les 14 fixtures gelées de `tests/fixtures/test_cases/rules/` reproduites à l'identique (`crates/core/tests/integration/rules.rs`), tous les chemins d'erreur épinglés en tests unitaires
 
-- [ ] Filtres structurels (chacun en O(cours), à appliquer dans cet ordre)
-    - [ ] Offre par saison ; précédence par parcours du `PrereqTree` (`All` = chaque enfant strictement avant ; `Any` = au moins un avant ; `ProgramCredits` = crédits accumulés avant ≥ seuil ; opérandes `Raw`/non vérifiables **remontées, jamais imposées** — `2026-07-operande-non-verifiable-gardee-en-texte`) ; capacité de crédits par session
-    - [ ] Option « concomitants » : relâche « strictement avant » en « avant ou identique »
-    - Verify : un cours placé avant son préalable est rejeté ; un arbre OU satisfait par un seul enfant passe ; une saison non offerte est rejetée ; un dépassement de plafond est rejeté — chacun épinglé par une fixture de `tests/fixtures/test_cases/organigrammes/`
+- [x] Filtres structurels (appliqués à chaque extension, le moins cher d'abord)
+    - [x] Offre par saison (au domaine) ; capacité ; précédence par évaluation **trois-valuée** de l'arbre aplati (sans récursion) — `False` prouvé permanent donc élagage sûr ; opérandes `Raw` **et codes inconnus préuniversitaires (0xxx)** présumés satisfaits et remontés par solution (`assumed`) ; tout autre code inconnu bloque (ADR `2026-07-prealable-inconnu-non-bloquant-remonte`, restreint par `2026-07-presomption-limitee-au-preuniversitaire`)
+    - [x] Option « concomitants » : relâche « strictement avant » en « avant ou identique » (jamais pour soi-même ni pour `program_credits`)
+    - Verify : ✅ chaque filtre épinglé par les fixtures `organigrammes/` et par tests en ligne (chaîne de préalables, OU à une branche, saison absente, dépassement de plafond)
 
-- [ ] Oracle de faisabilité mémoïsé (`feasibility.rs`)
-    - [ ] `term_feasible(cache, (Season, BTreeSet<code>), snapshot) -> bool` appelant `weekly::is_feasible` sur le domaine construit, clé canonique indépendante de l'ordre
-    - Verify : deux candidats partageant l'ensemble de cours d'une session ne calculent la faisabilité qu'une fois (compteur d'appels sous-jacents)
+- [x] Oracle de faisabilité mémoïsé (`feasibility.rs`)
+    - [x] `FeasibilityCache::term_feasible(season, codes, by_code)` appelant `weekly::is_feasible`, clé `(Season, BTreeSet<code>)` canonique — appliqué au contenu **partiel** de la session à chaque ajout (`is_feasible` est monotone, le veto anticipé est déjà final)
+    - Verify : ✅ le même ensemble ne calcule qu'une fois (`computed()`), saisons distinctes = verdicts distincts, code sans offre = infaisable bruyant
 
 ---
 
 ## Phase 3 — Solveur B (fait main, placement seul, toutes les solutions)
 
-- [ ] `organigramme.rs` : la recherche de placement
-    - [ ] Affectation systématique **complète** cours par cours (frontière par `fold`, ni `while` ni récursion), élaguée par les filtres structurels à chaque extension
-    - [ ] Ordre de valeurs = session du `cheminement_type` de référence d'abord, puis sessions voisines ; sans seed (autre programme, base du directeur) : plus tôt offerte d'abord — la première solution de la liste ressemble au cheminement de référence
-    - [ ] A-veto mémoïsé (`term_feasible`) dès qu'une session est complète, pas seulement aux feuilles
-    - [ ] Budget de nœuds explicite, qui borne aussi la taille de l'ensemble retourné (mémoire WASM) : recherche épuisée sans solution = « aucun cheminement faisable » **prouvé** ; budget atteint = « budget épuisé », jamais confondus
-    - [ ] **Rejet, jamais réparation** : un préfixe qui échoue est abandonné, jamais corrigé sur place
-    - [ ] Sortie : **toutes les solutions faisables trouvées**, dans l'ordre de la recherche (ADR `2026-07-b-enumere-toutes-les-solutions`) — recherche épuisée = ensemble complet prouvé (vide = infaisable) ; budget atteint = ensemble partiel, signalé ; l'utilisateur édite, on replace
-    - Verify : les 13 fixtures gelées de `tests/fixtures/test_cases/organigrammes/` reproduites à l'identique, sortie canonisée avant comparaison (ADR `2026-07-schema-des-fixtures-de-placement`) — dont l'inversion des projets intégrateurs en admission hiver ; sur le bac GEX complet (34 obligatoires + électifs choisis), l'énumération complète sort en bien moins d'une seconde ; **mesure consignée** : le nombre de solutions du bac complet *et* d'une liste partielle (tronc seul) — tout raffinement (dédoublonnage d'électifs interchangeables) attend cette donnée ; propriétés — chaque solution de l'ensemble respecte précédence, offre, capacité, singletons épinglés, et chaque session est horaire-faisable via A ; sur entrée sur-contrainte fabriquée sans solution, sortie « infaisable » prouvée (pas de plantage, pas de faux positif) ; un budget minuscule forcé rapporte « budget épuisé » avec ensemble partiel, jamais « infaisable »
+- [x] `organigramme.rs` : la recherche de placement
+    - [x] Affectation systématique **complète** cours par cours — parcours en profondeur sur pile explicite dans un `try_fold` borné (ni `while` ni récursion ; la profondeur préserve les solutions déjà trouvées quand une borne arrête la recherche, ce que la frontière de A perdrait — ADR `2026-07-budget-de-b-en-double-borne`), élaguée par les filtres structurels à chaque extension
+    - [x] Ordre de valeurs = session du seed d'abord, puis voisines par distance (plus tôt sur égalité) ; sans seed : plus tôt offerte d'abord — le paramètre `seed` attend le `cheminement_type` manuel (fichier encore inexistant)
+    - [x] A-veto mémoïsé (`term_feasible`) sur le contenu partiel de la session à **chaque ajout** (monotonie de `is_feasible`), pas seulement aux feuilles
+    - [x] **Double borne** explicite (`max_nodes` = affectations partielles développées, `max_solutions` = taille de l'ensemble) ; `Completion::{Complete, NodeBudget, SolutionCap}` jamais confondus — recherche épuisée à ensemble vide = infaisabilité **prouvée**
+    - [x] **Rejet, jamais réparation** ; sortie = toutes les solutions trouvées en ordre de recherche, `assumed` par solution pour les opérandes présumées
+    - Verify : ✅ les 13 fixtures gelées de `tests/fixtures/test_cases/organigrammes/` reproduites à l'identique, sortie canonisée avant comparaison — dont l'inversion des projets intégrateurs en admission hiver ; propriétés `proptest` : l'ensemble retourné **égale** une énumération brute indépendante (justesse *et* complétude), recherche déterministe, budget réduit = préfixe de l'ensemble complet ; budget minuscule = `NodeBudget` jamais « infaisable » ; sur-contraint = infaisable prouvé
+    - **Mesure consignée (2026-07-30, release, plafond 17, admission a2026)** : bac GEX complet (33 obligatoires plaçables + 4 électifs, GCI-1011 sans page de cours — voir « Encore à planifier ») → première solution < 50 ms, 1 000 solutions en 36 ms ; tronc seul (33 cours) → 100 000 solutions en 1,4 s, 500 000 en 7,9 s, **plafond toujours atteint** : l'ensemble complet explose combinatoirement (queue de cours lâches), « bien moins d'une seconde » vaut pour tout ensemble borné raisonnable mais **pas** pour l'énumération totale — la donnée que le dédoublonnage d'électifs interchangeables attendait ; la double borne fait exactement son travail
 
 ---
 
 ## Phase 4 — Intégration et harnais
 
-- [ ] Harnais CLI/test de B
-    - [ ] Fournir des contraintes (réussis, voulus, sessions manuelles, étranger) et une liste de cours → le premier organigramme imprimé en entier, le compte total de solutions affiché ; avec une liste partielle, le rapport de couverture des règles imprimé à côté
-    - Verify : `make test` vert à couverture cible ; un organigramme signalant un cours placé avant son préalable et ce qui manque pour diplômer (jalon 8, via le vérificateur)
+- [x] Harnais CLI/test de B
+    - [x] `ulaval-scheduler organigramme <session-départ> [codes…] --credit-cap N [--program STEM] [--passed …] [--pinned CODE=N] [--concomitant] [--sessions N] [--max-nodes N] [--max-solutions N]` : saisons alternées automne/hiver depuis la session de départ, `data/cours.json` unique (offre la plus récente par saison portée par `last_offered` — hypothèse fondatrice par cours), premier organigramme imprimé en entier avec charges par session, compte et statut de l'ensemble, préalables présumés remontés ; avec `--program`, les obligatoires entrent dans la liste et le rapport de couverture est imprimé à côté ; un obligatoire sans page de cours est écarté bruyamment (ADR `2026-07-cours-sans-offre-ecarte-par-le-harnais`), l'entrée tapée reste strictement validée
+    - Verify : ✅ `make test` vert à 100 % ; le bac GEX réel imprime son organigramme et sa couverture (règles 1–4 satisfaites par les électifs choisis, règle 5 et exigence linguistique remontées), infaisable prouvé = sortie 2
 
-- [ ] Tests de propriété transverses de B
-    - Verify : sur des contraintes et listes générées, toute solution de l'ensemble retourné respecte précédence, offre, capacité, et chaque session est horaire-faisable via A ; le vérificateur de règles est cohérent (une sélection déclarée conforme ne perd aucune règle)
+- [x] Tests de propriété transverses de B
+    - Verify : ✅ sur instances générées (saisons, offres, plages, préalables `Needs`/`Either`/`CreditsBefore`, réussis, épinglés, plafond, concomitance), l'ensemble retourné **égale** l'énumération brute naïve — donc chaque solution respecte précédence, offre, capacité, épinglages, et chaque session est horaire-faisable via A ; le vérificateur est verrouillé par les 14 fixtures et ses tests unitaires (contenus de `counted`/`candidates`, arithmétique des manques)
 
 - [ ] Câblage `ui` (jalon 7+ ; hors cœur) : `core` piloté depuis Dioxus, snapshot chargé au navigateur — **aucune règle métier dans la vue** (invariant) : couverture des règles, candidats et validation viennent tous de `core`. Lire `.claude/dioxus.md` avant tout code Dioxus 0.7
 
@@ -110,16 +109,15 @@ L'absence de perte silencieuse s'applique partout : une règle, un préalable ou
 ## Encore à planifier (à faire remonter, pas à inventer)
 
 Ces points sont des **décisions ou des données manquantes**, pas des tâches d'implémentation ; les trancher avec l'utilisateur et les consigner en ADR avant de coder ce qui en dépend.
+Tranchés le 2026-07-30 (avec Antoine, ADR individuels) : le budget de B (double borne — `2026-07-budget-de-b-en-double-borne`), le préalable hors liste (non bloquant, remonté — `2026-07-prealable-inconnu-non-bloquant-remonte`, restreint le 2026-07-31 aux codes 0xxx — `2026-07-presomption-limitee-au-preuniversitaire`), la pondération des crédits en intervalle (borne basse en planification — `2026-07-credits-range-borne-basse-en-planification`) et la somme au-dessus du `max` (erreur typée — `2026-07-somme-au-dessus-du-max-en-erreur-typee`).
 
-- **Plafond de crédits par session** : dur (17 ?) ou cible molle — le chiffre n'a aucune source documentée, à confirmer avec le directeur.
-- **Pondération des crédits en intervalle** : requise d'emblée, ou défaut à la borne basse.
+- **Plafond de crédits par session** : dur (17 ?) ou cible molle — le chiffre n'a aucune source documentée, à confirmer avec le directeur (la mécanique est en place : le plafond est une entrée, `--credit-cap` au harnais).
+- **Dédoublonnage des solutions de B** : la mesure du 2026-07-30 (Phase 3) montre que l'ensemble complet du bac GEX dépasse 500 000 solutions — variantes d'électifs et de cours lâches interchangeables ; forme du dédoublonnage (classes d'équivalence ?) ou plafond UI bas à trancher avant le jalon 9.
+- **GCI-1011 sans page de cours** : obligatoire du bac GEX 2026, absent de tous les snapshots 2009–2026 — trou de scrape ou cours jamais offert ? À vérifier à la source ; en attendant, le harnais l'écarte bruyamment (ADR `2026-07-cours-sans-offre-ecarte-par-le-harnais`).
 - **Sémantique exacte des préférences de A** (journées compactes, matins libres, pause dîner) — pour le classement du jalon 10, à calibrer contre des données réelles (Phase 0 laisse les signatures ouvertes) ; B n'a plus d'objectif.
-- **Interaction règles × profils** (jalon 6) — désormais côté vérificateur/affichage, plus côté solveur.
+- **Interaction règles × profils** (jalon 6) — désormais côté vérificateur/affichage, plus côté solveur ; le vérificateur accepte déjà une portée profil.
 - **Format JSON de l'organigramme** échangé entre « Cours pour le programme » et l'horaire hebdomadaire — forme provisoire concrète fixée par les fixtures (saisons ordonnées des sessions + solution en carte cours → numéro de session, ADR `2026-07-schema-des-fixtures-de-placement`) ; l'intégration UI reste ouverte.
-- **Budget de nœuds de B** : la définition d'un « nœud » et la façon dont le budget borne l'ensemble retourné — la fixture « budget atteint = ensemble partiel » attend cette décision (`expected.complete: false` réservé dans le schéma).
 - **Double comptage au vérificateur** : un cours candidat aux listes de deux règles compte-t-il pour les deux ? Sans effet sur les rapports par règle, décisif pour « ce qui manque pour diplômer » — à trancher avec le directeur.
 - **Concomitance par arête** (jetons ombrés des organigrammes PDF) : `PrereqTree` ne la porte pas — l'astérisque du site ne survit que dans `prerequisites.raw` ; seule l'option globale est fixturée, l'encoder est une décision scraper/modèle de données.
-- **Préalable vers un cours hors liste et non réussi** (p. ex. collégial) : bloquer, remonter ou présumer satisfait à l'admission — les fixtures évitent le cas, la référence erre dès que le verdict en dépend.
-- **Somme au-dessus du `max` d'une règle à crédits** : violation ou excédent non compté — les fixtures restent ≤ max.
 - **Forme minimale du rapport de conflit** de A — tranchée au niveau cours : marquage optionnel `valid: false` par cours et par alternative (sémantique swap), contrat et cas de test figés dans `tests/fixtures/test_cases/schedules/` (ADR `2026-07-contrat-horaire-hebdomadaire-vers-ui`) ; reste ouvert le raffinement « ensemble minimal » Max-CSP pour le cas infaisable (le cas « paires compatibles, ensemble infaisable » est couvert par `triple-infeasible-pairwise-ok.json`).
-- **Présentation des solutions multiples de B dans l'UI** : la première est proposée ; comment (et si) offrir les autres — et si la mesure révèle une explosion de variantes interchangeables, la forme du dédoublonnage.
+- **Arbitrage de la référence B** : les fixtures sont reproduites à l'identique par l'implémentation Rust — les scripts `tests/reference/solveur_b/` peuvent être supprimés après confirmation par Antoine (ADR `2026-07-reference-b-versionnee-jusqua-larbitrage` : « quand l'implémentation Rust reproduit les fixtures »).

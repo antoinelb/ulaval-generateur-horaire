@@ -89,10 +89,6 @@ static LINKED_WRAPPER: LazyLock<Selector> =
 
 pub struct CoursePage {
     pub course: Course,
-    // the year each retained season was read from: it names the session
-    // snapshot (`a2026`) but is not a property of the course, so it rides
-    // alongside `Course` instead of inside it
-    pub years: BTreeMap<Season, u16>,
     pub anomalies: Vec<ParseError>,
 }
 
@@ -143,16 +139,30 @@ pub fn parse(html: &str) -> Result<Option<CoursePage>, ParseError> {
     };
     let prerequisites = parse_prerequisites(&doc, &mut anomalies);
     let equivalents = parse_equivalents(&doc)?;
-    let sessions = parse_seasons(&doc, &mut anomalies);
 
-    let years = sessions
-        .iter()
-        .map(|(season, (year, _))| (*season, *year))
-        .collect();
-    let seasons = sessions
-        .into_iter()
-        .map(|(season, (_, offering))| (season, offering))
-        .collect();
+    // The new-course rule: a page with no session section at all is a course
+    // whose schedule is not yet published (GCI-1011) — offered Fall and
+    // Winter, vintage and schedule unknown (ADR
+    // `2026-07-cours-sans-section-de-session-offert-automne-hiver`). The
+    // guard is the *absence of the section*, not an empty parse result: a
+    // session block that yields nothing left an anomaly, and nothing is
+    // invented next to an anomaly.
+    let seasons = if doc.select(&SESSION).next().is_none() {
+        [Season::Fall, Season::Winter]
+            .into_iter()
+            .map(|season| {
+                (
+                    season,
+                    SeasonOffering {
+                        last_offered: None,
+                        options: None,
+                    },
+                )
+            })
+            .collect()
+    } else {
+        parse_seasons(&doc, &mut anomalies)
+    };
 
     Ok(Some(CoursePage {
         course: Course {
@@ -164,7 +174,6 @@ pub fn parse(html: &str) -> Result<Option<CoursePage>, ParseError> {
             equivalents,
             seasons,
         },
-        years,
         anomalies,
     }))
 }
@@ -618,8 +627,8 @@ fn parse_equivalents(doc: &Html) -> Result<Vec<String>, ParseError> {
 fn parse_seasons(
     doc: &Html,
     anomalies: &mut Vec<ParseError>,
-) -> BTreeMap<Season, (u16, SeasonOffering)> {
-    let mut latest: BTreeMap<Season, (u16, SeasonOffering)> = BTreeMap::new();
+) -> BTreeMap<Season, SeasonOffering> {
+    let mut latest: BTreeMap<Season, SeasonOffering> = BTreeMap::new();
 
     for session in doc.select(&SESSION) {
         let Some(heading) = session.select(&SESSION_HEADING).next() else {
@@ -634,13 +643,22 @@ fn parse_seasons(
                 continue;
             }
         };
-        if latest.get(&season).is_some_and(|(known, _)| *known >= year) {
+        if latest
+            .get(&season)
+            .is_some_and(|kept| kept.last_offered >= Some(year))
+        {
             continue;
         }
 
-        let offering = parse_offering(session, &heading, anomalies);
-        if !offering.options.is_empty() {
-            latest.insert(season, (year, offering));
+        let options = parse_offering(session, &heading, anomalies);
+        if !options.is_empty() {
+            latest.insert(
+                season,
+                SeasonOffering {
+                    last_offered: Some(year),
+                    options: Some(options),
+                },
+            );
         }
     }
 
@@ -672,7 +690,7 @@ fn parse_offering(
     session: ElementRef,
     heading: &str,
     anomalies: &mut Vec<ParseError>,
-) -> SeasonOffering {
+) -> Vec<Vec<Section>> {
     let top = top_level_sections(session);
 
     if advertised_section_count(heading) != Some(top.len()) {
@@ -682,12 +700,9 @@ fn parse_offering(
         });
     }
 
-    let options = top
-        .into_iter()
+    top.into_iter()
         .flat_map(|section| enrolment_options(section, anomalies))
-        .collect();
-
-    SeasonOffering { options }
+        .collect()
 }
 
 // A stray tag can re-parent a section out of the session's direct children —
@@ -1076,6 +1091,12 @@ mod tests {
         }
     }
 
+    // every parsed offering carries a schedule: `options: None` only comes
+    // from the new-course synthesis in `parse`, never from `parse_seasons`
+    fn options_of(offering: &SeasonOffering) -> &[Vec<Section>] {
+        offering.options.as_deref().expect("a parsed schedule")
+    }
+
     fn credits_card(value: &str) -> String {
         fait_rapide(&format!(
             r#"<span class="promo-entete--titre">{value}</span><span class="promo-entete--contenu">Crédits</span>"#
@@ -1121,9 +1142,11 @@ mod tests {
     }
 
     #[test]
-    fn a_complete_page_without_sessions_is_a_course_with_no_season() {
-        // the counterpart of the table above: every field present, so the
-        // same `?`s let the page through
+    fn a_page_without_sessions_is_offered_fall_and_winter_unknown() {
+        // The new-course rule (GCI-1011's shape): no session section at all
+        // means the schedule is not yet published, not that the course is
+        // never offered — Fall and Winter, vintage and schedule unknown
+        // (ADR `2026-07-cours-sans-section-de-session-offert-automne-hiver`)
         let html = format!(
             "<html><body>{}{}{}{}</body></html>",
             r#"<span class="fe--titre-type">GEX-4008</span>"#,
@@ -1136,8 +1159,35 @@ mod tests {
             .expect("complete page")
             .expect("a first-cycle course is in scope");
         assert_eq!(page.course.code, "GEX-4008");
-        assert!(page.course.seasons.is_empty());
+        assert_eq!(
+            page.course.seasons.keys().collect::<Vec<_>>(),
+            [&Season::Fall, &Season::Winter],
+        );
+        assert!(page.course.seasons.values().all(|offering| {
+            offering.last_offered.is_none() && offering.options.is_none()
+        }));
         assert!(page.anomalies.is_empty());
+    }
+
+    #[test]
+    fn a_session_block_yielding_nothing_synthesizes_no_season() {
+        // The guard is the *absence* of the section, never an empty parse
+        // result: a session block whose heading the parser cannot read left
+        // an anomaly, and nothing is invented next to an anomaly.
+        let html = format!(
+            "<html><body>{}{}{}{}{}</body></html>",
+            r#"<span class="fe--titre-type">GEX-4008</span>"#,
+            r#"<span class="fe--titre-nom">Approvisionnement</span>"#,
+            credits_card("3"),
+            cycle_card(&["Premier cycle"]),
+            session("Printemps 2026 – 1 section offerte", ""),
+        );
+
+        let page = parse(&html)
+            .expect("complete page")
+            .expect("a first-cycle course is in scope");
+        assert!(page.course.seasons.is_empty());
+        assert_eq!(page.anomalies.len(), 1, "the dropped block is surfaced");
     }
 
     #[test]
@@ -1604,10 +1654,15 @@ mod tests {
             let seasons = parse_seasons(&doc, &mut anomalies);
 
             assert_eq!(seasons.len(), 1, "one offering per season ({order})");
-            let (year, offering) = &seasons[&Season::Fall];
-            assert_eq!(*year, 2026, "the 2026 session wins ({order})");
+            let offering = &seasons[&Season::Fall];
             assert_eq!(
-                offering.options[0][0].nrc, "22222",
+                offering.last_offered,
+                Some(2026),
+                "the 2026 session wins ({order})"
+            );
+            assert_eq!(
+                options_of(offering)[0][0].nrc,
+                "22222",
                 "the 2026 session wins ({order})"
             );
             assert!(anomalies.is_empty(), "{order}: {anomalies:?}");
@@ -1651,7 +1706,7 @@ mod tests {
         let mut anomalies = Vec::new();
 
         let seasons = parse_seasons(&doc, &mut anomalies);
-        assert_eq!(seasons[&Season::Winter].1.options.len(), 1);
+        assert_eq!(options_of(&seasons[&Season::Winter]).len(), 1);
         assert_eq!(malformed_entry(&anomalies[0]).0, "p.controls-title");
     }
 
@@ -1673,7 +1728,7 @@ mod tests {
             let mut anomalies = Vec::new();
 
             let seasons = parse_seasons(&doc, &mut anomalies);
-            assert_eq!(seasons[&Season::Fall].1.options.len(), 1);
+            assert_eq!(options_of(&seasons[&Season::Fall]).len(), 1);
             assert_eq!(
                 malformed_entry(&anomalies[0]).0,
                 "p.controls-title",
@@ -1735,9 +1790,7 @@ mod tests {
 
         let seasons = parse_seasons(&doc, &mut anomalies);
 
-        let nrcs: Vec<Vec<&str>> = seasons[&Season::Fall]
-            .1
-            .options
+        let nrcs: Vec<Vec<&str>> = options_of(&seasons[&Season::Fall])
             .iter()
             .map(|option| {
                 option.iter().map(|s| s.nrc.as_str()).collect::<Vec<_>>()
@@ -1787,9 +1840,7 @@ mod tests {
 
         let seasons = parse_seasons(&doc, &mut anomalies);
 
-        let nrcs: Vec<&str> = seasons[&Season::Fall]
-            .1
-            .options
+        let nrcs: Vec<&str> = options_of(&seasons[&Season::Fall])
             .iter()
             .flatten()
             .map(|s| s.nrc.as_str())
@@ -1908,7 +1959,7 @@ mod tests {
         let seasons = parse_seasons(&doc, &mut anomalies);
 
         assert!(anomalies.is_empty(), "{anomalies:?}");
-        let section = &seasons[&Season::Fall].1.options[0][0];
+        let section = &options_of(&seasons[&Season::Fall])[0][0];
         assert_eq!(section.mode, Mode::Hybrid);
         assert_eq!(
             section.slots.len(),

@@ -1,30 +1,33 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-// the exact JSON shape the scraper writes to `data/cours/{session}.json`:
+// the exact JSON shape the scraper writes to `data/cours.json`:
 // two courses on the same monday slot, a winter-only course borrowing its
 // equivalent's fall offering, a winter-only orphan, and a variable-credit
 // stage — enough to drive every exit of the binary
 const SNAPSHOT: &str = r#"{"courses":[
   {"code":"GEX-1000","title":"T","credits":3,"cycle":1,
    "prerequisites":null,"equivalents":[],
-   "seasons":{"fall":{"options":[[{"nrc":"81001","section":"A",
+   "seasons":{"fall":{"last_offered":2026,
+     "options":[[{"nrc":"81001","section":"A",
      "mode":"in-person","slots":[{"day":"monday","start":"08:30",
      "end":"11:20"}]}]]}}},
   {"code":"GCI-1000","title":"T","credits":3,"cycle":1,
    "prerequisites":null,"equivalents":[],
-   "seasons":{"fall":{"options":[[{"nrc":"82002","section":"A",
+   "seasons":{"fall":{"last_offered":2026,
+     "options":[[{"nrc":"82002","section":"A",
      "mode":"in-person","slots":[{"day":"monday","start":"08:30",
      "end":"11:20"}]}]]}}},
   {"code":"GEX-2000","title":"T","credits":3,"cycle":1,
    "prerequisites":null,"equivalents":["GCI-1000"],
-   "seasons":{"winter":{"options":[[]]}}},
+   "seasons":{"winter":{"last_offered":2026,"options":[[]]}}},
   {"code":"GEX-3000","title":"T","credits":3,"cycle":1,
    "prerequisites":null,"equivalents":[],
-   "seasons":{"winter":{"options":[[]]}}},
+   "seasons":{"winter":{"last_offered":2026,"options":[[]]}}},
   {"code":"GEX-2580","title":"Stage","credits":{"min":6,"max":12},
    "cycle":1,"prerequisites":null,"equivalents":[],
-   "seasons":{"fall":{"options":[[{"nrc":"85800","section":null,
+   "seasons":{"fall":{"last_offered":2026,
+     "options":[[{"nrc":"85800","section":null,
      "mode":"remote","slots":[]}]]}}}
 ]}"#;
 
@@ -159,10 +162,9 @@ fn test_dir(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!("ulaval-scheduler-e2e-{name}"));
     // leftovers from an earlier failed run
     let _ = std::fs::remove_dir_all(&dir);
-    let cours = dir.join("cours");
-    std::fs::create_dir_all(&cours)
-        .unwrap_or_else(|e| panic!("create {}: {e}", cours.display()));
-    std::fs::write(cours.join("a2026.json"), SNAPSHOT)
+    std::fs::create_dir_all(&dir)
+        .unwrap_or_else(|e| panic!("create {}: {e}", dir.display()));
+    std::fs::write(dir.join("cours.json"), SNAPSHOT)
         .unwrap_or_else(|e| panic!("write the snapshot: {e}"));
     dir
 }

@@ -47,6 +47,19 @@ impl Credits {
             )),
         }
     }
+
+    // The credits a course counts for in *planning* (solver B, rules
+    // verifier) when no weighting has been chosen yet: a Range counts its
+    // lower bound — the only value that never fabricates credits the
+    // student does not have (ADR
+    // `2026-07-credits-range-borne-basse-en-planification`). A chosen
+    // weighting still goes through `resolve`.
+    pub fn planning(self) -> u32 {
+        match self {
+            Credits::Fixed(n) => n,
+            Credits::Range { min, .. } => min,
+        }
+    }
 }
 
 // A course can sit below the first cycle: a préuniversitaire « cours
@@ -119,11 +132,19 @@ pub struct ProgramCredits {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SeasonOffering {
+    // the session vintage this offering was read from — the newest year the
+    // page showed for this season (ADR
+    // `2026-07-snapshot-unique-des-cours-millesime-par-saison`). None = new
+    // course whose schedule is not yet published, so no vintage exists.
+    pub last_offered: Option<u16>,
     // one *complete* enrolment per entry: take all of an option's sections
     // together and union their slots. A lecture offering a choice of labs
     // appears once per lab, so a section with no lab of its own can still be
     // taken alone (ADR `2026-07-sections-en-combinaisons-valides`).
-    pub options: Vec<Vec<Section>>,
+    // None = offered but the schedule is not yet published — distinct from
+    // Some(vec![]), no valid enrolment combination (ADR
+    // `2026-07-cours-sans-section-de-session-offert-automne-hiver`).
+    pub options: Option<Vec<Vec<Section>>>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -393,16 +414,40 @@ mod tests {
         // sections together and union their slots. GCI-1007's shape — the
         // lecture rides along with whichever lab is chosen, so it appears in
         // both options.
-        let json = r#"{"options":[[{"nrc":"84664","section":null,"mode":"in-person","slots":[]},{"nrc":"84665","section":"A","mode":"in-person","slots":[]}],[{"nrc":"84664","section":null,"mode":"in-person","slots":[]},{"nrc":"84666","section":"B","mode":"in-person","slots":[]}]]}"#;
+        let json = r#"{"last_offered":2026,"options":[[{"nrc":"84664","section":null,"mode":"in-person","slots":[]},{"nrc":"84665","section":"A","mode":"in-person","slots":[]}],[{"nrc":"84664","section":null,"mode":"in-person","slots":[]},{"nrc":"84666","section":"B","mode":"in-person","slots":[]}]]}"#;
         let offering: SeasonOffering =
             serde_json::from_str(json).expect("offering");
-        assert_eq!(offering.options.len(), 2);
-        assert_eq!(offering.options[0].len(), 2);
-        assert_eq!(offering.options[0][0].nrc, offering.options[1][0].nrc);
+        assert_eq!(offering.last_offered, Some(2026));
+        let options = offering.options.as_deref().expect("known schedule");
+        assert_eq!(options.len(), 2);
+        assert_eq!(options[0].len(), 2);
+        assert_eq!(options[0][0].nrc, options[1][0].nrc);
         assert_eq!(
             serde_json::to_value(&offering).expect("ser"),
             as_value(json)
         );
+    }
+
+    // The new-course rule: a page with no session section at all yields an
+    // offering with neither vintage nor schedule. Serialization always
+    // writes both keys as explicit nulls; on the way in, serde lets an
+    // `Option` field be absent (a hand-written `data/cours.manuel.json`
+    // entry can omit them), which reads as the same `None` (ADR
+    // `2026-07-cours-sans-section-de-session-offert-automne-hiver`).
+    #[test]
+    fn a_new_course_offering_round_trips_both_nulls() {
+        let json = r#"{"last_offered":null,"options":null}"#;
+        let offering: SeasonOffering =
+            serde_json::from_str(json).expect("offering");
+        assert_eq!(offering.last_offered, None);
+        assert_eq!(offering.options, None);
+        assert_eq!(
+            serde_json::to_value(&offering).expect("ser"),
+            as_value(json)
+        );
+        let bare: SeasonOffering =
+            serde_json::from_str(r#"{}"#).expect("absent fields read None");
+        assert_eq!(bare, offering);
     }
 
     // An NRC may repeat *across* options — CSO-6702 hangs its two sections
@@ -411,10 +456,11 @@ mod tests {
     // contradiction.
     #[test]
     fn one_nrc_may_appear_in_several_options() {
-        let json = r#"{"options":[[{"nrc":"13450","section":"A","mode":"in-person","slots":[]},{"nrc":"13449","section":null,"mode":"in-person","slots":[]}],[{"nrc":"13451","section":"B","mode":"in-person","slots":[]},{"nrc":"13449","section":null,"mode":"in-person","slots":[]}]]}"#;
+        let json = r#"{"last_offered":2026,"options":[[{"nrc":"13450","section":"A","mode":"in-person","slots":[]},{"nrc":"13449","section":null,"mode":"in-person","slots":[]}],[{"nrc":"13451","section":"B","mode":"in-person","slots":[]},{"nrc":"13449","section":null,"mode":"in-person","slots":[]}]]}"#;
         let offering: SeasonOffering =
             serde_json::from_str(json).expect("offering");
-        assert_eq!(offering.options[0][1].nrc, offering.options[1][1].nrc);
+        let options = offering.options.as_deref().expect("known schedule");
+        assert_eq!(options[0][1].nrc, options[1][1].nrc);
         assert_eq!(
             serde_json::to_value(&offering).expect("ser"),
             as_value(json)
@@ -472,11 +518,18 @@ mod tests {
 
     #[test]
     fn range_credits_require_a_choice() {
-        // whether planning may default to the lower bound is an open
-        // question of `docs/next_steps.md` — until it is settled, no total
-        // is computed without the student's weighting
+        // `resolve` keeps its strict contract (A's credit totals): without
+        // the student's weighting, no total is computed — planning goes
+        // through `planning()` instead
         let range = Credits::Range { min: 6, max: 12 };
         assert!(range.resolve(None).is_err());
+    }
+
+    #[test]
+    fn planning_credits_default_a_range_to_its_lower_bound() {
+        // ADR `2026-07-credits-range-borne-basse-en-planification`
+        assert_eq!(Credits::Fixed(3).planning(), 3);
+        assert_eq!(Credits::Range { min: 6, max: 12 }.planning(), 6);
     }
 
     // --- PrereqTree: untagged ET/OU tree, each variant round-trips exactly ---
@@ -666,7 +719,7 @@ mod tests {
 
     #[test]
     fn course_deserializes_season_keyed_map() {
-        let json = r#"{"code":"GEX-7002","title":"x","credits":3,"cycle":2,"prerequisites":null,"equivalents":[],"seasons":{"winter":{"options":[[{"nrc":"14856","section":"A","mode":"in-person","slots":[{"day":"friday","start":"08:30","end":"11:20"}]}]]}}}"#;
+        let json = r#"{"code":"GEX-7002","title":"x","credits":3,"cycle":2,"prerequisites":null,"equivalents":[],"seasons":{"winter":{"last_offered":2026,"options":[[{"nrc":"14856","section":"A","mode":"in-person","slots":[{"day":"friday","start":"08:30","end":"11:20"}]}]]}}}"#;
         let course: Course = serde_json::from_str(json).expect("course");
         assert_eq!(course.cycle, CourseCycle::Second);
         assert_eq!(course.credits, Credits::Fixed(3));
@@ -674,7 +727,8 @@ mod tests {
             .seasons
             .get(&Season::Winter)
             .expect("winter offering");
-        assert_eq!(winter.options.len(), 1);
-        assert_eq!(winter.options[0][0].nrc, "14856");
+        let options = winter.options.as_deref().expect("known schedule");
+        assert_eq!(options.len(), 1);
+        assert_eq!(options[0][0].nrc, "14856");
     }
 }

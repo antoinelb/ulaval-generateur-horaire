@@ -20,3 +20,6 @@ unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage_nightly)"] }
 
 [workspace.lints.clippy]
 manual_range_contains = "allow"
+
+[profile.dev.package.ulaval-scheduler-core]
+opt-level = 2

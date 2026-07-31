@@ -12,6 +12,7 @@
   "equivalents": [],
   "seasons": {
     "fall": {
+      "last_offered": 2019,
       "options": [
         [
           {
@@ -24,6 +25,7 @@
       ]
     },
     "summer": {
+      "last_offered": 2021,
       "options": [
         [
           {

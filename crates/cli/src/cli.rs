@@ -4,8 +4,10 @@ use std::path::Path;
 use clap::Parser;
 
 use ulaval_scheduler_core::{
-    resolve_offering, schedule_report, Course, CourseReport, Day,
-    ScheduleReport, Season, Section, Slot,
+    coverage_report, place, resolve_offering, schedule_report, Completion,
+    Course, CourseReport, CoverageReport, Day, LanguageStatus,
+    MandatoryReport, Missing, Placement, PlacementRequest, Program,
+    RuleReport, RuleStatus, ScheduleReport, Season, Section, Slot, Solution,
 };
 
 // The jalon-2 harness: print a conflict-free weekly schedule for a list of
@@ -24,14 +26,55 @@ struct Cli {
 #[derive(clap::Subcommand)]
 enum Command {
     Schedule {
-        // season letter + year, matching the snapshot file names:
-        // a2026 (automne), h2027 (hiver), e2026 (été)
+        // season letter + year: a2026 (automne), h2027 (hiver), e2026
+        // (été). The season selects the offering; the snapshot keeps one
+        // per season (its freshest), so the year names the student's
+        // target session without selecting data.
         session: String,
         #[arg(required = true, num_args = 1..)]
         codes: Vec<String>,
         #[arg(long, default_value = "data")]
         data_dir: String,
     },
+    Organigramme(OrganigrammeArgs),
+}
+
+// The solveur-B harness (Phase 4 of `docs/next_steps.md`): a starting
+// session, a course list (a program's mandatory courses and/or explicit
+// codes) and the student's constraints → the first organigramme printed
+// whole, the total solution count, and — with a program — the rules
+// coverage report beside it.
+#[derive(clap::Args)]
+struct OrganigrammeArgs {
+    // starting session (a2026): seasons then alternate automne/hiver
+    start: String,
+    // chosen electives (or the whole list when --program is absent)
+    #[arg(num_args = 0..)]
+    codes: Vec<String>,
+    // a program snapshot stem (baccalaureat-en-genie-des-eaux-2026): its
+    // mandatory courses join the list and the coverage report is printed
+    #[arg(long)]
+    program: Option<String>,
+    // no documented per-session cap exists (open question with the
+    // director), so the value stays an explicit input, never a constant
+    #[arg(long)]
+    credit_cap: u32,
+    #[arg(long, default_value_t = 8)]
+    sessions: usize,
+    #[arg(long, value_delimiter = ',')]
+    passed: Vec<String>,
+    // CODE=SESSION, session numbers 1-based
+    #[arg(long, value_delimiter = ',')]
+    pinned: Vec<String>,
+    #[arg(long)]
+    concomitant: bool,
+    // the double bound (ADR `2026-07-budget-de-b-en-double-borne`)
+    #[arg(long, default_value_t = 10_000_000)]
+    max_nodes: u64,
+    #[arg(long, default_value_t = 100_000)]
+    max_solutions: usize,
+    #[arg(long, default_value = "data")]
+    data_dir: String,
 }
 
 // the same snapshot shape the scraper writes: `{"courses": [...]}`
@@ -63,6 +106,7 @@ pub fn run(args: Vec<String>) -> anyhow::Result<()> {
             codes,
             data_dir,
         } => print_schedule(&session, &codes, &data_dir),
+        Command::Organigramme(args) => print_organigramme(&args),
     }
 }
 
@@ -71,11 +115,10 @@ fn print_schedule(
     codes: &[String],
     data_dir: &str,
 ) -> anyhow::Result<()> {
-    let (season, year) = parse_session(session)?;
-    let snapshot = read_snapshot(data_dir, session)?;
+    let (season, _) = parse_session(session)?;
+    let snapshot = read_snapshot(data_dir)?;
     let codes = normalize_codes(codes)?;
-    let courses =
-        select_courses(&snapshot.courses, &codes, season, year, session)?;
+    let courses = select_courses(&snapshot.courses, &codes, season, session)?;
 
     // no pins: the harness always starts from scratch, the UI will pin
     let report = schedule_report(&courses, season, &BTreeMap::new())?;
@@ -96,8 +139,315 @@ fn print_schedule(
     Ok(())
 }
 
-// `a2026` → (Fall, 2026); the letter is the season of the snapshot file
-// names (a = automne, h = hiver, e = été)
+fn print_organigramme(args: &OrganigrammeArgs) -> anyhow::Result<()> {
+    let (start, _) = parse_session(&args.start)?;
+    let sessions = alternating_sessions(start, args.sessions);
+    let program = args
+        .program
+        .as_ref()
+        .map(|stem| read_program(&args.data_dir, stem))
+        .transpose()?;
+    let electives = normalize_codes(&args.codes)?;
+    let passed_codes = normalize_codes(&args.passed)?;
+    let list = course_list(program.as_ref(), &electives, &passed_codes);
+    let snapshot = read_snapshot(&args.data_dir)?;
+    // typed input (codes, passed, pins) is strictly validated — a typo
+    // must not survive; program-derived courses degrade loudly instead
+    // (ADR `2026-07-cours-sans-offre-ecarte-par-le-harnais`)
+    let explicit: BTreeSet<&str> = electives
+        .iter()
+        .chain(&passed_codes)
+        .map(String::as_str)
+        .collect();
+    let (courses, set_aside) = select_known(&list, &snapshot, &explicit)?;
+    if !set_aside.is_empty() {
+        println!(
+            "Sans données d'offre (écartés du placement) : {}\n",
+            set_aside.join(", ")
+        );
+    }
+    let passed: BTreeSet<String> = passed_codes.into_iter().collect();
+    let pinned = parse_pins(&args.pinned)?;
+
+    let placement = place(&PlacementRequest {
+        sessions: &sessions,
+        credit_cap: args.credit_cap,
+        concomitant: args.concomitant,
+        courses: &courses,
+        passed: &passed,
+        pinned: &pinned,
+        // the hand-encoded cheminement_type seed will plug in here once
+        // `data/programmes/{code}.manuel.json` exists
+        seed: &BTreeMap::new(),
+        max_nodes: args.max_nodes,
+        max_solutions: args.max_solutions,
+    })?;
+
+    println!("{}", render_placement(&placement, &courses, &sessions));
+    if let Some(program) = &program {
+        let selection: BTreeSet<String> = list.iter().cloned().collect();
+        let coverage =
+            coverage_report(program, None, None, &selection, &courses)?;
+        println!("\n{}", render_coverage(&coverage));
+    }
+    anyhow::ensure!(
+        placement.completion != Completion::Complete
+            || !placement.solutions.is_empty(),
+        "no feasible organigramme exists (proven by exhaustive search)"
+    );
+    Ok(())
+}
+
+// real cheminements alternate automne/hiver; a summer start flows into
+// fall — été is never generated automatically
+fn alternating_sessions(start: Season, count: usize) -> Vec<Season> {
+    (0..count)
+        .scan(start, |season, _| {
+            let current = *season;
+            *season = match current {
+                Season::Fall => Season::Winter,
+                Season::Winter | Season::Summer => Season::Fall,
+            };
+            Some(current)
+        })
+        .collect()
+}
+
+fn read_program(data_dir: &str, stem: &str) -> anyhow::Result<Program> {
+    let path = Path::new(data_dir)
+        .join("programmes")
+        .join(format!("{stem}.json"));
+    let raw = std::fs::read_to_string(&path).map_err(|source| {
+        anyhow::anyhow!(
+            "Reading {}: {source}\nRun `ulaval-scraper program` first.",
+            path.display()
+        )
+    })?;
+    serde_json::from_str(&raw).map_err(|source| {
+        anyhow::anyhow!("Parsing {}: {source}", path.display())
+    })
+}
+
+// the program's mandatory courses first (reference order), then the
+// chosen electives, then the passed courses — deduplicated, so a passed
+// mandatory course appears once and carries its Course object
+fn course_list(
+    program: Option<&Program>,
+    electives: &[String],
+    passed: &[String],
+) -> Vec<String> {
+    let mut seen = BTreeSet::new();
+    program
+        .map(|program| program.mandatory.clone())
+        .unwrap_or_default()
+        .into_iter()
+        .chain(electives.iter().cloned())
+        .chain(passed.iter().cloned())
+        .filter(|code| seen.insert(code.clone()))
+        .collect()
+}
+
+// One Course per requested code, cloned whole — the snapshot already
+// carries every season an offering exists for, each dated by its
+// `last_offered`. A code the snapshot does not carry is an error when
+// explicitly typed, and otherwise (program-derived) set aside and returned
+// for the caller to surface — never silently dropped either way.
+fn select_known(
+    codes: &[String],
+    snapshot: &Snapshot,
+    explicit: &BTreeSet<&str>,
+) -> anyhow::Result<(Vec<Course>, Vec<String>)> {
+    let by_code: BTreeMap<&str, &Course> = snapshot
+        .courses
+        .iter()
+        .map(|course| (course.code.as_str(), course))
+        .collect();
+    let unknown: Vec<&str> = codes
+        .iter()
+        .filter(|code| !by_code.contains_key(code.as_str()))
+        .map(String::as_str)
+        .collect();
+    let typos: Vec<&str> = unknown
+        .iter()
+        .filter(|code| explicit.contains(**code))
+        .copied()
+        .collect();
+    anyhow::ensure!(
+        typos.is_empty(),
+        "unknown course codes : {}",
+        typos.join(", ")
+    );
+    let set_aside: Vec<String> =
+        unknown.iter().map(|code| code.to_string()).collect();
+    let courses = codes
+        .iter()
+        .filter_map(|code| by_code.get(code.as_str()))
+        .map(|&course| course.clone())
+        .collect();
+    Ok((courses, set_aside))
+}
+
+fn parse_pins(specs: &[String]) -> anyhow::Result<BTreeMap<String, usize>> {
+    specs
+        .iter()
+        .map(|spec| {
+            let (code, session) = spec.split_once('=').ok_or_else(|| {
+                anyhow::anyhow!("pinned expects CODE=SESSION : {spec}")
+            })?;
+            let session = session.parse().map_err(|_| {
+                anyhow::anyhow!("pinned expects CODE=SESSION : {spec}")
+            })?;
+            Ok((code.to_uppercase(), session))
+        })
+        .collect()
+}
+
+// the first organigramme whole — session by session with its credit
+// load — then the count and how the search ended, never confusing a
+// proven-empty set with an interrupted one
+fn render_placement(
+    placement: &Placement,
+    courses: &[Course],
+    sessions: &[Season],
+) -> String {
+    let status = match placement.completion {
+        Completion::Complete => "ensemble complet".to_string(),
+        Completion::NodeBudget => {
+            "budget de nœuds épuisé — ensemble partiel".to_string()
+        }
+        Completion::SolutionCap => {
+            "plafond de solutions atteint — ensemble partiel".to_string()
+        }
+    };
+    let count =
+        format!("{} solution(s) ({status})", placement.solutions.len());
+    match placement.solutions.first() {
+        None => count,
+        Some(first) => {
+            let credits: BTreeMap<&str, u32> = courses
+                .iter()
+                .map(|course| {
+                    (course.code.as_str(), course.credits.planning())
+                })
+                .collect();
+            let terms: Vec<String> = sessions
+                .iter()
+                .enumerate()
+                .map(|(i, &season)| {
+                    render_term(first, i + 1, season, &credits)
+                })
+                .collect();
+            let assumed = if first.assumed.is_empty() {
+                String::new()
+            } else {
+                format!(
+                    "\n\nPréalables présumés (à vérifier) : {}",
+                    first
+                        .assumed
+                        .iter()
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join(" ; ")
+                )
+            };
+            format!("{}\n\n{count}{assumed}", terms.join("\n"))
+        }
+    }
+}
+
+fn render_term(
+    solution: &Solution,
+    session: usize,
+    season: Season,
+    credits: &BTreeMap<&str, u32>,
+) -> String {
+    let placed: Vec<&str> = solution
+        .placement
+        .iter()
+        .filter(|&(_, &term)| term == session)
+        .map(|(code, _)| code.as_str())
+        .collect();
+    let load: u32 = placed.iter().filter_map(|code| credits.get(code)).sum();
+    let listing = if placed.is_empty() {
+        "—".to_string()
+    } else {
+        format!("{} ({load} cr)", placed.join(", "))
+    };
+    format!("Session {session} ({}) : {listing}", season_label(season))
+}
+
+fn season_label(season: Season) -> &'static str {
+    match season {
+        Season::Fall => "Automne",
+        Season::Winter => "Hiver",
+        Season::Summer => "Été",
+    }
+}
+
+// the coverage report in French prose — one line per verdict, the raw
+// text of anything the grammar could not count shown verbatim
+fn render_coverage(coverage: &CoverageReport) -> String {
+    let mut lines = vec!["Couverture des règles :".to_string()];
+    lines.extend(coverage.mandatory.iter().map(render_mandatory));
+    lines.extend(coverage.rules.iter().map(render_rule));
+    if let Some(language) = &coverage.language_requirement {
+        lines.push(match language.status {
+            LanguageStatus::Satisfied => {
+                "Exigence linguistique : satisfaite".to_string()
+            }
+            LanguageStatus::Reported => {
+                "Exigence linguistique : à valider (cours ou test de \
+                 classement)"
+                    .to_string()
+            }
+        });
+    }
+    lines.join("\n")
+}
+
+fn render_mandatory(block: &MandatoryReport) -> String {
+    if block.missing.is_empty() {
+        format!("Cours obligatoires : complets ({})", block.satisfied.len())
+    } else {
+        format!(
+            "Cours obligatoires : manquants — {}",
+            block.missing.join(", ")
+        )
+    }
+}
+
+fn render_rule(rule: &RuleReport) -> String {
+    match rule.status {
+        RuleStatus::Satisfied => format!("{} : satisfaite", rule.title),
+        RuleStatus::Incomplete => {
+            let missing =
+                rule.missing.as_ref().map(missing_label).unwrap_or_default();
+            let candidates =
+                rule.candidates.as_deref().unwrap_or_default().len();
+            format!(
+                "{} : à combler — {missing} (candidats : {candidates})",
+                rule.title
+            )
+        }
+        RuleStatus::Reported => match &rule.raw {
+            Some(raw) => {
+                format!("{} : à valider — « {raw} »", rule.title)
+            }
+            None => format!("{} : à valider", rule.title),
+        },
+    }
+}
+
+fn missing_label(missing: &Missing) -> String {
+    match *missing {
+        Missing::Count { count } => format!("{count} cours"),
+        Missing::Credits { credits } => format!("{credits} crédits"),
+    }
+}
+
+// `a2026` → (Fall, 2026); a = automne, h = hiver, e = été. Only the season
+// selects data — the snapshot keeps one offering per season — but the year
+// is still validated: a malformed session is a typo to surface.
 fn parse_session(session: &str) -> anyhow::Result<(Season, u16)> {
     let mut letters = session.chars();
     let season = match letters.next() {
@@ -118,10 +468,8 @@ fn parse_session(session: &str) -> anyhow::Result<(Season, u16)> {
     Ok((season, year))
 }
 
-fn read_snapshot(data_dir: &str, session: &str) -> anyhow::Result<Snapshot> {
-    let path = Path::new(data_dir)
-        .join("cours")
-        .join(format!("{session}.json"));
+fn read_snapshot(data_dir: &str) -> anyhow::Result<Snapshot> {
+    let path = Path::new(data_dir).join("cours.json");
     let raw = std::fs::read_to_string(&path).map_err(|source| {
         anyhow::anyhow!(
             "Reading {}: {source}\nRun `ulaval-scraper courses` first.",
@@ -159,7 +507,6 @@ fn select_courses(
     all: &[Course],
     codes: &[String],
     season: Season,
-    year: u16,
     session: &str,
 ) -> anyhow::Result<Vec<Course>> {
     let by_code: BTreeMap<&str, &Course> = all
@@ -179,7 +526,7 @@ fn select_courses(
     codes
         .iter()
         .map(|code| {
-            effective_course(by_code[code.as_str()], &by_code, season, year)
+            effective_course(by_code[code.as_str()], &by_code, season)
                 .ok_or_else(|| {
                     anyhow::anyhow!("{code} is not offered in {session}")
                 })
@@ -188,29 +535,22 @@ fn select_courses(
 }
 
 // The offering actually attended may come from an equivalent — the most
-// recent session vintage wins, ties to the course (ADR
-// `2026-07-equivalences-par-millesime-de-session`). One snapshot means one
-// vintage everywhere, so today the course's own offering wins whenever it
-// exists; the fold is already shaped for the multi-snapshot fallback. The
+// recent `last_offered` vintage wins, ties to the course (ADR
+// `2026-07-equivalences-par-millesime-de-session`, vintage in-data since
+// ADR `2026-07-snapshot-unique-des-cours-millesime-par-saison`). The
 // requested course keeps its identity: only the offering is borrowed.
 fn effective_course(
     course: &Course,
     by_code: &BTreeMap<&str, &Course>,
     season: Season,
-    year: u16,
 ) -> Option<Course> {
-    let seed = course.seasons.get(&season).map(|offering| (offering, year));
-    let (offering, _) = course
+    let seed = course.seasons.get(&season);
+    let offering = course
         .equivalents
         .iter()
         .filter_map(|code| by_code.get(code.as_str()))
-        .filter_map(|equivalent| {
-            equivalent
-                .seasons
-                .get(&season)
-                .map(|offering| (offering, year))
-        })
-        .fold(seed, |acc, pair| resolve_offering(acc, Some(pair)))?;
+        .filter_map(|equivalent| equivalent.seasons.get(&season))
+        .fold(seed, |acc, offering| resolve_offering(acc, Some(offering)))?;
     let mut effective = course.clone();
     effective.seasons = std::iter::once((season, offering.clone())).collect();
     Some(effective)
@@ -331,10 +671,20 @@ mod tests {
     // --- selection and equivalents ---
 
     fn course(code: &str, season: &str, options: &str) -> Course {
+        vintage_course(code, season, "2026", options)
+    }
+
+    fn vintage_course(
+        code: &str,
+        season: &str,
+        last_offered: &str,
+        options: &str,
+    ) -> Course {
         serde_json::from_str(&format!(
             r#"{{"code":"{code}","title":"T","credits":3,"cycle":1,
                  "prerequisites":null,"equivalents":[],
-                 "seasons":{{"{season}":{{"options":{options}}}}}}}"#
+                 "seasons":{{"{season}":{{"last_offered":{last_offered},
+                                          "options":{options}}}}}}}"#
         ))
         .unwrap_or_else(|e| panic!("course literal: {e}"))
     }
@@ -362,7 +712,6 @@ mod tests {
             &all,
             &["GEX-1000".to_string(), "A-1".to_string(), "B-2".to_string()],
             Season::Fall,
-            2026,
             "a2026",
         )
         .expect_err("two unknown codes");
@@ -382,7 +731,6 @@ mod tests {
             &all,
             &["GEX-1000".to_string()],
             Season::Fall,
-            2026,
             "a2026",
         )
         .expect_err("offered in winter only");
@@ -401,19 +749,17 @@ mod tests {
             &all,
             &["GEX-1000".to_string()],
             Season::Fall,
-            2026,
             "a2026",
         )
         .unwrap_or_else(|e| panic!("{e}"));
 
         assert_eq!(courses[0].code, "GEX-1000");
-        let offering = &courses[0].seasons[&Season::Fall];
-        assert_eq!(offering.options[0][0].nrc, "7");
+        assert_eq!(selected_nrc(&courses[0]), "7");
     }
 
     #[test]
     fn a_courses_own_offering_wins_over_its_equivalents() {
-        // one snapshot = one vintage everywhere, and ties go to the course
+        // equal vintages: ties go to the course itself
         let mut wanted = monday("GEX-1000", "1");
         wanted.equivalents = vec!["GCI-1000".to_string()];
         let all = [wanted, monday("GCI-1000", "7")];
@@ -422,13 +768,46 @@ mod tests {
             &all,
             &["GEX-1000".to_string()],
             Season::Fall,
-            2026,
             "a2026",
         )
         .unwrap_or_else(|e| panic!("{e}"));
 
-        let offering = &courses[0].seasons[&Season::Fall];
-        assert_eq!(offering.options[0][0].nrc, "1");
+        assert_eq!(selected_nrc(&courses[0]), "1");
+    }
+
+    #[test]
+    fn an_equivalent_with_a_newer_vintage_wins_the_offering() {
+        // the vintage lives in the data now: an equivalent whose season was
+        // read from a fresher session shadows the course's own offering
+        // (ADR `2026-07-equivalences-par-millesime-de-session`)
+        let mut wanted = vintage_course(
+            "GEX-1000",
+            "fall",
+            "2024",
+            &format!("[{}]", option_json("1", "monday", "08:30", "11:20")),
+        );
+        wanted.equivalents = vec!["GCI-1000".to_string()];
+        let all = [wanted, monday("GCI-1000", "7")];
+
+        let courses = select_courses(
+            &all,
+            &["GEX-1000".to_string()],
+            Season::Fall,
+            "a2026",
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+
+        assert_eq!(courses[0].code, "GEX-1000", "identity is kept");
+        assert_eq!(selected_nrc(&courses[0]), "7", "the offering is borrowed");
+    }
+
+    fn selected_nrc(course: &Course) -> &str {
+        course.seasons[&Season::Fall]
+            .options
+            .as_deref()
+            .expect("known schedule")[0][0]
+            .nrc
+            .as_str()
     }
 
     // --- credit_total ---
@@ -534,7 +913,7 @@ mod tests {
             std::env::temp_dir().join(format!("ulaval-scheduler-cli-{name}"));
         // leftovers from an earlier failed run
         let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(dir.join("cours"))
+        std::fs::create_dir_all(dir.join("programmes"))
             .unwrap_or_else(|e| panic!("create {}: {e}", dir.display()));
         dir
     }
@@ -544,13 +923,10 @@ mod tests {
             .unwrap_or_else(|e| panic!("cleanup {}: {e}", dir.display()));
     }
 
-    fn write_snapshot(dir: &Path, session: &str, courses: &[Course]) {
+    fn write_snapshot(dir: &Path, courses: &[Course]) {
         let snapshot = serde_json::json!({ "courses": courses });
-        std::fs::write(
-            dir.join("cours").join(format!("{session}.json")),
-            snapshot.to_string(),
-        )
-        .unwrap_or_else(|e| panic!("write the snapshot: {e}"));
+        std::fs::write(dir.join("cours.json"), snapshot.to_string())
+            .unwrap_or_else(|e| panic!("write the snapshot: {e}"));
     }
 
     fn run_args(dir: &Path, rest: &[&str]) -> Vec<String> {
@@ -565,7 +941,6 @@ mod tests {
         let dir = test_dir("happy");
         write_snapshot(
             &dir,
-            "a2026",
             &[
                 monday("GEX-1000", "1"),
                 course(
@@ -589,7 +964,6 @@ mod tests {
         let dir = test_dir("conflict");
         write_snapshot(
             &dir,
-            "a2026",
             &[monday("GEX-1000", "1"), monday("GCI-1000", "2")],
         );
 
@@ -616,7 +990,7 @@ mod tests {
     #[test]
     fn an_unreadable_snapshot_is_a_parsing_error() {
         let dir = test_dir("bad-snapshot");
-        std::fs::write(dir.join("cours").join("a2026.json"), "not json")
+        std::fs::write(dir.join("cours.json"), "not json")
             .unwrap_or_else(|e| panic!("write the bad snapshot: {e}"));
 
         let error = run(run_args(&dir, &["a2026", "GEX-1000"]))
@@ -629,7 +1003,7 @@ mod tests {
     #[test]
     fn a_duplicated_code_aborts_the_run() {
         let dir = test_dir("duplicate");
-        write_snapshot(&dir, "a2026", &[monday("GEX-1000", "1")]);
+        write_snapshot(&dir, &[monday("GEX-1000", "1")]);
 
         let error = run(run_args(&dir, &["a2026", "gex-1000", "GEX-1000"]))
             .expect_err("the same course twice");
@@ -643,7 +1017,7 @@ mod tests {
         // an offering with no enrolment option: the report refuses to
         // invent a selection and the run surfaces it
         let dir = test_dir("no-options");
-        write_snapshot(&dir, "a2026", &[course("GEX-1000", "fall", "[]")]);
+        write_snapshot(&dir, &[course("GEX-1000", "fall", "[]")]);
 
         let error = run(run_args(&dir, &["a2026", "GEX-1000"]))
             .expect_err("nothing to enrol in");
@@ -653,9 +1027,28 @@ mod tests {
     }
 
     #[test]
+    fn an_unpublished_schedule_aborts_the_weekly_schedule() {
+        // the GCI-1011 shape (new-course rule): offered, but nothing can be
+        // drawn on a weekly grid — refused loudly, never silently dropped
+        let dir = test_dir("schedule-unknown");
+        write_snapshot(
+            &dir,
+            &[vintage_course("GCI-1011", "fall", "null", "null")],
+        );
+
+        let error = run(run_args(&dir, &["a2026", "GCI-1011"]))
+            .expect_err("no schedule to draw");
+
+        let message = error.to_string();
+        assert!(message.contains("GCI-1011"), "{message}");
+        assert!(message.contains("not yet published"), "{message}");
+        cleanup(&dir);
+    }
+
+    #[test]
     fn an_unknown_code_aborts_the_run() {
         let dir = test_dir("unknown-code");
-        write_snapshot(&dir, "a2026", &[monday("GEX-1000", "1")]);
+        write_snapshot(&dir, &[monday("GEX-1000", "1")]);
 
         let error = run(run_args(&dir, &["a2026", "ZZZ-9999"]))
             .expect_err("no such course in the snapshot");
@@ -675,7 +1068,7 @@ mod tests {
             option_json("5", "monday", "08:30", "11:20"),
         ))
         .unwrap_or_else(|e| panic!("stage literal: {e}"));
-        write_snapshot(&dir, "a2026", &[stage]);
+        write_snapshot(&dir, &[stage]);
 
         let error = run(run_args(&dir, &["a2026", "GEX-2580"]))
             .expect_err("no chosen weighting");
@@ -713,5 +1106,757 @@ mod tests {
         ])
         .expect_err("unknown flag");
         assert!(error.to_string().contains("--nope"), "{error}");
+    }
+
+    // --- organigramme: sessions and pins ---
+
+    #[test]
+    fn sessions_alternate_automne_hiver_from_the_start() {
+        assert_eq!(
+            alternating_sessions(Season::Fall, 4),
+            [Season::Fall, Season::Winter, Season::Fall, Season::Winter]
+        );
+        assert_eq!(
+            alternating_sessions(Season::Winter, 3),
+            [Season::Winter, Season::Fall, Season::Winter]
+        );
+        // été is never generated: a summer start flows into fall
+        assert_eq!(
+            alternating_sessions(Season::Summer, 3),
+            [Season::Summer, Season::Fall, Season::Winter]
+        );
+    }
+
+    #[test]
+    fn pins_parse_and_uppercase_their_codes() {
+        let pins =
+            parse_pins(&["gci-1007=2".to_string(), "GEX-1002=1".to_string()])
+                .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(pins["GCI-1007"], 2);
+        assert_eq!(pins["GEX-1002"], 1);
+    }
+
+    #[test]
+    fn a_malformed_pin_is_an_error_showing_the_expected_shape() {
+        for spec in ["GCI-1007", "GCI-1007=two"] {
+            let error =
+                parse_pins(&[spec.to_string()]).expect_err("not CODE=SESSION");
+            assert!(error.to_string().contains("CODE=SESSION"), "{error}");
+        }
+    }
+
+    fn program_json(mandatory: &str, rules: &str) -> String {
+        format!(
+            r#"{{"code":"p","year":2026,"title":"P","cycle":1,
+                 "credits_required":120,"mandatory":{mandatory},
+                 "rules":{rules},"concentrations":[],"profiles":[]}}"#
+        )
+    }
+
+    #[test]
+    fn the_course_list_orders_mandatory_electives_then_passed_deduped() {
+        let program: Program =
+            serde_json::from_str(&program_json(r#"["M-1","M-2"]"#, "[]"))
+                .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let list = course_list(
+            Some(&program),
+            &["E-1".to_string(), "M-2".to_string()],
+            &["P-1".to_string(), "E-1".to_string()],
+        );
+        assert_eq!(list, ["M-1", "M-2", "E-1", "P-1"]);
+    }
+
+    // --- organigramme: rendering ---
+
+    #[test]
+    fn a_placement_renders_terms_count_and_assumptions() {
+        let placement = Placement {
+            completion: Completion::Complete,
+            solutions: vec![Solution {
+                placement: BTreeMap::from([
+                    ("A-1".to_string(), 1),
+                    ("B-2".to_string(), 1),
+                ]),
+                assumed: ["MAT-0130".to_string()].into_iter().collect(),
+            }],
+        };
+        let courses = [monday("A-1", "1"), monday("B-2", "2")];
+        let rendered = render_placement(
+            &placement,
+            &courses,
+            &[Season::Fall, Season::Winter],
+        );
+        assert!(
+            rendered.contains("Session 1 (Automne) : A-1, B-2 (6 cr)"),
+            "{rendered}"
+        );
+        assert!(rendered.contains("Session 2 (Hiver) : —"), "{rendered}");
+        assert!(
+            rendered.contains("1 solution(s) (ensemble complet)"),
+            "{rendered}"
+        );
+        assert!(
+            rendered.contains("Préalables présumés (à vérifier) : MAT-0130"),
+            "{rendered}"
+        );
+    }
+
+    #[test]
+    fn an_empty_set_renders_only_the_count_and_its_cause() {
+        let placement = Placement {
+            completion: Completion::NodeBudget,
+            solutions: Vec::new(),
+        };
+        assert_eq!(
+            render_placement(&placement, &[], &[Season::Fall]),
+            "0 solution(s) (budget de nœuds épuisé — ensemble partiel)"
+        );
+    }
+
+    #[test]
+    fn a_capped_set_names_the_solution_cap_and_omits_empty_assumptions() {
+        let placement = Placement {
+            completion: Completion::SolutionCap,
+            solutions: vec![Solution {
+                placement: BTreeMap::from([("A-1".to_string(), 1)]),
+                assumed: BTreeSet::new(),
+            }],
+        };
+        let courses = [monday("A-1", "1")];
+        let rendered = render_placement(&placement, &courses, &[Season::Fall]);
+        assert!(
+            rendered.contains(
+                "1 solution(s) (plafond de solutions atteint — ensemble \
+                 partiel)"
+            ),
+            "{rendered}"
+        );
+        assert!(!rendered.contains("Préalables présumés"), "{rendered}");
+    }
+
+    #[test]
+    fn every_season_labels_in_french() {
+        assert_eq!(season_label(Season::Fall), "Automne");
+        assert_eq!(season_label(Season::Winter), "Hiver");
+        assert_eq!(season_label(Season::Summer), "Été");
+    }
+
+    #[test]
+    fn the_coverage_report_renders_every_verdict_shape() {
+        use ulaval_scheduler_core::{LanguageReport, RuleReport, Scope};
+        let rule = |title: &str,
+                    status: RuleStatus,
+                    missing: Option<Missing>,
+                    candidates: Option<usize>,
+                    raw: Option<&str>| {
+            RuleReport {
+                scope: Scope::Program,
+                title: title.to_string(),
+                status,
+                counted: candidates.map(|_| Vec::new()),
+                missing,
+                candidates: candidates
+                    .map(|count| vec!["X-1".to_string(); count]),
+                raw: raw.map(str::to_string),
+            }
+        };
+        let coverage = CoverageReport {
+            mandatory: vec![
+                MandatoryReport {
+                    scope: Scope::Program,
+                    satisfied: vec!["A-1".to_string()],
+                    missing: Vec::new(),
+                },
+                MandatoryReport {
+                    scope: Scope::Program,
+                    satisfied: Vec::new(),
+                    missing: vec!["B-2".to_string(), "C-3".to_string()],
+                },
+            ],
+            rules: vec![
+                rule("Règle 1", RuleStatus::Satisfied, None, Some(2), None),
+                rule(
+                    "Règle 2",
+                    RuleStatus::Incomplete,
+                    Some(Missing::Count { count: 1 }),
+                    Some(3),
+                    None,
+                ),
+                rule(
+                    "Règle 3",
+                    RuleStatus::Incomplete,
+                    Some(Missing::Credits { credits: 3 }),
+                    Some(4),
+                    None,
+                ),
+                rule(
+                    "Règle 5",
+                    RuleStatus::Reported,
+                    None,
+                    None,
+                    Some("tous les cours"),
+                ),
+                rule("Règle 6", RuleStatus::Reported, None, None, None),
+            ],
+            language_requirement: Some(LanguageReport {
+                status: LanguageStatus::Reported,
+            }),
+        };
+        let rendered = render_coverage(&coverage);
+        assert!(
+            rendered.contains("Cours obligatoires : complets (1)"),
+            "{rendered}"
+        );
+        assert!(
+            rendered.contains("Cours obligatoires : manquants — B-2, C-3"),
+            "{rendered}"
+        );
+        assert!(rendered.contains("Règle 1 : satisfaite"), "{rendered}");
+        assert!(
+            rendered.contains("Règle 2 : à combler — 1 cours (candidats : 3)"),
+            "{rendered}"
+        );
+        assert!(
+            rendered
+                .contains("Règle 3 : à combler — 3 crédits (candidats : 4)"),
+            "{rendered}"
+        );
+        assert!(
+            rendered.contains("Règle 5 : à valider — « tous les cours »"),
+            "{rendered}"
+        );
+        assert!(rendered.contains("Règle 6 : à valider"), "{rendered}");
+        assert!(
+            rendered.contains("Exigence linguistique : à valider"),
+            "{rendered}"
+        );
+    }
+
+    #[test]
+    fn a_satisfied_language_requirement_renders_as_such() {
+        use ulaval_scheduler_core::LanguageReport;
+        let coverage = CoverageReport {
+            mandatory: Vec::new(),
+            rules: Vec::new(),
+            language_requirement: Some(LanguageReport {
+                status: LanguageStatus::Satisfied,
+            }),
+        };
+        assert!(render_coverage(&coverage)
+            .contains("Exigence linguistique : satisfaite"));
+    }
+
+    // --- organigramme: end to end in-process ---
+
+    fn organigramme_args(dir: &Path, rest: &[&str]) -> Vec<String> {
+        let mut args = vec!["organigramme".to_string()];
+        args.extend(rest.iter().map(|arg| arg.to_string()));
+        args.extend(["--data-dir".to_string(), dir.display().to_string()]);
+        args
+    }
+
+    // one multi-season course, the shape the single snapshot holds whole
+    fn fall_winter(code: &str, fall: &str, winter: &str) -> Course {
+        serde_json::from_str(&format!(
+            r#"{{"code":"{code}","title":"T","credits":3,"cycle":1,
+                 "prerequisites":null,"equivalents":[],
+                 "seasons":{{
+                   "fall":{{"last_offered":2026,
+                            "options":[{fall}]}},
+                   "winter":{{"last_offered":2026,
+                              "options":[{winter}]}}}}}}"#
+        ))
+        .unwrap_or_else(|e| panic!("course literal: {e}"))
+    }
+
+    #[test]
+    fn a_feasible_organigramme_prints_and_succeeds() {
+        let dir = test_dir("organigramme-happy");
+        write_snapshot(
+            &dir,
+            &[
+                fall_winter(
+                    "GEX-1000",
+                    &option_json("1", "monday", "08:30", "11:20"),
+                    &option_json("3", "monday", "08:30", "11:20"),
+                ),
+                fall_winter(
+                    "GCI-1000",
+                    &option_json("2", "tuesday", "08:30", "11:20"),
+                    &option_json("4", "monday", "08:30", "11:20"),
+                ),
+            ],
+        );
+
+        run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "gex-1000",
+                "gci-1000",
+                "--credit-cap",
+                "6",
+                "--sessions",
+                "2",
+                "--pinned",
+                "gex-1000=1",
+            ],
+        ))
+        .unwrap_or_else(|e| panic!("feasible organigramme: {e}"));
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn an_unknown_typed_code_aborts_the_organigramme() {
+        let dir = test_dir("organigramme-unknown");
+        write_snapshot(&dir, &[monday("GEX-1000", "1")]);
+
+        let error = run(organigramme_args(
+            &dir,
+            &["a2026", "ZZZ-9999", "--credit-cap", "6", "--sessions", "1"],
+        ))
+        .expect_err("no such course anywhere");
+
+        assert!(error.to_string().contains("ZZZ-9999"), "{error}");
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn a_proven_infeasible_placement_exits_with_an_error() {
+        // two courses on the same monday slot, one single session: the
+        // weekly veto forbids the only assignment — proven, not guessed
+        let dir = test_dir("organigramme-infeasible");
+        write_snapshot(
+            &dir,
+            &[monday("GEX-1000", "1"), monday("GCI-1000", "2")],
+        );
+
+        let error = run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "GEX-1000",
+                "GCI-1000",
+                "--credit-cap",
+                "30",
+                "--sessions",
+                "1",
+            ],
+        ))
+        .expect_err("nothing fits one session");
+
+        assert!(error.to_string().contains("proven"), "{error}");
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn a_missing_snapshot_names_the_scraper_organigramme() {
+        let dir = test_dir("organigramme-no-snapshot");
+
+        let error = run(organigramme_args(
+            &dir,
+            &["a2026", "GEX-1000", "--credit-cap", "6"],
+        ))
+        .expect_err("nothing scraped yet");
+
+        let message = error.to_string();
+        assert!(message.contains("cours.json"), "{message}");
+        assert!(message.contains("ulaval-scraper"), "{message}");
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn an_old_vintage_is_still_known_and_placeable() {
+        // the founding hypothesis, per course now: an offering last read
+        // from automne 2025 serves an a2026 plan — a course is never lost
+        // to a newer snapshot of its season (ADR
+        // `2026-07-snapshot-unique-des-cours-millesime-par-saison`)
+        let dir = test_dir("organigramme-old-vintage");
+        write_snapshot(
+            &dir,
+            &[vintage_course(
+                "GEX-1000",
+                "fall",
+                "2025",
+                &format!("[{}]", option_json("1", "monday", "08:30", "11:20")),
+            )],
+        );
+
+        run(organigramme_args(
+            &dir,
+            &["a2026", "GEX-1000", "--credit-cap", "6", "--sessions", "1"],
+        ))
+        .unwrap_or_else(|e| panic!("an old vintage still places: {e}"));
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn an_unpublished_schedule_still_places_in_the_organigramme() {
+        // the GCI-1011 shape: offered fall and winter, no vintage, no
+        // schedule — placeable by B even though A refuses to draw it
+        let dir = test_dir("organigramme-schedule-unknown");
+        write_snapshot(
+            &dir,
+            &[
+                monday("GEX-1000", "1"),
+                vintage_course("GCI-1011", "fall", "null", "null"),
+            ],
+        );
+
+        run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "GEX-1000",
+                "GCI-1011",
+                "--credit-cap",
+                "6",
+                "--sessions",
+                "1",
+            ],
+        ))
+        .unwrap_or_else(|e| panic!("an unpublished schedule places: {e}"));
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn a_program_pulls_its_mandatory_and_prints_coverage() {
+        // GHOST-999 is mandatory but has no snapshot data: set aside
+        // loudly, the rest placed, the coverage printed (ADR
+        // `2026-07-cours-sans-offre-ecarte-par-le-harnais`)
+        let dir = test_dir("organigramme-program");
+        write_snapshot(
+            &dir,
+            &[
+                monday("GEX-1000", "1"),
+                course(
+                    "GCI-1000",
+                    "fall",
+                    &format!(
+                        "[{}]",
+                        option_json("2", "tuesday", "08:30", "11:20")
+                    ),
+                ),
+            ],
+        );
+        std::fs::write(
+            dir.join("programmes").join("prog-2026.json"),
+            program_json(
+                r#"["GEX-1000","GHOST-999"]"#,
+                r#"[{"title":"Règle 1","constraint":{"count":1},
+                     "courses":["GCI-1000","GCI-2000"]}]"#,
+            ),
+        )
+        .unwrap_or_else(|e| panic!("write the program: {e}"));
+
+        run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "GCI-1000",
+                "--program",
+                "prog-2026",
+                "--credit-cap",
+                "30",
+                "--sessions",
+                "1",
+            ],
+        ))
+        .unwrap_or_else(|e| panic!("program-driven organigramme: {e}"));
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn a_missing_program_file_names_the_scraper() {
+        let dir = test_dir("organigramme-no-program");
+        write_snapshot(&dir, &[monday("GEX-1000", "1")]);
+
+        let error = run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "--program",
+                "nope-2026",
+                "--credit-cap",
+                "6",
+                "--sessions",
+                "1",
+            ],
+        ))
+        .expect_err("no such program snapshot");
+
+        assert!(
+            error.to_string().contains("ulaval-scraper program"),
+            "{error}"
+        );
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn an_unreadable_program_file_is_a_parsing_error() {
+        let dir = test_dir("organigramme-bad-program");
+        write_snapshot(&dir, &[monday("GEX-1000", "1")]);
+        std::fs::write(
+            dir.join("programmes").join("bad-2026.json"),
+            "not json",
+        )
+        .unwrap_or_else(|e| panic!("write the bad program: {e}"));
+
+        let error = run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "--program",
+                "bad-2026",
+                "--credit-cap",
+                "6",
+                "--sessions",
+                "1",
+            ],
+        ))
+        .expect_err("unparseable program");
+
+        assert!(error.to_string().contains("Parsing"), "{error}");
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn a_passed_course_is_not_placed_by_the_harness() {
+        let dir = test_dir("organigramme-passed");
+        write_snapshot(
+            &dir,
+            &[monday("GEX-1000", "1"), monday("GCI-1000", "2")],
+        );
+
+        // both share the monday slot, but GEX-1000 is passed: only
+        // GCI-1000 is placed, so the single session suffices
+        run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "GEX-1000",
+                "GCI-1000",
+                "--passed",
+                "gex-1000",
+                "--credit-cap",
+                "6",
+                "--sessions",
+                "1",
+            ],
+        ))
+        .unwrap_or_else(|e| panic!("passed course still blocks: {e}"));
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn a_bad_start_session_fails_before_touching_the_disk() {
+        let error = run(vec![
+            "organigramme".to_string(),
+            "x2026".to_string(),
+            "--credit-cap".to_string(),
+            "6".to_string(),
+        ])
+        .expect_err("no such season letter");
+        assert!(error.to_string().contains("a<year>"), "{error}");
+    }
+
+    #[test]
+    fn duplicated_codes_or_passed_abort_the_organigramme() {
+        let dir = test_dir("organigramme-duplicates");
+        write_snapshot(&dir, &[monday("GEX-1000", "1")]);
+
+        let error = run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "gex-1000",
+                "GEX-1000",
+                "--credit-cap",
+                "6",
+                "--sessions",
+                "1",
+            ],
+        ))
+        .expect_err("the same elective twice");
+        assert!(error.to_string().contains("duplicated"), "{error}");
+
+        let error = run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "GEX-1000",
+                "--passed",
+                "gex-1000,GEX-1000",
+                "--credit-cap",
+                "6",
+                "--sessions",
+                "1",
+            ],
+        ))
+        .expect_err("the same passed course twice");
+        assert!(error.to_string().contains("duplicated"), "{error}");
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn a_malformed_pin_aborts_the_organigramme() {
+        let dir = test_dir("organigramme-bad-pin");
+        write_snapshot(&dir, &[monday("GEX-1000", "1")]);
+
+        let error = run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "GEX-1000",
+                "--pinned",
+                "GEX-1000",
+                "--credit-cap",
+                "6",
+                "--sessions",
+                "1",
+            ],
+        ))
+        .expect_err("no session number");
+
+        assert!(error.to_string().contains("CODE=SESSION"), "{error}");
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn a_course_both_passed_and_pinned_aborts_through_the_placement() {
+        let dir = test_dir("organigramme-passed-pinned");
+        write_snapshot(&dir, &[monday("GEX-1000", "1")]);
+
+        let error = run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "GEX-1000",
+                "--passed",
+                "gex-1000",
+                "--pinned",
+                "gex-1000=1",
+                "--credit-cap",
+                "6",
+                "--sessions",
+                "1",
+            ],
+        ))
+        .expect_err("contradictory constraints");
+
+        assert!(error.to_string().contains("passed and pinned"), "{error}");
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn an_over_selected_credits_rule_aborts_the_coverage() {
+        // 6 credits selected on a min-3-max-3 rule: the undecided
+        // semantics surface as the verifier's typed error (ADR
+        // `2026-07-somme-au-dessus-du-max-en-erreur-typee`)
+        let dir = test_dir("organigramme-over-max");
+        write_snapshot(
+            &dir,
+            &[
+                monday("GEX-1000", "1"),
+                course(
+                    "GCI-1000",
+                    "fall",
+                    &format!(
+                        "[{}]",
+                        option_json("2", "tuesday", "08:30", "11:20")
+                    ),
+                ),
+            ],
+        );
+        std::fs::write(
+            dir.join("programmes").join("prog-2026.json"),
+            program_json(
+                "[]",
+                r#"[{"title":"Règle 1","constraint":{"min":3,"max":3},
+                     "courses":["GEX-1000","GCI-1000"]}]"#,
+            ),
+        )
+        .unwrap_or_else(|e| panic!("write the program: {e}"));
+
+        let error = run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "GEX-1000",
+                "GCI-1000",
+                "--program",
+                "prog-2026",
+                "--credit-cap",
+                "30",
+                "--sessions",
+                "1",
+            ],
+        ))
+        .expect_err("6 credits above max 3");
+
+        assert!(error.to_string().contains("above the max"), "{error}");
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn an_unreadable_course_snapshot_aborts_the_organigramme() {
+        let dir = test_dir("organigramme-bad-snapshot");
+        std::fs::write(dir.join("cours.json"), "not json")
+            .unwrap_or_else(|e| panic!("write the bad snapshot: {e}"));
+
+        let error = run(organigramme_args(
+            &dir,
+            &["a2026", "GEX-1000", "--credit-cap", "6", "--sessions", "1"],
+        ))
+        .expect_err("unparseable snapshot");
+
+        assert!(error.to_string().contains("Parsing"), "{error}");
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn budget_bounds_are_reported_not_fatal() {
+        let dir = test_dir("organigramme-budget");
+        write_snapshot(
+            &dir,
+            &[fall_winter(
+                "GEX-1000",
+                &option_json("1", "monday", "08:30", "11:20"),
+                &option_json("3", "monday", "08:30", "11:20"),
+            )],
+        );
+
+        // an exhausted node budget is a partial set, never « infeasible »
+        run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "GEX-1000",
+                "--credit-cap",
+                "6",
+                "--sessions",
+                "2",
+                "--max-nodes",
+                "1",
+            ],
+        ))
+        .unwrap_or_else(|e| panic!("budget stop is not an error: {e}"));
+
+        // a hit solution cap likewise
+        run(organigramme_args(
+            &dir,
+            &[
+                "a2026",
+                "GEX-1000",
+                "--credit-cap",
+                "6",
+                "--sessions",
+                "2",
+                "--max-solutions",
+                "1",
+            ],
+        ))
+        .unwrap_or_else(|e| panic!("solution cap is not an error: {e}"));
+        cleanup(&dir);
     }
 }

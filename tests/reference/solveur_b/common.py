@@ -15,8 +15,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = ROOT / "tests" / "fixtures" / "test_cases"
-# 2026 snapshots newest first (fall > summer > winter within the civil year);
-# each contributes only its own season's subtree to a merged course
+# Unused since data/cours.json merged the per-session files (ADR
+# `2026-07-snapshot-unique-des-cours-millesime-par-saison`); kept as the
+# record of which vintages the frozen fixtures were derived from.
 SNAPSHOTS = (("a2026", "fall"), ("e2026", "summer"), ("h2026", "winter"))
 DAY_INDEX = {
     "monday": 0,

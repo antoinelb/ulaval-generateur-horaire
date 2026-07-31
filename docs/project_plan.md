@@ -1,7 +1,7 @@
 # PLAN — Générateur d'horaire / planificateur de cheminement
 
 **Date :** juillet 2026.
-**Statut :** scraper (étape 1) livré ; cœur solveur (étape 2) conçu, implémentation à venir — conception dans `docs/conception/solveur-conception.md`, plan d'implémentation dans `docs/next_steps.md`.
+**Statut :** scraper (étape 1) livré ; cœur solveur (étape 2) livré — A (horaire hebdomadaire, jalon 2) et B (placement d'organigramme, vérificateur de règles, harnais CLI `organigramme`) reproduisent toutes les fixtures gelées à 100 % de couverture ; restent les jalons UI (7–9) et les préférences (10) — conception dans `docs/conception/solveur-conception.md`, avancement dans `docs/next_steps.md`.
 **Rôle de ce document :** point d'entrée du projet, autonome — tout ce qu'il faut pour implémenter est ici.
 Les documents de conception d'origine sont archivés dans `docs/conception/` ; ils gardent le détail supplémentaire (grammaires, exemples de formats JSON, résultats du spike, alternatives rejetées), mais en cas de contradiction, ce document a préséance.
 Toute nouvelle décision est documentée dans un fichier individuel sous `docs/conception/adr/`, et ce document est mis à jour en conséquence : le plan porte le *quoi*, l'ADR conserve le *pourquoi*.
@@ -13,8 +13,8 @@ Toute nouvelle décision est documentée dans un fichier individuel sous `docs/c
 ### Acquisition des données (scraper)
 
 - Extraire des pages publiques de l'ULaval : le catalogue (~10 000 cours), les cours offerts par session (sections, NRC, plages horaires, sections liées, préalables, programmes contributoires, équivalences) et les règles des programmes (crédits exigés, cours obligatoires, « Règle N – X crédits parmi »).
-- Produire un snapshot JSON par session (`a2026`, `h2027`, …) plus un fichier des programmes.
-- Conserver un snapshot par saison, jamais écrasé aveuglément : une session future sans horaire publié réutilise le plus récent de la même saison (hypothèse de Daniel).
+- Produire un snapshot JSON unique `data/cours.json` — chaque cours entier, chaque saison datée de sa dernière année d'offre (`last_offered`) — plus un fichier des programmes (ADR `2026-07-snapshot-unique-des-cours-millesime-par-saison`).
+- Une session future sans horaire publié réutilise l'offre la plus récente de la même saison, par cours via `last_offered` (hypothèse de Daniel) ; un cours nouveau sans aucune section de session est gardé, offert automne+hiver, horaire inconnu (`options: null` — ADR `2026-07-cours-sans-section-de-session-offert-automne-hiver`).
 - Le scrape du catalogue est toujours complet — l'union des facettes matières, aucun mode scopé (ADR `2026-07-scraper-plein-catalogue-seulement`) ; seules les pages programmes se limitent aux programmes nécessaires.
 - Reprendre un scrape interrompu sans tout refaire ; throttler à ~10 requêtes/seconde (~20 min pour le catalogue complet).
 - Parser les préalables (ET/OU parenthésés, exigences de crédits) et les règles de programme en arbres structurés ; toute expression hors grammaire est conservée en brut et signalée, jamais perdue silencieusement.
@@ -31,7 +31,7 @@ Toute nouvelle décision est documentée dans un fichier individuel sous `docs/c
 - Enlever un cours de l'horaire actuel.
 - Affichage du nombre total de crédits de l'horaire actuel.
 - Ajouter manuellement un cours avec son horaire (ex. session à l'étranger, autre université).
-- Proposer un cours ajouté à la main au catalogue partagé : un bouton ouvre une issue GitHub préremplie avec son JSON ; une fois commité dans `data/cours/{session}.manuel.json`, il est visible de tous (ADR `2026-07-contribution-de-cours-manuels`).
+- Proposer un cours ajouté à la main au catalogue partagé : un bouton ouvre une issue GitHub préremplie avec son JSON ; une fois commité dans `data/cours.manuel.json`, il est visible de tous (ADR `2026-07-contribution-de-cours-manuels`).
 - Visualisation de tous les cours sélectionnés dans un horaire hebdomadaire.
 - Choix automatique d'une combinaison de sections sans conflit (une section de chaque type par cours, sections liées obligatoires incluses).
 - Quand un cours a un équivalent, utiliser l'horaire du plus récent des deux.
@@ -136,16 +136,16 @@ Alternatives rejetées (raisonnement complet dans `docs/conception/`) : Python +
 
 ### Flux de données de bout en bout
 
-Cron GitHub Actions → binaire `scraper` (GET throttlés à ~10 req/s par un throttle partagé honorant `Retry-After`, pagination du catalogue calculée depuis la page 0 (borne supérieure, pages « Aucun résultat » excédentaires tolérées) puis vérifiée par réconciliation arithmétique, catalogue complet = union des facettes matières partitionnées (l'index du site plafonne toute requête à 10 000 résultats ; la bannière est ignorée, le widget troué étant un bug du site assumé) — ADR `2026-07-conception-du-fetcher`, `2026-07-pagination-du-catalogue-par-comptage`, `2026-07-tolerance-des-pages-aucun-resultat-du-fan-out`, `2026-07-partition-du-catalogue-par-matiere`, `2026-07-le-catalogue-est-lunion-des-facettes` — parsing via les types de `core`) → `data/catalogue.json` (catalogue complet trié/dédupliqué par code, écrit seulement si ≥ 90 % du compte précédent) + `data/catalogue_errors.log` (anomalies brutes, une par ligne ; le cron alerte si non vide), puis, à partir de ce catalogue comme file de travail, `data/cours/{session}.json` — un fichier par couple (saison, année) rencontré, chaque `Course` projeté sur la seule saison concernée — + `data/cours_errors.log` (une page en échec est une anomalie, jamais un arrêt) + `data/programmes/{code}-{year}.json` — un fichier par programme et par année scolaire (mai–décembre → année civile courante, janvier–avril → précédente ; les étudiants gardent la version de leur inscription — ADR `2026-07-annee-de-programme-selon-la-date-de-scrape`), écrit par `ulaval-scraper program [<url>...]` — sans URL, le run rafraîchit tous les programmes déjà présents, slug reconstruit du nom de fichier (ADR `2026-07-programs-sans-url-rafraichit-par-slug`) ; avec des URL, il ne touche que les programmes nommés — + `data/programmes_errors.log` (ADR `2026-07-un-fichier-par-programme`, `2026-07-echec-de-page-programme-non-bloquant`) → commit du snapshot → redéploiement du site statique → `ui` charge le JSON dans le navigateur, tout le calcul tourne localement via `core` → un horaire choisi se partage en URL.
+Cron GitHub Actions → binaire `scraper` (GET throttlés à ~10 req/s par un throttle partagé honorant `Retry-After`, pagination du catalogue calculée depuis la page 0 (borne supérieure, pages « Aucun résultat » excédentaires tolérées) puis vérifiée par réconciliation arithmétique, catalogue complet = union des facettes matières partitionnées (l'index du site plafonne toute requête à 10 000 résultats ; la bannière est ignorée, le widget troué étant un bug du site assumé) — ADR `2026-07-conception-du-fetcher`, `2026-07-pagination-du-catalogue-par-comptage`, `2026-07-tolerance-des-pages-aucun-resultat-du-fan-out`, `2026-07-partition-du-catalogue-par-matiere`, `2026-07-le-catalogue-est-lunion-des-facettes` — parsing via les types de `core`) → `data/catalogue.json` (catalogue complet trié/dédupliqué par code, écrit seulement si ≥ 90 % du compte précédent) + `data/catalogue_errors.log` (anomalies brutes, une par ligne ; le cron alerte si non vide), puis, à partir de ce catalogue comme file de travail, `data/cours.json` — un seul fichier, chaque `Course` multi-saisons entier, chaque saison datée `last_offered` (ADR `2026-07-snapshot-unique-des-cours-millesime-par-saison`) — + `data/cours_errors.log` (une page en échec est une anomalie, jamais un arrêt) + `data/programmes/{code}-{year}.json` — un fichier par programme et par année scolaire (mai–décembre → année civile courante, janvier–avril → précédente ; les étudiants gardent la version de leur inscription — ADR `2026-07-annee-de-programme-selon-la-date-de-scrape`), écrit par `ulaval-scraper program [<url>...]` — sans URL, le run rafraîchit tous les programmes déjà présents, slug reconstruit du nom de fichier (ADR `2026-07-programs-sans-url-rafraichit-par-slug`) ; avec des URL, il ne touche que les programmes nommés — + `data/programmes_errors.log` (ADR `2026-07-un-fichier-par-programme`, `2026-07-echec-de-page-programme-non-bloquant`) → commit du snapshot → redéploiement du site statique → `ui` charge le JSON dans le navigateur, tout le calcul tourne localement via `core` → un horaire choisi se partage en URL.
 Aucun serveur nulle part dans le chemin.
-En parallèle, `data/cours/{session}.manuel.json` (cours sans source machine-lisible, jamais touché par le scraper) est fusionné au chargement avec le snapshot, entrées marquées `source: "manuel"` et scrapé prioritaire en cas de collision de code — ADR `2026-07-contribution-de-cours-manuels`.
+En parallèle, `data/cours.manuel.json` (cours sans source machine-lisible, jamais touché par le scraper) est fusionné au chargement avec le snapshot, entrées marquées `source: "manuel"` et scrapé prioritaire en cas de collision de code — ADR `2026-07-contribution-de-cours-manuels`.
 
 Entre les deux phases, `data/cache/cours/{code}.json` (gitignoré) garde les cours déjà parsés sans anomalie, pour qu'une relance ne refasse que les pages qui en ont besoin — ADR `2026-07-cache-de-cours-parses`.
 Un changement de format du `Course` sérialisé périme d'un coup tout le cache : chaque fichier redevient un défaut, silencieusement, et la relance est froide sans le dire.
 La ligne de clôture du scrape annonce donc la répartition (`Scraped 8826 courses (8518 cached, 308 fetched).`) — sans elle, un cache périmé est indiscernable d'un throttle mal placé.
 Le cache porte aussi le verdict « hors périmètre » (les ~20 pages `MDD-5xxx`/`PSY-785x` qui ne donnent aucun cours), stampé de l'empreinte de la règle de périmètre et retesté à la lecture, si bien qu'une relance en cache fait 0 requête sans jamais rester périmée si la règle change — ADR `2026-07-cache-du-verdict-hors-perimetre`.
 
-Un run restreint (`--subjects gex`) **fusionne** dans les snapshots existants au lieu de les remplacer : il réécrit exactement les cours de ses matières et laisse les autres intacts, en triant par code comme le ferait un run complet — ADR `2026-07-run-par-matiere-fusionne-dans-le-snapshot`.
+Un run restreint (`--subjects gex`) **fusionne** dans le snapshot existant au lieu de le remplacer : il réécrit exactement les cours de ses matières et laisse les autres intacts, en triant par code comme le ferait un run complet — ADR `2026-07-run-par-matiere-fusionne-dans-le-snapshot`.
 
 Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par de simples GET (ni session, ni POST de formulaire) ; le cookie store de `reqwest` reste un repli si certaines pages l'exigent (à vérifier à la semaine 1).
 
@@ -153,7 +153,7 @@ Le spike du 2026-07-02 a confirmé que les pages observées sont accessibles par
 
 1. **Scraper d'abord** — tue le plus gros risque externe (la forme réelle des données) avant que du code n'en dépende ; démarche test-first : fixtures e2e des pages catalogue/cours/programme → parseur validé → tests unitaires.
    Les sorties attendues vivent dans `tests/fixtures/test_cases/` (`catalogue/`, `classes/`, `programs/`) ; pour le catalogue, la vérité terrain est le catalogue fusionné de la facette GEX (`catalogue/gex.json`), comparé au parsing de pages HTML gelées, les comportements par page (page vide, `total_results` optionnel) étant épinglés par des tests unitaires (ADR `2026-07-catalogue-artefact-commite`, révisé par `2026-07-catalogue-teste-sur-html-gele`).
-   Livrable : `data/{session}.json` + fixtures HTML + tests du parseur.
+   Livrable : `data/cours.json` + fixtures HTML + tests du parseur.
 2. **Cœur ensuite** — Rust pur contre les vraies données de l'étape 1 : combinaison de sections, préférences, préalables, génération d'organigramme (démarche détaillée : `docs/next_steps.md`).
    Livrable : un harnais CLI/test qui imprime des horaires valides pour des codes de cours donnés, absence de conflit testée par propriétés.
 3. **UI en dernier** — à ce stade c'est un problème de rendu, pas de conception.
@@ -186,7 +186,7 @@ Entrer des codes de cours pour une session : l'horaire se crée automatiquement 
 
 | Semaine | Jalon | Démonstration |
 |---|---|---|
-| 1 | **Scraper d'une session** (test-first) : workspace Cargo, types du domaine dans `core`, fixtures e2e des pages catalogue et cours, parseur validé, snapshot `data/cours/a2026.json` pour les matières GEX | Le JSON de GCI-1007 (cours + laboratoires + sections liées) est correct |
+| 1 | **Scraper d'une session** (test-first) : workspace Cargo, types du domaine dans `core`, fixtures e2e des pages catalogue et cours, parseur validé, snapshot des cours pour les matières GEX | Le JSON de GCI-1007 (cours + laboratoires + sections liées) est correct |
 | 2 | **Cœur solveur** : détection de conflits, combinaison automatique de sections (backtracking borné, une section de chaque type, sections liées incluses), harnais CLI | Le harnais imprime un horaire valide pour une liste de codes de cours ; absence de conflit testée par propriétés |
 | 3 | **UI minimale de l'horaire** : app Dioxus servie en statique, ajout/retrait de cours par code, grille hebdomadaire, combinaison automatique affichée, plages en conflit surlignées quand aucune combinaison n'existe, nombre total de crédits affiché | Le requis central de Daniel de bout en bout : entrer des codes de cours d'une session → l'horaire se monte tout de suite, crédits et conflits visibles |
 
@@ -229,7 +229,7 @@ Historique complet dans `docs/conception/` ; les décisions futures s'ajoutent e
 | Partage | Aucun pour le moment | Partage d'horaire par URL en portée (quasi gratuit en statique) ; reprise `localStorage` inchangée |
 | Hébergement | Question ouverte (serveur externe ou local) | Site statique (ex. GitHub Pages) ; « local » = ouvrir les fichiers statiques |
 
-Inchangé et toujours contraignant : hypothèse des snapshots par saison, formats de données, grammaires (règles et préalables), conventions défensives du scraper, `cheminement_type` à la main, JSON plutôt que SQLite, pas de navigateur headless.
+Inchangé et toujours contraignant : hypothèse fondatrice (réutilisation de la saison, désormais par cours via `last_offered`), formats de données, grammaires (règles et préalables), conventions défensives du scraper, `cheminement_type` à la main, JSON plutôt que SQLite, pas de navigateur headless.
 
 ---
 
@@ -240,7 +240,9 @@ Inchangé et toujours contraignant : hypothèse des snapshots par saison, format
 - Agencement des écrans (pas nécessairement un écran unique) — à explorer une fois les fonctionnalités gelées.
 - Le catalogue est-il joignable sans identifiants depuis le CI? (Détermine la gestion de secrets — à résoudre au jalon 1.)
 - Modèle exact de préférences/scoring — structure arrêtée dans `docs/conception/solveur-conception.md` (opérations sur bits + somme pondérée) ; poids et sémantique fine à calibrer contre des données réelles.
-- Plafond de crédits par session : dur (17 ?) ou cible molle — aucun chiffre documenté, à confirmer avec le directeur.
+- Plafond de crédits par session : dur (17 ?) ou cible molle — aucun chiffre documenté, à confirmer avec le directeur ; la mécanique est en place (entrée explicite du solveur B et du harnais, jamais une constante).
+- Dédoublonnage des solutions de B : mesuré le 2026-07-30, l'ensemble complet du bac GEX dépasse 500 000 placements (électifs et cours lâches interchangeables) alors que la première solution vient en moins de 50 ms — forme du dédoublonnage ou plafond UI à trancher avant le jalon 9 (`docs/next_steps.md`, Phase 3).
+- GCI-1011 (obligatoire du bac GEX 2026) n'a de page de cours dans aucun snapshot — trou de scrape ou cours jamais offert ? À vérifier à la source ; le harnais l'écarte bruyamment en attendant (ADR `2026-07-cours-sans-offre-ecarte-par-le-harnais`).
 - Cadence du cron (hebdomadaire vs quotidien) et canal de notification d'échec.
 - Cheminements types d'autres programmes que GEX : qui les fournit, le cas échéant?
 - Niveau de couverture des cas particuliers exigé avant livraison (stages, cours multi-sessions, formation à distance, formes de préalables non observées) — principal risque résiduel d'estimation.

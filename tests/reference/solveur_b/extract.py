@@ -121,15 +121,16 @@ def merged_course(code, snapshots):
 
 
 def load_snapshots():
-    """code -> {season -> record}, newest snapshot first per course."""
+    """code -> {season -> record}.
+
+    data/cours.json holds each course whole (ADR
+    `2026-07-snapshot-unique-des-cours-millesime-par-saison`), so every
+    offered season maps to the same record and `merged_course` rebuilds the
+    course identically — the interface the per-session files used to feed.
+    """
     snapshots = {}
-    for stem, season in ("a2026", "fall"), ("e2026", "summer"), (
-        "h2026",
-        "winter",
-    ):
-        for record in load_json(ROOT / "data" / "cours" / f"{stem}.json")[
-            "courses"
-        ]:
+    for record in load_json(ROOT / "data" / "cours.json")["courses"]:
+        for season in record["seasons"]:
             snapshots.setdefault(record["code"], {})[season] = record
     return snapshots
 

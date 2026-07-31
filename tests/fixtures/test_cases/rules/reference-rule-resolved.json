@@ -323,6 +323,7 @@
       "equivalents": [],
       "seasons": {
         "winter": {
+          "last_offered": null,
           "options": [
             [
               {

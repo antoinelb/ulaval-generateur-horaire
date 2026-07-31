@@ -8,5 +8,14 @@
   "cycle": 1,
   "prerequisites": null,
   "equivalents": [],
-  "seasons": {}
+  "seasons": {
+    "fall": {
+      "last_offered": null,
+      "options": null
+    },
+    "winter": {
+      "last_offered": null,
+      "options": null
+    }
+  }
 }

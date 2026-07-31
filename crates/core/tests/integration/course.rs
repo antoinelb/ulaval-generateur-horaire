@@ -10,10 +10,11 @@ const FIXTURE_DIR: &str = concat!(
 );
 
 // `med-1911` carries the range form of `credits`, `cso-6702` an NRC shared
-// by two options: both are shapes no other fixture exercises.
+// by two options, `gci-1011` the new-course double null (`last_offered`
+// and `options`): shapes no other fixture exercises.
 const FIXTURES: &[&str] = &[
-    "gci-1007", "gci-2010", "gex-7002", "gex-4008", "ecn-4901", "gae-3008",
-    "med-1911", "cso-6702",
+    "gci-1007", "gci-1011", "gci-2010", "gex-7002", "gex-4008", "ecn-4901",
+    "gae-3008", "med-1911", "cso-6702",
 ];
 
 #[test]

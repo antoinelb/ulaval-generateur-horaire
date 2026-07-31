@@ -60,6 +60,8 @@ pub enum ScheduleError {
     NotOffered { code: String },
     #[error("{code} has no enrolment option in the requested season")]
     NoOptions { code: String },
+    #[error("{code} is offered but its schedule is not yet published")]
+    ScheduleUnknown { code: String },
     #[error("a pinned option names no requested course : {code}")]
     UnknownChosenCourse { code: String },
     #[error("no option of {code} matches the pinned NRC set")]
@@ -76,31 +78,42 @@ struct CourseDomain<'a> {
 }
 
 // Between a course's offering and its equivalent's, keep the most recent
-// session vintage; the year comes from the snapshot file name, which
-// `core` never sees, so the caller supplies it (ADR
-// `2026-07-equivalences-par-millesime-de-session`). Ties go to the course
-// itself, and the winning *pair* is returned so several equivalents fold:
-// `equivalents.fold(Some(course_pair), |acc, e| resolve_offering(acc, Some(e)))`.
+// session vintage, now read off the offering itself (ADR
+// `2026-07-equivalences-par-millesime-de-session`, vintage in-data since
+// ADR `2026-07-snapshot-unique-des-cours-millesime-par-saison`). `None <
+// Some(_)`, so a vintage-less offering loses to any dated one. Ties go to
+// the course itself, and the winning offering is returned so several
+// equivalents fold:
+// `equivalents.fold(Some(course), |acc, e| resolve_offering(acc, Some(e)))`.
 pub fn resolve_offering<'a>(
-    course: Option<(&'a SeasonOffering, u16)>,
-    equivalent: Option<(&'a SeasonOffering, u16)>,
-) -> Option<(&'a SeasonOffering, u16)> {
+    course: Option<&'a SeasonOffering>,
+    equivalent: Option<&'a SeasonOffering>,
+) -> Option<&'a SeasonOffering> {
     match (course, equivalent) {
-        (Some((_, year)), Some(pair)) if pair.1 > year => Some(pair),
-        (Some(pair), _) => Some(pair),
+        (Some(own), Some(other)) if other.last_offered > own.last_offered => {
+            Some(other)
+        }
+        (Some(own), _) => Some(own),
         (None, other) => other,
     }
 }
 
 // One `Opt` per `options[i]`: an option is a *complete* enrolment (ADR
 // `2026-07-sections-en-combinaisons-valides`), so its mask is the union of
-// its sections' slots.
+// its sections' slots. An unpublished schedule (`options: None`) yields one
+// placeholder opt occupying nothing — the course stays placeable by the
+// planner even though nothing can be drawn on a weekly grid (ADR
+// `2026-07-cours-sans-section-de-session-offert-automne-hiver`).
 pub fn build_domain(offering: &SeasonOffering) -> Vec<Opt> {
-    offering
-        .options
-        .iter()
-        .map(|sections| build_opt(sections))
-        .collect()
+    match offering.options.as_deref() {
+        None => vec![Opt {
+            nrc_set: BTreeSet::new(),
+            mask: WeekMask::EMPTY,
+        }],
+        Some(options) => {
+            options.iter().map(|sections| build_opt(sections)).collect()
+        }
+    }
 }
 
 fn build_opt(sections: &[Section]) -> Opt {
@@ -196,6 +209,13 @@ fn course_domain<'a>(
             code: course.code.clone(),
         }
     })?;
+    // a weekly grid cannot draw a schedule nobody has published — a loud
+    // refusal like the others, never a silent drop
+    let Some(options) = offering.options.as_deref() else {
+        return Err(ScheduleError::ScheduleUnknown {
+            code: course.code.clone(),
+        });
+    };
     let opts = build_domain(offering);
     if opts.is_empty() {
         return Err(ScheduleError::NoOptions {
@@ -220,7 +240,7 @@ fn course_domain<'a>(
     }
     Ok(CourseDomain {
         code: &course.code,
-        options: &offering.options,
+        options,
         opts,
         allowed,
     })
@@ -405,7 +425,7 @@ mod tests {
     fn a_fully_remote_offering_yields_opts_with_empty_masks() {
         // a remote option never conflicts and always fits
         let offering: SeasonOffering = serde_json::from_str(
-            r#"{"options":[[{"nrc":"20907","section":"Z1","mode":"remote","slots":[]}]]}"#,
+            r#"{"last_offered":2026,"options":[[{"nrc":"20907","section":"Z1","mode":"remote","slots":[]}]]}"#,
         )
         .expect("offering");
         let domain = build_domain(&offering);
@@ -417,7 +437,8 @@ mod tests {
     #[test]
     fn an_offering_with_no_options_yields_an_empty_domain() {
         let offering: SeasonOffering =
-            serde_json::from_str(r#"{"options":[]}"#).expect("offering");
+            serde_json::from_str(r#"{"last_offered":2026,"options":[]}"#)
+                .expect("offering");
         assert!(build_domain(&offering).is_empty());
     }
 
@@ -426,11 +447,27 @@ mod tests {
         // degenerate but representable input: no panic, an empty Opt that
         // any later `force_nrc` naturally drops
         let offering: SeasonOffering =
-            serde_json::from_str(r#"{"options":[[]]}"#).expect("offering");
+            serde_json::from_str(r#"{"last_offered":2026,"options":[[]]}"#)
+                .expect("offering");
         let domain = build_domain(&offering);
         assert_eq!(domain.len(), 1);
         assert!(domain[0].nrc_set.is_empty());
         assert!(domain[0].mask.is_empty());
+    }
+
+    #[test]
+    fn an_unpublished_schedule_yields_one_placeholder_opt() {
+        // the new-course rule (`options: null`): one opt occupying nothing,
+        // so the course is placeable and never conflicts — distinct from
+        // `options: []`, whose empty domain is infeasible
+        let offering: SeasonOffering =
+            serde_json::from_str(r#"{"last_offered":null,"options":null}"#)
+                .expect("offering");
+        let domain = build_domain(&offering);
+        assert_eq!(domain.len(), 1);
+        assert!(domain[0].nrc_set.is_empty());
+        assert!(domain[0].mask.is_empty());
+        assert!(is_feasible(&[domain]));
     }
 
     // --- force_nrc: containment, never « option k » ---
@@ -558,7 +595,8 @@ mod tests {
         serde_json::from_str(&format!(
             r#"{{"code":"{code}","title":"T","credits":3,"cycle":1,
                  "prerequisites":null,"equivalents":[],
-                 "seasons":{{"fall":{{"options":{options}}}}}}}"#
+                 "seasons":{{"fall":{{"last_offered":2026,
+                                      "options":{options}}}}}}}"#
         ))
         .expect("course literal")
     }
@@ -758,6 +796,20 @@ mod tests {
     }
 
     #[test]
+    fn an_unpublished_schedule_is_an_error_in_the_weekly_report() {
+        // `options: null` (new-course rule) refuses loudly where
+        // `options: []` reads NoOptions — the grid can draw neither, but
+        // the student must learn *why* differently
+        let courses = [course("A-1000", "null")];
+        assert_eq!(
+            schedule_report(&courses, Season::Fall, &no_pins()),
+            Err(ScheduleError::ScheduleUnknown {
+                code: "A-1000".to_string()
+            })
+        );
+    }
+
+    #[test]
     fn a_pin_naming_an_unknown_course_is_an_error() {
         let courses = [course(
             "A-1000",
@@ -791,6 +843,7 @@ mod tests {
         for error in [
             ScheduleError::NotOffered { code: code() },
             ScheduleError::NoOptions { code: code() },
+            ScheduleError::ScheduleUnknown { code: code() },
             ScheduleError::UnknownChosenCourse { code: code() },
             ScheduleError::ChosenOptionAbsent { code: code() },
         ] {
@@ -800,46 +853,65 @@ mod tests {
 
     // --- resolve_offering: most recent vintage wins, ties to the course ---
 
-    fn offering_with(options: usize) -> SeasonOffering {
+    // `options` counts distinguish the instances under PartialEq, so an
+    // assertion can tell *which* offering won
+    fn offering(last_offered: Option<u16>, options: usize) -> SeasonOffering {
         SeasonOffering {
-            options: vec![Vec::new(); options],
+            last_offered,
+            options: Some(vec![Vec::new(); options]),
         }
     }
 
     #[test]
     fn resolve_offering_prefers_the_most_recent_vintage() {
-        let course = offering_with(1);
-        let equivalent = offering_with(2);
-        let resolved =
-            resolve_offering(Some((&course, 2025)), Some((&equivalent, 2026)));
-        assert_eq!(resolved, Some((&equivalent, 2026)));
+        let course = offering(Some(2025), 1);
+        let equivalent = offering(Some(2026), 2);
+        let resolved = resolve_offering(Some(&course), Some(&equivalent));
+        assert_eq!(resolved, Some(&equivalent));
     }
 
     #[test]
     fn resolve_offering_ties_go_to_the_course_itself() {
-        let course = offering_with(1);
-        let equivalent = offering_with(2);
+        let course = offering(Some(2026), 1);
+        let same = offering(Some(2026), 2);
+        let older = offering(Some(2024), 2);
         assert_eq!(
-            resolve_offering(Some((&course, 2026)), Some((&equivalent, 2026))),
-            Some((&course, 2026))
+            resolve_offering(Some(&course), Some(&same)),
+            Some(&course)
         );
         assert_eq!(
-            resolve_offering(Some((&course, 2026)), Some((&equivalent, 2024))),
-            Some((&course, 2026))
+            resolve_offering(Some(&course), Some(&older)),
+            Some(&course)
+        );
+    }
+
+    #[test]
+    fn a_vintage_less_offering_loses_to_any_dated_one() {
+        // `None < Some(_)`: an offering synthesized by the new-course rule
+        // never shadows a real schedule — and two vintage-less offerings
+        // tie to the course itself
+        let dated = offering(Some(2009), 1);
+        let undated = offering(None, 2);
+        let undated_too = offering(None, 3);
+        assert_eq!(
+            resolve_offering(Some(&undated), Some(&dated)),
+            Some(&dated)
+        );
+        assert_eq!(
+            resolve_offering(Some(&dated), Some(&undated)),
+            Some(&dated)
+        );
+        assert_eq!(
+            resolve_offering(Some(&undated), Some(&undated_too)),
+            Some(&undated)
         );
     }
 
     #[test]
     fn resolve_offering_falls_back_when_one_side_is_missing() {
-        let offering = offering_with(1);
-        assert_eq!(
-            resolve_offering(Some((&offering, 2024)), None),
-            Some((&offering, 2024))
-        );
-        assert_eq!(
-            resolve_offering(None, Some((&offering, 2024))),
-            Some((&offering, 2024))
-        );
+        let only = offering(Some(2024), 1);
+        assert_eq!(resolve_offering(Some(&only), None), Some(&only));
+        assert_eq!(resolve_offering(None, Some(&only)), Some(&only));
     }
 
     #[test]
@@ -849,20 +921,20 @@ mod tests {
 
     #[test]
     fn resolve_offering_folds_across_several_equivalents() {
-        // returning the winning *pair* makes the function foldable when a
+        // returning the winning offering makes the function foldable when a
         // course lists several equivalents; left-wins-on-tie keeps the
         // course ahead of any equally recent equivalent
-        let course = offering_with(1);
-        let older = offering_with(2);
-        let newer = offering_with(3);
+        let course = offering(Some(2024), 1);
+        let older = offering(Some(2026), 2);
+        let newer = offering(Some(2026), 3);
         // the seed is itself a resolution, as a real caller's would be — an
         // accumulator of `None` must keep folding (the next equivalent may
         // win), so `try_fold`'s short-circuit would be wrong here
-        let seed = resolve_offering(Some((&course, 2024)), None);
-        let resolved = [(&older, 2026u16), (&newer, 2026u16)]
+        let seed = resolve_offering(Some(&course), None);
+        let resolved = [&older, &newer]
             .into_iter()
-            .fold(seed, |acc, pair| resolve_offering(acc, Some(pair)));
-        assert_eq!(resolved, Some((&older, 2026)));
+            .fold(seed, |acc, e| resolve_offering(acc, Some(e)));
+        assert_eq!(resolved, Some(&older));
     }
 
     // --- properties ---
@@ -959,19 +1031,22 @@ mod tests {
         ) {
             use crate::course::{Mode, Section};
             let offering = SeasonOffering {
-                options: options
-                    .into_iter()
-                    .map(|nrcs| {
-                        nrcs.into_iter()
-                            .map(|nrc| Section {
-                                nrc,
-                                section: None,
-                                mode: Mode::Remote,
-                                slots: Vec::new(),
-                            })
-                            .collect()
-                    })
-                    .collect(),
+                last_offered: Some(2026),
+                options: Some(
+                    options
+                        .into_iter()
+                        .map(|nrcs| {
+                            nrcs.into_iter()
+                                .map(|nrc| Section {
+                                    nrc,
+                                    section: None,
+                                    mode: Mode::Remote,
+                                    slots: Vec::new(),
+                                })
+                                .collect()
+                        })
+                        .collect(),
+                ),
             };
             for opt in build_domain(&offering) {
                 prop_assert!(opt.mask.is_empty());

@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use futures::stream::{self, StreamExt};
@@ -6,7 +5,7 @@ use futures::stream::{self, StreamExt};
 use crate::fetch::{FetchError, Fetcher};
 use crate::parser::{self, ParseError};
 use crate::print;
-use ulaval_scheduler_core::{CatalogueEntry, Course, CourseCycle, Season};
+use ulaval_scheduler_core::{CatalogueEntry, Course, CourseCycle};
 
 const n_concurrent: usize = 32;
 
@@ -31,24 +30,17 @@ pub enum CourseError {
     },
 }
 
-// What a cache file holds. `years` records which year each retained season
-// was read from: `Course` is keyed by season alone, but the snapshot files
-// are named per session (`a2026`), so the year has to survive the trip.
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct CachedCourse {
-    pub course: Course,
-    pub years: BTreeMap<Season, u16>,
-}
-
 // A cache file is one of two disjoint shapes, read untagged: a parsed
-// course (`{course, years}`), or the verdict that a page yields none —
-// stamped with the scope rule that reached it. Untagged is safe because the
-// two carry disjoint required fields, the same argument as `Credits`; a file
-// matching neither is a miss, so a corrupt cache refetches rather than lies.
+// `Course` (its vintage lives inside each season's `last_offered`), or the
+// verdict that a page yields none — stamped with the scope rule that reached
+// it. Untagged is safe because the two carry disjoint required fields, the
+// same argument as `Credits`; a file matching neither is a miss — a corrupt
+// file, or one in the retired `{course, years}` shape — so it refetches
+// rather than lies.
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
 enum CacheEntry {
-    Course(CachedCourse),
+    Course(Course),
     // an out-of-scope page has no `Course` to hold, so caching it needs its
     // own shape; `out_of_scope` is the scope fingerprint at write time
     OutOfScope { out_of_scope: String },
@@ -82,14 +74,16 @@ pub struct CacheTally {
     pub fetched: usize,
 }
 
-// One `data/cours/{session}.json`, mirroring the catalogue's shape. A
-// struct rather than a `json!` literal so serde keeps `Course`'s field
-// order: these snapshots are committed, and alphabetized keys would churn
-// the diffs and diverge from the `courses/*.json` fixtures.
+// The one `data/cours.json`, mirroring the catalogue's shape and holding
+// each multi-season `Course` whole (ADR
+// `2026-07-snapshot-unique-des-cours-millesime-par-saison`). A struct
+// rather than a `json!` literal so serde keeps `Course`'s field order: the
+// snapshot is committed, and alphabetized keys would churn the diffs and
+// diverge from the `courses/*.json` fixtures.
 // `Deserialize` too: a `--subjects` run reads back the snapshot it is about
 // to rewrite, to keep the subjects it knows nothing about.
 #[derive(Default, serde::Serialize, serde::Deserialize)]
-pub struct SessionSnapshot {
+pub struct Snapshot {
     pub courses: Vec<Course>,
 }
 
@@ -97,7 +91,7 @@ pub async fn scrape(
     fetcher: &Fetcher,
     entries: &[CatalogueEntry],
     cache_dir: &Path,
-) -> (Vec<CachedCourse>, Vec<CourseError>, CacheTally) {
+) -> (Vec<Course>, Vec<CourseError>, CacheTally) {
     let task = print::progress_task(
         "Scraping courses...",
         "Scraped courses.",
@@ -108,7 +102,7 @@ pub async fn scrape(
     // `collect`, not `try_collect` as the catalogue does: at ~10 req/s a
     // full run is ~17 min, and one unreachable page must not throw all of
     // it away (ADR `2026-07-echec-de-page-cours-non-bloquant`)
-    let scraped: Vec<(Option<CachedCourse>, Vec<CourseError>, Origin)> =
+    let scraped: Vec<(Option<Course>, Vec<CourseError>, Origin)> =
         stream::iter(entries)
             .map(|entry| async move {
                 let scraped = scrape_course(fetcher, entry, cache_dir).await;
@@ -141,7 +135,7 @@ async fn scrape_course(
     fetcher: &Fetcher,
     entry: &CatalogueEntry,
     cache_dir: &Path,
-) -> (Option<CachedCourse>, Vec<CourseError>, Origin) {
+) -> (Option<Course>, Vec<CourseError>, Origin) {
     let path = cache_path(cache_dir, &entry.code);
     match read_cache(&path) {
         Some(CacheEntry::Course(cached)) => {
@@ -191,10 +185,7 @@ async fn scrape_course(
         }
     };
 
-    let course = CachedCourse {
-        course: page.course,
-        years: page.years,
-    };
+    let course = page.course;
     let mut anomalies: Vec<CourseError> = page
         .anomalies
         .into_iter()
@@ -231,7 +222,7 @@ fn read_cache(path: &Path) -> Option<CacheEntry> {
     serde_json::from_str(&raw).ok()
 }
 
-// generic over what is cached: a `CachedCourse` writes `{course, years}`, a
+// generic over what is cached: a `Course` writes itself, a
 // `CacheEntry::OutOfScope` writes `{out_of_scope}`, and `read_cache` reads
 // either back through the untagged enum
 fn write_cache<T: serde::Serialize>(
@@ -245,51 +236,12 @@ fn write_cache<T: serde::Serialize>(
     std::fs::write(path, json)
 }
 
-// One course page can feed several session snapshots: a page lists up to
-// three seasons at once, each with its own year (ECN-4901 carries Hiver
-// 2026 and Été 2026).
-pub fn group_by_session(
-    courses: Vec<CachedCourse>,
-) -> BTreeMap<String, SessionSnapshot> {
-    let mut sessions: BTreeMap<String, SessionSnapshot> = BTreeMap::new();
-
-    for CachedCourse { course, years } in courses {
-        for (season, offering) in &course.seasons {
-            // a season with no recorded year belongs to no session, so no
-            // file could hold it; only a hand-edited cache file gets here
-            let Some(year) = years.get(season) else {
-                continue;
-            };
-            sessions
-                .entry(session_name(*season, *year))
-                .or_default()
-                .courses
-                .push(Course {
-                    // the snapshot is already named after the session, so
-                    // it carries that season alone
-                    seasons: BTreeMap::from([(*season, offering.clone())]),
-                    ..course.clone()
-                });
-        }
-    }
-
-    // `buffer_unordered` yields in completion order, which network timing
-    // makes arbitrary; these snapshots are committed, so they are sorted by
-    // code like the catalogue is, to keep the git diffs meaningful
-    for snapshot in sessions.values_mut() {
-        snapshot.courses.sort_by(|a, b| a.code.cmp(&b.code));
-    }
-
-    sessions
-}
-
-fn session_name(season: Season, year: u16) -> String {
-    let season = match season {
-        Season::Fall => 'a',
-        Season::Winter => 'h',
-        Season::Summer => 'e',
-    };
-    format!("{season}{year}")
+// `buffer_unordered` yields in completion order, which network timing
+// makes arbitrary; the snapshot is committed, so it is sorted by code like
+// the catalogue is, to keep the git diffs meaningful.
+pub fn snapshot(mut courses: Vec<Course>) -> Snapshot {
+    courses.sort_by(|a, b| a.code.cmp(&b.code));
+    Snapshot { courses }
 }
 
 #[cfg_attr(coverage_nightly, coverage(off))]
@@ -305,82 +257,49 @@ pub(crate) mod tests {
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     use super::*;
-    use ulaval_scheduler_core::{CourseCycle, Credits, SeasonOffering};
+    use ulaval_scheduler_core::{
+        Course, CourseCycle, Credits, Season, SeasonOffering,
+    };
 
     #[test]
-    fn a_session_is_named_by_its_season_letter_and_year() {
-        for (season, year, expected) in [
-            (Season::Fall, 2026, "a2026"),
-            (Season::Winter, 2026, "h2026"),
-            (Season::Summer, 2026, "e2026"),
-            (Season::Fall, 2021, "a2021"),
-        ] {
-            assert_eq!(session_name(season, year), expected);
-        }
-    }
-
-    #[test]
-    fn a_course_feeds_one_snapshot_per_season_it_is_offered_in() {
-        // ECN-4901's shape: one page, two seasons, and here two different
-        // years — so two session files, each carrying its own season alone
-        let cached = cached_course(
+    fn the_snapshot_holds_each_multi_season_course_whole() {
+        // ECN-4901's shape: one page, two seasons, each dated by its own
+        // `last_offered` — one snapshot entry carrying both seasons
+        let course = course_with(
             "ECN-4901",
             &[(Season::Winter, 2026), (Season::Summer, 2025)],
         );
 
-        let sessions = group_by_session(vec![cached]);
+        let snapshot = snapshot(vec![course]);
 
+        assert_eq!(snapshot.courses.len(), 1);
+        let course = &snapshot.courses[0];
+        assert_eq!(course.code, "ECN-4901");
         assert_eq!(
-            sessions.keys().collect::<Vec<_>>(),
-            ["e2025", "h2026"],
-            "one file per season+year pair"
+            course.seasons.keys().collect::<Vec<_>>(),
+            [&Season::Winter, &Season::Summer],
         );
-        let winter = &sessions["h2026"].courses[0];
-        assert_eq!(winter.code, "ECN-4901");
-        assert_eq!(
-            winter.seasons.keys().collect::<Vec<_>>(),
-            [&Season::Winter],
-            "the snapshot is named after the session, so it carries that \
-             season alone"
-        );
-        assert_eq!(
-            sessions["e2025"].courses[0]
-                .seasons
-                .keys()
-                .collect::<Vec<_>>(),
-            [&Season::Summer]
-        );
+        assert_eq!(course.seasons[&Season::Winter].last_offered, Some(2026));
+        assert_eq!(course.seasons[&Season::Summer].last_offered, Some(2025));
     }
 
     #[test]
     fn a_snapshot_is_sorted_by_code_whatever_order_courses_arrive_in() {
         // courses come back in completion order, which network timing makes
-        // arbitrary; the snapshots are committed, so the file must not
+        // arbitrary; the snapshot is committed, so the file must not
         // depend on which page answered first
         let arrived = vec![
-            cached_course("GEX-2000", &[(Season::Fall, 2026)]),
-            cached_course("GCI-1007", &[(Season::Fall, 2026)]),
-            cached_course("GEX-1000", &[(Season::Fall, 2026)]),
+            course_with("GEX-2000", &[(Season::Fall, 2026)]),
+            course_with("GCI-1007", &[(Season::Fall, 2026)]),
+            course_with("GEX-1000", &[(Season::Fall, 2026)]),
         ];
 
-        let sessions = group_by_session(arrived);
-
-        let codes: Vec<&str> = sessions["a2026"]
+        let codes: Vec<String> = snapshot(arrived)
             .courses
-            .iter()
-            .map(|course| course.code.as_str())
+            .into_iter()
+            .map(|course| course.code)
             .collect();
         assert_eq!(codes, ["GCI-1007", "GEX-1000", "GEX-2000"]);
-    }
-
-    #[test]
-    fn a_season_with_no_recorded_year_belongs_to_no_session() {
-        // only a hand-edited or truncated cache file gets here: the season
-        // names no snapshot, so there is no file it could go in
-        let mut cached = cached_course("GEX-1000", &[(Season::Fall, 2026)]);
-        cached.years.clear();
-
-        assert!(group_by_session(vec![cached]).is_empty());
     }
 
     #[test]
@@ -412,7 +331,7 @@ pub(crate) mod tests {
     fn a_written_cache_file_reads_back() {
         let dir = test_dir("cache-roundtrip");
         let path = dir.join("gex-1000.json");
-        let course = cached_course("GEX-1000", &[(Season::Fall, 2026)]);
+        let course = course_with("GEX-1000", &[(Season::Fall, 2026)]);
 
         write_cache(&path, &course)
             .unwrap_or_else(|e| panic!("write the cache file: {e}"));
@@ -421,8 +340,24 @@ pub(crate) mod tests {
         let CacheEntry::Course(read) = read else {
             panic!("a course file must read back as a course, not a verdict");
         };
-        assert_eq!(read.course, course.course);
-        assert_eq!(read.years, course.years);
+        assert_eq!(read, course);
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn a_cache_file_in_the_retired_shape_is_a_miss() {
+        // the pre-merge cache wrote `{course, years}`; neither untagged
+        // variant matches it, so the page refetches instead of being misread
+        let dir = test_dir("cache-retired-shape");
+        let path = dir.join("gex-1000.json");
+        let old = serde_json::json!({
+            "course": course_with("GEX-1000", &[(Season::Fall, 2026)]),
+            "years": {"fall": 2026},
+        });
+        std::fs::write(&path, old.to_string())
+            .unwrap_or_else(|e| panic!("plant an old-shape cache file: {e}"));
+
+        assert!(read_cache(&path).is_none());
         cleanup(&dir);
     }
 
@@ -433,7 +368,7 @@ pub(crate) mod tests {
         std::fs::create_dir_all(&path)
             .unwrap_or_else(|e| panic!("block the cache path: {e}"));
 
-        let result = write_cache(&path, &cached_course("GEX-1000", &[]));
+        let result = write_cache(&path, &course_with("GEX-1000", &[]));
 
         assert!(result.is_err(), "writing over a directory must fail");
         cleanup(&dir);
@@ -450,8 +385,8 @@ pub(crate) mod tests {
             scrape_one(&server, "GEX-1000", &dir).await;
 
         assert!(anomalies.is_empty(), "{anomalies:?}");
-        assert_eq!(courses[0].course.code, "GEX-1000");
-        assert_eq!(courses[0].years[&Season::Fall], 2026);
+        assert_eq!(courses[0].code, "GEX-1000");
+        assert_eq!(courses[0].seasons[&Season::Fall].last_offered, Some(2026));
         assert!(
             dir.join("gex-1000.json").exists(),
             "a clean parse must be cached"
@@ -468,7 +403,7 @@ pub(crate) mod tests {
         let dir = test_dir("scrape-cache-hit");
         write_cache(
             &dir.join("gex-1000.json"),
-            &cached_course("GEX-1000", &[(Season::Fall, 2026)]),
+            &course_with("GEX-1000", &[(Season::Fall, 2026)]),
         )
         .unwrap_or_else(|e| panic!("prime the cache: {e}"));
 
@@ -476,7 +411,7 @@ pub(crate) mod tests {
             scrape_one(&server, "GEX-1000", &dir).await;
 
         assert!(anomalies.is_empty(), "{anomalies:?}");
-        assert_eq!(courses[0].course.code, "GEX-1000");
+        assert_eq!(courses[0].code, "GEX-1000");
         cleanup(&dir);
     }
 
@@ -491,7 +426,7 @@ pub(crate) mod tests {
         let dir = test_dir("scrape-tally");
         write_cache(
             &dir.join("gex-1000.json"),
-            &cached_course("GEX-1000", &[(Season::Fall, 2026)]),
+            &course_with("GEX-1000", &[(Season::Fall, 2026)]),
         )
         .unwrap_or_else(|e| panic!("prime the cache: {e}"));
         let entries = [entry(&server, "GEX-1000"), entry(&server, "GEX-2000")];
@@ -637,7 +572,7 @@ pub(crate) mod tests {
         let (courses, anomalies, _) =
             scrape_one(&server, "GEX-1000", &dir).await;
 
-        assert_eq!(courses[0].course.code, "GEX-1000", "the course is kept");
+        assert_eq!(courses[0].code, "GEX-1000", "the course is kept");
         assert_eq!(anomalies.len(), 1, "and its anomaly is surfaced");
         assert!(
             !dir.join("gex-1000.json").exists(),
@@ -695,14 +630,14 @@ pub(crate) mod tests {
         server: &MockServer,
         code: &str,
         cache_dir: &Path,
-    ) -> (Vec<CachedCourse>, Vec<CourseError>, CacheTally) {
+    ) -> (Vec<Course>, Vec<CourseError>, CacheTally) {
         scrape_with(&[entry(server, code)], cache_dir).await
     }
 
     async fn scrape_with(
         entries: &[CatalogueEntry],
         cache_dir: &Path,
-    ) -> (Vec<CachedCourse>, Vec<CourseError>, CacheTally) {
+    ) -> (Vec<Course>, Vec<CourseError>, CacheTally) {
         // zero intervals: throttle timing is unit-tested on a virtual
         // clock in fetch.rs; these tests assert orchestration and must
         // stay fast
@@ -775,28 +710,26 @@ pub(crate) mod tests {
         )
     }
 
-    fn cached_course(code: &str, years: &[(Season, u16)]) -> CachedCourse {
-        CachedCourse {
-            course: Course {
-                code: code.to_string(),
-                title: format!("Cours {code}"),
-                credits: Credits::Fixed(3),
-                cycle: CourseCycle::First,
-                prerequisites: None,
-                equivalents: Vec::new(),
-                seasons: years
-                    .iter()
-                    .map(|(season, _)| {
-                        (
-                            *season,
-                            SeasonOffering {
-                                options: Vec::new(),
-                            },
-                        )
-                    })
-                    .collect(),
-            },
-            years: years.iter().copied().collect(),
+    fn course_with(code: &str, years: &[(Season, u16)]) -> Course {
+        Course {
+            code: code.to_string(),
+            title: format!("Cours {code}"),
+            credits: Credits::Fixed(3),
+            cycle: CourseCycle::First,
+            prerequisites: None,
+            equivalents: Vec::new(),
+            seasons: years
+                .iter()
+                .map(|&(season, year)| {
+                    (
+                        season,
+                        SeasonOffering {
+                            last_offered: Some(year),
+                            options: Some(Vec::new()),
+                        },
+                    )
+                })
+                .collect(),
         }
     }
 

@@ -2,6 +2,8 @@
 
 Date : 2026-07-19
 
+**Statut : remplacé par `2026-07-snapshot-unique-des-cours-millesime-par-saison`.**
+
 ## Contexte
 
 `data/cours/{session}.json` est nommé par saison **et** année (`a2026`), mais `core::Course` est indexé par saison seule (`fall`/`winter`/`summer`).

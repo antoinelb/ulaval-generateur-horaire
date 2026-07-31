@@ -7,6 +7,7 @@
   "equivalents": [],
   "seasons": {
     "fall": {
+      "last_offered": 2026,
       "options": [
         [
           {
@@ -87,6 +88,7 @@
       ]
     },
     "winter": {
+      "last_offered": 2026,
       "options": [
         [
           {
@@ -167,6 +169,7 @@
       ]
     },
     "summer": {
+      "last_offered": 2026,
       "options": [
         [
           {

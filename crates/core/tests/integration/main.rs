@@ -4,5 +4,7 @@
 // subdirectories.
 mod catalogue;
 mod course;
+mod organigramme;
 mod program;
+mod rules;
 mod schedule;

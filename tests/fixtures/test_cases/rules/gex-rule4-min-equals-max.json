@@ -185,6 +185,7 @@
       ],
       "seasons": {
         "fall": {
+          "last_offered": null,
           "options": [
             [
               {
@@ -197,6 +198,7 @@
           ]
         },
         "winter": {
+          "last_offered": null,
           "options": [
             [
               {

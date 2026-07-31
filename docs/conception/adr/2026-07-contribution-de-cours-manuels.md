@@ -2,6 +2,8 @@
 
 Date : 2026-07-19
 
+**Statut : chemin révisé par `2026-07-snapshot-unique-des-cours-millesime-par-saison` — le sidecar devient `data/cours.manuel.json` (sans session), toujours jamais écrit par le scraper.**
+
 ## Contexte
 
 `docs/project_plan.md:33` prévoit l'ajout manuel d'un cours avec son horaire (session à l'étranger, autre université).

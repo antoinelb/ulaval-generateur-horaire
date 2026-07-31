@@ -2,6 +2,8 @@
 
 Date : 2026-07-19
 
+**Statut : caduc depuis `2026-07-snapshot-unique-des-cours-millesime-par-saison` — un seul `data/cours.json` remplacé en bloc, rien à balayer.**
+
 ## Contexte
 
 `write_courses` écrivait les fichiers de session sans jamais retirer ceux qu'un run ne produisait plus.

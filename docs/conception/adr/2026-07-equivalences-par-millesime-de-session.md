@@ -2,6 +2,8 @@
 
 Date : 2026-07-28
 
+**Statut : révisé par `2026-07-snapshot-unique-des-cours-millesime-par-saison` — le millésime vit désormais dans `SeasonOffering.last_offered`, `resolve_offering` le lit lui-même ; la règle de récence (plus récent gagne, égalité au cours) est inchangée.**
+
 ## Contexte
 
 « Quand un cours a un équivalent, utiliser l'horaire du plus récent des deux » (`project_plan.md`).

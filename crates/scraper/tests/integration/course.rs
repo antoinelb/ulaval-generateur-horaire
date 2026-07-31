@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::fs;
 
 use ulaval_scheduler_core::{Credits, Season};
@@ -17,10 +16,35 @@ const FIXTURE_DIR: &str = concat!(
 //   drt-7104  a stray `<b>` on the page, which HTML5 turns into a re-parent
 const FIXTURES: &[&str] = &[
     "act-4114", "chm-0150", "cso-6702", "drt-7104", "ecn-4901", "esp-1000",
-    "frn-1112", "gae-3008", "gci-1007", "gci-2010", "gci-2510", "gex-3100",
-    "gex-3333", "gex-4008", "gex-7002", "gmc-1590", "gmc-7000", "gml-1001",
-    "ift-1004", "med-1911", "phi-7750",
+    "frn-1112", "gae-3008", "gci-1007", "gci-1011", "gci-2010", "gci-2510",
+    "gex-3100", "gex-3333", "gex-4008", "gex-7002", "gmc-1590", "gmc-7000",
+    "gml-1001", "ift-1004", "med-1911", "phi-7750",
 ];
+
+// Regenerates every expected fixture from its frozen HTML (ADR
+// `2026-07-fixture-attendue-derivee-avant-le-parseur`: the parser already
+// reads these pages, so the expected output is derived by it, hand-reviewed
+// against the page, then frozen — never written by hand). Run with
+// `UPDATE_FIXTURES=1 cargo test -p ulaval-scheduler-scraper`; a plain run
+// leaves the files untouched.
+#[test]
+fn update_fixtures() {
+    if std::env::var_os("UPDATE_FIXTURES").is_none() {
+        return;
+    }
+    for name in FIXTURES {
+        let html_path = format!("{FIXTURE_DIR}/{name}.html");
+        let html = fs::read_to_string(&html_path)
+            .unwrap_or_else(|e| panic!("read {html_path}: {e}"));
+        let page = parser::course::parse(&html)
+            .unwrap_or_else(|e| panic!("parse {name}: {e}"))
+            .unwrap_or_else(|| panic!("{name} is in scope"));
+        let json = serde_json::to_string_pretty(&page.course)
+            .unwrap_or_else(|e| panic!("serialize {name}: {e}"));
+        fs::write(format!("{FIXTURE_DIR}/{name}.json"), json + "\n")
+            .unwrap_or_else(|e| panic!("write {name}.json: {e}"));
+    }
+}
 
 #[test]
 fn parses_every_course_fixture_without_anomalies() {
@@ -130,6 +154,8 @@ fn labs_stay_attached_to_the_section_that_offers_them() {
         .expect("fall offering");
     let nrcs: Vec<Vec<&str>> = fall
         .options
+        .as_deref()
+        .expect("published schedule")
         .iter()
         .map(|option| option.iter().map(|s| s.nrc.as_str()).collect())
         .collect();
@@ -167,6 +193,8 @@ fn a_section_re_parented_by_a_stray_tag_is_still_found() {
         .expect("fall offering");
     let nrcs: Vec<&str> = fall
         .options
+        .as_deref()
+        .expect("published schedule")
         .iter()
         .flatten()
         .map(|s| s.nrc.as_str())
@@ -175,16 +203,22 @@ fn a_section_re_parented_by_a_stray_tag_is_still_found() {
     assert_eq!(nrcs, vec!["84328", "84329"]);
 }
 
-// `Course` is keyed by season alone, but the snapshots are named per
-// session (`a2026`), so the year of each retained block has to reach the
-// scraper. GCI-1007 lists Automne 2024, 2025 and 2026; only 2026 survives.
+// The vintage of each retained block lives inside the offering itself
+// (`last_offered`). GCI-1007 lists Automne 2024, 2025 and 2026; only 2026
+// survives. GCI-1011 has no session section at all: the new-course rule
+// marks it fall and winter with no vintage and no schedule (ADR
+// `2026-07-cours-sans-section-de-session-offert-automne-hiver`).
 #[test]
 fn each_retained_season_carries_the_year_it_was_read_from() {
     for (name, expected) in [
-        ("gci-1007", vec![(Season::Fall, 2026)]),
+        ("gci-1007", vec![(Season::Fall, Some(2026))]),
         (
             "ecn-4901",
-            vec![(Season::Winter, 2026), (Season::Summer, 2026)],
+            vec![(Season::Winter, Some(2026)), (Season::Summer, Some(2026))],
+        ),
+        (
+            "gci-1011",
+            vec![(Season::Fall, None), (Season::Winter, None)],
         ),
     ] {
         let html_path = format!("{FIXTURE_DIR}/{name}.html");
@@ -195,15 +229,12 @@ fn each_retained_season_carries_the_year_it_was_read_from() {
             .unwrap_or_else(|e| panic!("parse {name}: {e}"))
             .unwrap_or_else(|| panic!("{name} is in scope"));
 
-        assert_eq!(
-            page.years,
-            BTreeMap::from_iter(expected),
-            "years parsed from {name}"
-        );
-        assert_eq!(
-            page.years.keys().collect::<Vec<_>>(),
-            page.course.seasons.keys().collect::<Vec<_>>(),
-            "every retained season must have a year ({name})"
-        );
+        let vintages: Vec<(Season, Option<u16>)> = page
+            .course
+            .seasons
+            .iter()
+            .map(|(&season, offering)| (season, offering.last_offered))
+            .collect();
+        assert_eq!(vintages, expected, "vintages parsed from {name}");
     }
 }
