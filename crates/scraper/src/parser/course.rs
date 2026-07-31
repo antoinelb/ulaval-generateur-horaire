@@ -295,17 +295,21 @@ fn parse_prerequisites(
         .select(&PREALABLES)
         .next()
         .map(|element| element.text().collect::<String>().trim().to_string());
-    let preuniversitaire = parse_preuniversitaire_codes(doc, anomalies);
 
-    // a course with no préuniversitaire field keeps its raw byte-for-byte; the
-    // field only ever folds in as extra ET-operands (ADR
+    // a course with no préuniversitaire field keeps its raw byte-for-byte;
+    // the field only ever folds in as extra ET-operands (ADR
     // `2026-07-prealables-preuniversitaires-fusionnes`)
-    let raw = match (regular, preuniversitaire.is_empty()) {
-        (Some(regular), true) => regular,
-        (None, true) => return None,
-        (None, false) => preuniversitaire.join(" ET "),
-        (Some(regular), false) => {
-            format!("({regular}) ET ({})", preuniversitaire.join(" ET "))
+    let mut parts: Vec<String> = regular
+        .into_iter()
+        .chain(parse_preuniversitaire(doc, anomalies))
+        .collect();
+    let raw = match parts.len() {
+        0 => return None,
+        1 => parts.swap_remove(0),
+        _ => {
+            let grouped: Vec<String> =
+                parts.iter().map(|part| format!("({part})")).collect();
+            grouped.join(" ET ")
         }
     };
 
@@ -321,50 +325,81 @@ fn parse_prerequisites(
     }
 }
 
-// « Préalables préuniversitaires nécessaires s'il y a lieu : CHM-0150 et
-// PHY-0250. » sits in a `.fe--message` box (one per session offering) the
-// regular selector never reads — hence the silent drop this restores. The
-// sigles form a contiguous list after the colon, but the last is glued to the
-// prose that follows it by a bare period (« MAT-0150.Cette section… ») — so
-// each token yields its *leading* code, the « et » connectors are skipped, and
-// the first token that is neither stops the walk before the prose, which is
-// therefore never scanned for a stray code-shaped word. ADR
-// `2026-07-prealables-preuniversitaires-fusionnes`.
-fn parse_preuniversitaire_codes(
+// « REMARQUE : Préalables préuniversitaires nécessaires s'il y a lieu :
+// BIO-0150, CHM-0150, CHM-0160 ou CHM-0170. » sits in a `.fe--message` box
+// (one per session offering) the regular selector never reads. Each marker
+// node yields the expression between the colon *after* the marker — a prefix
+// like « REMARQUE : » carries its own colon — and the first period, which
+// both ends the sentence and glues the prose that follows
+// (« MAT-0150.Cette section… »). The expression is handed to the préalables
+// grammar with its connectors uppercased; what the grammar cannot check
+// (comma lists, cégep sigles, « équivalent ») survives as a Raw operand.
+// Distinct messages on one page (BIO-1003) are all kept, ET-joined by the
+// caller. ADR `2026-07-prealables-preuniversitaires-en-expression`.
+fn parse_preuniversitaire(
     doc: &Html,
     anomalies: &mut Vec<ParseError>,
 ) -> Vec<String> {
-    let Some(tail) = doc
+    let markers = doc
         .select(&FE_MESSAGE)
         .flat_map(|message| message.text())
-        .find(|node| {
+        .filter(|node| {
             node.to_lowercase()
                 .contains("préuniversitaires nécessaires")
-        })
-        .and_then(|node| node.split_once(':').map(|(_, tail)| tail))
-    else {
-        return Vec::new();
-    };
+        });
 
-    let mut codes: Vec<String> = Vec::new();
-    for token in tail.split_whitespace() {
-        if token == "et" || token == "ET" {
-            continue;
-        }
-        match leading_course_code(token) {
-            Some(code) => codes.push(code.to_string()),
-            None => break,
+    let mut kept: Vec<String> = Vec::new();
+    let mut malformed: Vec<String> = Vec::new();
+    for node in markers {
+        let extracted = node
+            .split_once("nécessaires")
+            .and_then(|(_, tail)| tail.split_once(':'))
+            .map(|(_, tail)| {
+                normalize_connectors(tail.split('.').next().unwrap_or(""))
+            });
+        let (bucket, expr) = match extracted {
+            Some(expr) if contains_sigle(&expr) => (&mut kept, expr),
+            // an expression without a single sigle (« voir la direction »),
+            // or a marker the extraction cannot even reach: surfaced, never
+            // dropped in silence
+            Some(expr) => (&mut malformed, expr),
+            None => (&mut malformed, node.trim().to_string()),
+        };
+        if !bucket.contains(&expr) {
+            bucket.push(expr);
         }
     }
 
-    // the marker was there but yielded no sigle: surfaced, never dropped
-    if codes.is_empty() {
+    for raw in malformed {
         anomalies.push(ParseError::MalformedEntry {
             selector: "préalables préuniversitaires".to_string(),
-            raw: tail.trim().to_string(),
+            raw,
         });
     }
-    codes
+    kept
+}
+
+// The source writes its connectors in lowercase prose (« et », « ou »); the
+// grammar only knows the uppercase operators. Everything else — sigles,
+// parentheses, commas, prose — passes through untouched.
+fn normalize_connectors(expr: &str) -> String {
+    let words: Vec<&str> = expr
+        .split_whitespace()
+        .map(|word| match word {
+            "et" => "ET",
+            "ou" => "OU",
+            other => other,
+        })
+        .collect();
+    words.join(" ")
+}
+
+// At least one sigle-shaped token — possibly glued to an opening
+// parenthesis — must appear for the expression to be worth folding.
+fn contains_sigle(expr: &str) -> bool {
+    expr.split_whitespace().any(|token| {
+        leading_course_code(token.trim_start_matches('(')).is_some()
+    })
 }
 
 // The leading course code of a token — two to four uppercase letters, a
@@ -1536,18 +1571,118 @@ mod tests {
     #[test]
     fn a_preuniversitaire_marker_without_a_sigle_is_an_anomaly() {
         // the marker is there but no sigle comes out: surfaced as an anomaly,
-        // never dropped in silence
+        // never dropped in silence — and only once, however many sections
+        // repeat the same message
         let doc = document(
-            r#"<div class="fe--message"><p>Préalables préuniversitaires nécessaires s'il y a lieu : voir la direction.</p></div>"#,
+            r#"<div class="fe--message"><p>Préalables préuniversitaires nécessaires s'il y a lieu : voir la direction.</p></div><div class="fe--message"><p>Préalables préuniversitaires nécessaires s'il y a lieu : voir la direction.</p></div>"#,
         );
         let mut anomalies = Vec::new();
 
         assert_eq!(parse_prerequisites(&doc, &mut anomalies), None);
         assert_eq!(anomalies.len(), 1, "got {anomalies:?}");
         assert_eq!(
-            malformed_entry(&anomalies[0]).0,
-            "préalables préuniversitaires"
+            malformed_entry(&anomalies[0]),
+            ("préalables préuniversitaires", "voir la direction")
         );
+    }
+
+    #[test]
+    fn a_marker_whose_expression_is_unreachable_is_an_anomaly() {
+        // a marker node with no colon after « nécessaires » gives the
+        // extraction nothing to anchor on: the whole node is surfaced (the
+        // old walk returned nothing here, silently)
+        let doc = document(
+            r#"<div class="fe--message"><p>Préalables préuniversitaires nécessaires BIO-0150</p></div>"#,
+        );
+        let mut anomalies = Vec::new();
+
+        assert_eq!(parse_prerequisites(&doc, &mut anomalies), None);
+        assert_eq!(anomalies.len(), 1, "got {anomalies:?}");
+        assert_eq!(
+            malformed_entry(&anomalies[0]),
+            (
+                "préalables préuniversitaires",
+                "Préalables préuniversitaires nécessaires BIO-0150"
+            )
+        );
+    }
+
+    #[test]
+    fn a_remarque_prefix_does_not_swallow_the_expression() {
+        // bio-1003: « REMARQUE : » carries its own colon before the marker's,
+        // so the expression starts at the colon *after* « nécessaires ». The
+        // comma list is outside the grammar and survives as a Raw operand;
+        // the « ou » alternative that follows it stays checkable — the old
+        // walk dropped CHM-0170 without a trace.
+        let doc = document(
+            r#"<div class="fe--message"><p>REMARQUE : Préalables préuniversitaires nécessaires s'il y a lieu : BIO-0150, CHM-0150, CHM-0160 ou CHM-0170.</p></div>"#,
+        );
+        let mut anomalies = Vec::new();
+
+        assert_eq!(
+            parse_prerequisites(&doc, &mut anomalies),
+            Some(Prerequisites::Parsed {
+                raw: "BIO-0150, CHM-0150, CHM-0160 OU CHM-0170".to_string(),
+                tree: any(vec![
+                    PrereqTree::Raw {
+                        raw: "BIO-0150, CHM-0150, CHM-0160".to_string()
+                    },
+                    course("CHM-0170"),
+                ]),
+            })
+        );
+        assert!(anomalies.is_empty(), "got {anomalies:?}");
+    }
+
+    #[test]
+    fn distinct_preuniversitaire_messages_all_fold_in() {
+        // bio-1003 again: its sections carry two *different* messages — an
+        // ambiguous comma list and a fully parenthesized expression. Repeats
+        // dedupe; the distinct survivors are ET-joined so neither is lost.
+        let doc = document(
+            r#"<div class="fe--message"><p>REMARQUE : Préalables préuniversitaires nécessaires s'il y a lieu : BIO-0150, CHM-0150, CHM-0160 ou CHM-0170.</p></div><div class="fe--message"><p>REMARQUE : Préalables préuniversitaires nécessaires s'il y a lieu : BIO-0150, CHM-0150, CHM-0160 ou CHM-0170.</p></div><div class="fe--message"><p>Préalables préuniversitaires nécessaires : (BIO-0150 ou BIO-NYA ou équivalent) ET (CHM-0160 ou CHM-0170 ou CHM-NYB ou équivalent).</p></div>"#,
+        );
+        let mut anomalies = Vec::new();
+
+        assert_eq!(
+            parse_prerequisites(&doc, &mut anomalies),
+            Some(Prerequisites::Parsed {
+                raw: "(BIO-0150, CHM-0150, CHM-0160 OU CHM-0170) ET \
+                      ((BIO-0150 OU BIO-NYA OU équivalent) ET \
+                      (CHM-0160 OU CHM-0170 OU CHM-NYB OU équivalent))"
+                    .to_string(),
+                tree: all(vec![
+                    any(vec![
+                        PrereqTree::Raw {
+                            raw: "BIO-0150, CHM-0150, CHM-0160".to_string()
+                        },
+                        course("CHM-0170"),
+                    ]),
+                    all(vec![
+                        any(vec![
+                            course("BIO-0150"),
+                            PrereqTree::Raw {
+                                raw: "BIO-NYA".to_string()
+                            },
+                            PrereqTree::Raw {
+                                raw: "équivalent".to_string()
+                            },
+                        ]),
+                        any(vec![
+                            course("CHM-0160"),
+                            course("CHM-0170"),
+                            PrereqTree::Raw {
+                                raw: "CHM-NYB".to_string()
+                            },
+                            PrereqTree::Raw {
+                                raw: "équivalent".to_string()
+                            },
+                        ]),
+                    ]),
+                ]),
+            })
+        );
+        assert!(anomalies.is_empty(), "got {anomalies:?}");
     }
 
     #[test]

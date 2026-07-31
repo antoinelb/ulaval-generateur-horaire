@@ -1,0 +1,247 @@
+{
+  "code": "BIO-1003",
+  "title": "Microbiologie générale et laboratoire",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "(BIO-0150, CHM-0150, CHM-0160 OU CHM-0170) ET ((BIO-0150 OU BIO-NYA OU équivalent) ET (CHM-0160 OU CHM-0170 OU CHM-NYB OU équivalent))",
+    "tree": {
+      "all": [
+        {
+          "any": [
+            {
+              "raw": "BIO-0150, CHM-0150, CHM-0160"
+            },
+            "CHM-0170"
+          ]
+        },
+        {
+          "all": [
+            {
+              "any": [
+                "BIO-0150",
+                {
+                  "raw": "BIO-NYA"
+                },
+                {
+                  "raw": "équivalent"
+                }
+              ]
+            },
+            {
+              "any": [
+                "CHM-0160",
+                "CHM-0170",
+                {
+                  "raw": "CHM-NYB"
+                },
+                {
+                  "raw": "équivalent"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "equivalents": [],
+  "seasons": {
+    "fall": {
+      "last_offered": 2026,
+      "options": [
+        [
+          {
+            "nrc": "82889",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "08:30",
+                "end": "10:20"
+              },
+              {
+                "day": "friday",
+                "start": "08:30",
+                "end": "09:20"
+              }
+            ]
+          },
+          {
+            "nrc": "82890",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "13:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "82889",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "08:30",
+                "end": "10:20"
+              },
+              {
+                "day": "friday",
+                "start": "08:30",
+                "end": "09:20"
+              }
+            ]
+          },
+          {
+            "nrc": "82891",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "13:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "82889",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "08:30",
+                "end": "10:20"
+              },
+              {
+                "day": "friday",
+                "start": "08:30",
+                "end": "09:20"
+              }
+            ]
+          },
+          {
+            "nrc": "82892",
+            "section": "C",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "thursday",
+                "start": "13:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    "winter": {
+      "last_offered": 2026,
+      "options": [
+        [
+          {
+            "nrc": "12939",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "10:30",
+                "end": "12:20"
+              },
+              {
+                "day": "wednesday",
+                "start": "11:30",
+                "end": "12:20"
+              }
+            ]
+          },
+          {
+            "nrc": "12940",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "13:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "12939",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "10:30",
+                "end": "12:20"
+              },
+              {
+                "day": "wednesday",
+                "start": "11:30",
+                "end": "12:20"
+              }
+            ]
+          },
+          {
+            "nrc": "12941",
+            "section": "B",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "wednesday",
+                "start": "13:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "nrc": "12939",
+            "section": null,
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "10:30",
+                "end": "12:20"
+              },
+              {
+                "day": "wednesday",
+                "start": "11:30",
+                "end": "12:20"
+              }
+            ]
+          },
+          {
+            "nrc": "12942",
+            "section": "C",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "thursday",
+                "start": "13:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

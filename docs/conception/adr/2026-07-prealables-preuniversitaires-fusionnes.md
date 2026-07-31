@@ -1,5 +1,7 @@
 # Les préalables préuniversitaires sont fusionnés aux préalables
 
+Statut : mécanisme d'extraction remplacé par `2026-07-prealables-preuniversitaires-en-expression` (la fusion en une expression unique demeure; la marche de sigles disparaît).
+
 Date : 2026-07-21
 
 ## Contexte

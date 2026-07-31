@@ -43121,7 +43121,48 @@
       "title": "Microbiologie générale et laboratoire",
       "credits": 3,
       "cycle": 1,
-      "prerequisites": null,
+      "prerequisites": {
+        "raw": "(BIO-0150, CHM-0150, CHM-0160 OU CHM-0170) ET ((BIO-0150 OU BIO-NYA OU équivalent) ET (CHM-0160 OU CHM-0170 OU CHM-NYB OU équivalent))",
+        "tree": {
+          "all": [
+            {
+              "any": [
+                {
+                  "raw": "BIO-0150, CHM-0150, CHM-0160"
+                },
+                "CHM-0170"
+              ]
+            },
+            {
+              "all": [
+                {
+                  "any": [
+                    "BIO-0150",
+                    {
+                      "raw": "BIO-NYA"
+                    },
+                    {
+                      "raw": "équivalent"
+                    }
+                  ]
+                },
+                {
+                  "any": [
+                    "CHM-0160",
+                    "CHM-0170",
+                    {
+                      "raw": "CHM-NYB"
+                    },
+                    {
+                      "raw": "équivalent"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
       "equivalents": [],
       "seasons": {
         "fall": {

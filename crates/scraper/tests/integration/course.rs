@@ -8,17 +8,19 @@ const FIXTURE_DIR: &str = concat!(
     "/../../tests/fixtures/test_cases/courses",
 );
 
-// The last four pages each pin one family of the anomalies the first full
-// catalogue run logged:
+// Some pages each pin one family of the anomalies full catalogue runs
+// logged:
 //   med-1911  « 6 à 12 » credits, a stage the student weights himself
 //   ift-1004  two top-level sections, only one of them carrying labs
 //   cso-6702  two top-level sections hanging off one common seminar NRC
 //   drt-7104  a stray `<b>` on the page, which HTML5 turns into a re-parent
+//   bio-1003  two distinct préuniversitaire messages, one behind
+//             « REMARQUE : », comma lists and cégep sigles kept Raw
 const FIXTURES: &[&str] = &[
-    "act-4114", "chm-0150", "cso-6702", "drt-7104", "ecn-4901", "esp-1000",
-    "frn-1112", "gae-3008", "gci-1007", "gci-1011", "gci-2010", "gci-2510",
-    "gex-3100", "gex-3333", "gex-4008", "gex-7002", "gmc-1590", "gmc-7000",
-    "gml-1001", "ift-1004", "med-1911", "phi-7750",
+    "act-4114", "bio-1003", "chm-0150", "cso-6702", "drt-7104", "ecn-4901",
+    "esp-1000", "frn-1112", "gae-3008", "gci-1007", "gci-1011", "gci-2010",
+    "gci-2510", "gex-3100", "gex-3333", "gex-4008", "gex-7002", "gmc-1590",
+    "gmc-7000", "gml-1001", "ift-1004", "med-1911", "phi-7750",
 ];
 
 // Regenerates every expected fixture from its frozen HTML (ADR
