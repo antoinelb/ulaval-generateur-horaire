@@ -28,6 +28,7 @@ const FIXTURES: &[&str] = &[
     "prereq-chain-forces-order",
     "program-credits-threshold-gates",
     "season-restricts-placement",
+    "unsatisfiable-prerequisite-proves-infeasible",
     "weekly-veto-splits-conflicting-courses",
     "winter-start-inverts-projects",
 ];

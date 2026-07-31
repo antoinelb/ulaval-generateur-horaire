@@ -2,7 +2,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ops::ControlFlow;
 
 use crate::course::{Course, PrereqTree, Prerequisites, Season};
-use crate::feasibility::FeasibilityCache;
+use crate::feasibility::{FeasibilityCache, MAX_MEMBERS};
+use crate::week::WeekMask;
+use crate::weekly::build_domain;
 
 // far above any real prerequisite tree; bounds the flatten loop
 const MAX_TREE_NODES: usize = 10_000;
@@ -35,6 +37,30 @@ pub struct PlacementRequest<'a> {
 pub struct Placement {
     pub completion: Completion,
     pub solutions: Vec<Solution>,
+    // courses proven unplaceable before the search — a non-empty list is
+    // an infeasibility proof that names its culprits (ADR
+    // `2026-07-implacabilite-prouvee-avant-la-recherche`)
+    pub blocked: Vec<Blocked>,
+}
+
+// A candidate no assignment can ever place, and why — surfaced so the
+// harness and the UI name the culprit instead of grinding the node budget
+// on an unwinnable enumeration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Blocked {
+    pub code: String,
+    pub reason: BlockedReason,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BlockedReason {
+    // no listed session can host the course (offer and pin filtering
+    // left nothing)
+    EmptyDomain,
+    // the prerequisite tree is False under every assignment — an unknown
+    // university code, the course as its own prerequisite, or a credits
+    // threshold above every credit in sight
+    UnsatisfiablePrerequisites,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -77,15 +103,23 @@ pub enum PlacementError {
     },
     #[error("the prerequisite tree of {code} exceeds {MAX_TREE_NODES} nodes")]
     PrerequisiteTreeTooLarge { code: String },
+    #[error(
+        "{count} courses to place exceed the supported {MAX_MEMBERS} \
+         (the feasibility cache packs them in a single bitset)"
+    )]
+    TooManyCourses { count: usize },
 }
 
 // a course to place: its planning credits, its prerequisite tree flattened
-// once, and its value-ordered session domain
+// once, its value-ordered session domain, and its weekly option masks per
+// offered season — precomputed once so the search's hot path never builds
+// a domain or touches an option's NRC strings again
 struct Candidate {
     code: String,
     credits: u32,
     tree: Option<FlatTree>,
     domain: Vec<usize>,
+    masks: BTreeMap<Season, Vec<WeekMask>>,
 }
 
 // A prerequisite tree flattened breadth-first: children always sit after
@@ -125,7 +159,14 @@ struct SearchCtx<'a> {
     // which candidates mention a code in their tree: placing that code
     // re-checks exactly these, nothing else
     referenced_by: BTreeMap<String, Vec<usize>>,
-    by_code: BTreeMap<&'a str, &'a Course>,
+    // whether `finalize` must re-evaluate the candidate's tree: only a
+    // `Credits` threshold resolves at the leaf, and only a `Raw` or an
+    // assumed préuniversitaire leaf contributes operands — every other
+    // tree's last incremental verdict is already final and operand-free
+    needs_final: Vec<bool>,
+    // suffix_credits[d] = credits of candidates d.. still to place — the
+    // O(1) side of the remaining-credits bound in `expand`
+    suffix_credits: Vec<u64>,
     passed_credits: u32,
 }
 
@@ -142,20 +183,23 @@ struct EvalCtx<'a> {
 pub fn place(request: &PlacementRequest) -> Result<Placement, PlacementError> {
     validate(request)?;
     let candidates = build_candidates(request)?;
+    if candidates.len() > MAX_MEMBERS {
+        return Err(PlacementError::TooManyCourses {
+            count: candidates.len(),
+        });
+    }
+    let index_of: BTreeMap<String, usize> = candidates
+        .iter()
+        .enumerate()
+        .map(|(i, candidate)| (candidate.code.clone(), i))
+        .collect();
     let ctx = SearchCtx {
         request,
         candidates: &candidates,
-        index_of: candidates
-            .iter()
-            .enumerate()
-            .map(|(i, candidate)| (candidate.code.clone(), i))
-            .collect(),
+        needs_final: needs_final_flags(&candidates, &index_of, request),
+        suffix_credits: suffix_credit_sums(&candidates),
+        index_of,
         referenced_by: referencing_map(&candidates),
-        by_code: request
-            .courses
-            .iter()
-            .map(|course| (course.code.as_str(), course))
-            .collect(),
         passed_credits: request
             .courses
             .iter()
@@ -163,6 +207,14 @@ pub fn place(request: &PlacementRequest) -> Result<Placement, PlacementError> {
             .map(|course| course.credits.planning())
             .sum(),
     };
+    let blocked = blocked_candidates(&ctx);
+    if !blocked.is_empty() {
+        return Ok(Placement {
+            completion: Completion::Complete,
+            solutions: Vec::new(),
+            blocked,
+        });
+    }
     Ok(search(&ctx))
 }
 
@@ -222,6 +274,17 @@ fn build_candidates(
                 credits: course.credits.planning(),
                 tree: flat_tree(course)?,
                 domain: value_ordered_domain(course, request),
+                masks: course
+                    .seasons
+                    .iter()
+                    .map(|(&season, offering)| {
+                        let masks = build_domain(offering)
+                            .iter()
+                            .map(|opt| opt.mask)
+                            .collect();
+                        (season, masks)
+                    })
+                    .collect(),
             })
         })
         .collect()
@@ -301,6 +364,117 @@ fn value_ordered_domain(
     domain
 }
 
+// Which trees `finalize` must re-evaluate (the flag is static: a leaf's
+// category never depends on the assignment). A tree of pure course leaves
+// — passed, listed, or blocked — resolves entirely during the search: its
+// last incremental verdict is final (placements are only added, and the
+// referencing map re-checked it at every relevant addition) and it can
+// carry no assumed operand, so re-evaluating it per solution is pure
+// waste.
+// one entry per depth plus a final zero, so `expand` reads the credits
+// still to place in O(1) whatever the depth
+fn suffix_credit_sums(candidates: &[Candidate]) -> Vec<u64> {
+    let mut sums = vec![0u64; candidates.len() + 1];
+    for depth in (0..candidates.len()).rev() {
+        sums[depth] = sums[depth + 1] + u64::from(candidates[depth].credits);
+    }
+    sums
+}
+
+fn needs_final_flags(
+    candidates: &[Candidate],
+    index_of: &BTreeMap<String, usize>,
+    request: &PlacementRequest,
+) -> Vec<bool> {
+    candidates
+        .iter()
+        .map(|candidate| {
+            candidate.tree.as_ref().is_some_and(|tree| {
+                tree.nodes.iter().any(|node| match node {
+                    // resolves only at the leaf of a complete assignment
+                    FlatNode::Credits(_) => true,
+                    // contributes an assumed operand to the solution
+                    FlatNode::Raw(_) => true,
+                    FlatNode::Course(code) => {
+                        !request.passed.contains(code)
+                            && !index_of.contains_key(code)
+                            && is_preuniversity(code)
+                    }
+                    FlatNode::All(_) | FlatNode::Any(_) => false,
+                })
+            })
+        })
+        .collect()
+}
+
+// The pre-search screen: a candidate with no admissible session, or whose
+// tree no assignment can satisfy, proves the whole instance infeasible in
+// O(courses × tree) — where the search would grind its node budget
+// rediscovering the same dead end under every arrangement of the other
+// courses. The screen is sound, never complete: what it misses (mutually
+// exclusive precedences, capacity knots) still falls to the search.
+fn blocked_candidates(ctx: &SearchCtx) -> Vec<Blocked> {
+    ctx.candidates
+        .iter()
+        .filter_map(|candidate| {
+            if candidate.domain.is_empty() {
+                return Some(Blocked {
+                    code: candidate.code.clone(),
+                    reason: BlockedReason::EmptyDomain,
+                });
+            }
+            candidate
+                .tree
+                .as_ref()
+                .is_some_and(|tree| !ever_satisfiable(tree, candidate, ctx))
+                .then(|| Blocked {
+                    code: candidate.code.clone(),
+                    reason: BlockedReason::UnsatisfiablePrerequisites,
+                })
+        })
+        .collect()
+}
+
+// The optimistic two-valued collapse of `node_verdict` : every leaf some
+// assignment could satisfy counts as satisfied, so a false root is
+// permanent under any search. Only three leaves poison a branch — an
+// unknown university code (never presumed, ADR
+// `2026-07-presomption-limitee-au-preuniversitaire`), the course as its
+// own prerequisite, and a credits threshold above passed plus every other
+// candidate. Same child-after-parent reverse scan as `eval`.
+fn ever_satisfiable(
+    tree: &FlatTree,
+    candidate: &Candidate,
+    ctx: &SearchCtx,
+) -> bool {
+    let optimistic_credits = u64::from(ctx.passed_credits)
+        + ctx.suffix_credits[0]
+        - u64::from(candidate.credits);
+    let mut verdicts = vec![false; tree.nodes.len()];
+    for i in (0..tree.nodes.len()).rev() {
+        verdicts[i] = match &tree.nodes[i] {
+            FlatNode::Raw(_) => true,
+            FlatNode::Course(code) => {
+                ctx.request.passed.contains(code)
+                    || (code != &candidate.code
+                        && ctx.index_of.contains_key(code))
+                    || (!ctx.index_of.contains_key(code)
+                        && is_preuniversity(code))
+            }
+            FlatNode::Credits(threshold) => {
+                optimistic_credits >= u64::from(*threshold)
+            }
+            FlatNode::All(children) => {
+                children.iter().all(|&child| verdicts[child])
+            }
+            FlatNode::Any(children) => {
+                children.iter().any(|&child| verdicts[child])
+            }
+        };
+    }
+    verdicts.first().copied().unwrap_or(true)
+}
+
 // Depth-first over an explicit stack, inside a fold bounded by the node
 // budget (ADR `2026-07-budget-de-b-en-double-borne`) : one iteration = one
 // partial assignment expanded (or one complete one finalized). Depth-first
@@ -308,20 +482,30 @@ fn value_ordered_domain(
 // frontier-by-course fold would lose them all.
 fn search(ctx: &SearchCtx) -> Placement {
     let mut cache = FeasibilityCache::new();
-    let mut stack: Vec<Vec<usize>> = vec![Vec::new()];
+    // A frame (len, session) names the partial assignment « path[..len-1]
+    // then candidates[len-1] ← session » : the shared `path` buffer is
+    // re-truncated on pop (ancestor prefixes are LIFO-intact), so pushing
+    // a child costs two words instead of cloning the whole prefix.
+    // (0, 0) is the empty root assignment — sessions are 1-based.
+    let mut stack: Vec<(usize, usize)> = vec![(0, 0)];
+    let mut path: Vec<usize> = Vec::with_capacity(ctx.candidates.len());
     let mut solutions: Vec<Solution> = Vec::new();
     let flow = (0..ctx.request.max_nodes).try_fold((), |(), _| {
         match stack.pop() {
             // the stack ran dry: the search is exhausted, the set proven
             // total — exhaustion wins over a simultaneously full cap
             None => ControlFlow::Break(Completion::Complete),
-            Some(chosen) => {
-                if chosen.len() == ctx.candidates.len() {
-                    if let Some(solution) = finalize(&chosen, ctx) {
+            Some((len, session)) => {
+                path.truncate(len.saturating_sub(1));
+                if len > 0 {
+                    path.push(session);
+                }
+                if path.len() == ctx.candidates.len() {
+                    if let Some(solution) = finalize(&path, ctx) {
                         solutions.push(solution);
                     }
                 } else {
-                    expand(&chosen, ctx, &mut cache, &mut stack);
+                    expand(&path, ctx, &mut cache, &mut stack);
                 }
                 if solutions.len() >= ctx.request.max_solutions
                     && !stack.is_empty()
@@ -343,6 +527,7 @@ fn search(ctx: &SearchCtx) -> Placement {
     Placement {
         completion,
         solutions,
+        blocked: Vec::new(),
     }
 }
 
@@ -354,26 +539,44 @@ fn expand(
     chosen: &[usize],
     ctx: &SearchCtx,
     cache: &mut FeasibilityCache,
-    stack: &mut Vec<Vec<usize>>,
+    stack: &mut Vec<(usize, usize)>,
 ) {
     let depth = chosen.len();
     let candidate = &ctx.candidates[depth];
     let loads = session_loads(chosen, ctx);
-    let children: Vec<Vec<usize>> = candidate
+    // no completion exists when the credits still to place exceed the
+    // capacity left across every session: prune the whole subtree before
+    // generating a single child (u64: the cap is caller-supplied, its
+    // product with the session count may overflow u32)
+    let used: u64 = loads.iter().map(|&load| u64::from(load)).sum();
+    let capacity =
+        u64::from(ctx.request.credit_cap) * ctx.request.sessions.len() as u64;
+    if ctx.suffix_credits[depth] > capacity - used {
+        return;
+    }
+    // one scratch child per expansion, its last slot rewritten per session
+    let mut child = Vec::with_capacity(depth + 1);
+    child.extend_from_slice(chosen);
+    child.push(0);
+    let children: Vec<usize> = candidate
         .domain
         .iter()
-        .filter(|&&session| {
+        .copied()
+        .filter(|&session| {
             loads[session - 1] + candidate.credits <= ctx.request.credit_cap
         })
-        .map(|&session| {
-            let mut child = chosen.to_vec();
-            child.push(session);
-            child
+        .filter(|&session| {
+            child[depth] = session;
+            precedence_admits(&child, depth, ctx)
+                && weekly_admits(&child, depth, ctx, cache)
         })
-        .filter(|child| precedence_admits(child, depth, ctx))
-        .filter(|child| weekly_admits(child, depth, ctx, cache))
         .collect();
-    stack.extend(children.into_iter().rev());
+    stack.extend(
+        children
+            .into_iter()
+            .rev()
+            .map(|session| (depth + 1, session)),
+    );
 }
 
 fn session_loads(chosen: &[usize], ctx: &SearchCtx) -> Vec<u32> {
@@ -415,9 +618,10 @@ fn precedence_admits(child: &[usize], depth: usize, ctx: &SearchCtx) -> bool {
     })
 }
 
-// the A-veto, memoized on (season, set of codes) — checked on the partial
-// session content at every addition: `is_feasible` is monotone (adding a
-// course never repairs a conflict), so an early veto is already final
+// the A-veto, memoized on (season, bitset of candidate indices) — checked
+// on the partial session content at every addition: the veto is monotone
+// (adding a course never repairs a conflict), so an early veto is already
+// final
 fn weekly_admits(
     child: &[usize],
     depth: usize,
@@ -425,17 +629,18 @@ fn weekly_admits(
     cache: &mut FeasibilityCache,
 ) -> bool {
     let session = child[depth];
-    let codes: BTreeSet<String> = child
+    let members = child
         .iter()
         .enumerate()
         .filter(|&(_, &placed)| placed == session)
-        .map(|(i, _)| ctx.candidates[i].code.clone())
-        .collect();
-    cache.term_feasible(
-        ctx.request.sessions[session - 1],
-        &codes,
-        &ctx.by_code,
-    )
+        .fold(0u128, |bits, (i, _)| bits | 1u128 << i);
+    let season = ctx.request.sessions[session - 1];
+    // indexing is safe: every member was placed at this session through
+    // its own domain, and `value_ordered_domain` only admits sessions
+    // whose season the course offers — `masks` covers exactly those
+    cache.term_feasible(season, members, |i| {
+        ctx.candidates[i].masks[&season].as_slice()
+    })
 }
 
 // A complete assignment survived every incremental filter; the final pass
@@ -447,6 +652,8 @@ fn finalize(chosen: &[usize], ctx: &SearchCtx) -> Option<Solution> {
         BTreeSet::new(),
         |mut assumed, (evaluated, candidate)| match &candidate.tree {
             None => Some(assumed),
+            // already proven Sat(∅) incrementally — see `needs_final_flags`
+            Some(_) if !ctx.needs_final[evaluated] => Some(assumed),
             Some(tree) => {
                 let eval_ctx = EvalCtx {
                     ctx,
@@ -843,6 +1050,22 @@ mod tests {
             assert!(error.to_string().contains("A-1"), "{error}");
         }
         assert!(PlacementError::EmptyRequest.to_string().contains("needs"));
+        let too_many = PlacementError::TooManyCourses { count: 129 };
+        assert!(too_many.to_string().contains("129"), "{too_many}");
+    }
+
+    #[test]
+    fn more_candidates_than_the_bitset_width_is_an_error() {
+        // the feasibility cache packs candidate indices in a u128: a list
+        // past 128 to-place courses is refused loudly, never truncated
+        let courses: Vec<Course> = (0..129)
+            .map(|i| anytime(&format!("C-{i}"), "monday"))
+            .collect();
+        let inputs = Inputs::new(&FALL_WINTER, courses);
+        assert_eq!(
+            inputs.place(),
+            Err(PlacementError::TooManyCourses { count: 129 })
+        );
     }
 
     // --- structural filters ---
@@ -896,6 +1119,13 @@ mod tests {
         let placement = Inputs::new(&FALL_WINTER, vec![summer_only]).solve();
         assert_eq!(placement.completion, Completion::Complete);
         assert!(placement.solutions.is_empty());
+        assert_eq!(
+            placement.blocked,
+            vec![Blocked {
+                code: "A-1".to_string(),
+                reason: BlockedReason::EmptyDomain,
+            }]
+        );
     }
 
     #[test]
@@ -913,6 +1143,22 @@ mod tests {
                 pairs(&[("A-1", 2), ("B-2", 1)]),
             ]
         );
+    }
+
+    #[test]
+    fn the_remaining_credits_bound_prunes_at_the_root() {
+        // two 3-credit courses, one 3-credit session: 6 credits can never
+        // fit — the bound proves it at the root, one node suffices, where
+        // the per-session filter alone would still expand a child
+        let mut inputs = Inputs::new(
+            &[Season::Fall],
+            vec![anytime("A-1", "monday"), anytime("B-2", "tuesday")],
+        );
+        inputs.credit_cap = 3;
+        inputs.max_nodes = 1;
+        let placement = inputs.solve();
+        assert_eq!(placement.completion, Completion::Complete);
+        assert!(placement.solutions.is_empty());
     }
 
     #[test]
@@ -962,6 +1208,13 @@ mod tests {
         let placement = inputs.solve();
         assert_eq!(placement.completion, Completion::Complete);
         assert!(placement.solutions.is_empty());
+        assert_eq!(
+            placement.blocked,
+            vec![Blocked {
+                code: "A-1".to_string(),
+                reason: BlockedReason::EmptyDomain,
+            }]
+        );
     }
 
     // --- precedence ---
@@ -1058,6 +1311,13 @@ mod tests {
         inputs.concomitant = true;
         let placement = inputs.solve();
         assert!(placement.solutions.is_empty());
+        assert_eq!(
+            placement.blocked,
+            vec![Blocked {
+                code: "B-2".to_string(),
+                reason: BlockedReason::UnsatisfiablePrerequisites,
+            }]
+        );
     }
 
     #[test]
@@ -1157,6 +1417,60 @@ mod tests {
         let placement = Inputs::new(&[Season::Fall], courses).solve();
         assert_eq!(placement.completion, Completion::Complete);
         assert!(placement.solutions.is_empty());
+        // proven before the search, with the culprit named
+        assert_eq!(
+            placement.blocked,
+            vec![Blocked {
+                code: "B-2".to_string(),
+                reason: BlockedReason::UnsatisfiablePrerequisites,
+            }]
+        );
+    }
+
+    #[test]
+    fn a_threshold_above_every_credit_in_sight_blocks_before_the_search() {
+        // 100 credits demanded, 6 in the whole request: no assignment can
+        // ever satisfy it, proven without expanding a node
+        let courses = vec![
+            anytime("A-1", "monday"),
+            with_prereq(
+                "B-2",
+                "tuesday",
+                &parsed(r#"{"program_credits":{"credits":100}}"#),
+            ),
+        ];
+        let mut inputs = Inputs::new(&FALL_WINTER, courses);
+        inputs.max_nodes = 0;
+        let placement = inputs.solve();
+        assert_eq!(placement.completion, Completion::Complete);
+        assert_eq!(
+            placement.blocked,
+            vec![Blocked {
+                code: "B-2".to_string(),
+                reason: BlockedReason::UnsatisfiablePrerequisites,
+            }]
+        );
+    }
+
+    #[test]
+    fn an_unknown_university_code_inside_an_any_blocks_only_its_branch() {
+        // the pre-search screen keeps the candidate (the other branch is
+        // satisfiable), so the search itself walks the unknown leaf: the
+        // university code refuses (never presumed), A-1 satisfies
+        let courses = vec![
+            anytime("A-1", "monday"),
+            with_prereq(
+                "B-2",
+                "tuesday",
+                &parsed(r#"{"any":["CEG-1101","A-1"]}"#),
+            ),
+        ];
+        let placement = Inputs::new(&FALL_WINTER, courses).solve();
+        assert!(placement.blocked.is_empty());
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("A-1", 1), ("B-2", 2)])]
+        );
     }
 
     #[test]

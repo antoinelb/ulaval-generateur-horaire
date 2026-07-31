@@ -1,0 +1,112 @@
+{
+  "sessions": [
+    "fall",
+    "winter"
+  ],
+  "credit_cap": 6,
+  "courses": [
+    {
+      "code": "TST-2210",
+      "title": "Cours de test 2210",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "90031",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "90031",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-2211",
+      "title": "Cours de test 2211",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TST-9999",
+        "tree": "TST-9999"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "90032",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "90032",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "complete": true,
+    "solutions": []
+  }
+}

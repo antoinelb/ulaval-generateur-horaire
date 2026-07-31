@@ -113,8 +113,9 @@ def eval_prereq(tree, before, known, credits_before):
 
     Leaves: a course in `before` (placed strictly before, or passed, or
     same-session under the concomitant relaxation) is satisfied; a course in
-    `known` but not before is not; anything else — a `raw` operand or a code
-    absent from the fixture — is undecidable. The tree combines with
+    `known` but not before is not; a code absent from the fixture follows
+    the presumption ADR — préuniversitaire (0xxx) satisfied, anything else
+    violated; a `raw` operand is undecidable. The tree combines with
     all/any/program_credits; if the FINAL verdict depends on an undecidable
     leaf the reference stops with an error instead of inventing one
     (undecidable branches that cannot change the outcome are fine: an `any`
@@ -159,7 +160,12 @@ def node_verdict(node, verdicts, before, known, credits_before):
             return True
         if node in known:
             return False
-        return f"course {node} is neither in the fixture nor passed"
+        # neither in the fixture nor passed: only a préuniversitaire code
+        # (course number starting with 0) is presumed satisfied — any other
+        # code is a university course still to take, hence violated (ADR
+        # `2026-07-presomption-limitee-au-preuniversitaire`)
+        number = node.split("-", 1)[1] if "-" in node else ""
+        return number.startswith("0")
     if "raw" in node:
         return f"raw operand « {node['raw']} »"
     if "program_credits" in node:

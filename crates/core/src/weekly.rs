@@ -319,11 +319,23 @@ fn schedule_from(courses: &[Vec<Opt>], leaf: &[usize]) -> Schedule {
     }
 }
 
-// B's veto: only whether a conflict-free combination exists. Carries bare
-// mask frontiers and short-circuits the moment one empties, instead of
-// paying `enumerate`'s full collection — this is B's hot path, even
-// memoized.
+// B's veto: only whether a conflict-free combination exists — an `Opt`'s
+// nrc_set plays no part in the verdict, so the full domains delegate to
+// the bare-mask variant below.
 pub fn is_feasible(courses: &[Vec<Opt>]) -> bool {
+    let masks: Vec<Vec<WeekMask>> = courses
+        .iter()
+        .map(|options| options.iter().map(|opt| opt.mask).collect())
+        .collect();
+    let borrowed: Vec<&[WeekMask]> = masks.iter().map(Vec::as_slice).collect();
+    masks_feasible(&borrowed)
+}
+
+// Carries bare mask frontiers and short-circuits the moment one empties,
+// instead of paying `enumerate`'s full collection — this is B's hot path,
+// even memoized, hence masks only: the planner precomputes one mask list
+// per (course, season) and never touches an option's NRC strings.
+pub fn masks_feasible(courses: &[&[WeekMask]]) -> bool {
     courses
         .iter()
         .try_fold(vec![WeekMask::EMPTY], |frontier, options| {
@@ -332,8 +344,8 @@ pub fn is_feasible(courses: &[Vec<Opt>]) -> bool {
                 .flat_map(|acc| {
                     options
                         .iter()
-                        .filter(|opt| !acc.overlaps(&opt.mask))
-                        .map(|opt| acc.merge(&opt.mask))
+                        .filter(|mask| !acc.overlaps(mask))
+                        .map(|mask| acc.merge(mask))
                 })
                 .collect();
             (!next.is_empty()).then_some(next)

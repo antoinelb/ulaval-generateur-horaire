@@ -4,8 +4,8 @@ use std::path::Path;
 use clap::Parser;
 
 use ulaval_scheduler_core::{
-    coverage_report, place, resolve_offering, schedule_report, Completion,
-    Course, CourseReport, CoverageReport, Day, LanguageStatus,
+    coverage_report, place, resolve_offering, schedule_report, BlockedReason,
+    Completion, Course, CourseReport, CoverageReport, Day, LanguageStatus,
     MandatoryReport, Missing, Placement, PlacementRequest, Program,
     RuleReport, RuleStatus, ScheduleReport, Season, Section, Slot, Solution,
 };
@@ -322,6 +322,25 @@ fn render_placement(
     let count =
         format!("{} solution(s) ({status})", placement.solutions.len());
     match placement.solutions.first() {
+        // a non-empty `blocked` is an infeasibility proof: name the
+        // culprits so the student fixes the list instead of retrying
+        None if !placement.blocked.is_empty() => {
+            let culprits: Vec<String> = placement
+                .blocked
+                .iter()
+                .map(|blocked| {
+                    format!(
+                        "{} ({})",
+                        blocked.code,
+                        blocked_label(blocked.reason)
+                    )
+                })
+                .collect();
+            format!(
+                "{count}\n\nImplaçables (prouvé avant recherche) : {}",
+                culprits.join(" ; ")
+            )
+        }
         None => count,
         Some(first) => {
             let credits: BTreeMap<&str, u32> = courses
@@ -374,6 +393,15 @@ fn render_term(
         format!("{} ({load} cr)", placed.join(", "))
     };
     format!("Session {session} ({}) : {listing}", season_label(season))
+}
+
+fn blocked_label(reason: BlockedReason) -> &'static str {
+    match reason {
+        BlockedReason::EmptyDomain => "aucune session ne peut l'accueillir",
+        BlockedReason::UnsatisfiablePrerequisites => {
+            "préalables insatisfiables"
+        }
+    }
 }
 
 fn season_label(season: Season) -> &'static str {
@@ -620,6 +648,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
+    use ulaval_scheduler_core::Blocked;
     use ulaval_scheduler_core::Time;
 
     // --- parse_session ---
@@ -1179,6 +1208,7 @@ mod tests {
                 ]),
                 assumed: ["MAT-0130".to_string()].into_iter().collect(),
             }],
+            blocked: Vec::new(),
         };
         let courses = [monday("A-1", "1"), monday("B-2", "2")];
         let rendered = render_placement(
@@ -1206,10 +1236,42 @@ mod tests {
         let placement = Placement {
             completion: Completion::NodeBudget,
             solutions: Vec::new(),
+            blocked: Vec::new(),
         };
         assert_eq!(
             render_placement(&placement, &[], &[Season::Fall]),
             "0 solution(s) (budget de nœuds épuisé — ensemble partiel)"
+        );
+    }
+
+    #[test]
+    fn a_blocked_placement_names_its_culprits_and_reasons() {
+        let placement = Placement {
+            completion: Completion::Complete,
+            solutions: Vec::new(),
+            blocked: vec![
+                Blocked {
+                    code: "GEX-3333".to_string(),
+                    reason: BlockedReason::UnsatisfiablePrerequisites,
+                },
+                Blocked {
+                    code: "A-1".to_string(),
+                    reason: BlockedReason::EmptyDomain,
+                },
+            ],
+        };
+        let rendered = render_placement(&placement, &[], &[Season::Fall]);
+        assert!(
+            rendered.contains(
+                "Implaçables (prouvé avant recherche) : \
+                 GEX-3333 (préalables insatisfiables) ; \
+                 A-1 (aucune session ne peut l'accueillir)"
+            ),
+            "{rendered}"
+        );
+        assert!(
+            rendered.contains("0 solution(s) (ensemble complet)"),
+            "{rendered}"
         );
     }
 
@@ -1221,6 +1283,7 @@ mod tests {
                 placement: BTreeMap::from([("A-1".to_string(), 1)]),
                 assumed: BTreeSet::new(),
             }],
+            blocked: Vec::new(),
         };
         let courses = [monday("A-1", "1")];
         let rendered = render_placement(&placement, &courses, &[Season::Fall]);
