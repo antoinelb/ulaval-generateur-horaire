@@ -9,7 +9,7 @@ The whole domain is French: keep domain vocabulary in French (`cours`, `cheminem
 
 **Code is English.** All identifiers (variables, functions, types), error messages, and data keys (JSON) are in English — as the test fixtures already do: `title`/`credits`/`prerequisites`/`mandatory`/`rules`, never `titre`/`crédits`/`préalables`/`obligatoires`/`regles`. French domain terms belong in prose and displayed text, not in code or serialized keys.
 
-**Current state: scraper (étape 1) and solver core (étape 2) shipped** — weekly schedule (A), organigramme placement (B), rules-coverage verifier and the `organigramme` CLI harness all reproduce the frozen fixtures; UI jalons (7–9) and preferences (10) remain.
+**Current state: scraper (étape 1) and solver core (étape 2) shipped** — weekly schedule (A), organigramme placement (B) and the rules-coverage verifier all reproduce the frozen fixtures; the interim harnesses (CLI, `ui-debug`) validated the solvers end to end and were then removed, their shared pipelines promoted to `core::intake` (ADR `2026-07-retrait-des-harnais-cli-et-ui-debug`); the real UI (jalons 3–9) and preferences (10) remain.
 
 ## Documents
 

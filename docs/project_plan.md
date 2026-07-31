@@ -1,7 +1,7 @@
 # PLAN — Générateur d'horaire / planificateur de cheminement
 
 **Date :** juillet 2026.
-**Statut :** scraper (étape 1) livré ; cœur solveur (étape 2) livré — A (horaire hebdomadaire, jalon 2) et B (placement d'organigramme, vérificateur de règles, harnais CLI `organigramme`) reproduisent toutes les fixtures gelées à 100 % de couverture ; restent les jalons UI (7–9) et les préférences (10) — conception dans `docs/conception/solveur-conception.md`, avancement dans `docs/next_steps.md`.
+**Statut :** scraper (étape 1) livré ; cœur solveur (étape 2) livré — A (horaire hebdomadaire, jalon 2) et B (placement d'organigramme, vérificateur de règles) reproduisent toutes les fixtures gelées à 100 % de couverture ; les harnais intérimaires (CLI, `ui-debug`) ont validé les solveurs de bout en bout puis ont été retirés, leurs pipelines partagés promus dans `core::intake` (ADR `2026-07-retrait-des-harnais-cli-et-ui-debug`) ; restent la vraie UI (jalons 3–9) et les préférences (10) — conception dans `docs/conception/solveur-conception.md`, avancement dans `docs/next_steps.md`.
 **Rôle de ce document :** point d'entrée du projet, autonome — tout ce qu'il faut pour implémenter est ici.
 Les documents de conception d'origine sont archivés dans `docs/conception/` ; ils gardent le détail supplémentaire (grammaires, exemples de formats JSON, résultats du spike, alternatives rejetées), mais en cas de contradiction, ce document a préséance.
 Toute nouvelle décision est documentée dans un fichier individuel sous `docs/conception/adr/`, et ce document est mis à jour en conséquence : le plan porte le *quoi*, l'ADR conserve le *pourquoi*.
