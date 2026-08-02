@@ -1,5 +1,6 @@
 {
-  "code": "baccalaureat-en-genie-des-eaux",
+  "code": "B-GEX",
+  "slug": "baccalaureat-en-genie-des-eaux",
   "semester": "A26",
   "possible_semester_start": [
     "A",

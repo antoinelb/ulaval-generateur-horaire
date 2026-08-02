@@ -1,5 +1,6 @@
 {
-  "code": "baccalaureat-en-genie-civil",
+  "code": "B-GCI",
+  "slug": "baccalaureat-en-genie-civil",
   "semester": "A26",
   "possible_semester_start": [
     "A",

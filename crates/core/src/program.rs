@@ -10,7 +10,13 @@ use crate::course::Season;
 // `2026-07-exigence-linguistique-champ-dedie`).
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Program {
+    // the official répertoire code, read from the page itself, its degree
+    // prefix abridged to one letter — `B-GEX`, `M-GEX` even for the maîtrise
+    // avec mémoire (ADR `2026-08-code-officiel-de-programme-et-slug`)
     pub code: String,
+    // the page URL's last segment; the no-URL refresh rebuilds each program
+    // URL from this field, so it must survive serialization (same ADR)
+    pub slug: String,
     // the vintage the snapshot describes — the session that follows the
     // scrape, since programs change between sessions at no announced date
     // (ADR `2026-08-millesime-de-programme-en-semestre`); students keep the
@@ -494,7 +500,7 @@ mod tests {
 
     #[test]
     fn program_without_language_requirement_omits_the_key() {
-        let json = r#"{"code":"x","semester":"A26","title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
+        let json = r#"{"code":"x","slug":"x","semester":"A26","title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
         let program: Program = serde_json::from_str(json).expect("program");
         assert_eq!(program.language_requirement, None);
         assert!(!serde_json::to_string(&program)
@@ -546,7 +552,7 @@ mod tests {
 
     #[test]
     fn possible_semester_start_round_trips_as_letters() {
-        let json = r#"{"code":"x","semester":"A26","possible_semester_start":["A","H","E"],"title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
+        let json = r#"{"code":"x","slug":"x","semester":"A26","possible_semester_start":["A","H","E"],"title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
         let program: Program = serde_json::from_str(json).expect("program");
         assert_eq!(
             program.possible_semester_start,
@@ -557,7 +563,7 @@ mod tests {
 
     #[test]
     fn an_empty_possible_semester_start_omits_the_key() {
-        let json = r#"{"code":"x","semester":"A26","title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
+        let json = r#"{"code":"x","slug":"x","semester":"A26","title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
         let program: Program = serde_json::from_str(json).expect("program");
         assert!(program.possible_semester_start.is_empty());
         assert!(!serde_json::to_string(&program)
@@ -570,14 +576,14 @@ mod tests {
         // one wrong letter and one two-letter entry: both name the culprit
         for letter in ["Z", "AH"] {
             let json = format!(
-                r#"{{"code":"x","semester":"A26","possible_semester_start":["{letter}"],"title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}}"#
+                r#"{{"code":"x","slug":"x","semester":"A26","possible_semester_start":["{letter}"],"title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}}"#
             );
             let error = serde_json::from_str::<Program>(&json)
                 .expect_err("an unknown letter must not pass");
             assert!(error.to_string().contains(letter), "got {error}");
         }
         // the JSON shape itself can be wrong, not just a letter inside
-        let json = r#"{"code":"x","semester":"A26","possible_semester_start":"AH","title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
+        let json = r#"{"code":"x","slug":"x","semester":"A26","possible_semester_start":"AH","title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
         assert!(
             serde_json::from_str::<Program>(json).is_err(),
             "a bare string is not a season list"

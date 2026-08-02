@@ -1,6 +1,6 @@
 # Plan — le cœur solveur
 
-~~**Avant toute chose, faire en sorte que rouler `programs` sans url rafraîchit l'ensemble des programmes déjà dans `data`.**~~ — fait (ADR `2026-07-programs-sans-url-rafraichit-par-slug`, `2026-07-annee-de-programme-selon-la-date-de-scrape` : les snapshots sont désormais `{code}-{year}.json` ; depuis, le millésime est un semestre `{code}-A26.json` — ADR `2026-08-millesime-de-programme-en-semestre`).
+~~**Avant toute chose, faire en sorte que rouler `programs` sans url rafraîchit l'ensemble des programmes déjà dans `data`.**~~ — fait (ADR `2026-07-programs-sans-url-rafraichit-par-slug`, `2026-07-annee-de-programme-selon-la-date-de-scrape` : les snapshots sont désormais `{code}-{year}.json` ; depuis, le millésime est un semestre `{code}-A26.json` — ADR `2026-08-millesime-de-programme-en-semestre` — et le code est le code officiel du répertoire (`B-GEX`), le refresh lisant le slug dans le contenu — ADR `2026-08-code-officiel-de-programme-et-slug`).
 
 Étape 2 (« Cœur ») de l'ordre de construction de `docs/project_plan.md` — l'étape 1 (scraper) est livrée, son plan test-first vit dans l'historique git de ce fichier.
 Fondements, mathématiques et justifications complètes dans `docs/conception/solveur-conception.md` — **le lire avant d'écrire du code**.

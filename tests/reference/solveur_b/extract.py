@@ -8,7 +8,7 @@ at the JSON-value level (fixtures re-indent).
 
 Usage:
   python extract.py course CODE...   print merged courses as a JSON array
-  python extract.py program SLUG     print a program
+  python extract.py program CODE     print a program (official code, `B-GEX`)
   python extract.py --verify         check every embedded object's provenance
 """
 
@@ -56,7 +56,7 @@ def verify():
     snapshots = load_snapshots()
     programs = {
         p["code"]: p
-        for path in sorted((ROOT / "data" / "programmes").glob("*-2026.json"))
+        for path in sorted((ROOT / "data" / "programmes").glob("*-A26.json"))
         for p in [load_json(path)]
     }
     frozen = {
@@ -135,8 +135,8 @@ def load_snapshots():
     return snapshots
 
 
-def load_program(slug):
-    return load_json(ROOT / "data" / "programmes" / f"{slug}-2026.json")
+def load_program(code):
+    return load_json(ROOT / "data" / "programmes" / f"{code}-A26.json")
 
 
 if __name__ == "__main__":

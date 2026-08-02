@@ -383,7 +383,7 @@ mod tests {
     #[test]
     fn the_course_list_orders_mandatory_electives_then_passed_deduped() {
         let program: Program = serde_json::from_str(
-            r#"{"code":"p","semester":"A26","title":"P","cycle":1,
+            r#"{"code":"p","slug":"p","semester":"A26","title":"P","cycle":1,
                 "credits_required":120,"mandatory":["M-1","M-2"],
                 "rules":[],"concentrations":[],"profiles":[]}"#,
         )
@@ -590,7 +590,7 @@ mod tests {
         // GHOST-999 is mandatory but has no snapshot data: set aside
         // loudly; the passed course still lands in the coverage selection
         let program: Program = serde_json::from_str(
-            r#"{"code":"p","semester":"A26","title":"P","cycle":1,
+            r#"{"code":"p","slug":"p","semester":"A26","title":"P","cycle":1,
                 "credits_required":120,
                 "mandatory":["GEX-1000","GHOST-999"],
                 "rules":[],"concentrations":[],"profiles":[]}"#,

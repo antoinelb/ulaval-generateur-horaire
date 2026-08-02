@@ -68,12 +68,18 @@ enum Command {
         )]
         base_url: String,
         // A program page URL is a slug no course code can rebuild — but a
-        // snapshot's file name carries it, so an empty list means « refresh
-        // every program already in the directory » (ADR
-        // `2026-07-programs-sans-url-rafraichit-par-slug`).
+        // snapshot's `slug` field carries it, so an empty list means
+        // « refresh every program already in the directory » (ADR
+        // `2026-08-code-officiel-de-programme-et-slug`).
         #[arg(num_args = 1..)]
         urls: Vec<String>,
     },
+}
+
+// the one field the refresh needs from a snapshot; serde ignores the rest
+#[derive(serde::Deserialize)]
+struct ProgramSlug {
+    slug: String,
 }
 
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
@@ -330,11 +336,10 @@ fn merge_into_existing(
     Ok(course::snapshot(courses))
 }
 
-// no `Result`, unlike its two siblings: there is no work queue to read and
-// no cache directory to create, so nothing can fail before the first request
-// An empty URL list means « refresh what is already there »: every snapshot
-// file name is `{slug}-{semester}.json` and the slug is the page URL's last
-// segment, so the directory itself is the work queue (ADR
+// An empty URL list means « refresh what is already there »: file names now
+// carry the official code (`B-GEX-A26.json`), which no URL can be rebuilt
+// from, so the slug is read from each snapshot's own `slug` field (ADR
+// `2026-08-code-officiel-de-programme-et-slug`, superseding
 // `2026-07-programs-sans-url-rafraichit-par-slug`). Nothing to refresh is an
 // error, never a silent no-op.
 fn refresh_urls(
@@ -342,7 +347,7 @@ fn refresh_urls(
     base_url: &str,
 ) -> anyhow::Result<Vec<String>> {
     let dir = Path::new(output_dir).join("programmes");
-    let slugs = program_slugs(&dir);
+    let slugs = program_slugs(&dir)?;
     anyhow::ensure!(
         !slugs.is_empty(),
         "No urls given and no programs to refresh in {}.",
@@ -354,10 +359,14 @@ fn refresh_urls(
         .collect())
 }
 
-// `{slug}.manuel.json` is hand-maintained and never scraped (ADR
+// `{code}.manuel.json` is hand-maintained and never scraped (ADR
 // `2026-07-cheminement-type-en-fichier-manuel`); several vintages of one
-// program fold into a single slug; a missing directory holds nothing
-fn program_slugs(dir: &Path) -> std::collections::BTreeSet<String> {
+// program fold into a single slug; a missing directory holds nothing. A
+// snapshot that cannot yield its slug is a hard error naming the file: a
+// silently skipped program would quietly stop being refreshed.
+fn program_slugs(
+    dir: &Path,
+) -> anyhow::Result<std::collections::BTreeSet<String>> {
     std::fs::read_dir(dir)
         .into_iter()
         .flatten()
@@ -365,29 +374,26 @@ fn program_slugs(dir: &Path) -> std::collections::BTreeSet<String> {
         .filter_map(|entry| {
             let name = entry.file_name();
             let name = name.to_string_lossy();
-            if name.ends_with(".manuel.json") {
+            if name.ends_with(".manuel.json") || !name.ends_with(".json") {
                 return None;
             }
-            Some(program_slug(name.strip_suffix(".json")?))
+            Some(entry.path())
+        })
+        .map(|path| {
+            let content =
+                std::fs::read_to_string(&path).map_err(|source| {
+                    anyhow::anyhow!("Reading {}: {source}", path.display())
+                })?;
+            let program: ProgramSlug = serde_json::from_str(&content)
+                .map_err(|source| {
+                    anyhow::anyhow!(
+                        "No usable `slug` in {}: {source}",
+                        path.display()
+                    )
+                })?;
+            Ok(program.slug)
         })
         .collect()
-}
-
-// a stem without a vintage suffix is kept whole: a legacy file still names
-// its program, and refreshing it writes the suffixed name from now on
-fn program_slug(stem: &str) -> String {
-    match stem.rsplit_once('-') {
-        Some((slug, vintage)) if is_vintage(vintage) => slug.to_string(),
-        _ => stem.to_string(),
-    }
-}
-
-// `A26` since the semester vintage (ADR
-// `2026-08-millesime-de-programme-en-semestre`), a bare `2026` before it:
-// both suffixes still fold a snapshot file into its slug
-fn is_vintage(suffix: &str) -> bool {
-    suffix.parse::<Semester>().is_ok()
-        || (suffix.len() == 4 && suffix.bytes().all(|b| b.is_ascii_digit()))
 }
 
 // The vintage a scrape captures: the session that follows the run, since a
@@ -1066,31 +1072,6 @@ mod tests {
     }
 
     #[test]
-    fn a_stem_without_a_vintage_suffix_is_already_a_slug() {
-        // semester vintages, legacy year vintages, and bare names all
-        // resolve to their program; a lowercase tail is not a vintage
-        assert_eq!(
-            program_slug("baccalaureat-en-genie-civil-A26"),
-            "baccalaureat-en-genie-civil"
-        );
-        assert_eq!(
-            program_slug("baccalaureat-en-genie-civil-2026"),
-            "baccalaureat-en-genie-civil",
-            "pre-semester snapshot names still resolve"
-        );
-        assert_eq!(
-            program_slug("baccalaureat-en-genie-civil-a26"),
-            "baccalaureat-en-genie-civil-a26",
-            "a vintage is uppercase"
-        );
-        assert_eq!(
-            program_slug("baccalaureat-en-genie-civil"),
-            "baccalaureat-en-genie-civil"
-        );
-        assert_eq!(program_slug("maitrise"), "maitrise", "no dash at all");
-    }
-
-    #[test]
     fn the_semester_after_the_scrape_flips_three_times_a_year() {
         // a run prepares the coming session: January–April → été,
         // May–August → automne, September–December → the next civil
@@ -1123,8 +1104,8 @@ mod tests {
     async fn scraped_programs_are_written_one_file_each() {
         let _guard = lock_print();
         let server = MockServer::start().await;
-        mount_program(&server, "genie-civil").await;
-        mount_program(&server, "genie-des-eaux").await;
+        mount_program(&server, "genie-civil", "B-GCI").await;
+        mount_program(&server, "genie-des-eaux", "B-GEX").await;
         let dir = test_dir("programs-happy");
 
         run(programs_args(
@@ -1139,18 +1120,17 @@ mod tests {
 
         let programmes = dir.join("programmes");
         let semester = semester_after(std::time::SystemTime::now());
+        // the file carries the official code, the slug lives inside it
         let civil = std::fs::read_to_string(
-            programmes.join(format!("genie-civil-{semester}.json")),
+            programmes.join(format!("B-GCI-{semester}.json")),
         )
         .unwrap_or_else(|e| panic!("read the program file: {e}"));
-        assert!(civil.contains("genie-civil"), "{civil}");
+        assert!(civil.contains("\"slug\": \"genie-civil\""), "{civil}");
         assert!(
             civil.contains(&format!("\"semester\": \"{semester}\"")),
             "{civil}"
         );
-        assert!(programmes
-            .join(format!("genie-des-eaux-{semester}.json"))
-            .exists());
+        assert!(programmes.join(format!("B-GEX-{semester}.json")).exists());
         // declaration order, not alphabetical: these files are committed and
         // the diffs have to stay readable
         assert!(civil.find("\"code\"") < civil.find("\"title\""), "{civil}");
@@ -1167,7 +1147,7 @@ mod tests {
         Mock::given(method("GET"))
             .and(wiremock::matchers::path("/genie-civil"))
             .respond_with(ResponseTemplate::new(200).set_body_string(
-                crate::program::tests::program_html("genie-civil"),
+                crate::program::tests::program_html("genie-civil", "B-GCI"),
             ))
             .expect(1)
             .mount(&server)
@@ -1176,14 +1156,16 @@ mod tests {
         let programmes = dir.join("programmes");
         std::fs::create_dir_all(&programmes)
             .unwrap_or_else(|e| panic!("create the programs dir: {e}"));
-        // one semester vintage and two legacy year vintages: all three fold
-        for name in [
-            "genie-civil-A25.json",
-            "genie-civil-2024.json",
-            "genie-civil-2025.json",
-        ] {
-            std::fs::write(programmes.join(name), "stale\n")
-                .unwrap_or_else(|e| panic!("plant {name}: {e}"));
+        // the slug comes from the content, never the file name — the three
+        // vintages (one legacy pre-code name among them) all fold into one
+        for name in
+            ["B-GCI-A25.json", "B-GCI-E25.json", "genie-civil-2025.json"]
+        {
+            std::fs::write(
+                programmes.join(name),
+                "{\"slug\": \"genie-civil\"}\n",
+            )
+            .unwrap_or_else(|e| panic!("plant {name}: {e}"));
         }
         std::fs::write(
             programmes.join("genie-civil.manuel.json"),
@@ -1206,18 +1188,19 @@ mod tests {
         .unwrap_or_else(|e| panic!("refresh the programs: {e}"));
 
         let refreshed =
-            std::fs::read_to_string(programmes.join("genie-civil-A26.json"))
+            std::fs::read_to_string(programmes.join("B-GCI-A26.json"))
                 .unwrap_or_else(|e| panic!("read the refreshed file: {e}"));
         assert!(refreshed.contains("\"semester\": \"A26\""), "{refreshed}");
         // earlier vintages are history, not targets: they survive untouched
-        for name in [
-            "genie-civil-A25.json",
-            "genie-civil-2024.json",
-            "genie-civil-2025.json",
-        ] {
+        for name in
+            ["B-GCI-A25.json", "B-GCI-E25.json", "genie-civil-2025.json"]
+        {
             let content = std::fs::read_to_string(programmes.join(name))
                 .unwrap_or_else(|e| panic!("read {name}: {e}"));
-            assert_eq!(content, "stale\n", "{name} must survive a refresh");
+            assert_eq!(
+                content, "{\"slug\": \"genie-civil\"}\n",
+                "{name} must survive a refresh"
+            );
         }
         let manuel = std::fs::read_to_string(
             programmes.join("genie-civil.manuel.json"),
@@ -1260,7 +1243,7 @@ mod tests {
     async fn a_failing_url_is_logged_and_the_reachable_programs_still_land() {
         let _guard = lock_print();
         let server = MockServer::start().await;
-        mount_program(&server, "genie-civil").await;
+        mount_program(&server, "genie-civil", "B-GCI").await;
         // nothing mounted for the second URL, so it 404s
         let dir = test_dir("programs-error-log");
 
@@ -1277,7 +1260,7 @@ mod tests {
         let semester = semester_after(std::time::SystemTime::now());
         assert!(
             dir.join("programmes")
-                .join(format!("genie-civil-{semester}.json"))
+                .join(format!("B-GCI-{semester}.json"))
                 .exists(),
             "the reachable program still lands"
         );
@@ -1289,10 +1272,63 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_snapshot_that_cannot_yield_its_slug_fails_the_refresh() {
+        // both a file that is not JSON and JSON without a `slug` land on the
+        // same rejection: skipping one would quietly stop refreshing it
+        for (name, content) in
+            [("broken.json", "stale\n"), ("no-slug.json", "{}\n")]
+        {
+            let dir = test_dir(&format!("programs-refresh-{name}"));
+            let programmes = dir.join("programmes");
+            std::fs::create_dir_all(&programmes)
+                .unwrap_or_else(|e| panic!("create the programs dir: {e}"));
+            std::fs::write(programmes.join(name), content)
+                .unwrap_or_else(|e| panic!("plant {name}: {e}"));
+
+            let error = run(vec![
+                "program".to_string(),
+                "--output-dir".to_string(),
+                dir.display().to_string(),
+            ])
+            .await
+            .expect_err("a slugless snapshot must be said");
+
+            assert!(
+                error.to_string().contains(name),
+                "the error names the file: {error}"
+            );
+            cleanup(&dir);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_snapshot_that_cannot_be_read_fails_the_refresh() {
+        // a directory named like a snapshot defeats `read_to_string`
+        let dir = test_dir("programs-refresh-unreadable");
+        let programmes = dir.join("programmes");
+        std::fs::create_dir_all(programmes.join("B-GCI-A26.json"))
+            .unwrap_or_else(|e| panic!("plant the directory: {e}"));
+
+        let error = run(vec![
+            "program".to_string(),
+            "--output-dir".to_string(),
+            dir.display().to_string(),
+        ])
+        .await
+        .expect_err("an unreadable snapshot must be said");
+
+        assert!(
+            error.to_string().contains("B-GCI-A26.json"),
+            "the error names the file: {error}"
+        );
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
     async fn an_unusable_programs_dir_is_an_error() {
         let _guard = lock_print();
         let server = MockServer::start().await;
-        mount_program(&server, "genie-civil").await;
+        mount_program(&server, "genie-civil", "B-GCI").await;
         let dir = test_dir("programs-blocked-dir");
         // a file where the program files must go
         std::fs::write(dir.join("programmes"), "in the way")
@@ -1310,13 +1346,13 @@ mod tests {
     async fn an_unwritable_program_file_is_an_error() {
         let _guard = lock_print();
         let server = MockServer::start().await;
-        mount_program(&server, "genie-civil").await;
+        mount_program(&server, "genie-civil", "B-GCI").await;
         let dir = test_dir("programs-blocked-file");
         // a directory at the target path makes the rename fail
         let semester = semester_after(std::time::SystemTime::now());
         std::fs::create_dir_all(
             dir.join("programmes")
-                .join(format!("genie-civil-{semester}.json")),
+                .join(format!("B-GCI-{semester}.json")),
         )
         .unwrap_or_else(|e| panic!("block the program path: {e}"));
 
@@ -1359,14 +1395,12 @@ mod tests {
         format!("{}/{slug}", server.uri())
     }
 
-    async fn mount_program(server: &MockServer, slug: &str) {
+    async fn mount_program(server: &MockServer, slug: &str, code: &str) {
         Mock::given(method("GET"))
             .and(wiremock::matchers::path(format!("/{slug}")))
-            .respond_with(
-                ResponseTemplate::new(200).set_body_string(
-                    crate::program::tests::program_html(slug),
-                ),
-            )
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                crate::program::tests::program_html(slug, code),
+            ))
             .mount(server)
             .await;
     }

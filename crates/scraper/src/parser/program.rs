@@ -12,9 +12,18 @@ use crate::parser::ParseError;
 const TITLE_CSS: &str = "h1";
 static TITLE: LazyLock<Selector> = LazyLock::new(|| sel(TITLE_CSS));
 
-// the code is the URL slug: the page never writes it in its own body
+// the slug is the URL's last segment, read from the canonical link
 const CANONICAL_CSS: &str = r#"link[rel="canonical"]"#;
 static CANONICAL: LazyLock<Selector> = LazyLock::new(|| sel(CANONICAL_CSS));
+
+// The official répertoire code (`B-GEX`) is written nowhere as text — only
+// inside the ids of the « Avenir » / « Poursuite des études » accordion
+// buttons, shaped `{code}-{matière}-{section}` (ADR
+// `2026-08-code-officiel-de-programme-et-slug`). The structure accordions
+// share the class but their ids are lowercase slugs (`genie-des-eaux-regle-1`).
+const CODE_BUTTON_CSS: &str = "button.accordeon-oe-programme[id]";
+static CODE_BUTTON: LazyLock<Selector> =
+    LazyLock::new(|| sel(CODE_BUTTON_CSS));
 
 // the « En bref » credits card — the same `promo-entete` pair the course
 // page carries, in another container
@@ -153,7 +162,8 @@ pub fn parse(
 
     let title = parse_title(&doc)?;
     let cycle = parse_cycle(&title)?;
-    let code = parse_code(&doc)?;
+    let code = parse_official_code(&doc)?;
+    let slug = parse_slug(&doc)?;
     let credits_required = parse_credits_required(&doc)?;
     let possible_semester_start =
         parse_possible_semester_start(&doc, &mut anomalies);
@@ -161,6 +171,7 @@ pub fn parse(
 
     let mut program = Program {
         code,
+        slug,
         semester,
         possible_semester_start,
         title,
@@ -205,7 +216,67 @@ fn parse_cycle(title: &str) -> Result<Cycle, ParseError> {
     }
 }
 
-fn parse_code(doc: &Html) -> Result<String, ParseError> {
+// Every code-bearing id repeats the matière right after the code's last
+// segment (`B-GEX-GEX-avenir`, `B-GEX-GEX-M-CNAM`) — that doubling is the
+// signature the scan keys on. A hard failure, never a fallback: the code
+// names the snapshot file, so a page without it must surface, not slip
+// through under another identity.
+fn parse_official_code(doc: &Html) -> Result<String, ParseError> {
+    let candidates: std::collections::BTreeSet<String> = doc
+        .select(&CODE_BUTTON)
+        .filter_map(|button| button.value().attr("id"))
+        .filter_map(candidate_code)
+        .collect();
+
+    let mut codes = candidates.into_iter();
+    let first = codes.next().ok_or_else(|| ParseError::MissingElement {
+        selector: CODE_BUTTON_CSS.to_string(),
+    })?;
+    let disagreeing: Vec<String> = codes.collect();
+    if disagreeing.is_empty() {
+        return Ok(first);
+    }
+    Err(ParseError::MalformedEntry {
+        selector: CODE_BUTTON_CSS.to_string(),
+        raw: std::iter::once(first)
+            .chain(disagreeing)
+            .collect::<Vec<_>>()
+            .join(", "),
+    })
+}
+
+// `B-GEX-GEX-M-CNAM` → `B-GEX`: the first segment doubling its predecessor
+// closes the code — every segment up to it uppercase alphanumeric — and a
+// section must still follow (an id *ending* on the doubled matière is not a
+// code carrier). The degree prefix keeps its first letter only — `MM-GEX`
+// on the page becomes `M-GEX` — matching the single-letter season codes
+// (ADR `2026-08-code-officiel-de-programme-et-slug`).
+fn candidate_code(id: &str) -> Option<String> {
+    let segments: Vec<&str> = id.split('-').collect();
+    let repeat = (1..segments.len().saturating_sub(1)).find(|&k| {
+        segments[k] == segments[k - 1]
+            && segments[..=k]
+                .iter()
+                .all(|segment| is_code_segment(segment))
+    })?;
+    // `is_code_segment` proved the prefix non-empty ASCII, so [..1] is safe
+    let degree = &segments[0][..1];
+    Some(
+        std::iter::once(degree)
+            .chain(segments[1..repeat].iter().copied())
+            .collect::<Vec<_>>()
+            .join("-"),
+    )
+}
+
+fn is_code_segment(segment: &str) -> bool {
+    !segment.is_empty()
+        && segment
+            .bytes()
+            .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
+}
+
+fn parse_slug(doc: &Html) -> Result<String, ParseError> {
     let href = doc
         .select(&CANONICAL)
         .next()
@@ -949,6 +1020,14 @@ mod tests {
         )
     }
 
+    // an « Avenir » accordion button, the only place the page writes the
+    // official code (inside its id)
+    fn code_button(id: &str) -> String {
+        format!(
+            r#"<button class="header-wrapper accordeon-oe-programme" aria-expanded="false" id="{id}"><span class="item">Professions et employeurs</span></button>"#
+        )
+    }
+
     fn promo(credits: &str) -> String {
         format!(
             r#"<div class="bloc-promo"><span class="promo-entete--titre">{credits}</span><span class="promo-entete--contenu">Crédits</span></div>"#
@@ -1020,8 +1099,9 @@ mod tests {
     // anomaly is raised
     fn page(groups: &str) -> String {
         format!(
-            "<html><body>{}{}{}{}{}</body></html>",
+            "<html><body>{}{}{}{}{}{}</body></html>",
             h1("Baccalauréat en génie des eaux"),
+            code_button("B-GEX-GEX-avenir"),
             canonical("baccalaureat-en-genie-des-eaux"),
             promo("120"),
             admission(&["Automne", "Hiver"]),
@@ -1060,19 +1140,21 @@ mod tests {
         // was missing, so the `?` that rejects it is a different one each
         // time. A hole in a Program would silently reach the solver.
         let title = h1("Baccalauréat en génie des eaux");
+        let button = code_button("B-GEX-GEX-avenir");
         let canonical = canonical("baccalaureat-en-genie-des-eaux");
         let credits = promo("120");
 
         for (missing, body) in [
             ("title", String::new()),
             ("cycle", h1("Doctorat en génie des eaux")),
-            ("code", title.clone()),
-            ("credits", format!("{title}{canonical}")),
+            ("official code", title.clone()),
+            ("slug", format!("{title}{button}")),
+            ("credits", format!("{title}{button}{canonical}")),
             (
                 "credits value",
-                format!("{title}{canonical}{}", promo("cent vingt")),
+                format!("{title}{button}{canonical}{}", promo("cent vingt")),
             ),
-            ("structure", format!("{title}{canonical}{credits}")),
+            ("structure", format!("{title}{button}{canonical}{credits}")),
         ] {
             let html = format!("<html><body>{body}</body></html>");
             assert!(
@@ -1088,7 +1170,8 @@ mod tests {
         // same `?`s let the page through
         let page = parsed("");
 
-        assert_eq!(page.program.code, "baccalaureat-en-genie-des-eaux");
+        assert_eq!(page.program.code, "B-GEX", "the official code");
+        assert_eq!(page.program.slug, "baccalaureat-en-genie-des-eaux");
         assert_eq!(page.program.title, "Baccalauréat en génie des eaux");
         assert_eq!(page.program.cycle, Cycle::First);
         assert_eq!(page.program.credits_required, 120);
@@ -1104,8 +1187,9 @@ mod tests {
     #[test]
     fn the_title_is_rebuilt_word_by_word_across_the_source_line_breaks() {
         let html = format!(
-            "<html><body>{}{}{}{}</body></html>",
+            "<html><body>{}{}{}{}{}</body></html>",
             "<h1>Baccalauréat en \n\t\t\tgénie des eaux</h1>",
+            code_button("B-GEX-GEX-avenir"),
             canonical("baccalaureat-en-genie-des-eaux"),
             promo("120"),
             structure(""),
@@ -1146,8 +1230,9 @@ mod tests {
     #[test]
     fn a_canonical_link_without_a_usable_segment_is_a_malformed_entry() {
         let html = format!(
-            "<html><body>{}{}</body></html>",
+            "<html><body>{}{}{}</body></html>",
             h1("Baccalauréat en génie des eaux"),
+            code_button("B-GEX-GEX-avenir"),
             r#"<link rel="canonical" href="///">"#,
         );
 
@@ -1155,11 +1240,102 @@ mod tests {
         assert_eq!(malformed_entry(&error).0, CANONICAL_CSS);
     }
 
+    // --- Official code from the accordion ids ---
+
     #[test]
-    fn a_credits_card_without_a_value_is_a_missing_element() {
+    fn the_official_code_is_read_before_the_doubled_matiere() {
+        for (id, expected) in [
+            ("B-GEX-GEX-avenir", "B-GEX"),
+            // the degree prefix keeps its first letter only: the maîtrise
+            // avec mémoire is `M-GEX`, never `MM-GEX`
+            ("MM-GEX-GEX-avenir", "M-GEX"),
+            // the doubling closes the code even when the section itself
+            // contains dashes and uppercase segments
+            ("B-GEX-GEX-M-CNAM", "B-GEX"),
+            ("B-GCI-GCI-poursuite-etudes-certificats", "B-GCI"),
+        ] {
+            assert_eq!(
+                candidate_code(id).as_deref(),
+                Some(expected),
+                "for {id:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_id_without_the_code_signature_is_no_candidate() {
+        for id in [
+            // structure accordions: lowercase slugs sharing the class
+            "genie-des-eaux-regle-1",
+            "profil-international-cours-obligatoires",
+            // doubled matière but nothing after it: not a code carrier
+            "B-GEX-GEX",
+            // no doubling at all
+            "B-GEX-avenir",
+            // the doubled pair must be uppercase alphanumeric throughout
+            "b-gex-gex-avenir",
+        ] {
+            assert_eq!(candidate_code(id), None, "for {id:?}");
+        }
+    }
+
+    #[test]
+    fn a_page_whose_ids_all_lack_the_signature_is_a_missing_element() {
+        let html = format!(
+            "<html><body>{}{}</body></html>",
+            h1("Baccalauréat en génie des eaux"),
+            code_button("genie-des-eaux-regle-1"),
+        );
+
+        let error = parse(&html, a26()).expect_err("no official code");
+        match error {
+            ParseError::MissingElement { selector } => {
+                assert_eq!(selector, CODE_BUTTON_CSS);
+            }
+            other => panic!("expected MissingElement, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn disagreeing_codes_on_one_page_are_a_malformed_entry() {
+        // never silently pick one: two codes mean the page is not what the
+        // scan believes it is
         let html = format!(
             "<html><body>{}{}{}</body></html>",
             h1("Baccalauréat en génie des eaux"),
+            code_button("B-GEX-GEX-avenir"),
+            code_button("B-GIN-GIN-avenir"),
+        );
+
+        let error = parse(&html, a26()).expect_err("two codes");
+        let (selector, raw) = malformed_entry(&error);
+        assert_eq!(selector, CODE_BUTTON_CSS);
+        assert_eq!(raw, "B-GEX, B-GIN", "both codes are named");
+    }
+
+    #[test]
+    fn repeated_ids_agreeing_on_the_code_are_not_a_disagreement() {
+        // the bac pages carry up to six code-bearing ids, all one code
+        let html = format!(
+            "<html><body>{}{}{}{}{}{}</body></html>",
+            h1("Baccalauréat en génie des eaux"),
+            code_button("B-GEX-GEX-avenir"),
+            code_button("B-GEX-GEX-M-CNAM"),
+            canonical("baccalaureat-en-genie-des-eaux"),
+            promo("120"),
+            structure(""),
+        );
+
+        let page = parse(&html, a26()).expect("one agreed code");
+        assert_eq!(page.program.code, "B-GEX");
+    }
+
+    #[test]
+    fn a_credits_card_without_a_value_is_a_missing_element() {
+        let html = format!(
+            "<html><body>{}{}{}{}</body></html>",
+            h1("Baccalauréat en génie des eaux"),
+            code_button("B-GEX-GEX-avenir"),
             canonical("baccalaureat-en-genie-des-eaux"),
             r#"<div class="bloc-promo"><span class="promo-entete--contenu">Crédits</span></div>"#,
         );

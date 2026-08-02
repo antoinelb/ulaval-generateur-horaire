@@ -11,21 +11,21 @@ const FIXTURE_DIR: &str = concat!(
 // an anomaly the table does not list fails the test, so a parser that starts
 // giving up on a page it used to read says so.
 const FIXTURES: &[(&str, &[&str])] = &[
-    ("baccalaureat-en-genie-civil", &[]),
-    ("baccalaureat-en-genie-des-eaux", &[]),
+    ("B-GCI", &[]),
+    ("B-GEX", &[]),
     // the ANL-2020 requirement now becomes `language_requirement` and « requis
     // par sa concentration » a recognized `negotiated` rule: neither is an
     // anomaly anymore (ADR `2026-07-exigence-linguistique-champ-dedie`,
     // `2026-07-regles-negociees-reconnues`)
-    ("baccalaureat-en-genie-industriel", &[]),
+    ("B-GIN", &[]),
     (
-        "baccalaureat-en-genie-mecanique",
+        "B-GMC",
         // the three ANL-2020 rules and the passage intégré are handled now;
         // only the concentrations sitting under no <h3> remain an anomaly
         &["3 blocks under no heading"],
     ),
-    ("baccalaureat-en-genie-physique", &[]),
-    ("maitrise-en-genie-des-eaux-avec-memoire", &[]),
+    ("B-GPH", &[]),
+    ("M-GEX", &[]),
 ];
 
 #[test]
@@ -69,7 +69,7 @@ fn parses_every_program_fixture() {
 // mémoire the page describes — and 15 + 30 = 45, the credits required.
 #[test]
 fn a_second_program_block_contributes_mandatory_courses_not_a_rule() {
-    let page = parse_fixture("maitrise-en-genie-des-eaux-avec-memoire");
+    let page = parse_fixture("M-GEX");
 
     assert_eq!(
         page.program.mandatory,
@@ -91,9 +91,9 @@ fn a_second_program_block_contributes_mandatory_courses_not_a_rule() {
 #[test]
 fn a_graduation_requirement_stated_in_prose_survives_as_a_note() {
     for (name, course) in [
-        ("baccalaureat-en-genie-civil", "GCI-2580"),
-        ("baccalaureat-en-genie-des-eaux", "GEX-1580"),
-        ("baccalaureat-en-genie-mecanique", "GMC-2580"),
+        ("B-GCI", "GCI-2580"),
+        ("B-GEX", "GEX-1580"),
+        ("B-GMC", "GMC-2580"),
     ] {
         let page = parse_fixture(name);
 
@@ -111,7 +111,7 @@ fn a_graduation_requirement_stated_in_prose_survives_as_a_note() {
 // which no other group carries.
 #[test]
 fn every_course_group_of_a_rule_reaches_the_course_list() {
-    let page = parse_fixture("baccalaureat-en-genie-des-eaux");
+    let page = parse_fixture("B-GEX");
 
     let rule = page
         .program
@@ -143,7 +143,7 @@ fn the_language_requirement_becomes_its_own_field() {
     use ulaval_scheduler_core::PlacementTest;
 
     // two-box layout: both audiences, FLS-2093 carrying two ANDed thresholds
-    let eaux = parse_fixture("baccalaureat-en-genie-des-eaux");
+    let eaux = parse_fixture("B-GEX");
     let requirement = eaux
         .program
         .language_requirement
@@ -176,7 +176,7 @@ fn the_language_requirement_becomes_its_own_field() {
 
     // prose layout: francophone only, and only the first threshold — the later
     // « (VEPT : 63) » upgrade tier stays in raw
-    let physique = parse_fixture("baccalaureat-en-genie-physique");
+    let physique = parse_fixture("B-GPH");
     let requirement = physique
         .program
         .language_requirement

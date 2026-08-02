@@ -206,7 +206,7 @@ async fn a_program_is_written_exactly_as_the_parser_fixture_expects() {
     // the parser fixtures already are: the frozen page and its expected JSON
     // pin the production artifact, not merely the parser.
     let server = MockServer::start().await;
-    mount_fixture(&server, "baccalaureat-en-genie-civil").await;
+    mount_fixture(&server, "B-GCI").await;
     let dir = test_dir("run-program");
 
     run_program(&dir, &[server.uri()])
@@ -214,8 +214,8 @@ async fn a_program_is_written_exactly_as_the_parser_fixture_expects() {
         .unwrap_or_else(|e| panic!("scrape a program: {e}"));
 
     assert_eq!(
-        read(&dir.join("programmes/baccalaureat-en-genie-civil-A26.json")),
-        read(&program_fixture("baccalaureat-en-genie-civil.json")),
+        read(&dir.join("programmes/B-GCI-A26.json")),
+        read(&program_fixture("B-GCI.json")),
     );
     assert!(
         !dir.join("programmes_errors.log").exists(),
@@ -231,15 +231,12 @@ async fn a_run_leaves_the_programs_it_was_not_given_alone() {
     // cheminement type beside it — outlive it (ADR
     // `2026-07-un-fichier-par-programme`)
     let server = MockServer::start().await;
-    mount_fixture(&server, "baccalaureat-en-genie-civil").await;
+    mount_fixture(&server, "B-GCI").await;
     let dir = test_dir("run-program-scoped");
     let programmes = dir.join("programmes");
     fs::create_dir_all(&programmes)
         .unwrap_or_else(|e| panic!("pre-create the programs dir: {e}"));
-    let untouched = [
-        "baccalaureat-en-genie-des-eaux.json",
-        "baccalaureat-en-genie-des-eaux.manuel.json",
-    ];
+    let untouched = ["B-GEX-A25.json", "B-GEX.manuel.json"];
     for name in untouched {
         fs::write(programmes.join(name), "earlier run\n")
             .unwrap_or_else(|e| panic!("plant {name}: {e}"));
@@ -249,9 +246,7 @@ async fn a_run_leaves_the_programs_it_was_not_given_alone() {
         .await
         .unwrap_or_else(|e| panic!("scrape one program: {e}"));
 
-    assert!(programmes
-        .join("baccalaureat-en-genie-civil-A26.json")
-        .exists());
+    assert!(programmes.join("B-GCI-A26.json").exists());
     for name in untouched {
         assert_eq!(
             read(&programmes.join(name)),
@@ -295,7 +290,7 @@ async fn the_binary_scrapes_a_program_end_to_end() {
     // multi_thread: the blocking child process and the mock server must not
     // share the one test thread
     let server = MockServer::start().await;
-    mount_fixture(&server, "baccalaureat-en-genie-civil").await;
+    mount_fixture(&server, "B-GCI").await;
     let dir = test_dir("e2e-program");
 
     let output = Command::new(env!("CARGO_BIN_EXE_ulaval-scraper"))
@@ -311,9 +306,7 @@ async fn the_binary_scrapes_a_program_end_to_end() {
         .unwrap_or_else(|e| panic!("run the scraper binary: {e}"));
 
     assert!(output.status.success(), "{output:?}");
-    assert!(dir
-        .join("programmes/baccalaureat-en-genie-civil-A26.json")
-        .exists());
+    assert!(dir.join("programmes/B-GCI-A26.json").exists());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Wrote programs"), "{stdout}");
     cleanup(&dir);

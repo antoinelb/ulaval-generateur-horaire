@@ -419,7 +419,7 @@ mod tests {
 
     fn program(body: &str) -> Program {
         serde_json::from_str(&format!(
-            r#"{{"code":"p","semester":"A26","title":"P","cycle":1,
+            r#"{{"code":"p","slug":"p","semester":"A26","title":"P","cycle":1,
                  "credits_required":120,{body}}}"#
         ))
         .unwrap_or_else(|e| panic!("program literal: {e}"))

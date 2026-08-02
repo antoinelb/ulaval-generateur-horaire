@@ -7,14 +7,8 @@ const FIXTURE_DIR: &str = concat!(
     "/../../tests/fixtures/test_cases/programs",
 );
 
-const FIXTURES: &[&str] = &[
-    "baccalaureat-en-genie-civil",
-    "baccalaureat-en-genie-des-eaux",
-    "baccalaureat-en-genie-industriel",
-    "baccalaureat-en-genie-mecanique",
-    "baccalaureat-en-genie-physique",
-    "maitrise-en-genie-des-eaux-avec-memoire",
-];
+const FIXTURES: &[&str] =
+    &["B-GCI", "B-GEX", "B-GIN", "B-GMC", "B-GPH", "M-GEX"];
 
 #[test]
 fn round_trips_every_fixture() {

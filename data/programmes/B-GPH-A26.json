@@ -1,5 +1,6 @@
 {
-  "code": "baccalaureat-en-genie-physique",
+  "code": "B-GPH",
+  "slug": "baccalaureat-en-genie-physique",
   "semester": "A26",
   "possible_semester_start": [
     "A",

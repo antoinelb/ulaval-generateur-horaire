@@ -2,6 +2,8 @@
 
 Date : 2026-07-29
 
+> **Remplacé** par `2026-08-code-officiel-de-programme-et-slug` : `code` n'est plus le slug — les fichiers sont nommés par le code officiel et le refresh lit le champ `slug` dans le contenu du snapshot, plus dans son nom.
+
 > **Mise à jour** (`2026-08-millesime-de-programme-en-semestre`) : le suffixe de millésime est désormais un semestre (`-A26`) ; le repli par slug reconnaît ce suffixe **et** l'ancien `-{year}` à quatre chiffres.
 
 ## Contexte

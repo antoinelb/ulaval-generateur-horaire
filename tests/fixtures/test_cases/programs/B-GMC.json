@@ -1,5 +1,6 @@
 {
-  "code": "baccalaureat-en-genie-mecanique",
+  "code": "B-GMC",
+  "slug": "baccalaureat-en-genie-mecanique",
   "semester": "A26",
   "possible_semester_start": [
     "A",

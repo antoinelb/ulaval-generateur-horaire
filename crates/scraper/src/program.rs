@@ -113,13 +113,15 @@ pub(crate) mod tests {
     async fn a_scraped_program_is_returned_without_anomalies() {
         let _guard = lock_print();
         let server = MockServer::start().await;
-        mount(&server, "genie-civil", program_html("genie-civil")).await;
+        mount(&server, "genie-civil", program_html("genie-civil", "B-GCI"))
+            .await;
 
         let (programs, anomalies) =
             scrape_urls(&[url(&server, "genie-civil")]).await;
 
         assert!(anomalies.is_empty(), "{anomalies:?}");
-        assert_eq!(programs[0].code, "genie-civil");
+        assert_eq!(programs[0].code, "B-GCI", "the official code");
+        assert_eq!(programs[0].slug, "genie-civil", "the URL's segment");
         assert_eq!(
             programs[0].semester.to_string(),
             "A26",
@@ -137,7 +139,8 @@ pub(crate) mod tests {
     async fn an_unreachable_page_is_an_anomaly_and_the_run_continues() {
         let _guard = lock_print();
         let server = MockServer::start().await;
-        mount(&server, "genie-civil", program_html("genie-civil")).await;
+        mount(&server, "genie-civil", program_html("genie-civil", "B-GCI"))
+            .await;
         // nothing mounted for the second URL, so it 404s
 
         let (programs, anomalies) = scrape_urls(&[
@@ -179,6 +182,7 @@ pub(crate) mod tests {
         // the rule is not — the same shape génie mécanique really has
         let html = program_page(
             "genie-civil",
+            "B-GCI",
             "Règle 1 – 3 crédits parmi :",
             r#"<p class="fe-bloc-regle--ligne">Réussir le cours ANL-2020.</p>"#,
         );
@@ -187,7 +191,7 @@ pub(crate) mod tests {
         let (programs, anomalies) =
             scrape_urls(&[url(&server, "genie-civil")]).await;
 
-        assert_eq!(programs[0].code, "genie-civil", "the program is kept");
+        assert_eq!(programs[0].code, "B-GCI", "the program is kept");
         assert!(
             matches!(&anomalies[0], ProgramError::Parse { url, .. }
                 if url.contains("genie-civil")),
@@ -219,11 +223,12 @@ pub(crate) mod tests {
     }
 
     // the smallest page the program parser reads without an anomaly: title,
-    // canonical link, total credits, admission sessions, and one block
-    // holding one accordion
-    pub(crate) fn program_html(slug: &str) -> String {
+    // official-code accordion button, canonical link, total credits,
+    // admission sessions, and one block holding one accordion
+    pub(crate) fn program_html(slug: &str, code: &str) -> String {
         program_page(
             slug,
+            code,
             "Cours obligatoires",
             concat!(
                 r#"<ul class="fe--liste-cours"><li>"#,
@@ -233,11 +238,21 @@ pub(crate) mod tests {
         )
     }
 
-    fn program_page(slug: &str, heading: &str, body: &str) -> String {
+    fn program_page(
+        slug: &str,
+        code: &str,
+        heading: &str,
+        body: &str,
+    ) -> String {
+        // the id repeats the code's matière, the signature the real pages
+        // carry (`B-GCI-GCI-avenir`)
+        let matiere = code.rsplit('-').next().unwrap_or(code);
         format!(
             concat!(
                 "<html><body>",
                 "<h1>Baccalauréat en {slug}</h1>",
+                r#"<button class="header-wrapper accordeon-oe-programme" "#,
+                r#"id="{code}-{matiere}-avenir"></button>"#,
                 r#"<link rel="canonical" "#,
                 r#"href="https://www.ulaval.ca/etudes/programmes/{slug}">"#,
                 r#"<div class="bloc-promo">"#,
@@ -268,6 +283,8 @@ pub(crate) mod tests {
                 "</body></html>",
             ),
             slug = slug,
+            code = code,
+            matiere = matiere,
             heading = heading,
             body = body
         )
