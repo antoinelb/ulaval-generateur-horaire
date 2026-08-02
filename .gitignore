@@ -15,3 +15,5 @@ data/cours_errors.log
 
 # Bytecode of the solver-B reference scripts (tests/reference/)
 __pycache__/
+
+crates/wasm/pkg

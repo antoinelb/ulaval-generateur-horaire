@@ -33,6 +33,7 @@ Rust throughout, one Cargo workspace — details and reasoning in `docs/project_
 
 - **`core`** (library) — all domain logic, zero IO/async; compiles to native (scraper, tests) and WASM (UI).
 - **`scraper`** (native async binary) — fetch + parse ULaval pages into JSON snapshots; fetching and parsing strictly separated, parser tested against frozen HTML fixtures.
+- **`wasm`** (`cdylib`) — the same `core` exposed to a plain-JavaScript consumer: `generate_schedule`/`verify_schedule`, `generate_organigramme`/`verify_organigramme`, JS objects in and out via `serde-wasm-bindgen`. The Rust functions are pure and tested natively; the `#[wasm_bindgen]` glue lives in `boundary.rs` under `cfg(target_arch = "wasm32")` only, so `make static` lints it on the wasm target and `make wasm` (needs `cargo install wasm-pack`) builds the npm package. Verifying an organigramme runs *both* `place` with everything pinned and `coverage_report`; verifying anything with a course left unpinned is an error, never a false verdict (ADR `2026-08-module-wasm-quatre-fonctions-js`).
 - **`ui`** (WASM binary) — Dioxus 0.7, client-side rendered. **Whenever Dioxus code is written or understood, first read `.claude/dioxus.md`** (Dioxus 0.7 API reference): 0.7 changed every API — `cx`, `Scope`, and `use_state` are gone; use `use_signal`, `#[component]`, `rsx!`, `Routable`, `use_resource`.
 
 To run tests with coverage, use `make test` (wraps `cargo +nightly llvm-cov`).

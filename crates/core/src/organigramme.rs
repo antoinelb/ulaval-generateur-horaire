@@ -43,7 +43,7 @@ pub struct PlacementRequest<'a> {
 
 // All feasible placements found, in search order, with the three outcomes
 // never confused (ADR `2026-07-b-enumere-toutes-les-solutions`).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct Placement {
     pub completion: Completion,
     pub solutions: Vec<Solution>,
@@ -56,13 +56,14 @@ pub struct Placement {
 // A candidate no assignment can ever place, and why — surfaced so the
 // harness and the UI name the culprit instead of grinding the node budget
 // on an unwinnable enumeration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct Blocked {
     pub code: String,
     pub reason: BlockedReason,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum BlockedReason {
     // no listed session can host the course (offer and pin filtering
     // left nothing)
@@ -77,7 +78,8 @@ pub enum BlockedReason {
     StageWithoutSummer,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum Completion {
     // search exhausted: the set is total — empty means infeasibility proven
     Complete,
@@ -87,7 +89,7 @@ pub enum Completion {
     SolutionCap,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct Solution {
     // code → 1-based session number; passed courses do not appear
     pub placement: BTreeMap<String, usize>,
@@ -2306,6 +2308,60 @@ mod tests {
             && capacity_ok
             && summer_ok
             && weekly_ok
+    }
+
+    // The JSON names are the contract the WASM boundary hands to JS (ADR
+    // `2026-08-module-wasm-quatre-fonctions-js`) — pinned here so a rename
+    // breaks a test rather than a caller.
+    #[test]
+    fn a_placement_serializes_under_its_published_names() {
+        let placement = Placement {
+            completion: Completion::Complete,
+            solutions: vec![Solution {
+                placement: BTreeMap::from([("TST-1001".to_string(), 1)]),
+                assumed: BTreeSet::from(["FRN-1904".to_string()]),
+            }],
+            blocked: vec![
+                Blocked {
+                    code: "A-1".to_string(),
+                    reason: BlockedReason::EmptyDomain,
+                },
+                Blocked {
+                    code: "B-2".to_string(),
+                    reason: BlockedReason::UnsatisfiablePrerequisites,
+                },
+                Blocked {
+                    code: "C-3".to_string(),
+                    reason: BlockedReason::StageWithoutSummer,
+                },
+            ],
+        };
+        let json = serde_json::to_value(&placement)
+            .unwrap_or_else(|e| panic!("serialize: {e}"));
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "completion": "complete",
+                "solutions": [{
+                    "placement": {"TST-1001": 1},
+                    "assumed": ["FRN-1904"],
+                }],
+                "blocked": [
+                    {"code": "A-1", "reason": "empty-domain"},
+                    {"code": "B-2",
+                     "reason": "unsatisfiable-prerequisites"},
+                    {"code": "C-3", "reason": "stage-without-summer"},
+                ],
+            })
+        );
+        for (completion, name) in [
+            (Completion::NodeBudget, "node-budget"),
+            (Completion::SolutionCap, "solution-cap"),
+        ] {
+            let json = serde_json::to_value(completion)
+                .unwrap_or_else(|e| panic!("serialize: {e}"));
+            assert_eq!(json, serde_json::json!(name));
+        }
     }
 
     proptest! {

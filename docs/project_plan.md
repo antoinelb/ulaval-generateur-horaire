@@ -129,6 +129,7 @@ Un dépôt, un workspace Cargo :
   Zéro IO, zéro async ; compile identiquement en natif (scraper, tests) et en WASM (UI).
 - **`scraper`** (binaire natif, async) — récolte + parsing → snapshots JSON ; dépend de `core` pour les types de sortie ; `tokio` + `reqwest` + `scraper` + `serde` ; `thiserror` dans la bibliothèque, `anyhow` à la frontière du binaire.
 - **`ui`** (binaire WASM) — frontend Dioxus 0.7, rendu client ; charge le snapshot JSON, pilote `core`, affiche.
+- **`wasm`** (bibliothèque `cdylib`) — le même `core` exposé à un consommateur **JavaScript** hors Dioxus : quatre fonctions, `generate_schedule`/`verify_schedule` et `generate_organigramme`/`verify_organigramme`, entrées et sorties en objets JS ordinaires via `serde-wasm-bindgen` ; les fonctions Rust sont pures et testées nativement, la colle `#[wasm_bindgen]` n'existe que sous `cfg(target_arch = "wasm32")`. Vérifier un organigramme = `place` avec tout épinglé (preuve du placement) **et** `coverage_report` (comptage des règles) ; `make wasm` produit le paquet npm (ADR `2026-08-module-wasm-quatre-fonctions-js`).
 - `server` (Axum) et un wrapper desktop sont des noms réservés, construits seulement si leurs déclencheurs se matérialisent.
 
 Les répertoires gardent les noms `core`/`scraper`/`ui` ; les paquets Cargo sont préfixés `ulaval-scheduler-` (ADR `2026-07-nommage-des-crates-prefixe-ulaval-scheduler`).
