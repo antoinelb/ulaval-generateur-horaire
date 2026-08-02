@@ -3,7 +3,7 @@ use futures::stream::{self, StreamExt};
 use crate::fetch::{FetchError, Fetcher};
 use crate::parser::{self, ParseError};
 use crate::print;
-use ulaval_scheduler_core::Program;
+use ulaval_scheduler_core::{Program, Semester};
 
 const n_concurrent: usize = 32;
 
@@ -25,7 +25,7 @@ pub enum ProgramError {
 pub async fn scrape(
     fetcher: &Fetcher,
     urls: &[String],
-    year: u16,
+    semester: Semester,
 ) -> (Vec<Program>, Vec<ProgramError>) {
     let task = print::progress_task(
         "Scraping programs...",
@@ -40,7 +40,7 @@ pub async fn scrape(
     let scraped: Vec<(Option<Program>, Vec<ProgramError>)> =
         stream::iter(urls)
             .map(|url| async move {
-                let scraped = scrape_program(fetcher, url, year).await;
+                let scraped = scrape_program(fetcher, url, semester).await;
                 progress.increment();
                 scraped
             })
@@ -61,7 +61,7 @@ pub async fn scrape(
 async fn scrape_program(
     fetcher: &Fetcher,
     url: &str,
-    year: u16,
+    semester: Semester,
 ) -> (Option<Program>, Vec<ProgramError>) {
     let html = match fetcher.fetch(url).await {
         Ok(html) => html,
@@ -69,7 +69,7 @@ async fn scrape_program(
     };
     // a page whose skeleton is missing yields no program at all: there is
     // nothing to write a file from
-    let page = match parser::program::parse(&html, year) {
+    let page = match parser::program::parse(&html, semester) {
         Ok(page) => page,
         Err(source) => {
             let error = ProgramError::Parse {
@@ -107,6 +107,7 @@ pub(crate) mod tests {
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     use super::*;
+    use ulaval_scheduler_core::Season;
 
     #[tokio::test]
     async fn a_scraped_program_is_returned_without_anomalies() {
@@ -119,7 +120,16 @@ pub(crate) mod tests {
 
         assert!(anomalies.is_empty(), "{anomalies:?}");
         assert_eq!(programs[0].code, "genie-civil");
-        assert_eq!(programs[0].year, 2026, "the caller's year is stamped");
+        assert_eq!(
+            programs[0].semester.to_string(),
+            "A26",
+            "the caller's semester is stamped"
+        );
+        assert_eq!(
+            programs[0].possible_semester_start,
+            [Season::Fall, Season::Winter],
+            "the admission sessions come from the page"
+        );
         assert_eq!(programs[0].mandatory, ["GEX-1000"]);
     }
 
@@ -192,7 +202,8 @@ pub(crate) mod tests {
         // in fetch.rs; these tests assert orchestration and must stay fast
         let fetcher = Fetcher::new(Duration::ZERO, Duration::ZERO)
             .unwrap_or_else(|e| panic!("build fetcher: {e}"));
-        scrape(&fetcher, urls, 2026).await
+        let semester = "A26".parse().unwrap_or_else(|e| panic!("{e}"));
+        scrape(&fetcher, urls, semester).await
     }
 
     fn url(server: &MockServer, slug: &str) -> String {
@@ -207,8 +218,9 @@ pub(crate) mod tests {
             .await;
     }
 
-    // the smallest page the program parser accepts: title, canonical link,
-    // total credits, and one block holding one accordion
+    // the smallest page the program parser reads without an anomaly: title,
+    // canonical link, total credits, admission sessions, and one block
+    // holding one accordion
     pub(crate) fn program_html(slug: &str) -> String {
         program_page(
             slug,
@@ -232,6 +244,14 @@ pub(crate) mod tests {
                 r#"<span class="promo-entete--titre">120</span>"#,
                 r#"<span class="promo-entete--contenu">Crédits</span>"#,
                 "</div>",
+                r#"<div class="admission--liste-sessions">"#,
+                "<h2>Sessions d'admission</h2><ul>",
+                r#"<li class="bloc-session">"#,
+                r#"<strong class="bloc-session--titre">Automne</strong>"#,
+                "</li>",
+                r#"<li class="bloc-session">"#,
+                r#"<strong class="bloc-session--titre">Hiver</strong>"#,
+                "</li></ul></div>",
                 r#"<section id="section-structure">"#,
                 r#"<div class="fe-bloc-section">"#,
                 r#"<div class="collapsible-sections">"#,

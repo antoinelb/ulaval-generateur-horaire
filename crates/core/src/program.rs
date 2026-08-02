@@ -1,4 +1,5 @@
 use crate::common::Cycle;
+use crate::course::Season;
 
 // A block of the « Structure du programme » section, in its three roles. The
 // prose a block carries — thematic subgroup labels, stage requirements — is
@@ -10,11 +11,19 @@ use crate::common::Cycle;
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Program {
     pub code: String,
-    // the academic year the snapshot describes — programs change over
-    // winter for the next fall, so a scrape dates its capture (ADR
-    // `2026-07-annee-de-programme-selon-la-date-de-scrape`); students keep
-    // the version of the year they enrolled under
-    pub year: u16,
+    // the vintage the snapshot describes — the session that follows the
+    // scrape, since programs change between sessions at no announced date
+    // (ADR `2026-08-millesime-de-programme-en-semestre`); students keep the
+    // version of the session they enrolled under
+    pub semester: Semester,
+    // the sessions that can start the program, in the order the page's
+    // « Sessions d'admission » block lists them
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        with = "season_letters"
+    )]
+    pub possible_semester_start: Vec<Season>,
     pub title: String,
     pub cycle: Cycle,
     pub credits_required: i64,
@@ -26,6 +35,72 @@ pub struct Program {
     pub notes: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub language_requirement: Option<LanguageRequirement>,
+}
+
+// A session vintage — « A26 » is automne 2026: the season letter the session
+// naming already uses (uppercased) and a two-digit year. One string in JSON
+// and in snapshot file names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Semester {
+    pub season: Season,
+    pub year: u16,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("unknown semester {raw:?}: expected A<yy>, H<yy> or E<yy> (e.g. A26)")]
+pub struct SemesterError {
+    pub raw: String,
+}
+
+impl std::fmt::Display for Semester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{:02}", season_letter(self.season), self.year % 100)
+    }
+}
+
+impl std::str::FromStr for Semester {
+    type Err = SemesterError;
+
+    fn from_str(raw: &str) -> Result<Self, Self::Err> {
+        let error = || SemesterError {
+            raw: raw.to_string(),
+        };
+        let mut letters = raw.chars();
+        let season = letters
+            .next()
+            .and_then(season_from_letter)
+            .ok_or_else(error)?;
+        // byte arithmetic, not `parse`: u16's parser accepts "+6", and a
+        // two-digit year leaves no failing path for a coverage hole
+        let year = match letters.as_str().as_bytes() {
+            [tens @ b'0'..=b'9', ones @ b'0'..=b'9'] => {
+                u16::from((tens - b'0') * 10 + (ones - b'0'))
+            }
+            _ => return Err(error()),
+        };
+        Ok(Semester {
+            season,
+            year: 2000 + year,
+        })
+    }
+}
+
+impl serde::Serialize for Semester {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(self)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Semester {
+    fn deserialize<D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        let raw = String::deserialize(deserializer)?;
+        raw.parse().map_err(serde::de::Error::custom)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -138,6 +213,63 @@ pub struct LanguageQualification {
 pub struct PlacementTest {
     pub name: String,
     pub score: i64,
+}
+
+// `possible_semester_start` as the page-facing letters (`["A", "H"]`),
+// matching the vintage format rather than `Season`'s english serialization
+mod season_letters {
+    use serde::Deserialize;
+
+    use super::{season_from_letter, season_letter, Season};
+
+    pub fn serialize<S: serde::Serializer>(
+        seasons: &[Season],
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.collect_seq(
+            seasons
+                .iter()
+                .map(|&season| season_letter(season).to_string()),
+        )
+    }
+
+    pub fn deserialize<'de, D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Vec<Season>, D::Error> {
+        let letters = Vec::<String>::deserialize(deserializer)?;
+        letters
+            .into_iter()
+            .map(|letter| {
+                let mut chars = letter.chars();
+                match (chars.next().and_then(season_from_letter), chars.next())
+                {
+                    (Some(season), None) => Ok(season),
+                    _ => Err(serde::de::Error::custom(format!(
+                        "unknown season letter {letter:?}: expected A, H or E"
+                    ))),
+                }
+            })
+            .collect()
+    }
+}
+
+// A = automne (fall), H = hiver (winter), E = été (summer) — the letters the
+// session naming (`a2026`) already uses, uppercased for vintages
+fn season_letter(season: Season) -> char {
+    match season {
+        Season::Fall => 'A',
+        Season::Winter => 'H',
+        Season::Summer => 'E',
+    }
+}
+
+fn season_from_letter(letter: char) -> Option<Season> {
+    match letter {
+        'A' => Some(Season::Fall),
+        'H' => Some(Season::Winter),
+        'E' => Some(Season::Summer),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -362,11 +494,93 @@ mod tests {
 
     #[test]
     fn program_without_language_requirement_omits_the_key() {
-        let json = r#"{"code":"x","year":2026,"title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
+        let json = r#"{"code":"x","semester":"A26","title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
         let program: Program = serde_json::from_str(json).expect("program");
         assert_eq!(program.language_requirement, None);
         assert!(!serde_json::to_string(&program)
             .expect("ser")
             .contains("language_requirement"));
+    }
+
+    // --- Semester: the « A26 » vintage string ---
+
+    #[test]
+    fn semester_round_trips_each_season_letter() {
+        for (raw, season, year) in [
+            ("A26", Season::Fall, 2026),
+            ("H27", Season::Winter, 2027),
+            ("E07", Season::Summer, 2007),
+        ] {
+            let semester: Semester = raw.parse().expect(raw);
+            assert_eq!(semester, Semester { season, year });
+            assert_eq!(semester.to_string(), raw, "Display mirrors FromStr");
+            let json = format!("\"{raw}\"");
+            assert_eq!(
+                serde_json::to_string(&semester).expect("ser"),
+                json,
+                "serde uses the same string"
+            );
+            assert_eq!(
+                serde_json::from_str::<Semester>(&json).expect("de"),
+                semester
+            );
+        }
+    }
+
+    #[test]
+    fn a_malformed_semester_is_rejected_with_its_input_named() {
+        // lowercase, unknown letter, long year, short year, sign trick, empty
+        for raw in ["a26", "X26", "A2026", "A2", "A+6", "26", ""] {
+            let error = raw.parse::<Semester>().expect_err(raw);
+            assert!(error.to_string().contains(raw), "got {error}");
+        }
+        assert!(serde_json::from_str::<Semester>("\"A2\"").is_err());
+        // the JSON shape itself can be wrong, not just the string inside
+        assert!(
+            serde_json::from_str::<Semester>("26").is_err(),
+            "a bare number is not a semester"
+        );
+    }
+
+    // --- possible_semester_start: A/H/E letters on the wire ---
+
+    #[test]
+    fn possible_semester_start_round_trips_as_letters() {
+        let json = r#"{"code":"x","semester":"A26","possible_semester_start":["A","H","E"],"title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
+        let program: Program = serde_json::from_str(json).expect("program");
+        assert_eq!(
+            program.possible_semester_start,
+            vec![Season::Fall, Season::Winter, Season::Summer]
+        );
+        assert_eq!(serde_json::to_string(&program).expect("ser"), json);
+    }
+
+    #[test]
+    fn an_empty_possible_semester_start_omits_the_key() {
+        let json = r#"{"code":"x","semester":"A26","title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
+        let program: Program = serde_json::from_str(json).expect("program");
+        assert!(program.possible_semester_start.is_empty());
+        assert!(!serde_json::to_string(&program)
+            .expect("ser")
+            .contains("possible_semester_start"));
+    }
+
+    #[test]
+    fn an_unknown_season_letter_is_rejected() {
+        // one wrong letter and one two-letter entry: both name the culprit
+        for letter in ["Z", "AH"] {
+            let json = format!(
+                r#"{{"code":"x","semester":"A26","possible_semester_start":["{letter}"],"title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}}"#
+            );
+            let error = serde_json::from_str::<Program>(&json)
+                .expect_err("an unknown letter must not pass");
+            assert!(error.to_string().contains(letter), "got {error}");
+        }
+        // the JSON shape itself can be wrong, not just a letter inside
+        let json = r#"{"code":"x","semester":"A26","possible_semester_start":"AH","title":"X","cycle":1,"credits_required":120,"mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#;
+        assert!(
+            serde_json::from_str::<Program>(json).is_err(),
+            "a bare string is not a season list"
+        );
     }
 }

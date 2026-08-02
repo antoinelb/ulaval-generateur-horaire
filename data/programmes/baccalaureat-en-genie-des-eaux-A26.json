@@ -1,6 +1,10 @@
 {
   "code": "baccalaureat-en-genie-des-eaux",
-  "year": 2026,
+  "semester": "A26",
+  "possible_semester_start": [
+    "A",
+    "H"
+  ],
   "title": "Baccalauréat en génie des eaux",
   "cycle": 1,
   "credits_required": 120,

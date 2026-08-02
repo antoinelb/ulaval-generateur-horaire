@@ -1,6 +1,10 @@
 {
   "code": "baccalaureat-en-genie-civil",
-  "year": 2026,
+  "semester": "A26",
+  "possible_semester_start": [
+    "A",
+    "H"
+  ],
   "title": "Baccalauréat en génie civil",
   "cycle": 1,
   "credits_required": 120,

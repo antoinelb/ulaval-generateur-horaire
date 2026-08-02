@@ -10,6 +10,8 @@
 data/cache/
 
 organigramme_*.pdf
+data/programmes_errors.log
+data/cours_errors.log
 
 # Bytecode of the solver-B reference scripts (tests/reference/)
 __pycache__/

@@ -1,6 +1,11 @@
 {
   "code": "maitrise-en-genie-des-eaux-avec-memoire",
-  "year": 2026,
+  "semester": "A26",
+  "possible_semester_start": [
+    "A",
+    "H",
+    "E"
+  ],
   "title": "Maîtrise en génie des eaux - avec mémoire",
   "cycle": 2,
   "credits_required": 45,

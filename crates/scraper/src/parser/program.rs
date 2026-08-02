@@ -4,7 +4,7 @@ use scraper::{ElementRef, Html, Selector};
 use ulaval_scheduler_core::{
     Concentration, Constraint, Cycle, Keyword, LanguageQualification,
     LanguageRequirement, PlacementTest, Profile, Program, Rule, RuleCourses,
-    RuleReference,
+    RuleReference, Season, Semester,
 };
 
 use crate::parser::ParseError;
@@ -25,6 +25,14 @@ static PROMO_VALUE: LazyLock<Selector> =
     LazyLock::new(|| sel(PROMO_VALUE_CSS));
 static PROMO_LABEL: LazyLock<Selector> =
     LazyLock::new(|| sel("span.promo-entete--contenu"));
+
+// the « Sessions d'admission » block: one card per season the program can
+// start in
+const ADMISSION_CSS: &str = "div.admission--liste-sessions";
+static ADMISSION: LazyLock<Selector> = LazyLock::new(|| sel(ADMISSION_CSS));
+const ADMISSION_SESSION_CSS: &str = "strong.bloc-session--titre";
+static ADMISSION_SESSION: LazyLock<Selector> =
+    LazyLock::new(|| sel(ADMISSION_SESSION_CSS));
 
 const STRUCTURE_CSS: &str = "section#section-structure";
 static STRUCTURE: LazyLock<Selector> = LazyLock::new(|| sel(STRUCTURE_CSS));
@@ -133,9 +141,12 @@ struct Structure {
     notes: Vec<String>,
 }
 
-// the page nowhere states which academic year it describes, so the caller
-// dates the capture (ADR `2026-07-annee-de-programme-selon-la-date-de-scrape`)
-pub fn parse(html: &str, year: u16) -> Result<ProgramPage, ParseError> {
+// the page nowhere states which session it describes, so the caller dates
+// the capture (ADR `2026-08-millesime-de-programme-en-semestre`)
+pub fn parse(
+    html: &str,
+    semester: Semester,
+) -> Result<ProgramPage, ParseError> {
     let doc = Html::parse_document(html);
 
     let mut anomalies = Vec::new();
@@ -144,11 +155,14 @@ pub fn parse(html: &str, year: u16) -> Result<ProgramPage, ParseError> {
     let cycle = parse_cycle(&title)?;
     let code = parse_code(&doc)?;
     let credits_required = parse_credits_required(&doc)?;
+    let possible_semester_start =
+        parse_possible_semester_start(&doc, &mut anomalies);
     let structure = parse_structure(&doc, &mut anomalies)?;
 
     let mut program = Program {
         code,
-        year,
+        semester,
+        possible_semester_start,
         title,
         cycle,
         credits_required,
@@ -236,6 +250,52 @@ fn parse_credits_required(doc: &Html) -> Result<i64, ParseError> {
         selector: "credits_required".to_string(),
         raw,
     })
+}
+
+// The « Sessions d'admission » cards. All six frozen pages carry the block,
+// so its absence — like a season label outside Automne/Hiver/Été — is
+// surfaced as an anomaly rather than passed over; the program itself is
+// still kept (an admission list is display data, not structure).
+fn parse_possible_semester_start(
+    doc: &Html,
+    anomalies: &mut Vec<ParseError>,
+) -> Vec<Season> {
+    let Some(block) = doc.select(&ADMISSION).next() else {
+        anomalies.push(ParseError::MissingElement {
+            selector: ADMISSION_CSS.to_string(),
+        });
+        return Vec::new();
+    };
+
+    let mut cards = 0;
+    let seasons: Vec<Season> = block
+        .select(&ADMISSION_SESSION)
+        .filter_map(|card| {
+            cards += 1;
+            let label = collapse(&card.text().collect::<String>());
+            match label.as_str() {
+                "Automne" => Some(Season::Fall),
+                "Hiver" => Some(Season::Winter),
+                "Été" => Some(Season::Summer),
+                _ => {
+                    anomalies.push(ParseError::MalformedEntry {
+                        selector: ADMISSION_SESSION_CSS.to_string(),
+                        raw: label,
+                    });
+                    None
+                }
+            }
+        })
+        .collect();
+
+    // a block holding no card at all is as suspect as a missing block; a
+    // card with an unknown label was already reported above
+    if cards == 0 {
+        anomalies.push(ParseError::MissingElement {
+            selector: ADMISSION_SESSION_CSS.to_string(),
+        });
+    }
+    seasons
 }
 
 fn parse_structure(
@@ -895,6 +955,20 @@ mod tests {
         )
     }
 
+    fn admission(labels: &[&str]) -> String {
+        let cards: String = labels
+            .iter()
+            .map(|label| {
+                format!(
+                    r#"<li class="bloc-session"><strong class="bloc-session--titre">{label}</strong></li>"#
+                )
+            })
+            .collect();
+        format!(
+            r#"<div class="admission--liste-sessions"><h2>Sessions d'admission</h2><ul>{cards}</ul></div>"#
+        )
+    }
+
     fn structure(groups: &str) -> String {
         format!(r#"<section id="section-structure">{groups}</section>"#)
     }
@@ -942,19 +1016,26 @@ mod tests {
         format!(r#"<div class="fe-bloc-section--paragraphe">{text}</div>"#)
     }
 
-    // a complete, minimal page: every `?` in `parse` lets it through
+    // a complete, minimal page: every `?` in `parse` lets it through and no
+    // anomaly is raised
     fn page(groups: &str) -> String {
         format!(
-            "<html><body>{}{}{}{}</body></html>",
+            "<html><body>{}{}{}{}{}</body></html>",
             h1("Baccalauréat en génie des eaux"),
             canonical("baccalaureat-en-genie-des-eaux"),
             promo("120"),
+            admission(&["Automne", "Hiver"]),
             structure(groups),
         )
     }
 
+    // the vintage every parser test stamps: fixed, so assertions stay literal
+    fn a26() -> Semester {
+        "A26".parse().unwrap_or_else(|e| panic!("{e}"))
+    }
+
     fn parsed(groups: &str) -> ProgramPage {
-        parse(&page(groups), 2026)
+        parse(&page(groups), a26())
             .unwrap_or_else(|e| panic!("valid page: {e}"))
     }
 
@@ -995,7 +1076,7 @@ mod tests {
         ] {
             let html = format!("<html><body>{body}</body></html>");
             assert!(
-                parse(&html, 2026).is_err(),
+                parse(&html, a26()).is_err(),
                 "a page missing {missing} was accepted"
             );
         }
@@ -1011,6 +1092,11 @@ mod tests {
         assert_eq!(page.program.title, "Baccalauréat en génie des eaux");
         assert_eq!(page.program.cycle, Cycle::First);
         assert_eq!(page.program.credits_required, 120);
+        assert_eq!(page.program.semester, a26(), "the caller's vintage");
+        assert_eq!(
+            page.program.possible_semester_start,
+            [Season::Fall, Season::Winter]
+        );
         assert!(page.program.rules.is_empty());
         assert!(page.anomalies.is_empty(), "got {:?}", page.anomalies);
     }
@@ -1025,7 +1111,7 @@ mod tests {
             structure(""),
         );
 
-        let page = parse(&html, 2026).expect("valid page");
+        let page = parse(&html, a26()).expect("valid page");
         assert_eq!(page.program.title, "Baccalauréat en génie des eaux");
     }
 
@@ -1065,7 +1151,7 @@ mod tests {
             r#"<link rel="canonical" href="///">"#,
         );
 
-        let error = parse(&html, 2026).expect_err("no slug");
+        let error = parse(&html, a26()).expect_err("no slug");
         assert_eq!(malformed_entry(&error).0, CANONICAL_CSS);
     }
 
@@ -1079,9 +1165,65 @@ mod tests {
         );
 
         assert!(matches!(
-            parse(&html, 2026),
+            parse(&html, a26()),
             Err(ParseError::MissingElement { selector }) if selector == PROMO_VALUE_CSS
         ));
+    }
+
+    // --- Sessions d'admission → possible_semester_start ---
+
+    fn admission_seasons(body: &str) -> (Vec<Season>, Vec<ParseError>) {
+        let doc =
+            Html::parse_document(&format!("<html><body>{body}</body></html>"));
+        let mut anomalies = Vec::new();
+        let seasons = parse_possible_semester_start(&doc, &mut anomalies);
+        (seasons, anomalies)
+    }
+
+    #[test]
+    fn every_admission_season_label_maps_to_its_season() {
+        // the maîtrise carries all three, in page order
+        let (seasons, anomalies) =
+            admission_seasons(&admission(&["Automne", "Hiver", "Été"]));
+
+        assert_eq!(seasons, [Season::Fall, Season::Winter, Season::Summer]);
+        assert!(anomalies.is_empty(), "got {anomalies:?}");
+    }
+
+    #[test]
+    fn a_page_without_an_admission_block_is_an_anomaly_and_an_empty_list() {
+        let (seasons, anomalies) = admission_seasons("");
+
+        assert!(seasons.is_empty());
+        assert!(
+            matches!(&anomalies[0], ParseError::MissingElement { selector }
+                if selector == ADMISSION_CSS),
+            "got {anomalies:?}"
+        );
+    }
+
+    #[test]
+    fn an_unknown_season_label_is_an_anomaly_and_the_known_ones_are_kept() {
+        let (seasons, anomalies) =
+            admission_seasons(&admission(&["Automne", "Printemps"]));
+
+        assert_eq!(seasons, [Season::Fall], "the known label still lands");
+        assert_eq!(
+            malformed_entry(&anomalies[0]),
+            (ADMISSION_SESSION_CSS, "Printemps")
+        );
+    }
+
+    #[test]
+    fn an_admission_block_without_any_card_is_an_anomaly() {
+        let (seasons, anomalies) = admission_seasons(&admission(&[]));
+
+        assert!(seasons.is_empty());
+        assert!(
+            matches!(&anomalies[0], ParseError::MissingElement { selector }
+                if selector == ADMISSION_SESSION_CSS),
+            "got {anomalies:?}"
+        );
     }
 
     // --- Groups: which role a block plays ---

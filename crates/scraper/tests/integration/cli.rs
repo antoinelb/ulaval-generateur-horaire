@@ -214,7 +214,7 @@ async fn a_program_is_written_exactly_as_the_parser_fixture_expects() {
         .unwrap_or_else(|e| panic!("scrape a program: {e}"));
 
     assert_eq!(
-        read(&dir.join("programmes/baccalaureat-en-genie-civil-2026.json")),
+        read(&dir.join("programmes/baccalaureat-en-genie-civil-A26.json")),
         read(&program_fixture("baccalaureat-en-genie-civil.json")),
     );
     assert!(
@@ -250,7 +250,7 @@ async fn a_run_leaves_the_programs_it_was_not_given_alone() {
         .unwrap_or_else(|e| panic!("scrape one program: {e}"));
 
     assert!(programmes
-        .join("baccalaureat-en-genie-civil-2026.json")
+        .join("baccalaureat-en-genie-civil-A26.json")
         .exists());
     for name in untouched {
         assert_eq!(
@@ -303,8 +303,8 @@ async fn the_binary_scrapes_a_program_end_to_end() {
             "program",
             "--output-dir",
             &dir.display().to_string(),
-            "--year",
-            "2026",
+            "--semester",
+            "A26",
             &server.uri(),
         ])
         .output()
@@ -312,7 +312,7 @@ async fn the_binary_scrapes_a_program_end_to_end() {
 
     assert!(output.status.success(), "{output:?}");
     assert!(dir
-        .join("programmes/baccalaureat-en-genie-civil-2026.json")
+        .join("programmes/baccalaureat-en-genie-civil-A26.json")
         .exists());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Wrote programs"), "{stdout}");
@@ -383,14 +383,14 @@ async fn run_catalogue(dir: &Path, url: &str) -> anyhow::Result<()> {
 }
 
 async fn run_program(dir: &Path, urls: &[String]) -> anyhow::Result<()> {
-    // --year 2026: the byte-exact comparisons target fixtures frozen under
-    // that vintage, whatever date the suite runs on
+    // --semester A26: the byte-exact comparisons target fixtures frozen
+    // under that vintage, whatever date the suite runs on
     let mut args = vec![
         "program".to_string(),
         "--output-dir".to_string(),
         dir.display().to_string(),
-        "--year".to_string(),
-        "2026".to_string(),
+        "--semester".to_string(),
+        "A26".to_string(),
     ];
     args.extend(urls.iter().cloned());
     cli::run(args).await

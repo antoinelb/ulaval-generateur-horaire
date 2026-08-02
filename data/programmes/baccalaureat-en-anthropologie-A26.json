@@ -1,6 +1,10 @@
 {
   "code": "baccalaureat-en-anthropologie",
-  "year": 2026,
+  "semester": "A26",
+  "possible_semester_start": [
+    "A",
+    "H"
+  ],
   "title": "Baccalauréat en anthropologie",
   "cycle": 1,
   "credits_required": 90,
@@ -127,7 +131,6 @@
       ],
       "notes": [
         "et les cours de langue moderne portant les sigles ALL, ARA, CHN, ESG, ITL, JAP, POR et RUS.",
-        "Pour la personne francophone, la réussite du cours ANL-3010 Advance English I (VEPT : 58) est requise pour diplômer.",
         "Pour la personne non francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP : 400 et TCF-TP/ÉÉ : 14) est requise pour diplômer."
       ]
     },
@@ -265,7 +268,6 @@
           ],
           "notes": [
             "et parmi un cours de langue moderne ALL, ARA, CHN, ESG, ITL, JAP, POR et RUS.",
-            "Pour la personne francophone, la réussite du cours ANL-3010 Advance English I (VEPT : 58) est requise pour diplômer.",
             "Pour la personne non francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP : 400 et TCF-TP/ÉÉ : 14) est requise pour diplômer."
           ]
         },
@@ -412,7 +414,6 @@
           ],
           "notes": [
             "et les cours de langue moderne portant les sigles ALL, ARA, CHN, ESG, ITL, JAP, POR et RUS.",
-            "Pour la personne francophone, la réussite du cours ANL-3010 Advance English I (VEPT : 58) est requise pour diplômer.",
             "Pour la personne non francophone, la réussite du cours FLS-2093 Rédaction de textes argumentatifs (TCF-TP : 400 et TCF-TP/ÉÉ : 14) est requise pour diplômer."
           ]
         },
@@ -454,5 +455,17 @@
   ],
   "notes": [
     "La formation pratique (ANT-3000 à ANT-3002) doit porter sur le domaine de la concentration choisie."
-  ]
+  ],
+  "language_requirement": {
+    "francophone": {
+      "course": "ANL-3010",
+      "tests": [
+        {
+          "name": "VEPT",
+          "score": 58
+        }
+      ],
+      "raw": "Pour la personne francophone, la réussite du cours ANL-3010 Advance English I (VEPT : 58) est requise pour diplômer."
+    }
+  }
 }

@@ -1,7 +1,7 @@
 {
   "program": {
     "code": "baccalaureat-en-genie-physique",
-    "year": 2026,
+    "semester": "A26",
     "title": "Baccalauréat en génie physique",
     "cycle": 1,
     "credits_required": 120,

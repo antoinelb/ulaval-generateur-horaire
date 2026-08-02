@@ -197,7 +197,8 @@ fn parse_fixture(name: &str) -> parser::program::ProgramPage {
     let html = fs::read_to_string(&html_path)
         .unwrap_or_else(|e| panic!("read {html_path}: {e}"));
 
-    // 2026: the year the fixture pages were frozen under
-    parser::program::parse(&html, 2026)
+    // A26: the vintage the fixture pages were frozen under
+    let semester = "A26".parse().unwrap_or_else(|e| panic!("{e}"));
+    parser::program::parse(&html, semester)
         .unwrap_or_else(|e| panic!("parse {name}: {e}"))
 }

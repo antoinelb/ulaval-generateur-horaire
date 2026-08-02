@@ -2,6 +2,8 @@
 
 Date : 2026-07-29
 
+> **Remplacée par** `2026-08-millesime-de-programme-en-semestre` : le millésime est désormais un semestre (`A26`), plus fin qu'une année civile.
+
 ## Contexte
 
 Un programme est modifié en hiver pour l'automne suivant, à une date imprécise que la page n'annonce nulle part.

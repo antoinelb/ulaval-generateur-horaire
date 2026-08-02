@@ -2,6 +2,8 @@
 
 Date : 2026-07-29
 
+> **Mise à jour** (`2026-08-millesime-de-programme-en-semestre`) : le suffixe de millésime est désormais un semestre (`-A26`) ; le repli par slug reconnaît ce suffixe **et** l'ancien `-{year}` à quatre chiffres.
+
 ## Contexte
 
 La sous-commande `program` exigeait sa liste d'URL : une page programme est un slug qu'aucun code de cours ne permet de reconstruire, et seuls les programmes dont on veut les règles méritent un scrape.
