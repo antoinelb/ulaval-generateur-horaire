@@ -1,7 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::ops::ControlFlow;
 
-use crate::course::{Course, PrereqTree, Prerequisites, Season};
+use crate::course::{
+    is_preuniversity, Course, PrereqTree, Prerequisites, Season,
+};
 use crate::feasibility::{FeasibilityCache, MAX_MEMBERS};
 use crate::week::WeekMask;
 use crate::weekly::build_domain;
@@ -745,13 +747,6 @@ fn course_leaf(code: &str, eval_ctx: &EvalCtx) -> Verdict {
     } else {
         Verdict::False
     }
-}
-
-// préuniversitaire numbers start with 0 (`MAT-0130`); for a code absent
-// from the snapshot the number is the only signal we have of its cycle
-fn is_preuniversity(code: &str) -> bool {
-    code.split_once('-')
-        .is_some_and(|(_, number)| number.starts_with('0'))
 }
 
 // accumulated credits strictly before the evaluated course's session:

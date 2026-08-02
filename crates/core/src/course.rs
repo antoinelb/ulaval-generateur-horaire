@@ -247,6 +247,13 @@ impl From<Time> for String {
     }
 }
 
+// préuniversitaire numbers start with 0 (`MAT-0130`); for a code absent
+// from the snapshot the number is the only signal we have of its cycle
+pub(crate) fn is_preuniversity(code: &str) -> bool {
+    code.split_once('-')
+        .is_some_and(|(_, number)| number.starts_with('0'))
+}
+
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
@@ -262,6 +269,13 @@ mod tests {
         assert_eq!(pre, CourseCycle::Preuniversity);
         assert_eq!(first, CourseCycle::First);
         assert_eq!(second, CourseCycle::Second);
+    }
+
+    #[test]
+    fn a_zero_numbered_code_is_preuniversity_a_dashless_one_is_not() {
+        assert!(is_preuniversity("MAT-0130"));
+        assert!(!is_preuniversity("MAT-1900"));
+        assert!(!is_preuniversity("nodash"));
     }
 
     #[test]

@@ -208,6 +208,7 @@ async fn a_program_is_written_exactly_as_the_parser_fixture_expects() {
     let server = MockServer::start().await;
     mount_fixture(&server, "B-GCI").await;
     let dir = test_dir("run-program");
+    plant_empty_snapshot(&dir);
 
     run_program(&dir, &[server.uri()])
         .await
@@ -233,6 +234,7 @@ async fn a_run_leaves_the_programs_it_was_not_given_alone() {
     let server = MockServer::start().await;
     mount_fixture(&server, "B-GCI").await;
     let dir = test_dir("run-program-scoped");
+    plant_empty_snapshot(&dir);
     let programmes = dir.join("programmes");
     fs::create_dir_all(&programmes)
         .unwrap_or_else(|e| panic!("pre-create the programs dir: {e}"));
@@ -292,6 +294,7 @@ async fn the_binary_scrapes_a_program_end_to_end() {
     let server = MockServer::start().await;
     mount_fixture(&server, "B-GCI").await;
     let dir = test_dir("e2e-program");
+    plant_empty_snapshot(&dir);
 
     let output = Command::new(env!("CARGO_BIN_EXE_ulaval-scraper"))
         .args([
@@ -317,6 +320,9 @@ fn the_binary_rejects_program_with_nothing_to_refresh_with_exit_code_2() {
     // no URLs falls back to refreshing the existing snapshots — and an
     // empty directory leaves nothing to do, which must be said
     let dir = test_dir("e2e-program-nothing");
+    // the course snapshot is read even earlier: plant it so the failure
+    // stays « nothing to refresh », not « no snapshot »
+    plant_empty_snapshot(&dir);
     let output = Command::new(env!("CARGO_BIN_EXE_ulaval-scraper"))
         .args(["program", "--output-dir", &dir.display().to_string()])
         .output()
@@ -325,7 +331,7 @@ fn the_binary_rejects_program_with_nothing_to_refresh_with_exit_code_2() {
     assert_eq!(output.status.code(), Some(2));
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("programmes"), "{stderr}");
-    // nothing to clean: the run fails before creating anything
+    cleanup(&dir);
 }
 
 #[test]
@@ -397,6 +403,16 @@ async fn mount_fixture(server: &MockServer, name: &str) {
         .respond_with(ResponseTemplate::new(200).set_body_string(html))
         .mount(server)
         .await;
+}
+
+// the program command reads the course snapshot before fetching anything
+// (ADR `2026-08-regle-scolarite-preparatoire`); an empty one yields no
+// « Scolarité préparatoire » rule, keeping byte-exact comparisons intact
+fn plant_empty_snapshot(dir: &Path) {
+    fs::create_dir_all(dir)
+        .unwrap_or_else(|e| panic!("create {}: {e}", dir.display()));
+    fs::write(dir.join("cours.json"), "{\"courses\":[]}")
+        .unwrap_or_else(|e| panic!("plant the course snapshot: {e}"));
 }
 
 fn program_fixture(name: &str) -> PathBuf {

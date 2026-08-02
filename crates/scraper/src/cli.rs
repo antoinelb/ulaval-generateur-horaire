@@ -7,7 +7,8 @@ use crate::course::{self, CourseError, Snapshot};
 use crate::program::{self, ProgramError};
 use crate::{catalogue, fetch::Fetcher, parser::ParseError, print};
 use ulaval_scheduler_core::{
-    Catalogue, CatalogueEntry, Program, Season, Semester,
+    preparatory_rule, Catalogue, CatalogueEntry, Course, Program, Season,
+    Semester,
 };
 
 // ~10 requests/second, the politeness budget the whole scraper shares
@@ -120,12 +121,17 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
             let semester = semester.unwrap_or_else(|| {
                 semester_after(std::time::SystemTime::now())
             });
+            // the courses feed the « Scolarité préparatoire » rule: read
+            // before anything is fetched, so a missing snapshot fails the
+            // run immediately (ADR `2026-08-regle-scolarite-preparatoire`)
+            let snapshot = read_snapshot(Path::new(&output_dir))?;
             let urls = if urls.is_empty() {
                 refresh_urls(&output_dir, &base_url)?
             } else {
                 urls
             };
             let (programs, anomalies) = get_programs(&urls, semester).await;
+            let programs = add_preparatory_rules(programs, &snapshot.courses)?;
             write_programs(programs, anomalies, &output_dir)
         }
     }
@@ -216,6 +222,22 @@ fn read_catalogue(dir: &Path) -> anyhow::Result<Catalogue> {
         )
     })?;
     Ok(serde_json::from_str(&raw)?)
+}
+
+// the course snapshot feeds the préuniversitaire walk of every scraped
+// program, so `program` needs it up front — same fail-fast contract as
+// `read_catalogue` (ADR `2026-08-regle-scolarite-preparatoire`)
+fn read_snapshot(dir: &Path) -> anyhow::Result<Snapshot> {
+    let path = dir.join("cours.json");
+    let raw = std::fs::read_to_string(&path).map_err(|source| {
+        anyhow::anyhow!(
+            "Reading {}: {source}\nRun `ulaval-scraper courses` first.",
+            path.display()
+        )
+    })?;
+    serde_json::from_str(&raw).map_err(|source| {
+        anyhow::anyhow!("Parsing {}: {source}", path.display())
+    })
 }
 
 fn filter_by_subject(
@@ -456,6 +478,25 @@ async fn get_programs(
     let fetcher = Fetcher::new(min_interval, backoff)
         .expect("static fetcher config always builds");
     program::scrape(&fetcher, urls, semester).await
+}
+
+// The computed « Scolarité préparatoire » rule, appended last: no page
+// lists the 0xxx cours d'appoint a program's mandatory prerequisites can
+// require, so the walk over the course snapshot supplies them (ADR
+// `2026-08-regle-scolarite-preparatoire`)
+fn add_preparatory_rules(
+    mut programs: Vec<Program>,
+    courses: &[Course],
+) -> anyhow::Result<Vec<Program>> {
+    for program in &mut programs {
+        match preparatory_rule(&program.mandatory, courses) {
+            Ok(Some(rule)) => program.rules.push(rule),
+            // nothing reachable: the rule is omitted, not emitted empty
+            Ok(None) => {}
+            Err(error) => anyhow::bail!("{}: {error}", program.code),
+        }
+    }
+    Ok(programs)
 }
 
 // One file per program rather than one snapshot holding them all: a run is
@@ -1044,6 +1085,28 @@ mod tests {
             .unwrap_or_else(|e| panic!("plant the snapshot: {e}"));
     }
 
+    // a snapshot whose courses carry prerequisite trees, for the
+    // préuniversitaire walk: `prerequisites` is a raw JSON value, or None
+    fn plant_snapshot_with_prereqs(
+        dir: &Path,
+        courses: &[(&str, Option<&str>)],
+    ) {
+        let courses: Vec<String> = courses
+            .iter()
+            .map(|(code, prerequisites)| {
+                let prereq = prerequisites.map_or(String::new(), |json| {
+                    format!(r#","prerequisites":{json}"#)
+                });
+                format!(
+                    r#"{{"code":"{code}","title":"x","credits":3,"cycle":1{prereq},"seasons":{{}}}}"#
+                )
+            })
+            .collect();
+        let json = format!(r#"{{"courses":[{}]}}"#, courses.join(","));
+        std::fs::write(dir.join("cours.json"), json)
+            .unwrap_or_else(|e| panic!("plant the snapshot: {e}"));
+    }
+
     fn snapshot_codes(dir: &Path) -> Vec<String> {
         let path = dir.join("cours.json");
         let raw = std::fs::read_to_string(&path)
@@ -1107,6 +1170,7 @@ mod tests {
         mount_program(&server, "genie-civil", "B-GCI").await;
         mount_program(&server, "genie-des-eaux", "B-GEX").await;
         let dir = test_dir("programs-happy");
+        plant_snapshot(&dir, &[]);
 
         run(programs_args(
             &dir,
@@ -1153,6 +1217,7 @@ mod tests {
             .mount(&server)
             .await;
         let dir = test_dir("programs-refresh");
+        plant_snapshot(&dir, &[]);
         let programmes = dir.join("programmes");
         std::fs::create_dir_all(&programmes)
             .unwrap_or_else(|e| panic!("create the programs dir: {e}"));
@@ -1215,6 +1280,7 @@ mod tests {
         // an empty refresh list can only mean the caller pointed at the
         // wrong directory — never a silent no-op
         let dir = test_dir("programs-refresh-empty");
+        plant_snapshot(&dir, &[]);
 
         let error = run(vec![
             "program".to_string(),
@@ -1246,6 +1312,7 @@ mod tests {
         mount_program(&server, "genie-civil", "B-GCI").await;
         // nothing mounted for the second URL, so it 404s
         let dir = test_dir("programs-error-log");
+        plant_snapshot(&dir, &[]);
 
         run(programs_args(
             &dir,
@@ -1279,6 +1346,7 @@ mod tests {
             [("broken.json", "stale\n"), ("no-slug.json", "{}\n")]
         {
             let dir = test_dir(&format!("programs-refresh-{name}"));
+            plant_snapshot(&dir, &[]);
             let programmes = dir.join("programmes");
             std::fs::create_dir_all(&programmes)
                 .unwrap_or_else(|e| panic!("create the programs dir: {e}"));
@@ -1305,6 +1373,7 @@ mod tests {
     async fn a_snapshot_that_cannot_be_read_fails_the_refresh() {
         // a directory named like a snapshot defeats `read_to_string`
         let dir = test_dir("programs-refresh-unreadable");
+        plant_snapshot(&dir, &[]);
         let programmes = dir.join("programmes");
         std::fs::create_dir_all(programmes.join("B-GCI-A26.json"))
             .unwrap_or_else(|e| panic!("plant the directory: {e}"));
@@ -1330,6 +1399,7 @@ mod tests {
         let server = MockServer::start().await;
         mount_program(&server, "genie-civil", "B-GCI").await;
         let dir = test_dir("programs-blocked-dir");
+        plant_snapshot(&dir, &[]);
         // a file where the program files must go
         std::fs::write(dir.join("programmes"), "in the way")
             .unwrap_or_else(|e| panic!("block the programs dir: {e}"));
@@ -1348,6 +1418,7 @@ mod tests {
         let server = MockServer::start().await;
         mount_program(&server, "genie-civil", "B-GCI").await;
         let dir = test_dir("programs-blocked-file");
+        plant_snapshot(&dir, &[]);
         // a directory at the target path makes the rename fail
         let semester = semester_after(std::time::SystemTime::now());
         std::fs::create_dir_all(
@@ -1371,6 +1442,7 @@ mod tests {
         // and the path it must be logged to is blocked
         let server = MockServer::start().await;
         let dir = test_dir("programs-blocked-log");
+        plant_snapshot(&dir, &[]);
         std::fs::create_dir_all(dir.join("programmes_errors.log"))
             .unwrap_or_else(|e| panic!("block the log path: {e}"));
 
@@ -1378,6 +1450,129 @@ mod tests {
             run(programs_args(&dir, &[&program_url(&server, "absent")])).await;
 
         assert!(result.is_err(), "an unwritable error log must fail");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn program_without_a_course_snapshot_fails_before_fetching() {
+        // the préuniversitaire walk needs the courses: without them the run
+        // must stop before a single page is fetched
+        let server = MockServer::start().await;
+        mount_program(&server, "genie-civil", "B-GCI").await;
+        let dir = test_dir("programs-no-course-snapshot");
+
+        let error =
+            run(programs_args(&dir, &[&program_url(&server, "genie-civil")]))
+                .await
+                .expect_err("a missing course snapshot must be said");
+
+        let message = error.to_string();
+        assert!(message.contains("cours.json"), "{message}");
+        assert!(
+            message.contains("Run `ulaval-scraper courses` first."),
+            "{message}"
+        );
+        let requests = server.received_requests().await.unwrap_or_default();
+        assert!(requests.is_empty(), "nothing may be fetched");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn an_unparsable_course_snapshot_fails_the_run() {
+        let server = MockServer::start().await;
+        mount_program(&server, "genie-civil", "B-GCI").await;
+        let dir = test_dir("programs-broken-course-snapshot");
+        std::fs::write(dir.join("cours.json"), "not json")
+            .unwrap_or_else(|e| panic!("plant the broken snapshot: {e}"));
+
+        let error =
+            run(programs_args(&dir, &[&program_url(&server, "genie-civil")]))
+                .await
+                .expect_err("an unparsable course snapshot must be said");
+
+        let message = error.to_string();
+        assert!(message.contains("Parsing"), "{message}");
+        assert!(message.contains("cours.json"), "{message}");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn a_preparatory_rule_is_appended_from_the_prerequisite_trees() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        // the mock page's mandatory list is ["GEX-1000"]
+        mount_program(&server, "genie-des-eaux", "B-GEX").await;
+        let dir = test_dir("programs-preparatory-rule");
+        plant_snapshot_with_prereqs(
+            &dir,
+            &[
+                // the cégep sigle in the OR branch is prose, not a code
+                (
+                    "GEX-1000",
+                    Some(
+                        r#"{"raw":"MAT-0150 OU BIO-NYA","tree":{"any":["MAT-0150",{"raw":"BIO-NYA"}]}}"#,
+                    ),
+                ),
+                // préuniversitaire courses chain: the closure is transitive
+                ("MAT-0150", Some(r#"{"raw":"MAT-0130","tree":"MAT-0130"}"#)),
+            ],
+        );
+
+        run(programs_args(
+            &dir,
+            &[&program_url(&server, "genie-des-eaux")],
+        ))
+        .await
+        .unwrap_or_else(|e| panic!("scrape the program: {e}"));
+
+        let semester = semester_after(std::time::SystemTime::now());
+        let written = std::fs::read_to_string(
+            dir.join("programmes")
+                .join(format!("B-GEX-{semester}.json")),
+        )
+        .unwrap_or_else(|e| panic!("read the program file: {e}"));
+        let program: serde_json::Value = serde_json::from_str(&written)
+            .unwrap_or_else(|e| panic!("parse the program file: {e}"));
+        let rule = program["rules"]
+            .as_array()
+            .and_then(|rules| rules.last())
+            .unwrap_or_else(|| panic!("a rule must be appended: {written}"));
+        assert_eq!(rule["title"], "Scolarité préparatoire");
+        assert_eq!(
+            rule["courses"],
+            serde_json::json!(["MAT-0130", "MAT-0150"])
+        );
+        assert!(
+            rule.get("constraint").is_none(),
+            "no constraint may be invented: {rule}"
+        );
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn a_prerequisite_graph_over_budget_fails_and_names_the_program() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        mount_program(&server, "genie-des-eaux", "B-GEX").await;
+        let dir = test_dir("programs-preparatory-over-budget");
+        let leaves: Vec<String> =
+            (0..10_000).map(|i| format!(r#""XXX-{i:04}""#)).collect();
+        let tree = format!(
+            r#"{{"raw":"x","tree":{{"all":[{}]}}}}"#,
+            leaves.join(",")
+        );
+        plant_snapshot_with_prereqs(&dir, &[("GEX-1000", Some(&tree))]);
+
+        let error = run(programs_args(
+            &dir,
+            &[&program_url(&server, "genie-des-eaux")],
+        ))
+        .await
+        .expect_err("an over-budget graph must be said");
+
+        let message = error.to_string();
+        assert!(message.contains("B-GEX"), "{message}");
+        assert!(message.contains("exceeds"), "{message}");
         cleanup(&dir);
     }
 

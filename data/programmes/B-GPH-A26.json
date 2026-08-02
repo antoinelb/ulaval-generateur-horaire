@@ -150,6 +150,17 @@
         "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GPH-2591 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GPH-2590, GPH-3590, GPH-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
       ],
       "credits_in_addition": true
+    },
+    {
+      "title": "Scolarité préparatoire",
+      "courses": [
+        "CHM-0150",
+        "MAT-0130",
+        "MAT-0150",
+        "MAT-0260",
+        "PHY-0150",
+        "PHY-0250"
+      ]
     }
   ],
   "concentrations": [
