@@ -100,6 +100,16 @@
           "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GIN-3580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GIN-3590, GIN-3591 et GIN-3592. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
         ],
         "credits_in_addition": true
+      },
+      {
+        "title": "Scolarité préparatoire",
+        "courses": [
+          "MAT-0130",
+          "MAT-0150",
+          "MAT-0250",
+          "MAT-0260",
+          "PHY-0150"
+        ]
       }
     ],
     "concentrations": [
@@ -541,6 +551,19 @@
           "GIN-3590",
           "GIN-3591",
           "GIN-3592"
+        ]
+      },
+      {
+        "scope": "program",
+        "title": "Scolarité préparatoire",
+        "status": "reported",
+        "counted": [],
+        "candidates": [
+          "MAT-0130",
+          "MAT-0150",
+          "MAT-0250",
+          "MAT-0260",
+          "PHY-0150"
         ]
       },
       {

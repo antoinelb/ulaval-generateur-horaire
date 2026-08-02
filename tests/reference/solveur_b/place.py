@@ -67,7 +67,9 @@ def solve(fixture):
     by_code = {course["code"]: course for course in fixture["courses"]}
     passed = set(fixture.get("passed", []))
     pinned = fixture.get("pinned", {})
-    validate(fixture, sessions, by_code, passed, pinned)
+    stages = set(fixture.get("stages", []))
+    open_summers = set(fixture.get("open_summers", []))
+    validate(fixture, sessions, by_code, passed, pinned, stages, open_summers)
     credits = {code: resolve_credits(c) for code, c in by_code.items()}
     passed_credits = sum(credits[code] for code in passed)
     to_place = [c["code"] for c in fixture["courses"] if c["code"] not in passed]
@@ -77,6 +79,12 @@ def solve(fixture):
             for s in range(1, len(sessions) + 1)
             if sessions[s - 1] in by_code[code]["seasons"]
             and (code not in pinned or pinned[code] == s)
+            and (
+                code in pinned
+                or summer_admits(
+                    code, s, sessions, stages, open_summers
+                )
+            )
         ]
         for code in to_place
     }
@@ -105,7 +113,7 @@ def solve(fixture):
     return {"complete": True, "solutions": [dict(sol) for sol in ordered]}
 
 
-def validate(fixture, sessions, by_code, passed, pinned):
+def validate(fixture, sessions, by_code, passed, pinned, stages, open_summers):
     if not sessions or not by_code:
         raise ValueError("a fixture needs sessions and courses")
     if len(by_code) != len(fixture["courses"]):
@@ -120,6 +128,26 @@ def validate(fixture, sessions, by_code, passed, pinned):
     }
     if out_of_range:
         raise ValueError(f"pinned outside 1..{len(sessions)}: {out_of_range}")
+    stray_stages = stages - set(by_code)
+    if stray_stages:
+        raise ValueError(f"stage codes without a Course: {stray_stages}")
+    bad_summers = {
+        s
+        for s in open_summers
+        if not 1 <= s <= len(sessions) or sessions[s - 1] != "summer"
+    }
+    if bad_summers:
+        raise ValueError(f"open summers not a summer session: {bad_summers}")
+
+
+def summer_admits(code, session, sessions, stages, open_summers):
+    # mirror of the Rust `summer_admits`: a stage goes to the étés only, a
+    # regular course avoids them unless the session was explicitly opened;
+    # the caller already lets a pin bypass both rules
+    summer = sessions[session - 1] == "summer"
+    if code in stages:
+        return summer
+    return not summer or session in open_summers
 
 
 def session_load(assignment, session, credits):

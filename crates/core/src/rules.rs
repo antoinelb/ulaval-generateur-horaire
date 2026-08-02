@@ -243,8 +243,14 @@ fn rule_report(
         (Some(listed), Some(constraint)) => {
             evaluated(scope, rule, listed, constraint, selection, credits)
         }
-        // Keyword (any/negotiated), raw-only, or a rule naming no number
-        _ => Ok(reported(scope, rule)),
+        // a list naming no number — « Scolarité préparatoire » : nothing to
+        // verdict, but the split is still shown (ADR
+        // `2026-08-regle-sans-contrainte-comptee-mais-reportee`)
+        (Some(listed), None) => {
+            Ok(listed_reported(scope, rule, listed, selection))
+        }
+        // Keyword (any/negotiated) or raw-only
+        (None, _) => Ok(reported(scope, rule)),
     }
 }
 
@@ -304,19 +310,7 @@ fn evaluated(
     selection: &BTreeSet<String>,
     credits: &BTreeMap<&str, u32>,
 ) -> Result<RuleReport, CoverageError> {
-    // set semantics: the page duplicates codes across thematic subgroups
-    // (règle 4 GEX), and the sorted iteration matches the frozen fixtures
-    let listed: BTreeSet<&str> = listed.iter().map(String::as_str).collect();
-    let counted: Vec<String> = listed
-        .iter()
-        .filter(|code| selection.contains(**code))
-        .map(|code| code.to_string())
-        .collect();
-    let candidates: Vec<String> = listed
-        .iter()
-        .filter(|code| !selection.contains(**code))
-        .map(|code| code.to_string())
-        .collect();
+    let (counted, candidates) = split_selection(listed, selection);
     let (status, missing) =
         verdict(&rule.title, constraint, &counted, credits)?;
     Ok(RuleReport {
@@ -328,6 +322,48 @@ fn evaluated(
         candidates: Some(candidates),
         raw: None,
     })
+}
+
+// the same set split as an evaluated rule, but no verdict: whether a listed
+// course applies depends on facts core cannot see (the student's collegial
+// record for the cours d'appoint), so the status stays reported — counted
+// and candidates give the UI the remaining courses to surface
+fn listed_reported(
+    scope: Scope,
+    rule: &Rule,
+    listed: &[String],
+    selection: &BTreeSet<String>,
+) -> RuleReport {
+    let (counted, candidates) = split_selection(listed, selection);
+    RuleReport {
+        scope,
+        title: rule.title.clone(),
+        status: RuleStatus::Reported,
+        counted: Some(counted),
+        missing: None,
+        candidates: Some(candidates),
+        raw: rule_raw(rule).map(str::to_string),
+    }
+}
+
+// set semantics: the page duplicates codes across thematic subgroups
+// (règle 4 GEX), and the sorted iteration matches the frozen fixtures
+fn split_selection(
+    listed: &[String],
+    selection: &BTreeSet<String>,
+) -> (Vec<String>, Vec<String>) {
+    let unique: BTreeSet<&str> = listed.iter().map(String::as_str).collect();
+    let counted = unique
+        .iter()
+        .filter(|code| selection.contains(**code))
+        .map(|code| code.to_string())
+        .collect();
+    let candidates = unique
+        .iter()
+        .filter(|code| !selection.contains(**code))
+        .map(|code| code.to_string())
+        .collect();
+    (counted, candidates)
 }
 
 fn verdict(
@@ -662,13 +698,19 @@ mod tests {
     }
 
     #[test]
-    fn a_list_rule_without_a_constraint_is_reported_without_raw() {
-        // génie mécanique's real « Règle 1 – Réussir la scolarité de » is
-        // cut off mid-sentence: shown, never counted
+    fn a_list_rule_without_a_constraint_reports_its_split_without_raw() {
+        // « Scolarité préparatoire » : no verdict — which listed course
+        // applies depends on the student's collegial record — but the split
+        // is still shown for the UI to surface (ADR
+        // `2026-08-regle-sans-contrainte-comptee-mais-reportee`)
         let program = bare(r#"[{"title":"Règle 1","courses":["A-1","B-2"]}]"#);
         let coverage = report(&program, &["A-1"], &[]);
-        assert_eq!(coverage.rules[0].status, RuleStatus::Reported);
-        assert_eq!(coverage.rules[0].raw, None);
+        let rule = &coverage.rules[0];
+        assert_eq!(rule.status, RuleStatus::Reported);
+        assert_eq!(rule.counted.as_deref(), Some(&["A-1".to_string()][..]));
+        assert_eq!(rule.missing, None);
+        assert_eq!(rule.candidates.as_deref(), Some(&["B-2".to_string()][..]));
+        assert_eq!(rule.raw, None);
     }
 
     // --- references: resolved, never chased ---
@@ -710,10 +752,14 @@ mod tests {
         );
         program.rules[0].constraint = None;
         let coverage = report(&program, &[], &[]);
-        assert_eq!(coverage.rules[0].status, RuleStatus::Reported);
+        let rule = &coverage.rules[0];
+        assert_eq!(rule.status, RuleStatus::Reported);
+        assert_eq!(rule.raw.as_deref(), Some("tous les cours de la Règle 1"));
+        // the resolved list still splits — counted empty, all candidates
+        assert_eq!(rule.counted.as_deref(), Some(&[][..]));
         assert_eq!(
-            coverage.rules[0].raw.as_deref(),
-            Some("tous les cours de la Règle 1")
+            rule.candidates.as_deref(),
+            Some(&["A-1".to_string(), "B-2".to_string()][..])
         );
     }
 

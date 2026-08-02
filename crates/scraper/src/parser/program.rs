@@ -4,7 +4,7 @@ use scraper::{ElementRef, Html, Selector};
 use ulaval_scheduler_core::{
     Concentration, Constraint, Cycle, Keyword, LanguageQualification,
     LanguageRequirement, PlacementTest, Profile, Program, Rule, RuleCourses,
-    RuleReference, Season, Semester,
+    RuleReference, Season, Semester, STAGES_RULE_TITLE,
 };
 
 use crate::parser::ParseError;
@@ -949,7 +949,7 @@ fn extract_stage_rule(program: &mut Program) {
 fn stage_rule(note: String) -> Rule {
     let credits_in_addition = note.contains("en sus des crédits exigés");
     Rule {
-        title: "Stages".to_string(),
+        title: STAGES_RULE_TITLE.to_string(),
         // at least the mandatory stage, up to the eight the direction
         // allows — neither bound is machine-readable on the page
         constraint: Some(Constraint::Course { min: 1, max: 8 }),

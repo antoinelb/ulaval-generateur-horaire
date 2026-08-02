@@ -101,15 +101,29 @@ def rule_report(scope, rule, program, selection, credits):
     constraint = rule.get("constraint")
     if isinstance(courses, dict):
         courses = resolve_reference(courses, program)
-    if not isinstance(courses, list) or constraint is None:
-        # Keyword (any/negotiated), raw-only, or a rule naming no number:
-        # surfaced to the student, never invented
+    if not isinstance(courses, list):
+        # Keyword (any/negotiated) or raw-only: surfaced to the student,
+        # never invented
         entry = {"scope": scope, "title": rule["title"], "status": "reported"}
         if "raw" in rule:
             entry["raw"] = rule["raw"]
         return entry
     listed = set(courses)
     counted = sorted(listed & selection)
+    if constraint is None:
+        # a list naming no number (« Scolarité préparatoire ») : no verdict,
+        # but the split is still shown (ADR
+        # `2026-08-regle-sans-contrainte-comptee-mais-reportee`)
+        entry = {
+            "scope": scope,
+            "title": rule["title"],
+            "status": "reported",
+            "counted": counted,
+            "candidates": sorted(listed - selection),
+        }
+        if "raw" in rule:
+            entry["raw"] = rule["raw"]
+        return entry
     status, missing = evaluate(constraint, counted, credits, rule)
     entry = {
         "scope": scope,

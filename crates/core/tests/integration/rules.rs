@@ -24,6 +24,7 @@ const FIXTURES: &[&str] = &[
     "language-requirement-reported",
     "language-requirement-satisfied",
     "negotiated-rule-reported",
+    "preparatory-rule-partially-counted",
     "profile-mandatory-and-rules",
     "raw-only-rule-reported",
     "reference-rule-resolved",

@@ -1,6 +1,11 @@
 use crate::common::Cycle;
 use crate::course::Season;
 
+// the title of the « Stages » rule the scraper promotes from the génie
+// bacs' graduation-stage prose — the intake finds the rule back by it (ADR
+// `2026-08-stage-obligatoire-en-prose-promu-en-regle`)
+pub const STAGES_RULE_TITLE: &str = "Stages";
+
 // A block of the « Structure du programme » section, in its three roles. The
 // prose a block carries — thematic subgroup labels, stage requirements — is
 // understood by no grammar, so it rides along in `notes`: displayed to the

@@ -17,17 +17,24 @@ const FIXTURE_DIR: &str = concat!(
 );
 
 const FIXTURES: &[&str] = &[
+    "closed-summer-refuses-regular-course",
     "concomitant-relaxes-precedence",
     "credit-cap-forces-split",
     "multiple-solutions-all-enumerated",
+    "open-summer-accepts-regular-course",
     "over-constrained-proves-infeasible",
     "passed-credits-count-toward-threshold",
     "passed-satisfies-prerequisite",
     "pinned-conflict-infeasible",
     "pinned-session-respected",
+    "preparatory-all-passed-none-placed",
+    "preparatory-none-passed-all-placed",
+    "preparatory-some-passed-rest-precede-dependents",
     "prereq-chain-forces-order",
     "program-credits-threshold-gates",
     "season-restricts-placement",
+    "stage-pinned-in-fall-lifts-summer-restriction",
+    "stage-unpinned-lands-in-summer",
     "unsatisfiable-prerequisite-proves-infeasible",
     "weekly-veto-splits-conflicting-courses",
     "winter-start-inverts-projects",
@@ -43,6 +50,10 @@ struct Fixture {
     passed: BTreeSet<String>,
     #[serde(default)]
     pinned: BTreeMap<String, usize>,
+    #[serde(default)]
+    stages: BTreeSet<String>,
+    #[serde(default)]
+    open_summers: BTreeSet<usize>,
     courses: Vec<Course>,
     expected: Expected,
 }
@@ -69,6 +80,8 @@ fn reproduces_every_frozen_solution_set() {
             courses: &fixture.courses,
             passed: &fixture.passed,
             pinned: &fixture.pinned,
+            stages: &fixture.stages,
+            open_summers: &fixture.open_summers,
             seed: &BTreeMap::new(),
             max_nodes: 10_000_000,
             max_solutions: 100_000,

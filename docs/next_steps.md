@@ -106,10 +106,26 @@ L'absence de perte silencieuse s'applique partout : une règle, un préalable ou
 
 ---
 
+## Phase 5 — Étés, stages et scolarité préparatoire (2026-08-02)
+
+Décisions avec Antoine, un ADR chacune : stages en été sauf épinglage (`2026-08-stage-place-en-ete-sauf-epinglage`), horizon avec étés (`2026-08-horizon-avec-ete-apres-chaque-hiver`), intake enrichi (`2026-08-stage-obligatoire-et-scolarite-preparatoire-dans-lintake`), règle sans contrainte comptée (`2026-08-regle-sans-contrainte-comptee-mais-reportee`).
+
+- [x] Solveur B : `PlacementRequest.stages` (domaine restreint aux étés de l'horizon, sauf épinglage — l'épingle lève la règle dans les deux sens, un cours régulier épinglé entre aussi dans un été fermé) et `open_summers` (indices 1-based des étés ouverts aux cours réguliers ; **défaut : aucun cours l'été**) ; validations typées (`StageWithoutCourse`, `OpenSummerOutOfRange`, `OpenSummerNotSummer`) ; `BlockedReason::StageWithoutSummer` quand un stage non épinglé n'a aucun été
+    - Verify : ✅ tests en ligne (stage → été seul, stage épinglé en automne placé, régulier refusé/admis/épinglé dans l'été, stage aussi réussi ni placé ni erreur) ; générateur `proptest` étendu (été optionnel, stage, ouverture) — l'ensemble retourné égale toujours la force brute naïve qui réimplémente la règle été indépendamment
+- [x] Intake : `horizon_sessions(start, study_sessions)` remplace `alternating_sessions` — un été inséré après chaque hiver, le dernier inclus ; le paramètre compte les **sessions d'études** seulement — plus `summer_indices` pour l'UI ; `course_list` = scolarité préparatoire (liste entière) → obligatoires → stage obligatoire (premier sigle de « Stages ») → electives → réussis ; `PlacementIntake.stages` = intersection de la règle « Stages » avec les cours **sélectionnés** (un stage en `set_aside` n'atteint jamais le solveur)
+    - Verify : ✅ tests en ligne (horizon avec départ automne/hiver/été, indices d'étés, ordre de la liste, stage écarté absent de `stages`, elective optionnel inclus)
+- [x] Vérificateur : une règle-liste sans contrainte est comptée (`counted`/`candidates`, `split_selection` partagé avec les règles évaluées) mais reste `reported` — aucun verdict inventé
+    - Verify : ✅ les 15 fixtures `rules/` (dont la nouvelle `preparatory-rule-partially-counted`) reproduites, `verify_rules.py` à parité bit-à-bit
+- [x] Fixtures : trois profils d'étudiants sur la chaîne réelle `MAT-0150 → MAT-0260 → MAT-1900` (scolarité préparatoire faite en entier / en partie / à faire au complet — rien de placé / le reste placé avant ses dépendants / tout placé) ; famille stages/étés en synthétique `TST-` (stage non épinglé en été, épinglé en automne, été ouvert/fermé pour un cours régulier) ; les 14 fixtures `rules/` régénérées (programmes ré-embarqués avec la règle préparatoire) et la dérive `last_offered` de `winter-start-inverts-projects` résorbée (solution inchangée)
+    - Verify : ✅ `place.py check` 21/21, `verify_rules.py check` 15/15, `check_anchor.py` 18/18, `extract.py --verify` 0 problème
+
+---
+
 ## Encore à planifier (à faire remonter, pas à inventer)
 
 Ces points sont des **décisions ou des données manquantes**, pas des tâches d'implémentation ; les trancher avec l'utilisateur et les consigner en ADR avant de coder ce qui en dépend.
 Tranchés le 2026-07-30 (avec Antoine, ADR individuels) : le budget de B (double borne — `2026-07-budget-de-b-en-double-borne`), le préalable hors liste (non bloquant, remonté — `2026-07-prealable-inconnu-non-bloquant-remonte`, restreint le 2026-07-31 aux codes 0xxx — `2026-07-presomption-limitee-au-preuniversitaire`), la pondération des crédits en intervalle (borne basse en planification — `2026-07-credits-range-borne-basse-en-planification`) et la somme au-dessus du `max` (erreur typée — `2026-07-somme-au-dessus-du-max-en-erreur-typee`).
+Tranchés le 2026-08-02 (avec Antoine) : les quatre décisions étés/stages/scolarité préparatoire de la Phase 5.
 
 - **Plafond de crédits par session** : dur (17 ?) ou cible molle — le chiffre n'a aucune source documentée, à confirmer avec le directeur (la mécanique est en place : le plafond est une entrée, `--credit-cap` au harnais).
 - **Dédoublonnage des solutions de B** : la mesure du 2026-07-30 (Phase 3) montre que l'ensemble complet du bac GEX dépasse 500 000 solutions — variantes d'électifs et de cours lâches interchangeables ; forme du dédoublonnage (classes d'équivalence ?) ou plafond UI bas à trancher avant le jalon 9.
@@ -121,3 +137,5 @@ Tranchés le 2026-07-30 (avec Antoine, ADR individuels) : le budget de B (double
 - **Concomitance par arête** (jetons ombrés des organigrammes PDF) : `PrereqTree` ne la porte pas — l'astérisque du site ne survit que dans `prerequisites.raw` ; seule l'option globale est fixturée, l'encoder est une décision scraper/modèle de données.
 - **Forme minimale du rapport de conflit** de A — tranchée au niveau cours : marquage optionnel `valid: false` par cours et par alternative (sémantique swap), contrat et cas de test figés dans `tests/fixtures/test_cases/schedules/` (ADR `2026-07-contrat-horaire-hebdomadaire-vers-ui`) ; reste ouvert le raffinement « ensemble minimal » Max-CSP pour le cas infaisable (le cas « paires compatibles, ensemble infaisable » est couvert par `triple-infeasible-pairwise-ok.json`).
 - **Arbitrage de la référence B** : les fixtures sont reproduites à l'identique par l'implémentation Rust — les scripts `tests/reference/solveur_b/` peuvent être supprimés après confirmation par Antoine (ADR `2026-07-reference-b-versionnee-jusqua-larbitrage` : « quand l'implémentation Rust reproduit les fixtures »).
+- **`credits_in_addition` inerte** : écrit par le scraper sur la règle « Stages », lu nulle part — le décompte « crédits vers le diplôme » (jalons 7–9) devra soustraire ces crédits *en sus* avant de comparer à `credits_required`.
+- **Surfacer `Placement.blocked` à l'UI (jalon 9)** : le stage obligatoire auto-inclus par l'intake porte un préalable `program_credits` (24 pour GEX-1580) — sur un petit placement il bloque légitimement tout l'ensemble ; l'UI doit nommer le coupable (`StageWithoutSummer` inclus) et offrir de retirer le stage ou de l'épingler.

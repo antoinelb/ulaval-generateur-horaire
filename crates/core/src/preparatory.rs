@@ -13,7 +13,8 @@ use crate::program::{Rule, RuleCourses};
 // course codes and tree nodes alike
 const MAX_VISITED: usize = 10_000;
 
-const RULE_TITLE: &str = "Scolarité préparatoire";
+// public so the intake finds the rule back by its title
+pub const PREPARATORY_RULE_TITLE: &str = "Scolarité préparatoire";
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum PreparatoryError {
@@ -100,7 +101,7 @@ fn preparatory_from(found: BTreeSet<String>) -> Option<Rule> {
         return None;
     }
     Some(Rule {
-        title: RULE_TITLE.to_string(),
+        title: PREPARATORY_RULE_TITLE.to_string(),
         constraint: None,
         // the BTreeSet already sorted and deduplicated the codes
         courses: RuleCourses::List {

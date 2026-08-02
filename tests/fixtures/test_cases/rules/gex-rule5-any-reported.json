@@ -157,6 +157,19 @@
           "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GEX-1580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GEX-2590, GEX-2591 et GEX-3590. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
         ],
         "credits_in_addition": true
+      },
+      {
+        "title": "Scolarité préparatoire",
+        "courses": [
+          "BIO-0150",
+          "CHM-0150",
+          "CHM-0160",
+          "CHM-0170",
+          "MAT-0130",
+          "MAT-0150",
+          "MAT-0260",
+          "PHY-0150"
+        ]
       }
     ],
     "concentrations": [],
@@ -339,6 +352,22 @@
           "GEX-2590",
           "GEX-2591",
           "GEX-3590"
+        ]
+      },
+      {
+        "scope": "program",
+        "title": "Scolarité préparatoire",
+        "status": "reported",
+        "counted": [],
+        "candidates": [
+          "BIO-0150",
+          "CHM-0150",
+          "CHM-0160",
+          "CHM-0170",
+          "MAT-0130",
+          "MAT-0150",
+          "MAT-0260",
+          "PHY-0150"
         ]
       }
     ],

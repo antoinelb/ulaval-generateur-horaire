@@ -1,7 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::course::{Course, Season};
-use crate::program::Program;
+use crate::preparatory::PREPARATORY_RULE_TITLE;
+use crate::program::{Program, RuleCourses, STAGES_RULE_TITLE};
 use crate::weekly::resolve_offering;
 
 // The intake seam of every consumer of the solvers (the UI, any future
@@ -51,6 +52,12 @@ pub struct PlacementIntake {
     // program-derived codes with no snapshot data, to surface loudly (ADR
     // `2026-07-cours-sans-offre-ecarte-par-le-harnais`)
     pub set_aside: Vec<String>,
+    // the selected courses that belong to the program's « Stages » rule —
+    // the auto-included mandatory stage plus any optional stage typed as
+    // an elective; the caller hands them to `PlacementRequest.stages` so
+    // they land in an été unless pinned (ADR
+    // `2026-08-stage-place-en-ete-sauf-epinglage`)
+    pub stages: BTreeSet<String>,
 }
 
 // The weekly pipeline shared by every harness: session parsed, codes
@@ -88,12 +95,26 @@ pub fn placement_intake(
         .collect();
     let (courses, set_aside) = select_known(&list, all, &explicit)?;
     let pinned = parse_pins(pins)?;
+    // intersected with the *selected* courses, not the whole list: a stage
+    // set aside for lack of snapshot data must not reach the solver, which
+    // requires a Course for every declared stage
+    let stage_codes: BTreeSet<&str> =
+        listed_rule_courses(program, STAGES_RULE_TITLE)
+            .iter()
+            .map(String::as_str)
+            .collect();
+    let stages = courses
+        .iter()
+        .map(|course| course.code.clone())
+        .filter(|code| stage_codes.contains(code.as_str()))
+        .collect();
     Ok(PlacementIntake {
         courses,
         passed: passed_codes.into_iter().collect(),
         pinned,
         selection: list.into_iter().collect(),
         set_aside,
+        stages,
     })
 }
 
@@ -115,10 +136,14 @@ pub fn parse_session(session: &str) -> Result<(Season, u16), IntakeError> {
     Ok((season, year))
 }
 
-// real cheminements alternate automne/hiver; a summer start flows into
-// fall — été is never generated automatically
-pub fn alternating_sessions(start: Season, count: usize) -> Vec<Season> {
-    (0..count)
+// A/H study sessions alternating from `start` — a summer start counts as a
+// study session and flows into fall — with an été inserted after each
+// hiver, the last included, so a stage always finds an été to land in.
+// `study_sessions` counts only the alternation; the inserted étés come on
+// top and stay closed to regular courses unless the caller opens them (ADR
+// `2026-08-horizon-avec-ete-apres-chaque-hiver`)
+pub fn horizon_sessions(start: Season, study_sessions: usize) -> Vec<Season> {
+    (0..study_sessions)
         .scan(start, |season, _| {
             let current = *season;
             *season = match current {
@@ -127,6 +152,24 @@ pub fn alternating_sessions(start: Season, count: usize) -> Vec<Season> {
             };
             Some(current)
         })
+        .flat_map(|season| {
+            if season == Season::Winter {
+                vec![Season::Winter, Season::Summer]
+            } else {
+                vec![season]
+            }
+        })
+        .collect()
+}
+
+// 1-based indices of the Summer sessions — the shape `open_summers` and
+// `pinned` speak
+pub fn summer_indices(sessions: &[Season]) -> BTreeSet<usize> {
+    sessions
+        .iter()
+        .enumerate()
+        .filter(|&(_, &season)| season == Season::Summer)
+        .map(|(index, _)| index + 1)
         .collect()
 }
 
@@ -165,23 +208,53 @@ pub fn parse_pins(
         .collect()
 }
 
-// the program's mandatory courses first (reference order), then the
-// chosen electives, then the passed courses — deduplicated, so a passed
-// mandatory course appears once and carries its Course object
+// The préparatoire courses first — they gate the rest, and the passed set
+// naturally excludes the ones already done — then the program's mandatory
+// courses (reference order), the mandatory stage (the « Stages » rule
+// lists it first, ADR `2026-08-stage-obligatoire-en-prose-promu-en-regle`),
+// the chosen electives and the passed courses — deduplicated, so a passed
+// mandatory course appears once and carries its Course object (ADR
+// `2026-08-stage-obligatoire-et-scolarite-preparatoire-dans-lintake`).
 pub fn course_list(
     program: Option<&Program>,
     electives: &[String],
     passed: &[String],
 ) -> Vec<String> {
     let mut seen = BTreeSet::new();
-    program
-        .map(|program| program.mandatory.clone())
-        .unwrap_or_default()
-        .into_iter()
+    listed_rule_courses(program, PREPARATORY_RULE_TITLE)
+        .iter()
+        .cloned()
+        .chain(
+            program
+                .map(|program| program.mandatory.clone())
+                .unwrap_or_default(),
+        )
+        .chain(
+            listed_rule_courses(program, STAGES_RULE_TITLE)
+                .first()
+                .cloned(),
+        )
         .chain(electives.iter().cloned())
         .chain(passed.iter().cloned())
         .filter(|code| seen.insert(code.clone()))
         .collect()
+}
+
+// the courses of the program rule bearing `title`, when it is a plain list
+fn listed_rule_courses<'a>(
+    program: Option<&'a Program>,
+    title: &str,
+) -> &'a [String] {
+    program
+        .map(|program| program.rules.as_slice())
+        .unwrap_or_default()
+        .iter()
+        .find(|rule| rule.title == title)
+        .and_then(|rule| match &rule.courses {
+            RuleCourses::List { courses } => Some(courses.as_slice()),
+            _ => None,
+        })
+        .unwrap_or_default()
 }
 
 // One Course per requested code, cloned whole — the snapshot already
@@ -320,23 +393,48 @@ mod tests {
         }
     }
 
-    // --- alternating_sessions ---
+    // --- horizon_sessions ---
 
     #[test]
-    fn sessions_alternate_automne_hiver_from_the_start() {
+    fn the_horizon_inserts_an_ete_after_each_hiver_the_last_included() {
         assert_eq!(
-            alternating_sessions(Season::Fall, 4),
-            [Season::Fall, Season::Winter, Season::Fall, Season::Winter]
+            horizon_sessions(Season::Fall, 4),
+            [
+                Season::Fall,
+                Season::Winter,
+                Season::Summer,
+                Season::Fall,
+                Season::Winter,
+                Season::Summer
+            ]
         );
         assert_eq!(
-            alternating_sessions(Season::Winter, 3),
-            [Season::Winter, Season::Fall, Season::Winter]
+            horizon_sessions(Season::Winter, 3),
+            [
+                Season::Winter,
+                Season::Summer,
+                Season::Fall,
+                Season::Winter,
+                Season::Summer
+            ]
         );
-        // été is never generated: a summer start flows into fall
+    }
+
+    #[test]
+    fn a_summer_start_counts_as_a_study_session_and_flows_into_fall() {
         assert_eq!(
-            alternating_sessions(Season::Summer, 3),
-            [Season::Summer, Season::Fall, Season::Winter]
+            horizon_sessions(Season::Summer, 3),
+            [Season::Summer, Season::Fall, Season::Winter, Season::Summer]
         );
+    }
+
+    #[test]
+    fn summer_indices_name_the_etes_one_based() {
+        assert_eq!(
+            summer_indices(&horizon_sessions(Season::Fall, 4)),
+            BTreeSet::from([3, 6])
+        );
+        assert_eq!(summer_indices(&[Season::Fall]), BTreeSet::new());
     }
 
     // --- normalize_codes ---
@@ -394,6 +492,50 @@ mod tests {
             &["P-1".to_string(), "E-1".to_string()],
         );
         assert_eq!(list, ["M-1", "M-2", "E-1", "P-1"]);
+    }
+
+    #[test]
+    fn the_course_list_puts_preparatory_first_and_adds_the_mandatory_stage() {
+        // the préparatoire rule enters whole; only the first Stages sigle
+        // (the mandatory stage) does — optional stages stay elective
+        let program: Program = serde_json::from_str(
+            r#"{"code":"p","slug":"p","semester":"A26","title":"P","cycle":1,
+                "credits_required":120,"mandatory":["M-1"],
+                "rules":[
+                  {"title":"Stages",
+                   "constraint":{"type":"course","min":1,"max":8},
+                   "courses":["S-1","S-2","S-3"],
+                   "credits_in_addition":true},
+                  {"title":"Scolarité préparatoire",
+                   "courses":["Z-0130","Z-0150"]}],
+                "concentrations":[],"profiles":[]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let list = course_list(
+            Some(&program),
+            &["E-1".to_string()],
+            &["Z-0130".to_string()],
+        );
+        assert_eq!(list, ["Z-0130", "Z-0150", "M-1", "S-1", "E-1"]);
+    }
+
+    #[test]
+    fn a_titled_rule_that_is_not_a_list_contributes_no_courses() {
+        // a « Stages » rule whose courses drifted to a keyword shape must
+        // not feed the list — non-list shapes are surfaced by the coverage
+        // report, never guessed at here
+        let program: Program = serde_json::from_str(
+            r#"{"code":"p","slug":"p","semester":"A26","title":"P","cycle":1,
+                "credits_required":120,"mandatory":["M-1"],
+                "rules":[
+                  {"title":"Stages",
+                   "constraint":{"type":"course","min":1,"max":8},
+                   "courses":"negotiated",
+                   "raw":"convenus avec la direction"}],
+                "concentrations":[],"profiles":[]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        assert_eq!(course_list(Some(&program), &[], &[]), ["M-1"]);
     }
 
     // --- selection and equivalents ---
@@ -618,6 +760,42 @@ mod tests {
         assert_eq!(intake.pinned["GCI-1000"], 1);
         assert!(intake.selection.contains("GHOST-999"), "whole list");
         assert!(intake.selection.contains("GEX-1000"), "passed included");
+        assert!(intake.stages.is_empty(), "no Stages rule, no stages");
+    }
+
+    #[test]
+    fn the_placement_pipeline_flags_selected_stages_only() {
+        // GEX-1580 (mandatory stage) has no snapshot data: set aside, so it
+        // must not reach the solver's stages either; the optional stage
+        // typed as an elective is selected and flagged
+        let program: Program = serde_json::from_str(
+            r#"{"code":"p","slug":"p","semester":"A26","title":"P","cycle":1,
+                "credits_required":120,"mandatory":[],
+                "rules":[
+                  {"title":"Stages",
+                   "constraint":{"type":"course","min":1,"max":8},
+                   "courses":["GEX-1580","GEX-2590"],
+                   "credits_in_addition":true}],
+                "concentrations":[],"profiles":[]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let all = [monday("GEX-2590", "1")];
+
+        let intake = placement_intake(
+            Some(&program),
+            &["gex-2590".to_string()],
+            &[],
+            &[],
+            &all,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+
+        assert_eq!(intake.set_aside, ["GEX-1580"]);
+        assert_eq!(
+            intake.stages,
+            BTreeSet::from(["GEX-2590".to_string()]),
+            "only stages with a Course reach the solver"
+        );
     }
 
     #[test]

@@ -1,0 +1,91 @@
+{
+  "sessions": [
+    "fall",
+    "winter",
+    "summer"
+  ],
+  "credit_cap": 12,
+  "pinned": {
+    "TST-2580": 1
+  },
+  "stages": [
+    "TST-2580"
+  ],
+  "courses": [
+    {
+      "code": "TST-2580",
+      "title": "Cours de test 2580",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "90021",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "90021",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "summer": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "90021",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "complete": true,
+    "solutions": [
+      {
+        "TST-2580": 1
+      }
+    ]
+  }
+}

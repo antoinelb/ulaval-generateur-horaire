@@ -1,0 +1,708 @@
+{
+  "sessions": [
+    "fall",
+    "winter",
+    "fall"
+  ],
+  "credit_cap": 12,
+  "courses": [
+    {
+      "code": "MAT-0130",
+      "title": "Algèbre vectorielle",
+      "credits": 3,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "85821",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85822",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85823",
+                "section": "C",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85824",
+                "section": "D",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85825",
+                "section": "E",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85826",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "85827",
+                "section": "Z4",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "15845",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "15846",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "15847",
+                "section": "C",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "15:30",
+                    "end": "18:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "15848",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "15849",
+                "section": "Z4",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        },
+        "summer": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "54700",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-0150",
+      "title": "Calcul différentiel",
+      "credits": 4,
+      "cycle": 0,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "85829",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85830",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85831",
+                "section": "C",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85832",
+                "section": "D",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "17:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "15:30",
+                    "end": "17:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85834",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ],
+            [
+              {
+                "nrc": "85835",
+                "section": "Z4",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "15850",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "15851",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "15852",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        },
+        "summer": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "54702",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-0260",
+      "title": "Calcul intégral",
+      "credits": 4,
+      "cycle": 0,
+      "prerequisites": {
+        "raw": "MAT-0150",
+        "tree": "MAT-0150"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "85837",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85838",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85840",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "15855",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "15856",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "20:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "15857",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        },
+        "summer": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "54704",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "MAT-1900",
+      "title": "Mathématiques pour l'ingénierie I",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "MAT-0130 ET MAT-0150 ET MAT-0260",
+        "tree": {
+          "all": [
+            "MAT-0130",
+            "MAT-0150",
+            "MAT-0260"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "85848",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85849",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "10:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85850",
+                "section": "C",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "10:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85851",
+                "section": "D",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "16:30",
+                    "end": "18:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "16:30",
+                    "end": "17:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "85852",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "19:45"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "19:45"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "15865",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "15:30",
+                    "end": "17:20"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "13:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "15866",
+                "section": "B",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "15867",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "19:45"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "18:30",
+                    "end": "19:45"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "summer": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "51289",
+                "section": "Z3",
+                "mode": "remote",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "18:30",
+                    "end": "20:50"
+                  },
+                  {
+                    "day": "thursday",
+                    "start": "18:30",
+                    "end": "20:50"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "complete": true,
+    "solutions": [
+      {
+        "MAT-0130": 1,
+        "MAT-0150": 1,
+        "MAT-0260": 2,
+        "MAT-1900": 3
+      },
+      {
+        "MAT-0130": 2,
+        "MAT-0150": 1,
+        "MAT-0260": 2,
+        "MAT-1900": 3
+      }
+    ]
+  }
+}

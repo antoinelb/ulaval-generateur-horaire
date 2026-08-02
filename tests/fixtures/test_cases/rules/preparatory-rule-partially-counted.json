@@ -210,7 +210,8 @@
     }
   },
   "selection": [
-    "MED-1100"
+    "CHM-0150",
+    "MAT-0150"
   ],
   "expected": {
     "mandatory": [
@@ -259,13 +260,15 @@
       {
         "scope": "program",
         "title": "Règle 1",
-        "status": "satisfied",
-        "counted": [
-          "MED-1100"
-        ],
+        "status": "incomplete",
+        "counted": [],
+        "missing": {
+          "count": 1
+        },
         "candidates": [
           "GMN-2901",
-          "GMN-2902"
+          "GMN-2902",
+          "MED-1100"
         ]
       },
       {
@@ -355,14 +358,15 @@
         "scope": "program",
         "title": "Scolarité préparatoire",
         "status": "reported",
-        "counted": [],
+        "counted": [
+          "CHM-0150",
+          "MAT-0150"
+        ],
         "candidates": [
           "BIO-0150",
-          "CHM-0150",
           "CHM-0160",
           "CHM-0170",
           "MAT-0130",
-          "MAT-0150",
           "MAT-0260",
           "PHY-0150"
         ]

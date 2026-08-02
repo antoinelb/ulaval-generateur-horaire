@@ -26,6 +26,14 @@ pub struct PlacementRequest<'a> {
     pub courses: &'a [Course],
     pub passed: &'a BTreeSet<String>,
     pub pinned: &'a BTreeMap<String, usize>,
+    // codes whose domain is restricted to the Summer sessions of the
+    // horizon — unless pinned: a pin is an explicit act and lifts the
+    // restriction (ADR `2026-08-stage-place-en-ete-sauf-epinglage`)
+    pub stages: &'a BTreeSet<String>,
+    // 1-based indices (the `pinned` convention) of the étés open to
+    // regular courses; an été absent from the set accepts only stages and
+    // pinned courses (ADR `2026-08-stage-place-en-ete-sauf-epinglage`)
+    pub open_summers: &'a BTreeSet<usize>,
     pub seed: &'a BTreeMap<String, usize>,
     // the double bound (ADR `2026-07-budget-de-b-en-double-borne`): work
     // (expanded partial assignments) and memory (returned solutions)
@@ -63,6 +71,10 @@ pub enum BlockedReason {
     // university code, the course as its own prerequisite, or a credits
     // threshold above every credit in sight
     UnsatisfiablePrerequisites,
+    // an unpinned stage found no été to land in — the horizon has no
+    // summer session or none offers the stage; pinning it lifts the
+    // restriction (ADR `2026-08-stage-place-en-ete-sauf-epinglage`)
+    StageWithoutSummer,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -103,6 +115,14 @@ pub enum PlacementError {
         session: usize,
         sessions: usize,
     },
+    #[error("{code} is declared a stage but has no Course in the request")]
+    StageWithoutCourse { code: String },
+    #[error("open summer {session} is outside 1..={sessions}")]
+    OpenSummerOutOfRange { session: usize, sessions: usize },
+    #[error(
+        "session {session} is open as an été but is a {season:?} session"
+    )]
+    OpenSummerNotSummer { session: usize, season: Season },
     #[error("the prerequisite tree of {code} exceeds {MAX_TREE_NODES} nodes")]
     PrerequisiteTreeTooLarge { code: String },
     #[error(
@@ -260,6 +280,34 @@ fn validate(request: &PlacementRequest) -> Result<(), PlacementError> {
             sessions: request.sessions.len(),
         });
     }
+    // a stage that is also passed is allowed — it never becomes a candidate
+    if let Some(code) = request
+        .stages
+        .iter()
+        .find(|code| !codes.contains(code.as_str()))
+    {
+        return Err(PlacementError::StageWithoutCourse { code: code.clone() });
+    }
+    if let Some(&session) = request
+        .open_summers
+        .iter()
+        .find(|&&session| session < 1 || session > request.sessions.len())
+    {
+        return Err(PlacementError::OpenSummerOutOfRange {
+            session,
+            sessions: request.sessions.len(),
+        });
+    }
+    if let Some(&session) = request
+        .open_summers
+        .iter()
+        .find(|&&session| request.sessions[session - 1] != Season::Summer)
+    {
+        return Err(PlacementError::OpenSummerNotSummer {
+            session,
+            season: request.sessions[session - 1],
+        });
+    }
     Ok(())
 }
 
@@ -344,7 +392,8 @@ fn flatten(code: &str, tree: &PrereqTree) -> Result<FlatTree, PlacementError> {
 // neighbours by distance (earlier wins ties) — so the first solution
 // resembles the reference cheminement; without a seed, earliest offered
 // first. A pin reduces the domain to a singleton; a season not offering
-// the course never enters it.
+// the course never enters it; the summer rules apply to unpinned courses
+// only, so a pin still intersects with the offer.
 fn value_ordered_domain(
     course: &Course,
     request: &PlacementRequest,
@@ -359,11 +408,31 @@ fn value_ordered_domain(
                 .get(&course.code)
                 .is_none_or(|&pin| pin == session)
         })
+        .filter(|&session| {
+            request.pinned.contains_key(&course.code)
+                || summer_admits(&course.code, session, request)
+        })
         .collect();
     if let Some(&anchor) = request.seed.get(&course.code) {
         domain.sort_by_key(|&session| (session.abs_diff(anchor), session));
     }
     domain
+}
+
+// the summer rules for an unpinned course: a stage goes to the étés only;
+// a regular course avoids them unless the session was explicitly opened
+// (ADR `2026-08-stage-place-en-ete-sauf-epinglage`)
+fn summer_admits(
+    code: &str,
+    session: usize,
+    request: &PlacementRequest,
+) -> bool {
+    let summer = request.sessions[session - 1] == Season::Summer;
+    if request.stages.contains(code) {
+        summer
+    } else {
+        !summer || request.open_summers.contains(&session)
+    }
 }
 
 // Which trees `finalize` must re-evaluate (the flag is static: a leaf's
@@ -420,9 +489,18 @@ fn blocked_candidates(ctx: &SearchCtx) -> Vec<Blocked> {
         .iter()
         .filter_map(|candidate| {
             if candidate.domain.is_empty() {
+                // an unpinned stage names the summer restriction as the
+                // culprit — pinning it is the way out the student can act on
+                let stage_starved =
+                    ctx.request.stages.contains(&candidate.code)
+                        && !ctx.request.pinned.contains_key(&candidate.code);
                 return Some(Blocked {
                     code: candidate.code.clone(),
-                    reason: BlockedReason::EmptyDomain,
+                    reason: if stage_starved {
+                        BlockedReason::StageWithoutSummer
+                    } else {
+                        BlockedReason::EmptyDomain
+                    },
                 });
             }
             candidate
@@ -878,13 +956,38 @@ mod tests {
         format!(r#"{{"raw":"source","tree":{tree}}}"#)
     }
 
+    // one in-person option on `day`, offered in fall, winter and summer
+    fn all_seasons(code: &str, day: &str) -> Course {
+        let offering = format!(
+            r#"{{"last_offered":2026,
+                 "options":[[{{"nrc":"1","section":"A","mode":"in-person",
+                "slots":[{{"day":"{day}","start":"08:30",
+                           "end":"11:20"}}]}}]]}}"#
+        );
+        serde_json::from_str(&format!(
+            r#"{{"code":"{code}","title":"T","credits":3,"cycle":1,
+                 "prerequisites":null,"equivalents":[],
+                 "seasons":{{"fall":{offering},"winter":{offering},
+                             "summer":{offering}}}}}"#
+        ))
+        .unwrap_or_else(|e| panic!("course literal: {e}"))
+    }
+
     const FALL_WINTER: [Season; 2] = [Season::Fall, Season::Winter];
+    const FALL_WINTER_SUMMER: [Season; 3] =
+        [Season::Fall, Season::Winter, Season::Summer];
+
+    fn stages(codes: &[&str]) -> BTreeSet<String> {
+        codes.iter().map(|code| code.to_string()).collect()
+    }
 
     struct Inputs {
         sessions: Vec<Season>,
         courses: Vec<Course>,
         passed: BTreeSet<String>,
         pinned: BTreeMap<String, usize>,
+        stages: BTreeSet<String>,
+        open_summers: BTreeSet<usize>,
         seed: BTreeMap<String, usize>,
         credit_cap: u32,
         concomitant: bool,
@@ -899,6 +1002,8 @@ mod tests {
                 courses,
                 passed: BTreeSet::new(),
                 pinned: BTreeMap::new(),
+                stages: BTreeSet::new(),
+                open_summers: BTreeSet::new(),
                 seed: BTreeMap::new(),
                 credit_cap: 30,
                 concomitant: false,
@@ -915,6 +1020,8 @@ mod tests {
                 courses: &self.courses,
                 passed: &self.passed,
                 pinned: &self.pinned,
+                stages: &self.stages,
+                open_summers: &self.open_summers,
                 seed: &self.seed,
                 max_nodes: self.max_nodes,
                 max_solutions: self.max_solutions,
@@ -1029,6 +1136,47 @@ mod tests {
     }
 
     #[test]
+    fn a_stage_code_without_a_course_is_an_error() {
+        let mut inputs =
+            Inputs::new(&FALL_WINTER, vec![anytime("A-1", "monday")]);
+        inputs.stages = stages(&["Z-9"]);
+        assert_eq!(
+            inputs.place(),
+            Err(PlacementError::StageWithoutCourse {
+                code: "Z-9".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn an_open_summer_outside_the_sessions_is_an_error() {
+        let mut inputs =
+            Inputs::new(&FALL_WINTER, vec![anytime("A-1", "monday")]);
+        inputs.open_summers = BTreeSet::from([3]);
+        assert_eq!(
+            inputs.place(),
+            Err(PlacementError::OpenSummerOutOfRange {
+                session: 3,
+                sessions: 2,
+            })
+        );
+    }
+
+    #[test]
+    fn an_open_summer_on_a_study_season_is_an_error() {
+        let mut inputs =
+            Inputs::new(&FALL_WINTER, vec![anytime("A-1", "monday")]);
+        inputs.open_summers = BTreeSet::from([2]);
+        assert_eq!(
+            inputs.place(),
+            Err(PlacementError::OpenSummerNotSummer {
+                session: 2,
+                season: Season::Winter,
+            })
+        );
+    }
+
+    #[test]
     fn every_placement_error_names_its_subject() {
         let code = || "A-1".to_string();
         for error in [
@@ -1040,6 +1188,7 @@ mod tests {
                 session: 3,
                 sessions: 2,
             },
+            PlacementError::StageWithoutCourse { code: code() },
             PlacementError::PrerequisiteTreeTooLarge { code: code() },
         ] {
             assert!(error.to_string().contains("A-1"), "{error}");
@@ -1047,6 +1196,16 @@ mod tests {
         assert!(PlacementError::EmptyRequest.to_string().contains("needs"));
         let too_many = PlacementError::TooManyCourses { count: 129 };
         assert!(too_many.to_string().contains("129"), "{too_many}");
+        let out_of_range = PlacementError::OpenSummerOutOfRange {
+            session: 3,
+            sessions: 2,
+        };
+        assert!(out_of_range.to_string().contains("3"), "{out_of_range}");
+        let not_summer = PlacementError::OpenSummerNotSummer {
+            session: 2,
+            season: Season::Winter,
+        };
+        assert!(not_summer.to_string().contains("2"), "{not_summer}");
     }
 
     #[test]
@@ -1120,6 +1279,114 @@ mod tests {
                 code: "A-1".to_string(),
                 reason: BlockedReason::EmptyDomain,
             }]
+        );
+    }
+
+    // --- summer rules: stages to the étés, regular courses out of them ---
+
+    #[test]
+    fn an_unpinned_stage_lands_only_in_summer() {
+        let mut inputs = Inputs::new(
+            &FALL_WINTER_SUMMER,
+            vec![all_seasons("S-1580", "monday")],
+        );
+        inputs.stages = stages(&["S-1580"]);
+        let placement = inputs.solve();
+        assert_eq!(placement.completion, Completion::Complete);
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("S-1580", 3)])]
+        );
+    }
+
+    #[test]
+    fn a_pinned_stage_escapes_the_summer_restriction() {
+        let mut inputs = Inputs::new(
+            &FALL_WINTER_SUMMER,
+            vec![all_seasons("S-1580", "monday")],
+        );
+        inputs.stages = stages(&["S-1580"]);
+        inputs.pinned = BTreeMap::from([("S-1580".to_string(), 1)]);
+        let placement = inputs.solve();
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("S-1580", 1)])]
+        );
+    }
+
+    #[test]
+    fn a_stage_without_a_summer_session_is_blocked_as_such() {
+        let mut inputs =
+            Inputs::new(&FALL_WINTER, vec![all_seasons("S-1580", "monday")]);
+        inputs.stages = stages(&["S-1580"]);
+        let placement = inputs.solve();
+        assert!(placement.solutions.is_empty());
+        assert_eq!(
+            placement.blocked,
+            vec![Blocked {
+                code: "S-1580".to_string(),
+                reason: BlockedReason::StageWithoutSummer,
+            }]
+        );
+    }
+
+    #[test]
+    fn a_regular_course_avoids_a_closed_summer() {
+        let placement = Inputs::new(
+            &FALL_WINTER_SUMMER,
+            vec![all_seasons("A-1", "monday")],
+        )
+        .solve();
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("A-1", 1)]), pairs(&[("A-1", 2)])]
+        );
+    }
+
+    #[test]
+    fn an_open_summer_admits_a_regular_course() {
+        let mut inputs = Inputs::new(
+            &FALL_WINTER_SUMMER,
+            vec![all_seasons("A-1", "monday")],
+        );
+        inputs.open_summers = BTreeSet::from([3]);
+        let placement = inputs.solve();
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![
+                pairs(&[("A-1", 1)]),
+                pairs(&[("A-1", 2)]),
+                pairs(&[("A-1", 3)])
+            ]
+        );
+    }
+
+    #[test]
+    fn a_pinned_regular_course_enters_a_closed_summer() {
+        // pinning is as explicit an act as opening the été: the same
+        // exception in both directions
+        let mut inputs = Inputs::new(
+            &FALL_WINTER_SUMMER,
+            vec![all_seasons("A-1", "monday")],
+        );
+        inputs.pinned = BTreeMap::from([("A-1".to_string(), 3)]);
+        let placement = inputs.solve();
+        assert_eq!(sorted_placements(&placement), vec![pairs(&[("A-1", 3)])]);
+    }
+
+    #[test]
+    fn a_passed_stage_is_neither_placed_nor_an_error() {
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![all_seasons("S-1580", "monday"), anytime("A-1", "tuesday")],
+        );
+        inputs.stages = stages(&["S-1580"]);
+        inputs.passed = passed(&["S-1580"]);
+        let placement = inputs.solve();
+        assert_eq!(placement.completion, Completion::Complete);
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("A-1", 1)]), pairs(&[("A-1", 2)])]
         );
     }
 
@@ -1670,13 +1937,19 @@ mod tests {
 
     #[derive(Debug, Clone)]
     struct Generated {
+        // study sessions, plus one trailing Summer when `summer` is set
         sessions: Vec<Season>,
+        summer: bool,
         specs: Vec<Spec>,
         credits: Vec<u32>,
-        offered: Vec<(bool, bool)>,
+        offered: Vec<(bool, bool, bool)>,
         days: Vec<usize>,
         passed: Vec<bool>,
         pin: Option<(usize, usize)>,
+        // at most one stage — enough to cross the summer restriction with
+        // every other rule (pin, passed, offer, cap)
+        stage: Option<usize>,
+        open_summer: bool,
         credit_cap: u32,
         concomitant: bool,
     }
@@ -1701,10 +1974,13 @@ mod tests {
                     n_courses..=n_courses,
                 ),
                 proptest::collection::vec(
-                    (1u32..=3, 0u8..4, 0usize..3, proptest::bool::ANY),
+                    (1u32..=3, 0u8..8, 0usize..3, proptest::bool::ANY),
                     n_courses..=n_courses,
                 ),
                 proptest::option::of((0usize..n_courses, 1usize..=n_sessions)),
+                proptest::bool::ANY,
+                proptest::option::of(0usize..n_courses),
+                proptest::bool::ANY,
                 3u32..=9,
                 proptest::bool::ANY,
             )
@@ -1714,6 +1990,9 @@ mod tests {
                         prereqs,
                         shapes,
                         pin,
+                        summer,
+                        stage,
+                        open_summer,
                         cap,
                         concomitant,
                     )| {
@@ -1724,17 +2003,22 @@ mod tests {
                                 spec(i, n_courses, kind, other, credits)
                             })
                             .collect();
+                        let mut sessions: Vec<Season> = winters
+                            .iter()
+                            .map(|&winter| {
+                                if winter {
+                                    Season::Winter
+                                } else {
+                                    Season::Fall
+                                }
+                            })
+                            .collect();
+                        if summer {
+                            sessions.push(Season::Summer);
+                        }
                         Generated {
-                            sessions: winters
-                                .iter()
-                                .map(|&winter| {
-                                    if winter {
-                                        Season::Winter
-                                    } else {
-                                        Season::Fall
-                                    }
-                                })
-                                .collect(),
+                            sessions,
+                            summer,
                             specs,
                             credits: shapes
                                 .iter()
@@ -1744,7 +2028,11 @@ mod tests {
                                 .iter()
                                 .map(|&(_, mask, ..)| {
                                     // 0 = nowhere: the infeasible case
-                                    (mask & 1 != 0, mask & 2 != 0)
+                                    (
+                                        mask & 1 != 0,
+                                        mask & 2 != 0,
+                                        mask & 4 != 0,
+                                    )
                                 })
                                 .collect(),
                             days: shapes
@@ -1756,6 +2044,8 @@ mod tests {
                                 .map(|&(.., passed)| passed)
                                 .collect(),
                             pin,
+                            stage,
+                            open_summer,
                             credit_cap: cap,
                             concomitant,
                         }
@@ -1818,6 +2108,9 @@ mod tests {
                 if generated.offered[i].1 {
                     seasons.insert(Season::Winter, offering.clone());
                 }
+                if generated.offered[i].2 {
+                    seasons.insert(Season::Summer, offering.clone());
+                }
                 Course {
                     code: code_of(i),
                     title: "T".to_string(),
@@ -1870,6 +2163,12 @@ mod tests {
             if !generated.passed[index] {
                 inputs.pinned = BTreeMap::from([(code_of(index), session)]);
             }
+        }
+        if let Some(index) = generated.stage {
+            inputs.stages = BTreeSet::from([code_of(index)]);
+        }
+        if generated.summer && generated.open_summer {
+            inputs.open_summers = BTreeSet::from([generated.sessions.len()]);
         }
         inputs
     }
@@ -1926,7 +2225,7 @@ mod tests {
         let offered = |i: usize, session: usize| match season_of(session) {
             Season::Fall => generated.offered[i].0,
             Season::Winter => generated.offered[i].1,
-            Season::Summer => false,
+            Season::Summer => generated.offered[i].2,
         };
         let passed_credits: u32 = generated
             .passed
@@ -1973,6 +2272,20 @@ mod tests {
                 .sum::<u32>()
                 <= generated.credit_cap
         });
+        // naive mirror of `summer_admits`: a pin lifts both summer rules
+        let summer_ok = assignment.iter().all(|(&i, &session)| {
+            if pinned.contains_key(&code_of(i)) {
+                return true;
+            }
+            let summer = season_of(session) == Season::Summer;
+            if generated.stage == Some(i) {
+                summer
+            } else {
+                !summer
+                    || (generated.open_summer
+                        && session == generated.sessions.len())
+            }
+        });
         let weekly_ok = (1..=generated.sessions.len()).all(|session| {
             let domains: Vec<Vec<crate::weekly::Opt>> = assignment
                 .iter()
@@ -1987,7 +2300,12 @@ mod tests {
                 .collect();
             crate::weekly::is_feasible(&domains)
         });
-        offer_ok && pin_ok && precedence_ok && capacity_ok && weekly_ok
+        offer_ok
+            && pin_ok
+            && precedence_ok
+            && capacity_ok
+            && summer_ok
+            && weekly_ok
     }
 
     proptest! {

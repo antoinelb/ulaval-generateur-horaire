@@ -105,6 +105,17 @@
           "En plus des cours obligatoires du programme, vous devez réussir le stage de formation pratique GCI-2580 pour diplômer. Vous pouvez également suivre trois autres stages de formation pratique optionnels : GCI-2590, GCI-3590, GCI-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
         ],
         "credits_in_addition": true
+      },
+      {
+        "title": "Scolarité préparatoire",
+        "courses": [
+          "CHM-0150",
+          "MAT-0130",
+          "MAT-0150",
+          "MAT-0260",
+          "PHY-0150",
+          "PHY-0250"
+        ]
       }
     ],
     "concentrations": [
@@ -380,7 +391,7 @@
       ],
       "seasons": {
         "winter": {
-          "last_offered": null,
+          "last_offered": 2026,
           "options": [
             [
               {
@@ -504,6 +515,20 @@
           "GCI-2590",
           "GCI-3590",
           "GCI-3591"
+        ]
+      },
+      {
+        "scope": "program",
+        "title": "Scolarité préparatoire",
+        "status": "reported",
+        "counted": [],
+        "candidates": [
+          "CHM-0150",
+          "MAT-0130",
+          "MAT-0150",
+          "MAT-0260",
+          "PHY-0150",
+          "PHY-0250"
         ]
       },
       {
