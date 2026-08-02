@@ -86,10 +86,14 @@ fn a_second_program_block_contributes_mandatory_courses_not_a_rule() {
 }
 
 // A stage that has to be passed to graduate is named nowhere but in the
-// prose of its block. It has no rule to live in, so dropping the prose drops
-// a graduation requirement (ADR `2026-07-notes-en-prose-conservees`).
+// prose of its block. It is promoted into a « Stages » rule appended after
+// the scraped ones — its credits « en sus » of the program total — and the
+// paragraph survives as the rule's note (ADR
+// `2026-08-stage-obligatoire-en-prose-promu-en-regle`).
 #[test]
-fn a_graduation_requirement_stated_in_prose_survives_as_a_note() {
+fn a_graduation_stage_stated_in_prose_becomes_a_rule() {
+    use ulaval_scheduler_core::{Constraint, RuleCourses};
+
     for (name, course) in [
         ("B-GCI", "GCI-2580"),
         ("B-GEX", "GEX-1580"),
@@ -97,10 +101,34 @@ fn a_graduation_requirement_stated_in_prose_survives_as_a_note() {
     ] {
         let page = parse_fixture(name);
 
+        let stage = page
+            .program
+            .rules
+            .iter()
+            .find(|rule| rule.title == "Stages")
+            .unwrap_or_else(|| panic!("{name} lost the {course} requirement"));
+        assert_eq!(
+            stage.constraint,
+            Some(Constraint::Course { min: 1, max: 8 }),
+            "{name}: at least the mandatory stage, up to the eight allowed"
+        );
+        let courses = match &stage.courses {
+            RuleCourses::List { courses } => courses,
+            other => panic!("{name}: expected a course list, got {other:?}"),
+        };
+        assert_eq!(
+            courses.first().map(String::as_str),
+            Some(course),
+            "{name}: the mandatory stage comes first"
+        );
+        assert!(stage.credits_in_addition, "{name}: « en sus » des crédits");
         assert!(
-            page.program.notes.iter().any(|note| note.contains(course)),
-            "{name} lost the {course} requirement: {:?}",
-            page.program.notes
+            stage.notes.iter().any(|note| note.contains(course)),
+            "{name}: the paragraph survives as the rule's note"
+        );
+        assert!(
+            !page.program.notes.iter().any(|note| note.contains(course)),
+            "{name}: the prose no longer rides in program.notes"
         );
     }
 }

@@ -47,6 +47,7 @@
     {
       "title": "Règle 1",
       "constraint": {
+        "type": "credits",
         "min": 3,
         "max": 3
       },
@@ -58,6 +59,7 @@
     {
       "title": "Règle 2",
       "constraint": {
+        "type": "credits",
         "min": 3,
         "max": 3
       },
@@ -73,11 +75,30 @@
     {
       "title": "Autres exigences – Règle 2",
       "constraint": {
+        "type": "credits",
         "min": 15,
         "max": 15
       },
       "courses": "negotiated",
       "raw": "Réussir les cours requis par sa concentration."
+    },
+    {
+      "title": "Stages",
+      "constraint": {
+        "type": "course",
+        "min": 1,
+        "max": 8
+      },
+      "courses": [
+        "GIN-3580",
+        "GIN-3590",
+        "GIN-3591",
+        "GIN-3592"
+      ],
+      "notes": [
+        "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GIN-3580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GIN-3590, GIN-3591 et GIN-3592. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
+      ],
+      "credits_in_addition": true
     }
   ],
   "concentrations": [
@@ -89,6 +110,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 15,
             "max": 15
           },
@@ -123,6 +145,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 3,
             "max": 9
           },
@@ -135,6 +158,7 @@
         {
           "title": "Règle 2",
           "constraint": {
+            "type": "credits",
             "min": 3,
             "max": 9
           },
@@ -151,6 +175,7 @@
         {
           "title": "Règle 3",
           "constraint": {
+            "type": "credits",
             "min": 0,
             "max": 6
           },
@@ -171,6 +196,7 @@
         {
           "title": "Règle 4",
           "constraint": {
+            "type": "credits",
             "min": 0,
             "max": 3
           },
@@ -190,6 +216,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 3,
             "max": 3
           },
@@ -201,6 +228,7 @@
         {
           "title": "Règle 2",
           "constraint": {
+            "type": "credits",
             "min": 6,
             "max": 9
           },
@@ -218,6 +246,7 @@
         {
           "title": "Règle 3",
           "constraint": {
+            "type": "credits",
             "min": 0,
             "max": 3
           },
@@ -245,6 +274,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 3,
             "max": 3
           },
@@ -256,6 +286,7 @@
         {
           "title": "Règle 2",
           "constraint": {
+            "type": "credits",
             "min": 3,
             "max": 9
           },
@@ -275,6 +306,7 @@
         {
           "title": "Règle 3",
           "constraint": {
+            "type": "credits",
             "min": 0,
             "max": 6
           },
@@ -296,6 +328,7 @@
         {
           "title": "Règle 4",
           "constraint": {
+            "type": "credits",
             "min": 0,
             "max": 3
           },
@@ -315,6 +348,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 6,
             "max": 9
           },
@@ -329,6 +363,7 @@
         {
           "title": "Règle 2",
           "constraint": {
+            "type": "credits",
             "min": 3,
             "max": 6
           },
@@ -343,6 +378,7 @@
         {
           "title": "Règle 3",
           "constraint": {
+            "type": "credits",
             "min": 0,
             "max": 3
           },
@@ -372,6 +408,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 3,
             "max": 3
           },
@@ -389,9 +426,6 @@
       ],
       "rules": []
     }
-  ],
-  "notes": [
-    "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GIN-3580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GIN-3590, GIN-3591 et GIN-3592. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
   ],
   "language_requirement": {
     "francophone": {

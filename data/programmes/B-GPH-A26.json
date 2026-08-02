@@ -51,6 +51,7 @@
     {
       "title": "Autres exigences – Règle 2",
       "constraint": {
+        "type": "credits",
         "min": 3,
         "max": 15
       },
@@ -68,6 +69,7 @@
     {
       "title": "Autres exigences – Règle 3",
       "constraint": {
+        "type": "credits",
         "min": 0,
         "max": 12
       },
@@ -120,7 +122,9 @@
     {
       "title": "Autres exigences – Règle 4",
       "constraint": {
-        "count": 1
+        "type": "course",
+        "min": 1,
+        "max": 1
       },
       "courses": [
         "GMN-2900",
@@ -128,6 +132,24 @@
         "GMN-2902",
         "MED-1100"
       ]
+    },
+    {
+      "title": "Stages",
+      "constraint": {
+        "type": "course",
+        "min": 1,
+        "max": 8
+      },
+      "courses": [
+        "GPH-2591",
+        "GPH-2590",
+        "GPH-3590",
+        "GPH-3591"
+      ],
+      "notes": [
+        "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GPH-2591 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GPH-2590, GPH-3590, GPH-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
+      ],
+      "credits_in_addition": true
     }
   ],
   "concentrations": [
@@ -139,6 +161,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 15,
             "max": 15
           },
@@ -163,6 +186,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 15,
             "max": 15
           },
@@ -187,6 +211,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 15,
             "max": 15
           },
@@ -209,6 +234,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 15,
             "max": 15
           },
@@ -234,6 +260,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 15,
             "max": 15
           },
@@ -258,6 +285,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 15,
             "max": 15
           },
@@ -281,6 +309,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 15,
             "max": 15
           },
@@ -305,6 +334,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 12,
             "max": 12
           },
@@ -323,9 +353,6 @@
       ],
       "rules": []
     }
-  ],
-  "notes": [
-    "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GPH-2591 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GPH-2590, GPH-3590, GPH-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
   ],
   "language_requirement": {
     "francophone": {

@@ -185,6 +185,7 @@ pub fn parse(
         language_requirement: None,
     };
     extract_language_requirement(&mut program);
+    extract_stage_rule(&mut program);
 
     Ok(ProgramPage { program, anomalies })
 }
@@ -652,6 +653,7 @@ fn parse_rule(
         constraint,
         courses,
         notes,
+        credits_in_addition: false,
     }
 }
 
@@ -687,7 +689,7 @@ fn parse_rule_heading(
 // tail cut off (génie physique, industriel, mécanique).
 fn parse_constraint(text: &str) -> Option<Constraint> {
     match text.split_whitespace().collect::<Vec<_>>().as_slice() {
-        ["Un", "cours", ..] => Some(Constraint::Count { count: 1 }),
+        ["Un", "cours", ..] => Some(Constraint::Course { min: 1, max: 1 }),
         [min, "à", max, "crédits", ..] => Some(Constraint::Credits {
             min: min.parse().ok()?,
             max: max.parse().ok()?,
@@ -927,6 +929,47 @@ fn is_language_prose(raw: &str) -> bool {
     raw.contains("VEPT") || raw.contains("École de langues")
 }
 
+// A graduation stage hides in the prose of its block on the génie bacs:
+// promoted into an ordinary rule appended after the scraped ones, so the
+// solver can count it (ADR
+// `2026-08-stage-obligatoire-en-prose-promu-en-regle`). The paragraph stays
+// whole as the rule's note — the mandatory/optional distinction and the
+// inscription pointer are readable nowhere else.
+fn extract_stage_rule(program: &mut Program) {
+    for note in std::mem::take(&mut program.notes) {
+        if is_stage_prose(&note) {
+            let rule = stage_rule(note);
+            program.rules.push(rule);
+        } else {
+            program.notes.push(note);
+        }
+    }
+}
+
+fn stage_rule(note: String) -> Rule {
+    let credits_in_addition = note.contains("en sus des crédits exigés");
+    Rule {
+        title: "Stages".to_string(),
+        // at least the mandatory stage, up to the eight the direction
+        // allows — neither bound is machine-readable on the page
+        constraint: Some(Constraint::Course { min: 1, max: 8 }),
+        courses: RuleCourses::List {
+            courses: course_codes(&note),
+        },
+        notes: vec![note],
+        credits_in_addition,
+    }
+}
+
+// the graduation-stage prose of the génie bacs, in both persons the pages
+// write it (« vous devez réussir » on civil, « l'étudiant doit réussir »
+// elsewhere)
+fn is_stage_prose(raw: &str) -> bool {
+    raw.contains("réussir le stage")
+        && raw.contains("diplôm")
+        && first_course_code(raw).is_some()
+}
+
 fn is_negotiated_prose(raw: &str) -> bool {
     raw.contains("convenus entre la direction")
         || raw.contains("requis par sa concentration")
@@ -945,6 +988,16 @@ fn first_course_code(text: &str) -> Option<String> {
         .map(|token| token.trim_matches(|c: char| !c.is_ascii_alphanumeric()))
         .find(|token| is_course_code(token))
         .map(str::to_string)
+}
+
+// every sigle of the sentence, in the order it names them — in the stage
+// prose the mandatory stage comes first, the optional ones after
+fn course_codes(text: &str) -> Vec<String> {
+    text.split_whitespace()
+        .map(|token| token.trim_matches(|c: char| !c.is_ascii_alphanumeric()))
+        .filter(|token| is_course_code(token))
+        .map(str::to_string)
+        .collect()
 }
 
 fn is_course_code(token: &str) -> bool {
@@ -1612,7 +1665,7 @@ mod tests {
     #[test]
     fn every_constraint_wording_is_recognized() {
         for (text, expected) in [
-            ("Un cours parmi :", Constraint::Count { count: 1 }),
+            ("Un cours parmi :", Constraint::Course { min: 1, max: 1 }),
             ("3 crédits parmi :", Constraint::Credits { min: 3, max: 3 }),
             (
                 "3 à 9 crédits parmi :",
@@ -2027,5 +2080,100 @@ mod tests {
         );
         assert!(requirement.non_francophone.is_none());
         assert!(page.anomalies.is_empty(), "got {:?}", page.anomalies);
+    }
+
+    // --- Stage rule promotion ---
+
+    #[test]
+    fn the_stage_prose_becomes_the_stages_rule_in_both_wordings() {
+        // the five génie bacs write the same paragraph in two persons; each
+        // becomes an ordinary rule appended after the scraped ones
+        for (prose, codes) in [
+            (
+                "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GEX-1580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GEX-2590, GEX-2591 et GEX-3590. Les crédits de ces stages sont en sus des crédits exigés du programme.",
+                vec!["GEX-1580", "GEX-2590", "GEX-2591", "GEX-3590"],
+            ),
+            (
+                "En plus des cours obligatoires du programme, vous devez réussir le stage de formation pratique GCI-2580 pour diplômer. Les crédits de ces stages sont en sus des crédits exigés du programme.",
+                vec!["GCI-2580"],
+            ),
+        ] {
+            let regle =
+                accordion("Règle 1 – 3 crédits parmi :", &cards(&["GEX-1000"]));
+            let page = parsed(&group(
+                None,
+                &block(
+                    "Génie des eaux",
+                    None,
+                    &format!("{regle}{}", note(prose)),
+                ),
+            ));
+
+            assert!(page.program.notes.is_empty(), "the note is lifted");
+            let stage = &page.program.rules[1];
+            assert_eq!(stage.title, "Stages", "appended after Règle 1");
+            assert_eq!(
+                stage.constraint,
+                Some(Constraint::Course { min: 1, max: 8 })
+            );
+            assert_eq!(
+                stage.courses,
+                RuleCourses::List {
+                    courses: codes.iter().map(|c| c.to_string()).collect()
+                },
+                "every sigle, mandatory first"
+            );
+            assert!(stage.credits_in_addition, "« en sus des crédits exigés »");
+            assert_eq!(stage.notes, vec![prose], "the paragraph stays whole");
+            assert!(page.anomalies.is_empty(), "got {:?}", page.anomalies);
+        }
+    }
+
+    #[test]
+    fn a_stage_note_without_en_sus_keeps_its_credits_counted() {
+        let prose =
+            "L'étudiant doit réussir le stage GMC-2580 pour obtenir son diplôme.";
+        let page = parsed(&group(
+            None,
+            &block(
+                "Génie mécanique",
+                None,
+                &format!(
+                    "{}{}",
+                    accordion(MANDATORY_HEADING, &cards(&["GMC-1000"])),
+                    note(prose),
+                ),
+            ),
+        ));
+
+        let stage = &page.program.rules[0];
+        assert_eq!(stage.title, "Stages");
+        assert!(!stage.credits_in_addition);
+    }
+
+    #[test]
+    fn prose_short_of_the_stage_requirement_stays_a_note() {
+        // no sigle, then no graduation mention: neither is the requirement,
+        // and nothing is invented from them
+        for prose in [
+            "L'étudiant doit réussir le stage pour obtenir son diplôme.",
+            "L'étudiant doit réussir le stage GMC-2580 avant la fin.",
+        ] {
+            let page = parsed(&group(
+                None,
+                &block(
+                    "Génie mécanique",
+                    None,
+                    &format!(
+                        "{}{}",
+                        accordion(MANDATORY_HEADING, &cards(&["GMC-1000"])),
+                        note(prose),
+                    ),
+                ),
+            ));
+
+            assert_eq!(page.program.notes, vec![prose], "kept as prose");
+            assert!(page.program.rules.is_empty(), "no rule is invented");
+        }
     }
 }

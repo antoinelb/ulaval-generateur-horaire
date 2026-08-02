@@ -4,8 +4,8 @@ Per scope (program, plus the chosen concentration/profile): mandatory
 courses split satisfied/missing, and each rule reported as satisfied /
 incomplete / reported per ADR
 `2026-07-schema-du-rapport-de-couverture-en-fixtures`. Rule lists have set
-semantics; references resolve to their target list; a credits sum above max
-is a hard error (semantics undecided, fixtures stay within).
+semantics; references resolve to their target list; a credits sum or course
+count above max is a hard error (semantics undecided, fixtures stay within).
 
 Usage: python verify_rules.py fill|check [fixture-stems...]
 """
@@ -154,11 +154,17 @@ def resolve_reference(reference, program):
 
 
 def evaluate(constraint, counted, credits, rule):
-    if "count" in constraint:
-        needed = constraint["count"]
-        if len(counted) >= needed:
+    if constraint["type"] == "course":
+        total = len(counted)
+        if total > constraint["max"]:
+            raise ValueError(
+                f"{rule['title']}: {total} courses exceed max "
+                f"{constraint['max']} — semantics undecided, fixtures stay "
+                "within"
+            )
+        if total >= constraint["min"]:
             return "satisfied", None
-        return "incomplete", {"count": needed - len(counted)}
+        return "incomplete", {"count": constraint["min"] - total}
     total = 0
     for code in counted:
         if code not in credits:

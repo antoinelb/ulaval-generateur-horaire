@@ -128,6 +128,13 @@ pub enum CoverageError {
          — semantics await the director's ruling"
     )]
     CreditsOverMax { rule: String, total: i64, max: i64 },
+    // the course-count twin of `CreditsOverMax`, same undecided semantics
+    // (ADR `2026-08-contrainte-etiquetee-min-max`)
+    #[error(
+        "{rule} : the selection counts {total} courses, above the max {max} \
+         — semantics await the director's ruling"
+    )]
+    CountOverMax { rule: String, total: i64, max: i64 },
 }
 
 // The pure function the UI calls on every selection change. `selection`
@@ -330,16 +337,20 @@ fn verdict(
     credits: &BTreeMap<&str, u32>,
 ) -> Result<(RuleStatus, Option<Missing>), CoverageError> {
     match *constraint {
-        Constraint::Count { count } => {
-            let chosen = counted.len() as i64;
-            if chosen >= count {
+        Constraint::Course { min, max } => {
+            let total = counted.len() as i64;
+            if total > max {
+                Err(CoverageError::CountOverMax {
+                    rule: title.to_string(),
+                    total,
+                    max,
+                })
+            } else if total >= min {
                 Ok((RuleStatus::Satisfied, None))
             } else {
                 Ok((
                     RuleStatus::Incomplete,
-                    Some(Missing::Count {
-                        count: count - chosen,
-                    }),
+                    Some(Missing::Count { count: min - total }),
                 ))
             }
         }
@@ -473,7 +484,7 @@ mod tests {
     #[test]
     fn a_count_rule_is_satisfied_at_the_count_and_lists_candidates() {
         let program = bare(
-            r#"[{"title":"Règle 1","constraint":{"count":1},
+            r#"[{"title":"Règle 1","constraint":{"type":"course","min":1,"max":1},
                  "courses":["B-2","A-1","C-3"]}]"#,
         );
         let coverage = report(&program, &["A-1"], &[]);
@@ -490,7 +501,7 @@ mod tests {
     #[test]
     fn a_count_rule_short_of_the_count_says_how_many_remain() {
         let program = bare(
-            r#"[{"title":"Règle 1","constraint":{"count":2},
+            r#"[{"title":"Règle 1","constraint":{"type":"course","min":2,"max":2},
                  "courses":["A-1","B-2","C-3"]}]"#,
         );
         let coverage = report(&program, &["A-1"], &[]);
@@ -503,7 +514,7 @@ mod tests {
     fn a_duplicated_listed_code_counts_once() {
         // règle 4 GEX lists DDU-2000 twice (thematic subgroups): one course
         let program = bare(
-            r#"[{"title":"Règle 4","constraint":{"count":2},
+            r#"[{"title":"Règle 4","constraint":{"type":"course","min":2,"max":2},
                  "courses":["A-1","A-1","B-2"]}]"#,
         );
         let coverage = report(&program, &["A-1"], &[]);
@@ -514,11 +525,38 @@ mod tests {
         assert_eq!(coverage.rules[0].status, RuleStatus::Incomplete);
     }
 
+    #[test]
+    fn a_selection_above_the_course_max_is_a_typed_error() {
+        // the course-count twin of the credits ceiling: same undecided
+        // semantics, same refusal to invent a verdict
+        let program = bare(
+            r#"[{"title":"Règle 1",
+                 "constraint":{"type":"course","min":1,"max":1},
+                 "courses":["A-1","B-2"]}]"#,
+        );
+        let error = coverage_report(
+            &program,
+            None,
+            None,
+            &selection(&["A-1", "B-2"]),
+            &[],
+        )
+        .expect_err("2 courses above max 1");
+        assert_eq!(
+            error,
+            CoverageError::CountOverMax {
+                rule: "Règle 1".to_string(),
+                total: 2,
+                max: 1,
+            }
+        );
+    }
+
     // --- credits rules ---
 
     fn credits_rule(min: i64, max: i64) -> Program {
         bare(&format!(
-            r#"[{{"title":"Règle 2","constraint":{{"min":{min},"max":{max}}},
+            r#"[{{"title":"Règle 2","constraint":{{"type":"credits","min":{min},"max":{max}}},
                  "courses":["A-1","B-2","C-3"]}}]"#
         ))
     }
@@ -604,9 +642,9 @@ mod tests {
     #[test]
     fn keyword_and_raw_rules_are_reported_with_their_raw_text() {
         let program = bare(
-            r#"[{"title":"Règle 5","constraint":{"min":3,"max":3},
+            r#"[{"title":"Règle 5","constraint":{"type":"credits","min":3,"max":3},
                  "courses":"any","raw":"tous les cours de premier cycle"},
-                {"title":"Règle 6","constraint":{"min":3,"max":3},
+                {"title":"Règle 6","constraint":{"type":"credits","min":3,"max":3},
                  "courses":"negotiated","raw":"convenus avec la direction"},
                 {"title":"Règle 7","raw":"du texte hors grammaire"}]"#,
         );
@@ -638,7 +676,7 @@ mod tests {
     fn referencing(concentrations: &str) -> Program {
         program(&format!(
             r#""mandatory":[],
-               "rules":[{{"title":"Règle 2","constraint":{{"count":1}},
+               "rules":[{{"title":"Règle 2","constraint":{{"type":"course","min":1,"max":1}},
                           "courses":{{"concentration":"Géotechnique",
                                       "rule":"Règle 1"}},
                           "raw":"tous les cours de la Règle 1"}}],
@@ -650,7 +688,7 @@ mod tests {
     fn a_reference_resolves_to_the_target_list_and_evaluates() {
         let program = referencing(
             r#"[{"title":"Géotechnique","mandatory":[],
-                 "rules":[{"title":"Règle 1","constraint":{"count":2},
+                 "rules":[{"title":"Règle 1","constraint":{"type":"course","min":2,"max":2},
                            "courses":["A-1","B-2"]}]}]"#,
         );
         let coverage = report(&program, &["A-1"], &[]);
@@ -667,7 +705,7 @@ mod tests {
         // but a rule naming no number is only ever reported
         let mut program = referencing(
             r#"[{"title":"Géotechnique","mandatory":[],
-                 "rules":[{"title":"Règle 1","constraint":{"count":2},
+                 "rules":[{"title":"Règle 1","constraint":{"type":"course","min":2,"max":2},
                            "courses":["A-1","B-2"]}]}]"#,
         );
         program.rules[0].constraint = None;
@@ -716,7 +754,7 @@ mod tests {
     fn a_reference_whose_target_is_not_a_list_is_an_error_not_a_chase() {
         let program = referencing(
             r#"[{"title":"Géotechnique","mandatory":[],
-                 "rules":[{"title":"Règle 1","constraint":{"count":1},
+                 "rules":[{"title":"Règle 1","constraint":{"type":"course","min":1,"max":1},
                            "courses":"any","raw":"tous les cours"}]}]"#,
         );
         let error =
@@ -739,7 +777,7 @@ mod tests {
             r#""mandatory":["M-1"],"rules":[],
                "concentrations":[{"title":"Géotechnique",
                  "mandatory":["C-1"],
-                 "rules":[{"title":"Règle C","constraint":{"count":1},
+                 "rules":[{"title":"Règle C","constraint":{"type":"course","min":1,"max":1},
                            "courses":["C-2"]}]}],
                "profiles":[{"title":"Profil international",
                  "mandatory":["P-1"],"rules":[]}]"#,
@@ -854,9 +892,9 @@ mod tests {
     #[test]
     fn evaluated_and_reported_entries_serialize_their_own_keys_only() {
         let program = bare(
-            r#"[{"title":"Règle 1","constraint":{"count":1},
+            r#"[{"title":"Règle 1","constraint":{"type":"course","min":1,"max":1},
                  "courses":["A-1"]},
-                {"title":"Règle 5","constraint":{"min":3,"max":3},
+                {"title":"Règle 5","constraint":{"type":"credits","min":3,"max":3},
                  "courses":"any","raw":"tous les cours"}]"#,
         );
         let coverage = report(&program, &["A-1"], &[]);
@@ -912,5 +950,11 @@ mod tests {
             max: 3
         })
         .contains("6"));
+        assert!(text(CoverageError::CountOverMax {
+            rule: "R".to_string(),
+            total: 2,
+            max: 1
+        })
+        .contains("2"));
     }
 }

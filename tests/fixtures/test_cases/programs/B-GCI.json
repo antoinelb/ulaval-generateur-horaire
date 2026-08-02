@@ -47,7 +47,9 @@
     {
       "title": "Règle 1",
       "constraint": {
-        "count": 1
+        "type": "course",
+        "min": 1,
+        "max": 1
       },
       "courses": [
         "GMN-2901",
@@ -58,6 +60,7 @@
     {
       "title": "Autres exigences – Règle 1",
       "constraint": {
+        "type": "credits",
         "min": 3,
         "max": 3
       },
@@ -77,11 +80,30 @@
     {
       "title": "Autres exigences – Règle 2",
       "constraint": {
+        "type": "credits",
         "min": 3,
         "max": 3
       },
       "courses": "any",
       "raw": "tous les cours de premier cycle, à l’exception des cours correctifs de français. Si le profil développement durable fait partie de votre cheminement, vous devez suivre DDU-1000."
+    },
+    {
+      "title": "Stages",
+      "constraint": {
+        "type": "course",
+        "min": 1,
+        "max": 8
+      },
+      "courses": [
+        "GCI-2580",
+        "GCI-2590",
+        "GCI-3590",
+        "GCI-3591"
+      ],
+      "notes": [
+        "En plus des cours obligatoires du programme, vous devez réussir le stage de formation pratique GCI-2580 pour diplômer. Vous pouvez également suivre trois autres stages de formation pratique optionnels : GCI-2590, GCI-3590, GCI-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
+      ],
+      "credits_in_addition": true
     }
   ],
   "concentrations": [
@@ -93,6 +115,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 15,
             "max": 15
           },
@@ -137,6 +160,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 12,
             "max": 12
           },
@@ -159,6 +183,7 @@
         {
           "title": "Règle 2",
           "constraint": {
+            "type": "credits",
             "min": 3,
             "max": 3
           },
@@ -178,6 +203,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 12,
             "max": 12
           },
@@ -200,6 +226,7 @@
         {
           "title": "Règle 2",
           "constraint": {
+            "type": "credits",
             "min": 3,
             "max": 3
           },
@@ -219,6 +246,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 12,
             "max": 12
           },
@@ -243,6 +271,7 @@
         {
           "title": "Règle 2",
           "constraint": {
+            "type": "credits",
             "min": 3,
             "max": 3
           },
@@ -266,6 +295,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 6,
             "max": 6
           },
@@ -278,6 +308,7 @@
         {
           "title": "Règle 2",
           "constraint": {
+            "type": "credits",
             "min": 3,
             "max": 3
           },
@@ -295,9 +326,6 @@
       ],
       "rules": []
     }
-  ],
-  "notes": [
-    "En plus des cours obligatoires du programme, vous devez réussir le stage de formation pratique GCI-2580 pour diplômer. Vous pouvez également suivre trois autres stages de formation pratique optionnels : GCI-2590, GCI-3590, GCI-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
   ],
   "language_requirement": {
     "francophone": {

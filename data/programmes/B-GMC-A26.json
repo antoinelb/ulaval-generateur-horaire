@@ -50,6 +50,7 @@
     {
       "title": "Règle 1",
       "constraint": {
+        "type": "credits",
         "min": 3,
         "max": 3
       },
@@ -57,6 +58,24 @@
         "GLO-1901",
         "IFT-1903"
       ]
+    },
+    {
+      "title": "Stages",
+      "constraint": {
+        "type": "course",
+        "min": 1,
+        "max": 8
+      },
+      "courses": [
+        "GMC-2580",
+        "GMC-1590",
+        "GMC-3590",
+        "GMC-3591"
+      ],
+      "notes": [
+        "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GMC-2580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GMC-1590, GMC-3590 et GMC-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
+      ],
+      "credits_in_addition": true
     }
   ],
   "concentrations": [
@@ -68,6 +87,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 12,
             "max": 15
           },
@@ -151,6 +171,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 12,
             "max": 12
           },
@@ -181,6 +202,7 @@
         {
           "title": "Règle 1",
           "constraint": {
+            "type": "credits",
             "min": 9,
             "max": 9
           },
@@ -218,9 +240,6 @@
         "Conditions requises : avoir acquis 60 crédits du programme et présenter la moyenne de programme exigée selon l'entente. Rencontrer la direction de programme pour établir le choix de cours selon l'entente de passage intégré au deuxième cycle."
       ]
     }
-  ],
-  "notes": [
-    "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GMC-2580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GMC-1590, GMC-3590 et GMC-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
   ],
   "language_requirement": {
     "francophone": {

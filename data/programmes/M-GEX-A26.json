@@ -22,6 +22,7 @@
     {
       "title": "Règle 1",
       "constraint": {
+        "type": "credits",
         "min": 12,
         "max": 12
       },

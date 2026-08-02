@@ -147,12 +147,23 @@ pub struct Rule {
     pub courses: RuleCourses,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub notes: Vec<String>,
+    // « Les crédits de ces stages sont en sus des crédits exigés du
+    // programme » : the rule must still be satisfied, but its credits do
+    // not count toward `credits_required` (ADR
+    // `2026-08-stage-obligatoire-en-prose-promu-en-regle`)
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub credits_in_addition: bool,
 }
 
+// « Règle N – <contrainte> parmi : » — the counted unit and its bounds;
+// « Un cours parmi » is min 1, max 1. The tag is load-bearing: untagged, a
+// course count `{min, max}` would be byte-identical to a credits span, so
+// the unit must be spelled out (ADR `2026-08-contrainte-etiquetee-min-max`).
+// Whether to show a single number or a range is the UI's choice.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-#[serde(untagged)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum Constraint {
-    Count { count: i64 },
+    Course { min: i64, max: i64 },
     Credits { min: i64, max: i64 },
 }
 
@@ -283,28 +294,46 @@ fn season_from_letter(letter: char) -> Option<Season> {
 mod tests {
     use super::*;
 
-    // --- Constraint: untagged {count} vs {min, max} ---
+    // --- Constraint: tagged {type, min, max} ---
 
     #[test]
-    fn constraint_count_round_trips() {
+    fn constraint_course_round_trips() {
         let constraint: Constraint =
-            serde_json::from_str(r#"{"count":1}"#).expect("count");
-        assert_eq!(constraint, Constraint::Count { count: 1 });
+            serde_json::from_str(r#"{"type":"course","min":1,"max":1}"#)
+                .expect("course");
+        assert_eq!(constraint, Constraint::Course { min: 1, max: 1 });
         assert_eq!(
             serde_json::to_string(&constraint).expect("ser"),
-            r#"{"count":1}"#
+            r#"{"type":"course","min":1,"max":1}"#
         );
     }
 
     #[test]
     fn constraint_credits_round_trips() {
         let constraint: Constraint =
-            serde_json::from_str(r#"{"min":3,"max":9}"#).expect("credits");
+            serde_json::from_str(r#"{"type":"credits","min":3,"max":9}"#)
+                .expect("credits");
         assert_eq!(constraint, Constraint::Credits { min: 3, max: 9 });
         assert_eq!(
             serde_json::to_string(&constraint).expect("ser"),
-            r#"{"min":3,"max":9}"#
+            r#"{"type":"credits","min":3,"max":9}"#
         );
+    }
+
+    #[test]
+    fn a_constraint_with_an_unknown_type_is_rejected() {
+        // the tag names the counted unit; a unit outside the grammar must
+        // fail loudly, never fall back to one of the known two
+        for json in [
+            r#"{"type":"stage","min":1,"max":1}"#,
+            r#"{"min":1,"max":1}"#,
+            r#"{"count":1}"#,
+        ] {
+            assert!(
+                serde_json::from_str::<Constraint>(json).is_err(),
+                "{json}"
+            );
+        }
     }
 
     // --- Rule: each legal courses/raw combination, and only those ---
@@ -320,7 +349,7 @@ mod tests {
 
     #[test]
     fn rule_with_explicit_list_round_trips() {
-        let json = r#"{"title":"Règle 1","constraint":{"count":1},"courses":["GCI-1000","GEX-1000"]}"#;
+        let json = r#"{"title":"Règle 1","constraint":{"type":"course","min":1,"max":1},"courses":["GCI-1000","GEX-1000"]}"#;
         let rule = assert_rule_round_trips(json);
         assert_eq!(
             rule.courses,
@@ -332,7 +361,7 @@ mod tests {
 
     #[test]
     fn rule_with_reference_round_trips() {
-        let json = r#"{"title":"Règle 2","constraint":{"min":3,"max":3},"courses":{"concentration":"Cheminement sans concentration","rule":"Règle 1"},"raw":"tous les cours de la Règle 1 du cheminement sans concentration"}"#;
+        let json = r#"{"title":"Règle 2","constraint":{"type":"credits","min":3,"max":3},"courses":{"concentration":"Cheminement sans concentration","rule":"Règle 1"},"raw":"tous les cours de la Règle 1 du cheminement sans concentration"}"#;
         let rule = assert_rule_round_trips(json);
         assert!(matches!(
             rule.courses,
@@ -344,7 +373,7 @@ mod tests {
 
     #[test]
     fn rule_with_any_keyword_round_trips() {
-        let json = r#"{"title":"Règle 2","constraint":{"min":3,"max":3},"courses":"any","raw":"tous les cours de premier cycle"}"#;
+        let json = r#"{"title":"Règle 2","constraint":{"type":"credits","min":3,"max":3},"courses":"any","raw":"tous les cours de premier cycle"}"#;
         let rule = assert_rule_round_trips(json);
         assert!(matches!(
             rule.courses,
@@ -372,7 +401,7 @@ mod tests {
 
     #[test]
     fn rule_with_raw_only_round_trips() {
-        let json = r#"{"title":"Règle 2","constraint":{"min":3,"max":3},"raw":"hors grammaire"}"#;
+        let json = r#"{"title":"Règle 2","constraint":{"type":"credits","min":3,"max":3},"raw":"hors grammaire"}"#;
         let rule = assert_rule_round_trips(json);
         assert_eq!(
             rule.courses,
@@ -393,7 +422,7 @@ mod tests {
 
     #[test]
     fn rule_notes_round_trip_and_vanish_when_empty() {
-        let json = r#"{"title":"Règle 4","constraint":{"min":3,"max":3},"courses":["IFT-4902"],"notes":["Programmation"]}"#;
+        let json = r#"{"title":"Règle 4","constraint":{"type":"credits","min":3,"max":3},"courses":["IFT-4902"],"notes":["Programmation"]}"#;
         let rule = assert_rule_round_trips(json);
         assert_eq!(rule.notes, vec!["Programmation".to_string()]);
 
@@ -406,15 +435,32 @@ mod tests {
     }
 
     #[test]
+    fn rule_credits_in_addition_round_trips_and_vanishes_when_false() {
+        // the génie stage rule: satisfied like any rule, credits « en sus »
+        let json = r#"{"title":"Stages","constraint":{"type":"course","min":1,"max":8},"courses":["GEX-1580"],"credits_in_addition":true}"#;
+        let rule = assert_rule_round_trips(json);
+        assert!(rule.credits_in_addition);
+
+        // an ordinary rule serializes no key at all
+        let ordinary = Rule {
+            credits_in_addition: false,
+            ..rule
+        };
+        assert!(!serde_json::to_string(&ordinary)
+            .expect("ser")
+            .contains("credits_in_addition"));
+    }
+
+    #[test]
     fn rule_without_courses_nor_raw_is_rejected() {
-        let json = r#"{"title":"Règle 1","constraint":{"count":1}}"#;
+        let json = r#"{"title":"Règle 1","constraint":{"type":"course","min":1,"max":1}}"#;
         assert!(serde_json::from_str::<Rule>(json).is_err());
     }
 
     #[test]
     fn rule_with_sentence_courses_but_no_raw_is_rejected() {
         // a parsed sentence must keep its source text
-        let json = r#"{"title":"Règle 2","constraint":{"min":3,"max":3},"courses":"any"}"#;
+        let json = r#"{"title":"Règle 2","constraint":{"type":"credits","min":3,"max":3},"courses":"any"}"#;
         assert!(serde_json::from_str::<Rule>(json).is_err());
     }
 
