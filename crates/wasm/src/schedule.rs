@@ -11,6 +11,7 @@ use ulaval_scheduler_core::{
 // refused rather than ignored: a typo in the JS object must not be read as
 // a default (« never lose input silently »).
 #[derive(Debug, Clone, serde::Deserialize)]
+#[cfg_attr(target_arch = "wasm32", derive(tsify::Tsify))]
 #[serde(deny_unknown_fields)]
 pub struct ScheduleInput {
     pub courses: Vec<Course>,
@@ -18,6 +19,10 @@ pub struct ScheduleInput {
     pub session: String,
     pub codes: Vec<String>,
     #[serde(default)]
+    #[cfg_attr(
+        target_arch = "wasm32",
+        tsify(type = "Record<string, string[]>")
+    )]
     pub chosen: BTreeMap<String, BTreeSet<String>>,
 }
 

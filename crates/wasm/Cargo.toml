@@ -18,8 +18,10 @@ serde = { workspace = true }
 # the JS boundary exists only in the browser build: a native `cargo test`
 # compiles neither the glue nor its dependencies
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2"
+wasm-bindgen = { workspace = true }
 serde-wasm-bindgen = "0.6"
+tsify = { workspace = true }
+ulaval-scheduler-core = { workspace = true, features = ["tsify"] }
 
 [dev-dependencies]
 serde_json = { workspace = true }

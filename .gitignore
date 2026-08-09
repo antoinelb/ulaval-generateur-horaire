@@ -17,3 +17,6 @@ data/cours_errors.log
 __pycache__/
 
 crates/wasm/pkg
+
+# mdBook output (docs/livre/src is the source)
+docs/livre/book/

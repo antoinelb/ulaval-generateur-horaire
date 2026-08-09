@@ -1,4 +1,4 @@
-.PHONY: static test wasm
+.PHONY: static test wasm docs
 
 static:
 	cargo fmt --all
@@ -12,3 +12,6 @@ test:
 
 wasm:
 	wasm-pack build crates/wasm --target web
+
+docs:
+	mdbook build docs/livre

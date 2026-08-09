@@ -26,11 +26,15 @@ pub struct Schedule {
 // highlights. Jalon 10's preference ranking will replace the selection
 // rule; the rest of the contract does not depend on it.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct ScheduleReport {
     pub valid: bool,
     pub courses: Vec<CourseReport>,
 }
 
+// no Tsify derive: `skip_serializing_if = "is_true"` makes `valid` an
+// absent-means-true key, which the derive would declare required — declared
+// by hand in the boundary's custom section instead
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct CourseReport {
     pub code: String,
@@ -42,7 +46,8 @@ pub struct CourseReport {
     pub alternatives: Vec<Alternative>,
 }
 
-// a non-selected option, in snapshot order
+// a non-selected option, in snapshot order; no Tsify derive for the same
+// absent-means-true `valid` as `CourseReport`
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct Alternative {
     pub sections: Vec<Section>,

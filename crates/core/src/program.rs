@@ -14,6 +14,7 @@ pub const STAGES_RULE_TITLE: &str = "Stages";
 // lifted out into `language_requirement` (ADR
 // `2026-07-exigence-linguistique-champ-dedie`).
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct Program {
     // the official répertoire code, read from the page itself, its degree
     // prefix abridged to one letter — `B-GEX`, `M-GEX` even for the maîtrise
@@ -34,6 +35,8 @@ pub struct Program {
         skip_serializing_if = "Vec::is_empty",
         with = "season_letters"
     )]
+    // `season_letters` writes letters, not `Season`'s english words
+    #[cfg_attr(feature = "tsify", tsify(type = "(\"A\" | \"H\" | \"E\")[]"))]
     pub possible_semester_start: Vec<Season>,
     pub title: String,
     pub cycle: Cycle,
@@ -115,6 +118,7 @@ impl<'de> serde::Deserialize<'de> for Semester {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct Concentration {
     pub title: String,
     // every concentration of the six known pages carries « N crédits
@@ -129,6 +133,7 @@ pub struct Concentration {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct Profile {
     pub title: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -139,6 +144,9 @@ pub struct Profile {
     pub notes: Vec<String>,
 }
 
+// no Tsify derive: the `flatten` would come out as `interface Rule extends
+// RuleCourses`, invalid over a union — declared by hand in the boundary's
+// custom section instead (ADR `2026-08-types-typescript-tsify-declaratif`)
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Rule {
     pub title: String,
@@ -166,6 +174,7 @@ pub struct Rule {
 // the unit must be spelled out (ADR `2026-08-contrainte-etiquetee-min-max`).
 // Whether to show a single number or a range is the UI's choice.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Constraint {
     Course { min: i64, max: i64 },
@@ -173,6 +182,7 @@ pub enum Constraint {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(untagged)]
 pub enum RuleCourses {
     List { courses: Vec<String> },
@@ -187,6 +197,7 @@ pub enum RuleCourses {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct RuleReference {
     pub concentration: String,
     pub rule: String,
@@ -195,6 +206,7 @@ pub struct RuleReference {
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize,
 )]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(rename_all = "lowercase")]
 pub enum Keyword {
     // "tous les cours de premier cycle, ..." — any course satisfies the rule
@@ -209,6 +221,7 @@ pub enum Keyword {
 // `2026-07-exigence-linguistique-champ-dedie`): the placement-test score
 // dispenses from the course, and the page states the two audiences apart.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct LanguageRequirement {
     pub francophone: LanguageQualification,
     // only the two-box page layout spells out the non-francophone (French)
@@ -218,6 +231,7 @@ pub struct LanguageRequirement {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct LanguageQualification {
     // course to pass when the test threshold is not met (ANL-2020 / FLS-2093)
     pub course: String,
@@ -232,6 +246,7 @@ pub struct LanguageQualification {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct PlacementTest {
     pub name: String,
     pub score: i64,

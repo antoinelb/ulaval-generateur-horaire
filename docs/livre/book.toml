@@ -1,0 +1,10 @@
+[book]
+title = "Générateur d'horaire ULaval"
+description = "Documentation du générateur d'horaire et de cheminement de l'Université Laval"
+language = "fr"
+authors = ["Antoine Lefebvre-Brossard"]
+src = "src"
+
+[build]
+# un chapitre manquant est une erreur dure, jamais un fichier vide créé en silence
+create-missing = false

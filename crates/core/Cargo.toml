@@ -10,6 +10,14 @@ workspace = true
 [dependencies]
 thiserror = { workspace = true }
 serde = { workspace = true }
+# enabled by the wasm crate's browser build alone: the derives only emit
+# TypeScript declarations, never code the native build runs (ADR
+# `2026-08-types-typescript-tsify-declaratif`)
+tsify = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+
+[features]
+tsify = ["dep:tsify", "dep:wasm-bindgen"]
 
 [dev-dependencies]
 proptest = { workspace = true }

@@ -44,6 +44,7 @@ pub struct PlacementRequest<'a> {
 // All feasible placements found, in search order, with the three outcomes
 // never confused (ADR `2026-07-b-enumere-toutes-les-solutions`).
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct Placement {
     pub completion: Completion,
     pub solutions: Vec<Solution>,
@@ -57,12 +58,14 @@ pub struct Placement {
 // harness and the UI name the culprit instead of grinding the node budget
 // on an unwinnable enumeration.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct Blocked {
     pub code: String,
     pub reason: BlockedReason,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(rename_all = "kebab-case")]
 pub enum BlockedReason {
     // no listed session can host the course (offer and pin filtering
@@ -79,6 +82,7 @@ pub enum BlockedReason {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(rename_all = "kebab-case")]
 pub enum Completion {
     // search exhausted: the set is total — empty means infeasibility proven
@@ -90,8 +94,11 @@ pub enum Completion {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct Solution {
-    // code → 1-based session number; passed courses do not appear
+    // code → 1-based session number; passed courses do not appear.
+    // `Record`: json_compatible serializes a map to a plain object
+    #[cfg_attr(feature = "tsify", tsify(type = "Record<string, number>"))]
     pub placement: BTreeMap<String, usize>,
     // unverifiable operands this placement's verdict relied on — a raw
     // operand or a course neither listed nor passed, presumed satisfied

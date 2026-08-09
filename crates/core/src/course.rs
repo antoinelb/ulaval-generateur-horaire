@@ -1,15 +1,25 @@
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct Course {
     pub code: String,
     pub title: String,
     pub credits: Credits,
     pub cycle: CourseCycle,
+    // `| null`: the snapshot writes explicit nulls, `| undefined` would
+    // reject the very JSON the consumer feeds back in
     #[serde(default)]
+    #[cfg_attr(feature = "tsify", tsify(type = "Prerequisites | null"))]
     pub prerequisites: Option<Prerequisites>,
     #[serde(default)]
     pub equivalents: Vec<String>,
+    // `Partial`: a `Record` would demand all three season keys, and a real
+    // course lists only the seasons it is offered in
+    #[cfg_attr(
+        feature = "tsify",
+        tsify(type = "Partial<Record<Season, SeasonOffering>>")
+    )]
     pub seasons: BTreeMap<Season, SeasonOffering>,
 }
 
@@ -19,6 +29,7 @@ pub struct Course {
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize,
 )]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(untagged)]
 pub enum Credits {
     Fixed(u32),
@@ -100,6 +111,7 @@ impl From<CourseCycle> for u8 {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(untagged)]
 pub enum Prerequisites {
     Parsed { raw: String, tree: PrereqTree },
@@ -107,6 +119,7 @@ pub enum Prerequisites {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(untagged)]
 pub enum PrereqTree {
     Course(String),
@@ -121,21 +134,25 @@ pub enum PrereqTree {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct ProgramCredits {
     // some pages state a credit requirement with no programme at all —
     // GEX-3333 reads « … ET  Crédits exigés : 72 », the requirement then
     // bearing on the student's own programme
     #[serde(default)]
+    #[cfg_attr(feature = "tsify", tsify(type = "string | null"))]
     pub program: Option<String>,
     pub credits: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct SeasonOffering {
     // the session vintage this offering was read from — the newest year the
     // page showed for this season (ADR
     // `2026-07-snapshot-unique-des-cours-millesime-par-saison`). None = new
     // course whose schedule is not yet published, so no vintage exists.
+    #[cfg_attr(feature = "tsify", tsify(type = "number | null"))]
     pub last_offered: Option<u16>,
     // one *complete* enrolment per entry: take all of an option's sections
     // together and union their slots. A lecture offering a choice of labs
@@ -144,18 +161,22 @@ pub struct SeasonOffering {
     // None = offered but the schedule is not yet published — distinct from
     // Some(vec![]), no valid enrolment combination (ADR
     // `2026-07-cours-sans-section-de-session-offert-automne-hiver`).
+    #[cfg_attr(feature = "tsify", tsify(type = "Section[][] | null"))]
     pub options: Option<Vec<Vec<Section>>>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct Section {
     pub nrc: String,
+    #[cfg_attr(feature = "tsify", tsify(type = "string | null"))]
     pub section: Option<String>,
     pub mode: Mode,
     pub slots: Vec<Slot>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct Slot {
     pub day: Day,
     pub start: Time,
@@ -173,6 +194,7 @@ pub struct Slot {
     serde::Serialize,
     serde::Deserialize,
 )]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(rename_all = "lowercase")]
 pub enum Season {
     Fall,
@@ -183,6 +205,7 @@ pub enum Season {
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize,
 )]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(rename_all = "kebab-case")]
 pub enum Mode {
     InPerson,
@@ -195,6 +218,7 @@ pub enum Mode {
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize,
 )]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(rename_all = "lowercase")]
 pub enum Day {
     Monday,

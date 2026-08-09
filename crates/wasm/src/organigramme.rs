@@ -18,6 +18,7 @@ const DEFAULT_MAX_SOLUTIONS: usize = 100;
 // `horizon_sessions`, so the été-after-each-hiver rule stays in core and
 // out of the view. Unknown fields are refused rather than ignored.
 #[derive(Debug, Clone, serde::Deserialize)]
+#[cfg_attr(target_arch = "wasm32", derive(tsify::Tsify))]
 #[serde(deny_unknown_fields)]
 pub struct OrganigrammeInput {
     pub courses: Vec<Course>,
@@ -34,6 +35,10 @@ pub struct OrganigrammeInput {
     // code → 1-based session number; for `verify` it is the whole
     // organigramme the student assembled
     #[serde(default)]
+    #[cfg_attr(
+        target_arch = "wasm32",
+        tsify(type = "Record<string, number>")
+    )]
     pub pinned: BTreeMap<String, usize>,
     pub start: Season,
     // the A/H alternation only — the étés come on top
@@ -45,6 +50,10 @@ pub struct OrganigrammeInput {
     #[serde(default)]
     pub summers_open: bool,
     #[serde(default)]
+    #[cfg_attr(
+        target_arch = "wasm32",
+        tsify(type = "Record<string, number>")
+    )]
     pub seed: BTreeMap<String, usize>,
     #[serde(default)]
     pub max_nodes: Option<u64>,
@@ -55,6 +64,7 @@ pub struct OrganigrammeInput {
 // The horizon is returned with the placement: the session numbers only mean
 // something next to the seasons they index, and JS never computed them.
 #[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(target_arch = "wasm32", derive(tsify::Tsify))]
 pub struct OrganigrammeReport {
     pub sessions: Vec<Season>,
     pub placement: Placement,

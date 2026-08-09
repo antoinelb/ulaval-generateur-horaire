@@ -13,6 +13,7 @@ use crate::program::{
 // feasibility: this is the accounting layer, the composition with A comes
 // with its own input shape later.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct CoverageReport {
     pub mandatory: Vec<MandatoryReport>,
     pub rules: Vec<RuleReport>,
@@ -21,6 +22,7 @@ pub struct CoverageReport {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct MandatoryReport {
     pub scope: Scope,
     pub satisfied: Vec<String>,
@@ -33,6 +35,7 @@ pub struct MandatoryReport {
 // `2026-07-contrainte-de-regle-optionnelle`,
 // `2026-07-regles-negociees-reconnues`).
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct RuleReport {
     pub scope: Scope,
     pub title: String,
@@ -48,6 +51,7 @@ pub struct RuleReport {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(rename_all = "lowercase")]
 pub enum Scope {
     Program,
@@ -56,6 +60,7 @@ pub enum Scope {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(rename_all = "lowercase")]
 pub enum RuleStatus {
     Satisfied,
@@ -65,6 +70,7 @@ pub enum RuleStatus {
 
 // mirror of `Constraint`: what remains to reach the count or the minimum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(untagged)]
 pub enum Missing {
     Count { count: i64 },
@@ -75,11 +81,13 @@ pub enum Missing {
 // can dispense from the course and core cannot see it, so the only verdicts
 // are satisfied (a branch's course is selected) or reported.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct LanguageReport {
     pub status: LanguageStatus,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(rename_all = "lowercase")]
 pub enum LanguageStatus {
     Satisfied,
