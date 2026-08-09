@@ -72,12 +72,15 @@ impl Task {
 
     pub fn increment(&self) {
         let mut state = lock_state();
+        let is_tty = state.is_tty;
+        let mut milestone = None;
         if let Some(progress) =
             state.progress.as_mut().filter(|p| p.id == self.id)
         {
             progress.done += 1;
+            milestone = milestone_line(is_tty, progress);
         }
-        write(&state, None)
+        write(&state, milestone.as_deref())
     }
 
     fn close(&mut self, symbol: &str, colour: &str, success: bool) {
@@ -299,6 +302,25 @@ fn format_progress_symbol(done: usize, total: usize) -> String {
     format!("{done:>width$}/{total}")
 }
 
+// off-tty (CI logs) there is no rewritable bottom line, so a long run would
+// print nothing between its opening and closing lines: emit a permanent
+// counter line every ~5% and at completion, as a heartbeat
+fn milestone_line(is_tty: bool, progress: &Progress) -> Option<String> {
+    let step = (progress.total / 20).max(1);
+    let due =
+        progress.done == progress.total || progress.done.is_multiple_of(step);
+    (!is_tty && due).then(|| {
+        format_line(
+            progress.indent,
+            &progress.msg,
+            &paint_symbol(
+                &format_progress_symbol(progress.done, progress.total),
+                BLUE,
+            ),
+        )
+    })
+}
+
 // flush-right time: cursor-forward 999 clamps at the last column, then back
 // up by the visible length — measured before painting, since the colour
 // escapes occupy zero columns; off-tty (logs) plain text only
@@ -340,6 +362,42 @@ mod tests {
     fn format_progress_symbol_right_aligns_done_to_total_width() {
         assert_eq!(format_progress_symbol(7, 9743), "   7/9743");
         assert_eq!(format_progress_symbol(9743, 9743), "9743/9743");
+    }
+
+    #[test]
+    fn milestone_line_stays_silent_on_tty() {
+        assert_eq!(milestone_line(true, &course_progress(442)), None);
+    }
+
+    #[test]
+    fn milestone_line_fires_every_five_percent_off_tty() {
+        assert_eq!(
+            milestone_line(false, &course_progress(442)),
+            Some(format_line(
+                1,
+                "Scraping courses...",
+                &paint_symbol(&format_progress_symbol(442, 8855), BLUE)
+            ))
+        );
+        assert_eq!(milestone_line(false, &course_progress(443)), None);
+    }
+
+    #[test]
+    fn milestone_line_fires_at_completion_off_step() {
+        // 8855 = 20 * 442 + 15: the last item is not on a step boundary
+        assert!(milestone_line(false, &course_progress(8855)).is_some());
+    }
+
+    #[test]
+    fn milestone_line_fires_every_item_when_total_is_small() {
+        let progress = Progress {
+            id: 0,
+            msg: "tiny".to_string(),
+            done: 1,
+            total: 3,
+            indent: 0,
+        };
+        assert!(milestone_line(false, &progress).is_some());
     }
 
     #[test]
@@ -550,6 +608,16 @@ mod tests {
             id,
             msg: format!("pending {id}"),
             indent,
+        }
+    }
+
+    fn course_progress(done: usize) -> Progress {
+        Progress {
+            id: 0,
+            msg: "Scraping courses...".to_string(),
+            done,
+            total: 8855,
+            indent: 1,
         }
     }
 
