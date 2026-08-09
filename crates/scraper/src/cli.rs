@@ -419,9 +419,11 @@ fn program_slugs(
 }
 
 // The vintage a scrape captures: the session that follows the run, since a
-// run prepares the coming session's version — January–April prepares été,
-// May–August automne, September–December the coming hiver, which belongs to
-// the next civil year (ADR `2026-08-millesime-de-programme-en-semestre`).
+// run prepares the coming session's version — and a program is only ever
+// defined for automne or hiver, never été, so September–December prepares
+// the coming hiver, which belongs to the next civil year, and every other
+// month prepares the current year's automne
+// (ADR `2026-08-millesime-automne-ou-hiver-jamais-ete`).
 fn semester_after(now: std::time::SystemTime) -> Semester {
     // a pre-1970 clock is a broken host; flooring it to day zero keeps the
     // rule total and the bogus vintage visible in the file name
@@ -431,17 +433,13 @@ fn semester_after(now: std::time::SystemTime) -> Semester {
         .unwrap_or(0);
     let (year, month) = civil_from_days(days);
     match month {
-        1..=4 => Semester {
-            season: Season::Summer,
-            year,
-        },
-        5..=8 => Semester {
-            season: Season::Fall,
-            year,
-        },
-        _ => Semester {
+        9..=12 => Semester {
             season: Season::Winter,
             year: year + 1,
+        },
+        _ => Semester {
+            season: Season::Fall,
+            year,
         },
     }
 }
@@ -1135,14 +1133,13 @@ mod tests {
     }
 
     #[test]
-    fn the_semester_after_the_scrape_flips_three_times_a_year() {
-        // a run prepares the coming session: January–April → été,
-        // May–August → automne, September–December → the next civil
-        // year's hiver — both boundaries of each band are pinned
+    fn the_semester_after_the_scrape_flips_twice_a_year() {
+        // a run prepares the coming session, and a program is only defined
+        // for automne or hiver: September–December → the next civil year's
+        // hiver, every other month → the current year's automne — both
+        // boundaries of each band are pinned
         for (date, secs, expected) in [
-            ("2026-01-01", 1_767_225_600_u64, "E26"),
-            ("2026-04-30", 1_777_507_200, "E26"),
-            ("2026-05-01", 1_777_593_600, "A26"),
+            ("2026-01-01", 1_767_225_600_u64, "A26"),
             ("2026-08-31", 1_788_134_400, "A26"),
             ("2026-09-01", 1_788_220_800, "H27"),
             ("2026-12-31", 1_798_675_200, "H27"),
@@ -1158,8 +1155,8 @@ mod tests {
         let now = std::time::UNIX_EPOCH - std::time::Duration::from_secs(1);
         assert_eq!(
             semester_after(now).to_string(),
-            "E70",
-            "January 1970 → its coming été"
+            "A70",
+            "January 1970 → its coming automne"
         );
     }
 
