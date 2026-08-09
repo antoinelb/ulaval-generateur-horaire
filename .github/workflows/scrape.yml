@@ -26,6 +26,9 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
+        with:
+          # rebasing the snapshot commit needs the real merge base, not a shallow tip
+          fetch-depth: 0
       - name: Check whether today is a scrape day
         id: gate
         # %m-%d matches the file's mm-jj lines; the header line never matches a date
@@ -48,17 +51,29 @@ jobs:
       - name: Commit the refreshed snapshots
         if: steps.gate.outputs.run == 'true'
         id: commit
+        # a scrape takes ~20 min, so main can move under us between checkout and
+        # push; the commit only touches generated files, so rebasing is safe
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/
           if git diff --cached --quiet; then
             echo "pushed=false" >> "$GITHUB_OUTPUT"
-          else
-            git commit -m "Refreshed the scraped snapshots"
-            git push
-            echo "pushed=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          git commit -m "Refreshed the scraped snapshots"
+          for attempt in 1 2 3; do
+            if git push; then
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt/3); rebasing onto origin/main" >&2
+            # a conflict aborts the step: hand-edited snapshots must not be
+            # merged hunk-by-hunk into a scraper rewrite of the same file
+            git pull --rebase origin main
+          done
+          echo "Push still rejected after 3 attempts" >&2
+          exit 1
       - name: Trigger the deploy
         if: steps.commit.outputs.pushed == 'true'
         env:
