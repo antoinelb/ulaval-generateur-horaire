@@ -1,0 +1,76 @@
+name: Scrape
+
+on:
+  schedule:
+    # daily around 04:30-05:30 in Québec; the date gate below decides whether to scrape
+    - cron: "30 9 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Scraper même si la date du jour n'est pas dans data/dates_scraping.txt"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    # a cold run (data/cache/ is not committed) takes ~20 min at ~10 req/s
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check whether today is a scrape day
+        id: gate
+        # %m-%d matches the file's mm-jj lines; the header line never matches a date
+        run: |
+          if grep -qx "$(date +%m-%d)" data/dates_scraping.txt || [ "${{ inputs.force }}" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.gate.outputs.run == 'true'
+        uses: dtolnay/rust-toolchain@stable
+      - if: steps.gate.outputs.run == 'true'
+        uses: Swatinem/rust-cache@v2
+      - name: Scrape catalogue, courses and programs
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          cargo run --release -p ulaval-scheduler-scraper -- catalogue
+          cargo run --release -p ulaval-scheduler-scraper -- courses
+          cargo run --release -p ulaval-scheduler-scraper -- program
+      - name: Commit the refreshed snapshots
+        if: steps.gate.outputs.run == 'true'
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "Refreshed the scraped snapshots"
+            git push
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Trigger the deploy
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --ref main
+      # fail AFTER committing: the snapshot stays valid (atomic writes, >=90% catalogue
+      # guard) and the failure is only the free notification channel (GitHub email)
+      - name: Fail if the scraper logged anomalies
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          if ls data/*_errors.log >/dev/null 2>&1; then
+            echo "Scraper anomalies:" >&2
+            tail -n +1 data/*_errors.log >&2
+            exit 1
+          fi

@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # a data push made by scrape.yml with GITHUB_TOKEN never triggers `push`;
+  # it redeploys through an explicit `gh workflow run ci.yml` instead
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      # `make static` formats in place; CI only verifies
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - run: cargo clippy -p ulaval-scheduler-wasm --target wasm32-unknown-unknown -- -D warnings
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - uses: Swatinem/rust-cache@v2
+      # same exclusions as `make test`, plus the blocking 100% threshold
+      - run: cargo llvm-cov --ignore-filename-regex '(lib\.rs|/mod\.rs|/main\.rs)$' --fail-under-lines 100
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: [static, test]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
+      - uses: Swatinem/rust-cache@v2
+      - run: wasm-pack build crates/wasm --target web
+      # the site serves only the wasm package and the data snapshots;
+      # the real UI will take the root later (jalons 3-9)
+      - name: Assemble site
+        run: |
+          mkdir -p _site/data
+          cp -r crates/wasm/pkg _site/pkg
+          cp data/*.json _site/data/
+          cp -r data/programmes _site/data/programmes
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - uses: actions/deploy-pages@v4
+        id: deployment
