@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag existant à (re)publier, p. ex. v0.1.0"
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  binaire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build the scraper
+        run: cargo build --release -p ulaval-scheduler-scraper
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        # the only consumer is another ubuntu-latest runner, so a plain glibc
+        # binary suffices; a musl build is the upgrade path if a consumer ever
+        # runs elsewhere (ADR `2026-08-release-semver-du-binaire-du-scraper`)
+        run: |
+          strip target/release/ulaval-scraper
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --generate-notes \
+            target/release/ulaval-scraper \
+            || gh release upload "$TAG" target/release/ulaval-scraper --clobber
