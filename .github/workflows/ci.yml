@@ -74,6 +74,13 @@ jobs:
           cp data/*.json _site/data/
           cp -r data/programmes _site/data/programmes
           mdbook build docs/livre --dest-dir "$GITHUB_WORKSPACE/_site/docs"
+      # Pages serves no directory listing; generate one at assembly time
+      - name: Index the data directories
+        run: |
+          for d in _site/data _site/data/programmes; do
+            ls -1 --color=never "$d" | grep -v '^index.html$' |
+              sed 's|.*|<a href="&">&</a><br>|' > "$d/index.html"
+          done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
