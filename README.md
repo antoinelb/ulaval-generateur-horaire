@@ -4,9 +4,9 @@ Le Générateur d'horaire est un outil de génération d'horaire et de planifica
 Il aide à bâtir un horaire hebdomadaire sans conflit pour une session donnée et à planifier un cheminement complet (organigramme A1→H8) sous les règles d'un programme.
 Il est développé à l'Université Laval, Québec, Canada, pour Daniel Nadeau, directeur du baccalauréat en génie des eaux (GEX).
 
-> **Statut :** conception terminée, implémentation en cours.
+> **Statut :** scraper (étape 1) et solveurs (étape 2) livrés ; l'interface (jalons 3–9) est en cours.
 
-📋 **[Plan du projet](docs/project_plan.md)** · 📐 **[Documents de conception](docs/conception/)**
+📖 **[Documentation](https://antoinelb.github.io/ulaval-generateur-horaire/docs/)** · 📋 **[Plan du projet](docs/project_plan.md)** · 📐 **[Documents de conception](docs/conception/)**
 
 [**Utilisation**](#utilisation)
 | [**Développement**](#développement)
@@ -15,52 +15,60 @@ Il est développé à l'Université Laval, Québec, Canada, pour Daniel Nadeau, 
 ## Utilisation
 
 L'application est entièrement statique, sans serveur ni base de données.
-Les données proviennent de snapshots JSON par session, produits par un scraper lancé sur un cron d'intégration continue — jamais de scraping depuis l'application.
-Le solveur d'horaire tourne dans le navigateur ; l'état de l'utilisateur vit dans le `localStorage` et un horaire se partage par URL.
+Les données proviennent de snapshots JSON produits par le scraper sur un cron d'intégration continue — jamais de scraping depuis l'application.
+Les solveurs tournent dans le navigateur ; l'état de l'utilisateur vit dans le `localStorage` et un horaire se partage par URL.
 
-### Prérequis
+Trois morceaux sont publiés sur GitHub Pages, à la même origine :
 
-- [Rust](https://www.rust-lang.org/tools/install) (édition 2021).
-- La CLI Dioxus (`dx`) : `cargo install dioxus-cli`.
+| Emplacement | Contenu |
+|---|---|
+| [`/pkg`](https://antoinelb.github.io/ulaval-generateur-horaire/pkg/ulaval_scheduler_wasm.js) | le module WASM (paquet ES + `.d.ts` typé), importable par URL depuis n'importe quel HTML |
+| [`/data`](https://antoinelb.github.io/ulaval-generateur-horaire/data/cours.json) | les snapshots (cours et programmes) |
+| [`/docs`](https://antoinelb.github.io/ulaval-generateur-horaire/docs/) | la documentation (livre mdBook en français) |
 
-### Lancer l'application
+Consommer les solveurs depuis JavaScript :
 
-Lancer le serveur de développement pour la plateforme web (par défaut) :
+```js
+import init, {generate_schedule} from "https://antoinelb.github.io/ulaval-generateur-horaire/pkg/ulaval_scheduler_wasm.js";
 
-```sh
-dx serve
+await init();
 ```
 
-L'interface est disponible à http://localhost:8080.
-
-Pour une autre plateforme, utiliser le drapeau `--platform` (features Cargo `web`, `desktop`, `mobile`) :
-
-```sh
-dx serve --platform desktop
-```
+Le [guide du consommateur JavaScript](https://antoinelb.github.io/ulaval-generateur-horaire/docs/guide/chargement.html) couvre les quatre fonctions, les schémas et les erreurs.
 
 ## Développement
 
-L'application est bâtie avec [Dioxus 0.7](https://dioxuslabs.com/learn/0.7) (Rust, WebAssembly, rendu côté client).
-
-### Structure
+Un workspace Cargo, tout en Rust :
 
 ```
-assets/        # ressources statiques (favicon, styles, images)
-src/           # code de l'application (point d'entrée : main.rs)
-Cargo.toml     # dépendances et features de plateforme
-Dioxus.toml    # configuration Dioxus (titre, ressources web)
+crates/core/     # logique du domaine, zéro IO ; compile en natif et en WASM
+crates/scraper/  # binaire natif async : pages ULaval → snapshots JSON
+crates/wasm/     # cdylib : les solveurs exposés au JavaScript nu
+crates/ui/       # interface Dioxus 0.7 (rendu client, web seulement)
+data/            # snapshots commis, servis tels quels sur Pages
+docs/livre/      # source du livre mdBook publié à /docs
 ```
 
-### Qualité du code
+### Cibles make
 
 ```sh
-cargo fmt
-cargo clippy
+make static  # fmt + clippy (natif --all-features, puis wasm32), avertissement = erreur
+make test    # cargo +nightly llvm-cov — 100 % de couverture exigé
+make wasm    # wasm-pack build crates/wasm --target web (requiert wasm-pack)
+make docs    # mdbook build docs/livre (requiert mdbook)
 ```
+
+L'interface se lance avec la CLI Dioxus (`cargo install dioxus-cli`) : `dx serve` depuis `crates/ui`, disponible à http://localhost:8080.
+
+### Intégration continue
+
+- `ci.yml` : `static` et `test` sur chaque push et pull request, puis (hors PR) déploiement de `pkg` + `data` + `docs` sur GitHub Pages.
+- `scrape.yml` : cron quotidien gardé par `data/dates_scraping.txt` ; scrape complet, commit atomique des snapshots, redéclenchement du déploiement.
+
+Chaque décision est consignée dans un ADR sous [`docs/conception/adr/`](docs/conception/adr/).
 
 ## Références
 
+- [Documentation](https://antoinelb.github.io/ulaval-generateur-horaire/docs/) — guide JavaScript, architecture et domaine.
 - [Plan du projet](docs/project_plan.md) — portée, contraintes et jalons.
 - [Documents de conception](docs/conception/) — historique de conception et décisions (ADR).
-- [Documentation Dioxus 0.7](https://dioxuslabs.com/learn/0.7)
