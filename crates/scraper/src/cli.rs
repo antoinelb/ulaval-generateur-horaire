@@ -110,7 +110,13 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
         } => {
             let (snapshot, anomalies) =
                 get_courses(&output_dir, &subjects).await?;
-            write_courses(snapshot, anomalies, &output_dir, &subjects)
+            write_courses(
+                snapshot,
+                anomalies,
+                &output_dir,
+                &subjects,
+                std::time::SystemTime::now(),
+            )
         }
         Command::Program {
             output_dir,
@@ -289,6 +295,7 @@ fn write_courses(
     anomalies: Vec<CourseError>,
     output_dir: &str,
     subjects: &[String],
+    now: std::time::SystemTime,
 ) -> anyhow::Result<()> {
     let dir = Path::new(output_dir);
     let path = dir.join("cours.json");
@@ -316,11 +323,51 @@ fn write_courses(
     // cannot fail
     let json = serde_json::to_string_pretty(&snapshot)
         .expect("Snapshot serialization always succeeds");
+    let meta = snapshot_meta(now, snapshot.courses.len());
     write_atomic(&path, &(json + "\n"))?;
+    // the UI shows « données du … » from this file: git keeps no mtime and
+    // Pages' Last-Modified is the deploy time, so the scrape stamps itself
+    // (ADR `2026-08-meta-json-provenance-du-snapshot`)
+    write_atomic(&dir.join("meta.json"), &(meta + "\n"))?;
     write_error_log(&dir.join("cours_errors.log"), &anomalies)?;
 
     task.done();
     Ok(())
+}
+
+fn snapshot_meta(now: std::time::SystemTime, course_count: usize) -> String {
+    #[derive(serde::Serialize)]
+    struct SnapshotMeta {
+        scraped_at: String,
+        course_count: usize,
+    }
+    let meta = SnapshotMeta {
+        scraped_at: iso_utc(now),
+        course_count,
+    };
+    // expect over `?`: serializing a string and an integer provably
+    // cannot fail
+    serde_json::to_string_pretty(&meta)
+        .expect("Meta serialization always succeeds")
+}
+
+// UTC ISO-8601 with an explicit Z: the stamp travels through JSON, exports
+// and screenshots, so it must carry its own timezone
+fn iso_utc(now: std::time::SystemTime) -> String {
+    // a pre-1970 clock is a broken host; flooring it to the epoch keeps the
+    // stamp total and the bogus date visible in the file
+    let secs = now
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|since| since.as_secs())
+        .unwrap_or(0);
+    let (year, month, day) = civil_from_days(secs / 86_400);
+    let in_day = secs % 86_400;
+    format!(
+        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}Z",
+        in_day / 3_600,
+        in_day % 3_600 / 60,
+        in_day % 60
+    )
 }
 
 // A `--subjects` run rewrites exactly its own subjects' courses inside the
@@ -431,7 +478,7 @@ fn semester_after(now: std::time::SystemTime) -> Semester {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|since| since.as_secs() / 86_400)
         .unwrap_or(0);
-    let (year, month) = civil_from_days(days);
+    let (year, month, _) = civil_from_days(days);
     match month {
         9..=12 => Semester {
             season: Season::Winter,
@@ -444,9 +491,9 @@ fn semester_after(now: std::time::SystemTime) -> Semester {
     }
 }
 
-// days since 1970-01-01 → (civil year, month), by Howard Hinnant's
+// days since 1970-01-01 → (civil year, month, day), by Howard Hinnant's
 // `civil_from_days` (branchless era arithmetic, exact for any day ≥ 0)
-fn civil_from_days(days: u64) -> (u16, u64) {
+fn civil_from_days(days: u64) -> (u16, u64, u64) {
     let z = days + 719_468;
     let era = z / 146_097;
     let day_of_era = z % 146_097;
@@ -456,6 +503,7 @@ fn civil_from_days(days: u64) -> (u16, u64) {
     let day_of_year =
         day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
     let shifted_month = (5 * day_of_year + 2) / 153;
+    let day = day_of_year - (153 * shifted_month + 2) / 5 + 1;
     // the algorithm's year starts in March; January and February belong to
     // the next civil year
     let month = if shifted_month < 10 {
@@ -464,7 +512,7 @@ fn civil_from_days(days: u64) -> (u16, u64) {
         shifted_month - 9
     };
     let year = year_of_era + era * 400 + u64::from(month <= 2);
-    (year as u16, month)
+    (year as u16, month, day)
 }
 
 async fn get_programs(
@@ -730,6 +778,11 @@ mod tests {
             "{snapshot}"
         );
         assert!(!dir.join("cours_errors.log").exists(), "clean run");
+        // the run stamps its own provenance beside the snapshot
+        let meta = std::fs::read_to_string(dir.join("meta.json"))
+            .unwrap_or_else(|e| panic!("read the meta: {e}"));
+        assert!(meta.contains("\"course_count\": 1"), "{meta}");
+        assert!(meta.contains("\"scraped_at\""), "{meta}");
         cleanup(&dir);
     }
 
@@ -933,6 +986,23 @@ mod tests {
         let result = run(courses_args(&dir, &[])).await;
 
         assert!(result.is_err(), "an unwritable snapshot must fail");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn an_unwritable_meta_is_an_error() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        mount_course(&server, "GEX-1000").await;
+        let dir = test_dir("courses-blocked-meta");
+        plant_catalogue(&dir, &server, &["GEX-1000"]);
+        // a directory at the target path makes the rename fail
+        std::fs::create_dir_all(dir.join("meta.json"))
+            .unwrap_or_else(|e| panic!("block the meta path: {e}"));
+
+        let result = run(courses_args(&dir, &[])).await;
+
+        assert!(result.is_err(), "an unwritable meta must fail");
         cleanup(&dir);
     }
 
@@ -1158,6 +1228,36 @@ mod tests {
             "A70",
             "January 1970 → its coming automne"
         );
+    }
+
+    #[test]
+    fn the_snapshot_meta_stamps_an_utc_instant_and_the_count() {
+        // 2026-09-01T00:00:00Z (pinned above) plus 01:02:03 into the day
+        let now = std::time::UNIX_EPOCH
+            + std::time::Duration::from_secs(1_788_220_800 + 3_723);
+        assert_eq!(
+            snapshot_meta(now, 8_834),
+            "{\n  \"scraped_at\": \"2026-09-01T01:02:03Z\",\n  \"course_count\": 8834\n}"
+        );
+    }
+
+    #[test]
+    fn iso_utc_pins_the_epoch_a_leap_day_and_a_year_end() {
+        for (secs, expected) in [
+            (0_u64, "1970-01-01T00:00:00Z"),
+            (1_709_164_800, "2024-02-29T00:00:00Z"),
+            (1_735_689_599, "2024-12-31T23:59:59Z"),
+        ] {
+            let now =
+                std::time::UNIX_EPOCH + std::time::Duration::from_secs(secs);
+            assert_eq!(iso_utc(now), expected);
+        }
+    }
+
+    #[test]
+    fn a_pre_epoch_clock_floors_the_meta_stamp_to_the_epoch() {
+        let now = std::time::UNIX_EPOCH - std::time::Duration::from_secs(1);
+        assert_eq!(iso_utc(now), "1970-01-01T00:00:00Z");
     }
 
     #[tokio::test]

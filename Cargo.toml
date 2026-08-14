@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/scraper", "crates/ui", "crates/wasm"]
+members = [
+    "crates/core",
+    "crates/scraper",
+    "crates/ui",
+    "crates/ui-calculations",
+    "crates/wasm",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -18,6 +24,11 @@ thiserror = "2"
 tsify = { version = "0.5", default-features = false, features = ["js"] }
 # 0.2.100 introduced unchecked_param_type / unchecked_return_type
 wasm-bindgen = "0.2.100"
+# the whole-organigramme share link: state → postcard → deflate → base64url
+# (ADR `2026-08-partage-de-lorganigramme-complet-en-fragment`)
+postcard = { version = "1", default-features = false, features = ["alloc"] }
+miniz_oxide = "0.8"
+base64 = "0.22"
 
 [workspace.lints.rust]
 non_upper_case_globals = "allow"

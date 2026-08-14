@@ -18,5 +18,11 @@ __pycache__/
 
 crates/wasm/pkg
 
+# Snapshot copies for dx serve, re-created by `make ui-data`
+crates/ui/assets/data/
+
+# Worker wasm module, re-created by `make ui-calc`
+crates/ui/assets/calc/
+
 # mdBook output (docs/livre/src is the source)
 docs/livre/book/

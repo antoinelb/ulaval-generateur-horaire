@@ -49,7 +49,7 @@ Toute nouvelle décision est documentée dans un fichier individuel sous `docs/c
 
 #### Cours pour le programme (création de l'organigramme)
 
-- Construire l'organigramme du programme (quel cours à quelle session, A1→H8 mappé sur des sessions réelles) sous contraintes fournies par l'utilisateur : cours déjà réussis, cours voulus, sessions remplies à la main, session à l'étranger, etc.
+- Construire l'organigramme du programme (quel cours à quelle session, A1→H8 mappé sur des sessions réelles) sous contraintes fournies par l'utilisateur : cours voulus, sessions remplies à la main, session à l'étranger, etc. Un cours déjà réussi s'exprime en le plaçant dans sa session passée — l'interface n'a pas de marquage « réussi » distinct ; seul le mécanisme `passed` de `core` subsiste, nourri par la case « scolarité préparatoire faite » (ADR `2026-08-retrait-de-la-notion-de-cours-reussi`).
 - Respecter les règles du programme (obligatoires, « Règle N – X crédits parmi », sous-groupes) et l'ordre imposé par les préalables (équivalences comprises), selon les sessions d'offre.
 - Partir du cheminement type GEX pré-chargé (encodé à la main — seule donnée sans source machine-lisible).
 - Afficher la couverture des règles : ce qui est satisfait, ce qui reste à combler, et des cours candidats pour combler.
@@ -58,7 +58,7 @@ Toute nouvelle décision est documentée dans un fichier individuel sous `docs/c
 #### Transversal
 
 - Reprise côté client (`localStorage`) : filtres, session affichée, horaire et organigramme courants — l'utilisateur reprend exactement où il était.
-- Partage d'un horaire par URL : un horaire choisi n'est qu'un ensemble de sections, encodable dans l'URL.
+- Partage par URL : le lien porte **l'organigramme entier** (programme et millésime, sessions, épinglages, sections forcées, cours manuels complets, ententes) dans le fragment `#…` — le destinataire colle le lien et voit tout, sans rien ajuster (ADR `2026-08-partage-de-lorganigramme-complet-en-fragment`).
 - L'agencement des écrans n'est pas figé (pas nécessairement un écran unique) ; ce document identifie les fonctionnalités, pas leur agencement.
 
 ### Portée

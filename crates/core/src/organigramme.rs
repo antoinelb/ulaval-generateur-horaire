@@ -107,6 +107,15 @@ pub struct Solution {
     pub assumed: BTreeSet<String>,
 }
 
+// The static answer of `prerequisites_met` : met against what the student
+// already holds, or not — `assumed` carries the operands the verdict had
+// to presume (raw text, préuniversitaire codes), surfaced, never imposed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PrereqStatus {
+    Met { assumed: BTreeSet<String> },
+    Unmet,
+}
+
 // Inputs the placement refuses to guess about — surfaced, never invented.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum PlacementError {
@@ -247,6 +256,96 @@ pub fn place(request: &PlacementRequest) -> Result<Placement, PlacementError> {
         });
     }
     Ok(search(&ctx))
+}
+
+// The static prerequisite question the UI asks per course row (jalon 6,
+// « préalables non remplis ») : against what the student already holds —
+// `satisfied` (passed and placed-before codes) and the credits accumulated
+// so far — never against a hypothetical future placement. Leaf semantics
+// mirror the search's: a code neither held nor préuniversitaire blocks
+// (ADR `2026-07-presomption-limitee-au-preuniversitaire`); a raw operand
+// or a presumed préuniversitaire code lands in `assumed`.
+pub fn prerequisites_met(
+    course: &Course,
+    satisfied: &BTreeSet<String>,
+    credits: u32,
+) -> Result<PrereqStatus, PlacementError> {
+    let Some(tree) = flat_tree(course)? else {
+        return Ok(PrereqStatus::Met {
+            assumed: BTreeSet::new(),
+        });
+    };
+    let mut verdicts = vec![Verdict::Unknown; tree.nodes.len()];
+    for i in (0..tree.nodes.len()).rev() {
+        let verdict = match &tree.nodes[i] {
+            FlatNode::Course(code) => static_course_leaf(code, satisfied),
+            FlatNode::Raw(raw) => {
+                Verdict::Sat(std::iter::once(raw.clone()).collect())
+            }
+            FlatNode::Credits(threshold) if credits >= *threshold => {
+                Verdict::Sat(BTreeSet::new())
+            }
+            FlatNode::Credits(_) => Verdict::False,
+            FlatNode::All(children) => all_verdict(children, &verdicts),
+            FlatNode::Any(children) => any_verdict(children, &verdicts),
+        };
+        verdicts[i] = verdict;
+    }
+    match verdicts.into_iter().next().unwrap_or(Verdict::Unknown) {
+        Verdict::Sat(assumed) => Ok(PrereqStatus::Met { assumed }),
+        // static leaves never yield Unknown; rejecting is the safe reading
+        // if one ever did
+        Verdict::False | Verdict::Unknown => Ok(PrereqStatus::Unmet),
+    }
+}
+
+// no candidate list here: a code is either held, presumed (préuniversitaire
+// only), or a real university course still to take — which blocks
+fn static_course_leaf(code: &str, satisfied: &BTreeSet<String>) -> Verdict {
+    if satisfied.contains(code) {
+        Verdict::Sat(BTreeSet::new())
+    } else if is_preuniversity(code) {
+        Verdict::Sat(std::iter::once(code.to_string()).collect())
+    } else {
+        Verdict::False
+    }
+}
+
+// Which sessions could host `code` if the student pinned it there, the
+// rest of the request held as given (the « + H28 » chips, jalons 6–7).
+// One probe of `place` per session : a pin is exactly what accepting the
+// chip would do, so pin semantics — offer intersection, summer restriction
+// lifted — answer the very question the click asks. With every other
+// course pinned, each probe validates a single assignment instead of
+// searching; an unpinned course left in the request stays movable, and
+// the probe then answers « could it fit with the others rearranged ».
+pub fn admissible_sessions(
+    request: &PlacementRequest,
+    code: &str,
+) -> Result<BTreeSet<usize>, PlacementError> {
+    let mut admissible = BTreeSet::new();
+    for session in 1..=request.sessions.len() {
+        let mut pinned = request.pinned.clone();
+        pinned.insert(code.to_string(), session);
+        let probe = PlacementRequest {
+            sessions: request.sessions,
+            credit_cap: request.credit_cap,
+            concomitant: request.concomitant,
+            courses: request.courses,
+            passed: request.passed,
+            pinned: &pinned,
+            stages: request.stages,
+            open_summers: request.open_summers,
+            seed: request.seed,
+            max_nodes: request.max_nodes,
+            // existence is the whole question
+            max_solutions: 1,
+        };
+        if !place(&probe)?.solutions.is_empty() {
+            admissible.insert(session);
+        }
+    }
+    Ok(admissible)
 }
 
 fn validate(request: &PlacementRequest) -> Result<(), PlacementError> {
@@ -1039,6 +1138,28 @@ mod tests {
 
         fn solve(&self) -> Placement {
             self.place().unwrap_or_else(|e| panic!("{e}"))
+        }
+
+        fn admissible(
+            &self,
+            code: &str,
+        ) -> Result<BTreeSet<usize>, PlacementError> {
+            admissible_sessions(
+                &PlacementRequest {
+                    sessions: &self.sessions,
+                    credit_cap: self.credit_cap,
+                    concomitant: self.concomitant,
+                    courses: &self.courses,
+                    passed: &self.passed,
+                    pinned: &self.pinned,
+                    stages: &self.stages,
+                    open_summers: &self.open_summers,
+                    seed: &self.seed,
+                    max_nodes: self.max_nodes,
+                    max_solutions: self.max_solutions,
+                },
+                code,
+            )
         }
     }
 
@@ -1922,6 +2043,169 @@ mod tests {
             inputs.place(),
             Err(PlacementError::PrerequisiteTreeTooLarge {
                 code: "B-2".to_string()
+            })
+        );
+    }
+
+    // --- the static prerequisite question (UI seam, jalon 6) ---
+
+    fn met_with(assumed: &[&str]) -> Result<PrereqStatus, PlacementError> {
+        Ok(PrereqStatus::Met {
+            assumed: passed(assumed),
+        })
+    }
+
+    #[test]
+    fn a_course_without_prerequisites_is_statically_met() {
+        assert_eq!(
+            prerequisites_met(&anytime("A-1", "monday"), &passed(&[]), 0),
+            met_with(&[])
+        );
+    }
+
+    #[test]
+    fn a_held_course_leaf_meets_and_a_missing_one_blocks() {
+        let course = with_prereq("B-2", "tuesday", &parsed("\"A-1\""));
+        assert_eq!(
+            prerequisites_met(&course, &passed(&["A-1"]), 0),
+            met_with(&[])
+        );
+        assert_eq!(
+            prerequisites_met(&course, &passed(&[]), 0),
+            Ok(PrereqStatus::Unmet)
+        );
+    }
+
+    #[test]
+    fn preuniversity_and_raw_operands_are_presumed_and_surfaced() {
+        let preuniversity =
+            with_prereq("B-2", "tuesday", &parsed("{\"all\":[\"MAT-0130\"]}"));
+        assert_eq!(
+            prerequisites_met(&preuniversity, &passed(&[]), 0),
+            met_with(&["MAT-0130"])
+        );
+        // a whole prerequisite outside the grammar: one presumed operand
+        let raw = with_prereq("B-2", "tuesday", "{\"raw\":\"un examen\"}");
+        assert_eq!(
+            prerequisites_met(&raw, &passed(&[]), 0),
+            met_with(&["un examen"])
+        );
+    }
+
+    #[test]
+    fn a_credits_threshold_is_checked_against_the_accumulated_credits() {
+        let course = with_prereq(
+            "B-2",
+            "tuesday",
+            &parsed("{\"program_credits\":{\"program\":null,\"credits\":24}}"),
+        );
+        assert_eq!(
+            prerequisites_met(&course, &passed(&[]), 24),
+            met_with(&[])
+        );
+        assert_eq!(
+            prerequisites_met(&course, &passed(&[]), 23),
+            Ok(PrereqStatus::Unmet)
+        );
+    }
+
+    #[test]
+    fn an_any_branch_proven_without_assumptions_wins() {
+        let course = with_prereq(
+            "B-2",
+            "tuesday",
+            &parsed("{\"any\":[\"MAT-0130\",\"A-1\"]}"),
+        );
+        // the clean branch beats the presumed préuniversitaire one
+        assert_eq!(
+            prerequisites_met(&course, &passed(&["A-1"]), 0),
+            met_with(&[])
+        );
+        // without it, the presumed branch carries its operand
+        assert_eq!(
+            prerequisites_met(&course, &passed(&[]), 0),
+            met_with(&["MAT-0130"])
+        );
+    }
+
+    #[test]
+    fn a_static_tree_past_the_bound_is_the_same_error() {
+        let tree = (0..MAX_TREE_NODES)
+            .fold(PrereqTree::Course("X-1".to_string()), |child, _| {
+                PrereqTree::All { all: vec![child] }
+            });
+        let mut course = anytime("B-2", "tuesday");
+        course.prerequisites = Some(Prerequisites::Parsed {
+            raw: "deep".to_string(),
+            tree,
+        });
+        assert_eq!(
+            prerequisites_met(&course, &passed(&[]), 0),
+            Err(PlacementError::PrerequisiteTreeTooLarge {
+                code: "B-2".to_string()
+            })
+        );
+    }
+
+    // --- the session probes behind the « + H28 » chips (UI seam) ---
+
+    #[test]
+    fn admissible_sessions_respect_offer_and_precedence() {
+        // A-1 pinned to session 1; B-2 requires it strictly before
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![
+                anytime("A-1", "monday"),
+                with_prereq("B-2", "tuesday", &parsed("\"A-1\"")),
+            ],
+        );
+        inputs.pinned = BTreeMap::from([("A-1".to_string(), 1)]);
+        assert_eq!(inputs.admissible("B-2"), Ok(BTreeSet::from([2])));
+    }
+
+    #[test]
+    fn a_full_session_is_not_admissible() {
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![anytime("A-1", "monday"), anytime("B-2", "tuesday")],
+        );
+        inputs.credit_cap = 3;
+        inputs.pinned = BTreeMap::from([("A-1".to_string(), 1)]);
+        assert_eq!(inputs.admissible("B-2"), Ok(BTreeSet::from([2])));
+    }
+
+    #[test]
+    fn a_weekly_conflict_excludes_the_session_from_the_probe() {
+        // same monday slot: the A-veto refuses the shared session
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![anytime("A-1", "monday"), anytime("B-2", "monday")],
+        );
+        inputs.pinned = BTreeMap::from([("A-1".to_string(), 1)]);
+        assert_eq!(inputs.admissible("B-2"), Ok(BTreeSet::from([2])));
+    }
+
+    #[test]
+    fn probing_a_stage_lifts_the_summer_restriction_like_the_pin_it_stands_for(
+    ) {
+        let mut inputs = Inputs::new(
+            &FALL_WINTER_SUMMER,
+            vec![all_seasons("S-1", "monday")],
+        );
+        inputs.stages = stages(&["S-1"]);
+        // unpinned the stage goes to the été only; the chip's pin opens all
+        assert_eq!(inputs.admissible("S-1"), Ok(BTreeSet::from([1, 2, 3])));
+    }
+
+    #[test]
+    fn probing_a_passed_course_is_the_typed_error() {
+        let mut inputs =
+            Inputs::new(&FALL_WINTER, vec![anytime("A-1", "monday")]);
+        inputs.passed = passed(&["A-1"]);
+        assert_eq!(
+            inputs.admissible("A-1"),
+            Err(PlacementError::PassedAndPinned {
+                code: "A-1".to_string()
             })
         );
     }
