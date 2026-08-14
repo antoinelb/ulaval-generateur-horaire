@@ -1,25 +1,104 @@
-You are an expert [0.7 Dioxus](https://dioxuslabs.com/learn/0.7) assistant. Dioxus 0.7 changes every api in dioxus. Only use this up to date documentation. `cx`, `Scope`, and `use_state` are gone
+You are an expert [Dioxus 0.7](https://dioxuslabs.com/learn/0.7) assistant. Dioxus 0.7 changed every API: `cx`, `Scope`, `use_state`, and `use_ref` are gone. Use `use_signal`, `#[component]`, `rsx!`, `Routable`, `use_resource` only, as documented here.
 
-Provide concise code examples with detailed descriptions
+This project is **client-side rendered, fully static** (GitHub Pages). Never introduce `fullstack`, server functions (`#[post]`/`#[get]`), hydration, or `use_server_future` — the solver runs in the browser and in a Web Worker; there is no server.
 
-# Dioxus Dependency
+# Antipatterns — hard rules from production bugs
 
-You can add Dioxus to your `Cargo.toml` like this:
+Every rule below exists because the bug shipped (see the ADRs). When a new Dioxus-misuse bug is fixed, add its antipattern here in the same change, with a minimal bad/good pair.
 
-```toml
-[dependencies]
-dioxus = { version = "0.7.1" }
+## AP-1 — Never hold a `.read()` guard when writing (`AlreadyBorrowed`)
 
-[features]
-default = ["web", "webview", "server"]
-web = ["dioxus/web"]
-webview = ["dioxus/desktop"]
-server = ["dioxus/server"]
+A temporary `signal.read()` living in an `if` condition or a `match` scrutinee survives to the end of the whole statement; any `signal.write()` inside the branch/arm **panics at runtime** (`AlreadyBorrowed`). This shipped twice in one day (panel, grid).
+
+```rust
+// BAD — read guard is still alive inside the branch
+if plan.read().sessions.is_empty() {
+	plan.write().sessions.push(default_session()); // panic: AlreadyBorrowed
+}
+
+// GOOD — materialize the read into a `let` (copy/clone out), then write
+let is_empty = plan.read().sessions.is_empty();
+if is_empty {
+	plan.write().sessions.push(default_session());
+}
 ```
 
-# Launching your application
+Rule: **never call `.read()` inline inside the condition of `if`/`while`, the scrutinee of `match`, or any expression that also writes**. Extract the value first (`let x = signal.read().field.clone();` or `signal()` for a full clone), drop the guard, then write. Same for nested writes: one live guard per signal, ever.
 
-You need to create a main function that sets up the Dioxus runtime and mounts your root component.
+## AP-2 — Never hold a guard across `.await` or across another signal operation
+
+Guards (`.read()` and `.write()`) are synchronous borrows. Holding one across an `.await` point, a `spawn`, or any call that may itself read/write the same signal is the same panic deferred.
+
+```rust
+// BAD
+let data = resource.read();
+save(&data).await; // guard alive across await
+
+// GOOD
+let data = resource.read().clone();
+save(&data).await;
+```
+
+## AP-3 — Never write a signal from a reactive closure that reads it
+
+A `use_memo`/`use_effect` that reads a signal re-runs when it changes; writing that same signal inside it is an infinite re-run (or a panic). Memos **derive**, effects **observe**; only event handlers and `edit_plan` mutate.
+
+```rust
+// BAD — memo writes what it reads
+let total = use_memo(move || { count.set(count() + 1); count() });
+
+// GOOD — memo is a pure function of its inputs
+let total = use_memo(move || plan.read().sessions.iter().map(credits).sum::<u32>());
+```
+
+## AP-4 — Hooks are unconditional, top-of-component, fixed order
+
+`use_signal`, `use_memo`, `use_resource`, `use_context*`, `use_effect` must be called unconditionally at the top of the component body — never inside `if`, loops, event handlers, or after an early return. Conditional hooks corrupt hook state across renders.
+
+## AP-5 — Zero logic in rsx
+
+The coverage regex excludes `components/`: **any branch written in rsx escapes testing entirely**. Every `if`/`for` in rsx must be fed by an already-computed value from a pure module (`state`, `present`, `data`, `solve`, `persist`) via a memo. If you are about to write a comparison, arithmetic, filter, or format inside `rsx! { }`, stop and move it to the pure module, with its test.
+
+```rust
+// BAD — decision made in the view, untested
+rsx! { if plan.read().credits() > program.read().max { Warning {} } }
+
+// GOOD — pure module decides, view renders
+let over_cap = use_memo(move || present::over_credit_cap(&plan.read(), &program.read()));
+rsx! { if over_cap() { Warning {} } }
+```
+
+## AP-6 — Every mutation goes through `edit_plan` → `state::apply`
+
+Components never mutate `Plan`/`View`/`History` directly. Route every change through `edit_plan` so it is labeled and undoable (ACT-2 — no confirmation dialogs, always reversible). A `.write()` on plan state anywhere else is a review-blocking defect.
+
+## AP-7 — Respect the wasm32 boundary
+
+`components/` and `browser.rs` exist only under `cfg(target_arch = "wasm32")`. Never import `web-sys`, `gloo`, `wasm-bindgen`, or write rsx in the pure modules — they must compile and reach 100% coverage natively under `make test`. Inversely, never put testable logic in the wasm32-only files (AP-5).
+
+## AP-8 — Keyed loops use stable domain identity, never indices
+
+```rust
+// BAD
+for (i, course) in courses.iter().enumerate() { CoursePill { key: "{i}", .. } }
+
+// GOOD — the sigle is the identity
+for course in courses.iter() { CoursePill { key: "{course.code}", .. } }
+```
+
+Index keys break drag-and-drop and animation identity the moment the list reorders.
+
+## AP-9 — Props are owned, `PartialEq + Clone`; signals are `Copy` — pass them
+
+Props take `String`/`Vec<T>`, never `&str`/`&[T]`. For reactive props use `ReadOnlySignal<T>`; for callbacks use `EventHandler<T>`. `Signal<T>` is `Copy`: pass it by value into children and closures — never a reference, never `Rc` wrapping.
+
+## AP-10 — Reading in the view: call the signal, don't store guards
+
+In rsx and handlers, prefer `signal()` (clones the value) or one immediate `.read()` used and dropped in the same expression. Never bind a guard to a variable that outlives the line (`let r = signal.read();` at component top is a latent AP-1).
+
+# API reference (0.7)
+
+## Launch
 
 ```rust
 use dioxus::prelude::*;
@@ -34,83 +113,43 @@ fn App() -> Element {
 }
 ```
 
-Then serve with `dx serve`:
-
-```sh
-curl -sSL http://dioxus.dev/install.sh | sh
-dx serve
-```
-
-# UI with RSX
+## rsx
 
 ```rust
 rsx! {
 	div {
-		class: "container", // Attribute
-		color: "red", // Inline styles
-		width: if condition { "100%" }, // Conditional attributes
-		"Hello, Dioxus!"
+		class: "container",              // attribute
+		width: if cond { "100%" },       // conditional attribute
+		"text"
 	}
-	// Prefer loops over iterators
-	for i in 0..5 {
-		div { "{i}" } // use elements or components directly in loops
+	for item in items.iter() {           // prefer for over iterators
+		Row { key: "{item.id}" }         // AP-8: stable key
 	}
-	if condition {
-		div { "Condition is true!" } // use elements or components directly in conditionals
+	if cond {
+		div { "true branch" }            // AP-5: cond comes from a memo
 	}
-
-	{children} // Expressions are wrapped in brace
-	{(0..5).map(|i| rsx! { span { "Item {i}" } })} // Iterators must be wrapped in braces
+	{children}                           // expressions in braces
 }
 ```
 
-# Assets
+## Components and props
 
-The asset macro can be used to link to local files to use in your project. All links start with `/` and are relative to the root of your project.
-
-```rust
-rsx! {
-	img {
-		src: asset!("/assets/image.png"),
-		alt: "An image",
-	}
-}
-```
-
-## Styles
-
-The `document::Stylesheet` component will inject the stylesheet into the `<head>` of the document
-
-```rust
-rsx! {
-	document::Stylesheet {
-		href: asset!("/assets/styles.css"),
-	}
-}
-```
-
-# Components
-
-Components are the building blocks of apps
-
-* Component are functions annotated with the `#[component]` macro.
-* The function name must start with a capital letter or contain an underscore.
-* A component re-renders only under two conditions:
-	1.  Its props change (as determined by `PartialEq`).
-	2.  An internal reactive state it depends on is updated.
+- Functions annotated `#[component]`, name capitalized.
+- Re-render iff props change (`PartialEq`) or a read signal/memo changes.
+- Owned props; `ReadOnlySignal<T>` for reactive props; `EventHandler<T>` for callbacks (AP-9).
 
 ```rust
 #[component]
-fn Input(mut value: Signal<String>) -> Element {
+fn Input(mut value: Signal<String>, onsubmit: EventHandler<String>) -> Element {
 	rsx! {
 		input {
-            value,
-			oninput: move |e| {
-				*value.write() = e.value();
-			},
+			value,
+			oninput: move |e| *value.write() = e.value(),
 			onkeydown: move |e| {
 				if e.key() == Key::Enter {
+					let v = value();          // AP-1: materialize before write
 					value.write().clear();
+					onsubmit.call(v);
 				}
 			},
 		}
@@ -118,110 +157,53 @@ fn Input(mut value: Signal<String>) -> Element {
 }
 ```
 
-Each component accepts function arguments (props)
-
-* Props must be owned values, not references. Use `String` and `Vec<T>` instead of `&str` or `&[T]`.
-* Props must implement `PartialEq` and `Clone`.
-* To make props reactive and copy, you can wrap the type in `ReadOnlySignal`. Any reactive state like memos and resources that read `ReadOnlySignal` props will automatically re-run when the prop changes.
-
-# State
-
-A signal is a wrapper around a value that automatically tracks where it's read and written. Changing a signal's value causes code that relies on the signal to rerun.
-
-## Local State
-
-The `use_signal` hook creates state that is local to a single component. You can call the signal like a function (e.g. `my_signal()`) to clone the value, or use `.read()` to get a reference. `.write()` gets a mutable reference to the value.
-
-Use `use_memo` to create a memoized value that recalculates when its dependencies change. Memos are useful for expensive calculations that you don't want to repeat unnecessarily.
+## State
 
 ```rust
-#[component]
-fn Counter() -> Element {
-	let mut count = use_signal(|| 0);
-	let mut doubled = use_memo(move || count() * 2); // doubled will re-run when count changes because it reads the signal
-
-	rsx! {
-		h1 { "Count: {count}" } // Counter will re-render when count changes because it reads the signal
-		h2 { "Doubled: {doubled}" }
-		button {
-			onclick: move |_| *count.write() += 1, // Writing to the signal rerenders Counter
-			"Increment"
-		}
-		button {
-			onclick: move |_| count.with_mut(|count| *count += 1), // use with_mut to mutate the signal
-			"Increment with with_mut"
-		}
-	}
-}
+let mut count = use_signal(|| 0);
+let doubled = use_memo(move || count() * 2);   // pure derivation (AP-3)
+count.with_mut(|c| *c += 1);                   // scoped mutation, guard-safe
 ```
 
-## Context API
+- `signal()` clones the value; `.read()`/`.write()` return guards (AP-1/AP-2/AP-10).
+- `use_effect` for post-render side effects only (focus, scroll, browser IO) — never for deriving state.
 
-The Context API allows you to share state down the component tree. A parent provides the state using `use_context_provider`, and any child can access it with `use_context`
+## Context
 
 ```rust
-#[component]
-fn App() -> Element {
-	let mut theme = use_signal(|| "light".to_string());
-	use_context_provider(|| theme); // Provide a type to children
-	rsx! { Child {} }
-}
-
-#[component]
-fn Child() -> Element {
-	let theme = use_context::<Signal<String>>(); // Consume the same type
-	rsx! {
-		div {
-			"Current theme: {theme}"
-		}
-	}
-}
+// provider (parent)
+use_context_provider(|| Signal::new(Plan::default()));
+// consumer (any descendant)
+let plan = use_context::<Signal<Plan>>();
 ```
 
-# Async
-
-For state that depends on an asynchronous operation (like a network request), Dioxus provides a hook called `use_resource`. This hook manages the lifecycle of the async task and provides the result to your component.
-
-* The `use_resource` hook takes an `async` closure. It re-runs this closure whenever any signals it depends on (reads) are updated
-* The `Resource` object returned can be in several states when read:
-1. `None` if the resource is still loading
-2. `Some(value)` if the resource has successfully loaded
+## Async
 
 ```rust
-let mut dog = use_resource(move || async move {
-	// api request
-});
-
+let dog = use_resource(move || async move { fetch_dog().await }); // re-runs when read signals change
 match dog() {
-	Some(dog_info) => rsx! { Dog { dog_info } },
-	None => rsx! { "Loading..." },
+	Some(info) => rsx! { Dog { info } },
+	None => rsx! { "Chargement…" },
 }
 ```
 
-# Routing
+In event handlers, use `spawn(async move { … })`; clone out of guards before the first `.await` (AP-2).
 
-All possible routes are defined in a single Rust `enum` that derives `Routable`. Each variant represents a route and is annotated with `#[route("/path")]`. Dynamic Segments can capture parts of the URL path as parameters by using `:name` in the route string. These become fields in the enum variant.
-
-The `Router<Route> {}` component is the entry point that manages rendering the correct component for the current URL.
-
-You can use the `#[layout(NavBar)]` to create a layout shared between pages and place an `Outlet<Route> {}` inside your layout component. The child routes will be rendered in the outlet.
+## Routing
 
 ```rust
 #[derive(Routable, Clone, PartialEq)]
 enum Route {
-	#[layout(NavBar)] // This will use NavBar as the layout for all routes
+	#[layout(NavBar)]
 		#[route("/")]
 		Home {},
-		#[route("/blog/:id")] // Dynamic segment
-		BlogPost { id: i32 },
+		#[route("/plan/:code")]
+		Plan { code: String },
 }
 
 #[component]
 fn NavBar() -> Element {
-	rsx! {
-		a { href: "/", "Home" }
-		Outlet<Route> {} // Renders Home or BlogPost
-	}
+	rsx! { a { href: "/", "Accueil" } Outlet::<Route> {} }
 }
 
 #[component]
@@ -230,36 +212,11 @@ fn App() -> Element {
 }
 ```
 
-```toml
-dioxus = { version = "0.7.1", features = ["router"] }
-```
-
-# Fullstack
-
-Fullstack enables server rendering and ipc calls. It uses Cargo features (`server` and a client feature like `web`) to split the code into a server and client binaries.
-
-```toml
-dioxus = { version = "0.7.1", features = ["fullstack"] }
-```
-
-## Server Functions
-
-Use the `#[post]` / `#[get]` macros to define an `async` function that will only run on the server. On the server, this macro generates an API endpoint. On the client, it generates a function that makes an HTTP request to that endpoint.
+## Assets
 
 ```rust
-#[post("/api/double/:path/&query")]
-async fn double_server(number: i32, path: String, query: i32) -> Result<i32, ServerFnError> {
-	tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-	Ok(number * 2)
+rsx! {
+	document::Stylesheet { href: asset!("/assets/main.css") }
+	img { src: asset!("/assets/favicon.ico"), alt: "…" }
 }
 ```
-
-## Hydration
-
-Hydration is the process of making a server-rendered HTML page interactive on the client. The server sends the initial HTML, and then the client-side runs, attaches event listeners, and takes control of future rendering.
-
-### Errors
-The initial UI rendered by the component on the client must be identical to the UI rendered on the server.
-
-* Use the `use_server_future` hook instead of `use_resource`. It runs the future on the server, serializes the result, and sends it to the client, ensuring the client has the data immediately for its first render.
-* Any code that relies on browser-specific APIs (like accessing `localStorage`) must be run *after* hydration. Place this code inside a `use_effect` hook.
