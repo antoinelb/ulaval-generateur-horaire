@@ -372,6 +372,20 @@ pub fn App() -> Element {
     use_context_provider(|| handle.clone());
     use_future(move || load(snapshot, load_state, alerts, manual));
     save_on_change(plan, view);
+    // the debounce's last ~300 ms: flush when the page goes away, so a
+    // reload right after an edit never loses it (rapport 2026-08-14)
+    use_hook(|| {
+        crate::browser::on_page_hide(move || {
+            crate::browser::local_set(
+                persist::PLAN_KEY,
+                &persist::encode_plan(&plan.peek()),
+            );
+            crate::browser::local_set(
+                persist::VIEW_KEY,
+                &persist::encode_view(&view.peek()),
+            );
+        });
+    });
     // a plan change stales the verify answer and the admissible chips
     use_effect(move || {
         let _ = plan.read();
@@ -381,6 +395,7 @@ pub fn App() -> Element {
         state.verify_failed = false;
         state.admissible.clear();
     });
+    heal_preparatory(plan, snapshot, alerts);
     auto_verify(plan, snapshot, solver_state, handle.clone());
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
@@ -424,12 +439,27 @@ fn restore_state() -> RestoredState {
     }
 }
 
+// Keys are unique for the whole page life, never recycled: the Toasts
+// auto-dismiss timers hold keys past an alert's death, and a recycled key
+// would let a stale timer kill an unrelated fresh message.
+thread_local! {
+    static NEXT_ALERT_KEY: std::cell::Cell<u64> =
+        const { std::cell::Cell::new(0) };
+}
+
+fn next_alert_key() -> u64 {
+    NEXT_ALERT_KEY.with(|next| {
+        let key = next.get();
+        next.set(key + 1);
+        key
+    })
+}
+
 fn seed_alerts(notes: &[String]) -> Vec<Alert> {
     notes
         .iter()
-        .enumerate()
-        .map(|(i, note)| Alert {
-            key: i as u64,
+        .map(|note| Alert {
+            key: next_alert_key(),
             body: AlertBody::Note(note.clone()),
         })
         .collect()
@@ -437,12 +467,14 @@ fn seed_alerts(notes: &[String]) -> Vec<Alert> {
 
 pub fn push_alert(mut alerts: Signal<Vec<Alert>>, body: AlertBody) {
     let mut list = alerts.write();
-    // the same message twice teaches nothing and floods the strip (ALR-3)
-    if list.iter().any(|alert| alert.body == body) {
-        return;
-    }
-    let key = list.last().map(|alert| alert.key + 1).unwrap_or(0);
-    list.push(Alert { key, body });
+    // never the same message twice (ALR-3) — but a repeat is refreshed to
+    // the front instead of swallowed: relaunching a search that ends on
+    // the same verdict must still visibly answer (rapport 2026-08-14)
+    list.retain(|alert| alert.body != body);
+    list.push(Alert {
+        key: next_alert_key(),
+        body,
+    });
 }
 
 // ACT-2: the one door every Plan mutation walks through — labelled,
@@ -521,6 +553,54 @@ fn import_organigramme(
 // every requested course placed. The generation counter keeps a burst of
 // edits down to one query; the guards make the effect converge (a fired
 // query sets `running`, its answer sets `verification`, both stop it).
+// The checked « scolarité préparatoire » box is an invariant, not a
+// request filter: no préparatoire code may occupy a session. Whatever
+// slipped one in (an old save, a shared link, an act done while the box
+// was unchecked) is purged here — loudly, never silently. A direct write,
+// not `edit_plan`: a derived correction is no student act; undoing the
+// checkbox itself restores the pre-toggle plan whole, placements included.
+fn heal_preparatory(
+    plan: Signal<Plan>,
+    snapshot: Signal<Option<Snapshot>>,
+    alerts: Signal<Vec<Alert>>,
+) {
+    use_effect(move || {
+        // materialize before any write: the read borrows must die first
+        let leftovers = {
+            let read = snapshot.read();
+            let Some(snapshot_ref) = read.as_ref() else {
+                return;
+            };
+            let plan_read = plan.read();
+            let Some(program) =
+                crate::panel::effective_program(snapshot_ref, &plan_read)
+            else {
+                return;
+            };
+            crate::solve::preparatory_leftovers(&plan_read, &program)
+        };
+        if leftovers.is_empty() {
+            return;
+        }
+        let mut plan = plan;
+        crate::state::purge_codes(&mut plan.write(), &leftovers);
+        let note = if leftovers.len() == 1 {
+            format!(
+                "{} retiré des sessions : la scolarité préparatoire est \
+                 marquée « déjà faite ». Décochez la case pour le replacer.",
+                leftovers[0]
+            )
+        } else {
+            format!(
+                "{} retirés des sessions : la scolarité préparatoire est \
+                 marquée « déjà faite ». Décochez la case pour les replacer.",
+                leftovers.join(", ")
+            )
+        };
+        push_alert(alerts, AlertBody::Note(note));
+    });
+}
+
 fn auto_verify(
     plan: Signal<Plan>,
     snapshot: Signal<Option<Snapshot>>,

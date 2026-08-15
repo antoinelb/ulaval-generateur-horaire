@@ -114,6 +114,24 @@ pub fn stash_backup(raw: &str) {
     local_set(&format!("gh.backup.{}", now_epoch_ms()), raw);
 }
 
+// The debounced save's last window: a reload right after an edit would
+// lose it (rapport étudiante 2026-08-14) — flush on the way out.
+// `pagehide` over `beforeunload`: it also fires on mobile tab discard.
+pub fn on_page_hide(callback: impl FnMut() + 'static) {
+    use wasm_bindgen::JsCast;
+    let closure = wasm_bindgen::closure::Closure::<dyn FnMut()>::new(callback);
+    if let Some(window) = web_sys::window() {
+        window
+            .add_event_listener_with_callback(
+                "pagehide",
+                closure.as_ref().unchecked_ref(),
+            )
+            .ok();
+    }
+    // the listener lives as long as the page — never dropped
+    closure.forget();
+}
+
 pub fn now_epoch_ms() -> u64 {
     web_time::SystemTime::now()
         .duration_since(web_time::UNIX_EPOCH)

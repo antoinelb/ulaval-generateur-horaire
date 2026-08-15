@@ -154,18 +154,66 @@ pub fn HeaderBar() -> Element {
                 onclick: share,
                 "Partager"
             }
+            ResetButton {}
         }
     }
 }
 
-// The reserved status region (ALR-6): always present, same place, holding
-// the undo/redo controls and every alert until its explicit dismissal
-// (ALR-4). Expansion pushes content down, never reorders it (LAY-2).
+// « Tout réinitialiser » : one click, undoable — never a confirmation
+// (ACT-2). The document (plan) goes back to zero through the history;
+// the hand-entered course fiches stay, they extend the catalogue, not the
+// document — an undo may restore a plan that references them (ADR
+// `2026-08-bouton-tout-reinitialiser`).
+#[component]
+fn ResetButton() -> Element {
+    let plan = use_context::<Signal<Plan>>();
+    let mut view = use_context::<Signal<View>>();
+    let history = use_context::<Signal<History>>();
+    let alerts = use_context::<Signal<Vec<Alert>>>();
+    let solver = use_context::<Signal<SolverState>>();
+    let handle = use_context::<SolverHandle>();
+    let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
+    rsx! {
+        button {
+            class: "status-undo",
+            title: "Repartir de zéro — annulable avec « Annuler »",
+            onclick: move |_| {
+                // a search in flight must not land its proposal in the
+                // fresh plan
+                if solver.peek().running.is_some() {
+                    super::cancel_search(
+                        &handle, solver, plan, history, alerts, manual,
+                    );
+                }
+                // a shared link left in the address bar would reimport
+                // everything at the next reload
+                crate::browser::strip_query();
+                super::edit_plan(plan, history, "Réinitialisation", |plan| {
+                    *plan = Plan::default();
+                });
+                view.set(View::default());
+                super::push_alert(
+                    alerts,
+                    AlertBody::Success(
+                        "Tout a été réinitialisé — « Annuler » restaure \
+                         votre organigramme."
+                            .to_string(),
+                    ),
+                );
+            },
+            "Réinitialiser"
+        }
+    }
+}
+
+// The reserved status region (ALR-6): always present, same place, one
+// line tall forever — the solver status and the undo/redo controls. The
+// alerts float apart in `Toasts`, so this strip never pushes the panel or
+// the grid down.
 #[component]
 pub fn StatusStrip() -> Element {
     let mut plan = use_context::<Signal<Plan>>();
     let mut history = use_context::<Signal<History>>();
-    let mut alerts = use_context::<Signal<Vec<Alert>>>();
     let undo_label = history
         .read()
         .undo_label()
@@ -203,45 +251,106 @@ pub fn StatusStrip() -> Element {
                 },
                 "↷ Rétablir"
             }
-            ul { class: "status-alerts",
-                for alert in alerts.read().iter().cloned() {
-                    li {
-                        key: "{alert.key}",
-                        class: "status-alert",
-                        // note 12: the whole message is its own dismiss —
-                        // any link inside would stop the propagation
-                        onclick: {
-                            let key = alert.key;
-                            move |_| {
-                                alerts
-                                    .write()
-                                    .retain(|kept| kept.key != key);
+        }
+    }
+}
+
+// Les alertes flottent en coin bas-droite, par-dessus la grille — le
+// panneau et l'horaire ne bougent jamais (ADR
+// `2026-08-alertes-en-toasts-flottants`). Les ⚠ persistent jusqu'au clic
+// (ALR-4) ; seuls les ✓ s'auto-effacent ; au-delà de TOASTS_VISIBLE la
+// pile se résume en « +N autres » et se déplie sur demande (ALR-3).
+const TOASTS_VISIBLE: usize = 3;
+const SUCCESS_TOAST_MS: u32 = 5_000;
+
+#[component]
+pub fn Toasts() -> Element {
+    let mut alerts = use_context::<Signal<Vec<Alert>>>();
+    let mut expanded = use_signal(|| false);
+    // chaque ✓ n'arme qu'une seule minuterie (peek : l'effet ne dépend
+    // que de la liste, jamais de sa propre comptabilité)
+    let mut timed = use_signal(std::collections::BTreeSet::<u64>::new);
+    use_effect(move || {
+        let successes: Vec<u64> = alerts
+            .read()
+            .iter()
+            .filter(|alert| matches!(alert.body, AlertBody::Success(_)))
+            .map(|alert| alert.key)
+            .collect();
+        for key in successes {
+            if timed.peek().contains(&key) {
+                continue;
+            }
+            timed.write().insert(key);
+            let mut alerts = alerts;
+            spawn(async move {
+                crate::browser::sleep_ms(SUCCESS_TOAST_MS).await;
+                alerts.write().retain(|kept| kept.key != key);
+            });
+        }
+    });
+    let all = alerts.read().clone();
+    if all.is_empty() {
+        return rsx! {};
+    }
+    let hidden = all.len().saturating_sub(TOASTS_VISIBLE);
+    let show_all = expanded() || hidden == 0;
+    let first_visible = if show_all {
+        0
+    } else {
+        all.len() - TOASTS_VISIBLE
+    };
+    rsx! {
+        div { class: "toasts", role: "status",
+            if !show_all {
+                button {
+                    class: "toast toast--more",
+                    onclick: move |_| expanded.set(true),
+                    if hidden == 1 {
+                        "+1 autre message - tout afficher"
+                    } else {
+                        "+{hidden} autres messages - tout afficher"
+                    }
+                }
+            }
+            for alert in all[first_visible..].iter().cloned() {
+                div {
+                    key: "{alert.key}",
+                    class: "toast",
+                    class: if matches!(alert.body, AlertBody::Success(_)) {
+                        "toast--success"
+                    },
+                    // note 12: the whole message is its own dismiss —
+                    // any link inside would stop the propagation
+                    onclick: {
+                        let key = alert.key;
+                        move |_| {
+                            alerts.write().retain(|kept| kept.key != key);
+                        }
+                    },
+                    match &alert.body {
+                        AlertBody::Note(note) => rsx! {
+                            span { "⚠ {note}" }
+                        },
+                        AlertBody::Success(note) => rsx! {
+                            span { class: "status-alert-ok", "✓ {note}" }
+                        },
+                        AlertBody::Error(error) => rsx! {
+                            span { class: "status-alert-error",
+                                "⚠ {error.what} {error.action} "
+                                code { "{error.id}" }
                             }
                         },
-                        match &alert.body {
-                            AlertBody::Note(note) => rsx! {
-                                span { "⚠ {note}" }
-                            },
-                            AlertBody::Success(note) => rsx! {
-                                span { class: "status-alert-ok", "✓ {note}" }
-                            },
-                            AlertBody::Error(error) => rsx! {
-                                span { class: "status-alert-error",
-                                    "⚠ {error.what} {error.action} "
-                                    code { "{error.id}" }
-                                }
-                            },
-                        }
-                        button {
-                            class: "status-dismiss",
-                            aria_label: "Rejeter cette alerte",
-                            onclick: move |_| {
-                                alerts
-                                    .write()
-                                    .retain(|kept| kept.key != alert.key);
-                            },
-                            "✕"
-                        }
+                    }
+                    button {
+                        class: "status-dismiss",
+                        aria_label: "Rejeter ce message",
+                        onclick: move |_| {
+                            alerts
+                                .write()
+                                .retain(|kept| kept.key != alert.key);
+                        },
+                        "✕"
                     }
                 }
             }

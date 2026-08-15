@@ -247,6 +247,22 @@ pub fn session_codes(plan: &Plan, session: usize) -> Vec<String> {
     codes
 }
 
+// Strip the given codes from every placement structure — the derived
+// correction behind « scolarité préparatoire faite » : a code acquired by
+// hypothesis must not occupy any session, wherever it slipped in from.
+pub fn purge_codes(plan: &mut Plan, codes: &[String]) {
+    plan.electives.retain(|code| !codes.contains(code));
+    plan.pinned_sessions.retain(|code, _| !codes.contains(code));
+    plan.displayed_placement
+        .retain(|code, _| !codes.contains(code));
+    for held in plan.manual.values_mut() {
+        held.retain(|code| !codes.contains(code));
+    }
+    for pins in plan.chosen.values_mut() {
+        pins.retain(|code, _| !codes.contains(code));
+    }
+}
+
 // --- undo/redo ------------------------------------------------------------
 
 // ACT-2: every mutation of the Plan goes through `apply`, so every one is
@@ -380,6 +396,38 @@ mod tests {
                 assert!(!semester_precedes(later, earlier));
             }
         }
+    }
+
+    #[test]
+    fn purge_codes_strips_the_named_codes_from_every_structure() {
+        let mut plan = Plan {
+            electives: vec!["MAT-0130".to_string(), "GEX-1000".to_string()],
+            pinned_sessions: BTreeMap::from([("MAT-0130".to_string(), 1)]),
+            displayed_placement: BTreeMap::from([
+                ("MAT-0130".to_string(), 1),
+                ("GEX-1000".to_string(), 2),
+            ]),
+            chosen: BTreeMap::from([(
+                1,
+                BTreeMap::from([
+                    ("MAT-0130".to_string(), BTreeSet::new()),
+                    ("GEX-1000".to_string(), BTreeSet::new()),
+                ]),
+            )]),
+            manual: BTreeMap::from([(
+                1,
+                vec!["MAT-0130".to_string(), "GEX-1000".to_string()],
+            )]),
+            ..Plan::default()
+        };
+        purge_codes(&mut plan, &["MAT-0130".to_string()]);
+        assert_eq!(plan.electives, ["GEX-1000"]);
+        assert!(plan.pinned_sessions.is_empty());
+        assert!(!plan.displayed_placement.contains_key("MAT-0130"));
+        assert_eq!(plan.displayed_placement["GEX-1000"], 2);
+        assert_eq!(plan.manual[&1], ["GEX-1000"]);
+        assert!(!plan.chosen[&1].contains_key("MAT-0130"));
+        assert!(plan.chosen[&1].contains_key("GEX-1000"));
     }
 
     #[test]

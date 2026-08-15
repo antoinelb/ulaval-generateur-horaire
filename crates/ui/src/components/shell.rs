@@ -120,6 +120,7 @@ fn Shell() -> Element {
                 grid::WeeklyGrid {}
             }
             Footer {}
+            header::Toasts {}
         }
     }
 }

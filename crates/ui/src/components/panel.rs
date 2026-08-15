@@ -715,7 +715,9 @@ fn RowView(row: Row) -> Element {
                     }
                 }
             }
-            if row.state != RowState::Unknown {
+            // an acquired préparatoire row offers nothing — granting it
+            // would resurrect it as ordinary work while the box says done
+            if !matches!(row.state, RowState::Unknown | RowState::Acquired) {
                 RuleAttach { code: row.code.clone() }
             }
             if addable {
@@ -1177,7 +1179,12 @@ fn ManualCourseForm() -> Element {
                     placeholder: "Code (GEX-1234)",
                     aria_label: "Code du cours manuel",
                     value: "{code}",
-                    oninput: move |event| code.set(event.value()),
+                    // resuming the form retires its old refusal — a stale
+                    // one stayed on screen all session (rapport 2026-08-14)
+                    oninput: move |event| {
+                        code.set(event.value());
+                        rejection.set(None);
+                    },
                 }
                 input {
                     class: "panel-add-input",

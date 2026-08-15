@@ -88,6 +88,9 @@ pub struct Row {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RowState {
     Placed,
+    // préparatoire course covered by the checked « déjà faite » box:
+    // counted ✓ by hypothesis, never actionable — no +, no chips
+    Acquired,
     // in `electives`, waiting for the solver to place it (jalon 9's
     // « cours voulus »)
     Chosen,
@@ -756,6 +759,20 @@ fn base_row(snapshot: &Snapshot, plan: &Plan, code: &str) -> Row {
         }
         _ => String::new(),
     };
+    // checked before Placed: a leftover placement (the healing effect is
+    // about to purge it) must never be re-offered meanwhile
+    if crate::solve::acquired_preparatory(snapshot, plan).contains(code) {
+        return Row {
+            code: code.to_string(),
+            title,
+            credits,
+            sub: "considéré comme déjà fait - décochez la case pour le \
+                  placer"
+                .to_string(),
+            state: RowState::Acquired,
+            assumed: Vec::new(),
+        };
+    }
     if let Some(&session) = plan.displayed_placement.get(code) {
         return Row {
             code: code.to_string(),
@@ -1413,6 +1430,61 @@ mod tests {
         plan.displayed_placement.insert("GAE-1000".to_string(), 2);
         let model = panel_model(&snapshot, &plan);
         assert_eq!(model.rules[0].badge, Badge::Ok("✓".to_string()));
+    }
+
+    #[test]
+    fn checked_preparatory_rows_are_acquired_in_rules_and_search() {
+        let preparatory_program = r#"{"code":"B-GEX","slug":"gex",
+            "semester":"A26","title":"P","cycle":1,"credits_required":6,
+            "mandatory":[],
+            "rules":[{"title":"Scolarité préparatoire",
+                      "courses":["GEX-1000","GAE-1000"]}],
+            "concentrations":[],"profiles":[]}"#;
+        let snapshot = parse_data(
+            &RawData {
+                courses: COURSES.to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                programs: vec![(
+                    "B-GEX-A26.json".to_string(),
+                    preparatory_program.to_string(),
+                )],
+            },
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let mut plan = plan();
+        let model = panel_model(&snapshot, &plan);
+        let rows = &model.rules[0].rows;
+        assert!(
+            rows.iter().all(|row| row.state == RowState::Acquired),
+            "{rows:?}"
+        );
+        assert!(rows[0].sub.contains("décochez la case"), "{}", rows[0].sub);
+        // the search offers the same course: same verdict, no side door
+        let everywhere = SearchScope {
+            session: None,
+            subject: None,
+            first_cycle_only: false,
+            only_fitting: false,
+        };
+        let results =
+            search_courses(&snapshot, &plan, everywhere, "hydrologie");
+        assert_eq!(results.rows[0].code, "GEX-1000");
+        assert_eq!(results.rows[0].state, RowState::Acquired);
+        // an entente moved the course into another rule: ordinary again
+        // (here it is placed in session 2 by the plan)
+        plan.rule_grants
+            .insert("GEX-1000".to_string(), "p/Règle 1".to_string());
+        let model = panel_model(&snapshot, &plan);
+        assert_eq!(model.rules[0].rows[0].state, RowState::Placed);
+        plan.rule_grants.clear();
+        // unchecked: ordinary work to place
+        plan.preparatory_done = false;
+        let model = panel_model(&snapshot, &plan);
+        assert!(model.rules[0]
+            .rows
+            .iter()
+            .all(|row| row.state != RowState::Acquired));
     }
 
     #[test]

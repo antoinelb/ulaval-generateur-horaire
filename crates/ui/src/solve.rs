@@ -249,6 +249,14 @@ pub fn validate_new_code(
              sigle (ex. GEX-1000)."
         ));
     };
+    // the checked box is an invariant, not a suggestion: an acquired
+    // préparatoire course must not enter any session by any door
+    if acquired_preparatory(snapshot, plan).contains(&code) {
+        return Err(format!(
+            "{code} fait partie de la scolarité préparatoire cochée \
+             « déjà faite » — décochez la case pour le placer."
+        ));
+    }
     if state::session_codes(plan, session).contains(&code) {
         return Err(format!("{code} est déjà dans cette session."));
     }
@@ -319,6 +327,23 @@ pub fn validate_new_code(
                 "{code} ajouté ; préalables illisibles : {error}."
             )),
         };
+    // a summer explicitly closed is not a wall either — but adding into
+    // it must never be silent (rapport étudiante 2026-08-14)
+    let summer_note = session_semester(plan, session)
+        .filter(|semester| {
+            semester.season == ulaval_scheduler_core::Season::Summer
+                && !plan.summers_open
+        })
+        .map(|_| {
+            format!(
+                "{code} ajouté dans un été fermé aux cours réguliers — \
+                 cochez « Ouvrir les étés » si c'est voulu."
+            )
+        });
+    let warning = match (summer_note, warning) {
+        (Some(summer), Some(other)) => Some(format!("{summer} {other}")),
+        (summer, other) => summer.or(other),
+    };
     Ok(NewCode { code, warning })
 }
 
@@ -652,6 +677,46 @@ mod tests {
     }
 
     #[test]
+    fn adding_into_a_closed_summer_warns_but_never_walls() {
+        let raw = r#"{"courses":[
+          {"code":"ETE-2000","title":"Été aussi","credits":3,"cycle":1,
+           "prerequisites":null,"equivalents":[],
+           "seasons":{"fall":{"last_offered":2026,"options":null},
+                      "summer":{"last_offered":2026,"options":null}}},
+          {"code":"ETE-3000","title":"Été exigeant","credits":3,"cycle":1,
+           "prerequisites":{"raw":"ZZZ-1111","tree":"ZZZ-1111"},
+           "equivalents":[],
+           "seasons":{"summer":{"last_offered":2026,"options":null}}}
+        ]}"#;
+        let snapshot = crate::data::parse_data(
+            &crate::data::RawData {
+                courses: raw.to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                programs: Vec::new(),
+            },
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        // session 3 is the first été (A1 → H2 → É)
+        let mut plan = Plan::default();
+        let accepted = validate_new_code(&snapshot, &plan, 3, "ETE-2000")
+            .unwrap_or_else(|e| panic!("{e}"));
+        let warning = accepted.warning.expect("a closed summer must speak");
+        assert!(warning.contains("été fermé"), "{warning}");
+        // a closed summer AND unmet prerequisites: both spoken, in order
+        let accepted = validate_new_code(&snapshot, &plan, 3, "ETE-3000")
+            .unwrap_or_else(|e| panic!("{e}"));
+        let warning = accepted.warning.expect("both warnings must speak");
+        assert!(warning.contains("été fermé"), "{warning}");
+        assert!(warning.contains("préalables"), "{warning}");
+        // summers opened: nothing left to warn about
+        plan.summers_open = true;
+        let accepted = validate_new_code(&snapshot, &plan, 3, "ETE-2000")
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(accepted.warning.is_none());
+    }
+
+    #[test]
     fn a_session_outside_the_horizon_accepts_without_a_season_check() {
         // the weekly path will say « hors de l'horizon »; the entry check
         // simply has no season to judge against
@@ -796,6 +861,49 @@ pub fn preparatory_codes(
             _ => None,
         })
         .unwrap_or_default()
+}
+
+// The préparatoire codes « acquis d'office » by the checked box — unless
+// an entente moved one into another rule (the granted program strips it
+// from the préparatoire list, so `rule_grants` mirrors that here).
+pub fn acquired_preparatory(
+    snapshot: &Snapshot,
+    plan: &Plan,
+) -> BTreeSet<String> {
+    if !plan.preparatory_done {
+        return BTreeSet::new();
+    }
+    crate::panel::chosen_program(snapshot, plan)
+        .map(|program| {
+            preparatory_codes(program)
+                .into_iter()
+                .filter(|code| !plan.rule_grants.contains_key(code))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+// The préparatoire codes that still occupy placement state while the box
+// says « déjà faite » — what the healing effect purges, so the grid never
+// draws a course every solver request silently drops. Takes the effective
+// (granted) program, like every request builder.
+pub fn preparatory_leftovers(
+    plan: &Plan,
+    program: &ulaval_scheduler_core::Program,
+) -> Vec<String> {
+    if !plan.preparatory_done {
+        return Vec::new();
+    }
+    preparatory_codes(program)
+        .into_iter()
+        .filter(|code| {
+            plan.displayed_placement.contains_key(code)
+                || plan.pinned_sessions.contains_key(code)
+                || plan.electives.contains(code)
+                || plan.manual.values().flatten().any(|held| held == code)
+                || plan.chosen.values().any(|pins| pins.contains_key(code))
+        })
+        .collect()
 }
 
 // Verification is only worth asking once every requested course has a
@@ -982,6 +1090,15 @@ pub fn parse_worker_answer(text: &str) -> Result<WorkerAnswer, String> {
 // truncation is never silent (ADR `2026-07-budget-de-b-en-double-borne`)
 pub fn completion_note(answer: &PlacementAnswer) -> Option<String> {
     match answer.completion.as_str() {
+        // nothing found ≠ nothing exists: the empty answer must say which
+        // (rapport étudiante 2026-08-14 : « rien ne change » sans verdict)
+        "node-budget" if answer.solutions.is_empty() => Some(
+            "La recherche s'est arrêtée avant d'avoir tout exploré, sans \
+             rien trouver pour l'instant — un agencement peut quand même \
+             exister. « Chercher plus longtemps » fouille davantage ; \
+             sinon, simplifiez (plafond, sessions, cours)."
+                .to_string(),
+        ),
         "node-budget" => Some(
             "La recherche s'est arrêtée avant d'avoir tout exploré : il \
              peut exister d'autres agencements — ou un agencement là où \
@@ -1155,6 +1272,110 @@ mod worker_tests {
         .unwrap_or_else(|e| panic!("{e}"))
     }
 
+    fn snapshot_with_preparatory() -> crate::data::Snapshot {
+        let courses = r#"{"courses":[
+          {"code":"GEX-1000","title":"Hydrologie","credits":3,"cycle":1,
+           "prerequisites":null,"equivalents":[],
+           "seasons":{"fall":{"last_offered":2026,"options":null}}},
+          {"code":"GEX-2000","title":"Hydraulique","credits":4,"cycle":1,
+           "prerequisites":null,"equivalents":[],
+           "seasons":{"fall":{"last_offered":2026,"options":null}}}
+        ]}"#;
+        let program = r#"{"code":"B-GEX","slug":"gex","semester":"A26",
+            "title":"P","cycle":1,"credits_required":6,"mandatory":[],
+            "rules":[{"title":"Scolarité préparatoire",
+                      "courses":["GEX-1000"]}],
+            "concentrations":[],"profiles":[]}"#;
+        crate::data::parse_data(
+            &crate::data::RawData {
+                courses: courses.to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                programs: vec![(
+                    "B-GEX-A26.json".to_string(),
+                    program.to_string(),
+                )],
+            },
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    fn gex_choice() -> ProgramChoice {
+        ProgramChoice {
+            code: "B-GEX".to_string(),
+            semester: "A26".to_string(),
+            concentration: None,
+            profile: None,
+        }
+    }
+
+    #[test]
+    fn acquired_preparatory_follows_the_box_the_program_and_the_grants() {
+        let snapshot = snapshot_with_preparatory();
+        let mut plan = Plan::default();
+        // no program chosen: nothing is acquired by hypothesis
+        assert!(acquired_preparatory(&snapshot, &plan).is_empty());
+        plan.program = Some(gex_choice());
+        assert_eq!(
+            acquired_preparatory(&snapshot, &plan),
+            BTreeSet::from(["GEX-1000".to_string()])
+        );
+        // an entente moved the code into another rule: ordinary work again
+        plan.rule_grants
+            .insert("GEX-1000".to_string(), "p/Règle 1".to_string());
+        assert!(acquired_preparatory(&snapshot, &plan).is_empty());
+        plan.rule_grants.clear();
+        plan.preparatory_done = false;
+        assert!(acquired_preparatory(&snapshot, &plan).is_empty());
+    }
+
+    #[test]
+    fn preparatory_leftovers_find_the_code_in_every_placement_structure() {
+        let program: ulaval_scheduler_core::Program = serde_json::from_str(
+            r#"{"code":"B-GEX","slug":"gex","semester":"A26","title":"P",
+                "cycle":1,"credits_required":6,"mandatory":[],
+                "rules":[{"title":"Scolarité préparatoire",
+                          "courses":["MAT-0130","PHY-0110","CHM-0100",
+                                     "BIO-0150","MAT-0110"]}],
+                "concentrations":[],"profiles":[]}"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let mut plan = Plan::default();
+        assert!(preparatory_leftovers(&plan, &program).is_empty());
+        plan.displayed_placement.insert("MAT-0130".to_string(), 1);
+        plan.pinned_sessions.insert("PHY-0110".to_string(), 2);
+        plan.electives.push("CHM-0100".to_string());
+        plan.manual.insert(1, vec!["BIO-0150".to_string()]);
+        plan.chosen.insert(
+            1,
+            BTreeMap::from([("MAT-0110".to_string(), BTreeSet::new())]),
+        );
+        assert_eq!(
+            preparatory_leftovers(&plan, &program),
+            ["MAT-0130", "PHY-0110", "CHM-0100", "BIO-0150", "MAT-0110"]
+        );
+        // unchecked: the same occupations are legitimate work
+        plan.preparatory_done = false;
+        assert!(preparatory_leftovers(&plan, &program).is_empty());
+    }
+
+    #[test]
+    fn adding_an_acquired_preparatory_course_is_refused_with_the_way_out() {
+        let snapshot = snapshot_with_preparatory();
+        let mut plan = Plan {
+            program: Some(gex_choice()),
+            ..Plan::default()
+        };
+        let error = validate_new_code(&snapshot, &plan, 1, "gex-1000")
+            .expect_err("acquired by the checked box");
+        assert!(error.contains("décochez la case"), "{error}");
+        // unchecked: the ordinary gates apply and the course is welcome
+        plan.preparatory_done = false;
+        let accepted = validate_new_code(&snapshot, &plan, 1, "gex-1000")
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(accepted.code, "GEX-1000");
+    }
+
     #[test]
     fn unplaced_codes_name_what_still_floats_and_carry_intake_errors() {
         let snapshot = snapshot();
@@ -1316,6 +1537,9 @@ mod worker_tests {
         assert!(completion_note(&answer("node-budget", 1))
             .expect("truncation speaks")
             .contains("avant d'avoir tout exploré"));
+        assert!(completion_note(&answer("node-budget", 0))
+            .expect("an empty truncated answer says which of the two")
+            .contains("sans rien trouver"));
         assert!(completion_note(&answer("solution-cap", 1))
             .expect("cap speaks")
             .contains("agencements"));
