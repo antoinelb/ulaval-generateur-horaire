@@ -1,0 +1,488 @@
+{
+  "courses": [
+    {
+      "code": "AUC-HOIX",
+      "title": "Cours de 1er cycle au choix",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "EHE-1ANT",
+      "title": "Échange étudiant hors établissement",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "EHE-1GCI",
+      "title": "Échange étudiant hors établissement",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "EHE-1GEX",
+      "title": "Échange étudiant hors établissement",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "EHE-1GIN",
+      "title": "Échange étudiant hors établissement",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "EHE-1GPH",
+      "title": "Échange étudiant hors établissement",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "ENT-3020",
+      "title": "Introduction à l'entrepreneurship technologique",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "GEX-3501",
+      "title": "Projet en recherche",
+      "credits": 0,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "LAN-GUES",
+      "title": "Cours de langue selon le résultat VEPT",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "OPT-ETR1",
+      "title": "Cours à option à l'étranger",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "OPT-ETR2",
+      "title": "Cours à option à l'étranger",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "OPT-ETR3",
+      "title": "Cours à option à l'étranger",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "OPT-ETR4",
+      "title": "Cours à option à l'étranger",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "OPT-ETR5",
+      "title": "Cours à option à l'étranger ou à l'Université Laval",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "OPT-GMC1",
+      "title": "Cours à option en génie mécanique",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "OPT-ION1",
+      "title": "Cours à option à déterminer",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "OPT-ION2",
+      "title": "Cours à option à déterminer",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "OPT-ION3",
+      "title": "Cours à option à déterminer",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "OPT-ION4",
+      "title": "Cours à option à déterminer",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "OPT-ION5",
+      "title": "Cours à option à déterminer",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "SAN-SÉCU",
+      "title": "Cours de santé et sécurité au travail à déterminer",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    },
+    {
+      "code": "SCI-NATU",
+      "title": "Cours de sciences de la nature à déterminer",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
+        },
+        "summer": {
+          "last_offered": null,
+          "options": null
+        }
+      }
+    }
+  ]
+}

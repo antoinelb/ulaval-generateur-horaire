@@ -255,9 +255,33 @@ fn apply_proposal(
             )),
         );
     }
+    if !report.injected.is_empty() {
+        let injected: Vec<&str> =
+            report.injected.iter().map(String::as_str).collect();
+        let added = if injected.len() == 1 {
+            "ajouté aux cours à option : un cours obligatoire l'exige \
+             comme préalable"
+        } else {
+            "ajoutés aux cours à option : des cours obligatoires les \
+             exigent comme préalables"
+        };
+        push_alert(
+            alerts,
+            AlertBody::Note(format!("{} {added}.", injected.join(", "))),
+        );
+    }
     let placement = solution.placement.clone();
+    let injected = report.injected.clone();
     edit_plan(plan, history, "Organigramme proposé appliqué", |plan| {
         plan.displayed_placement = placement;
+        // the plan must hold what the grid shows: an injected course left
+        // out of `electives` would vanish from the very next request (the
+        // preparatory-purge lesson)
+        for code in injected {
+            if !plan.electives.contains(&code) {
+                plan.electives.push(code);
+            }
+        }
     });
 }
 

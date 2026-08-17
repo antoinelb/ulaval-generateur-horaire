@@ -87,6 +87,10 @@ pub struct Report {
     pub sessions: Vec<Season>,
     pub placement: Placement,
     pub set_aside: Vec<String>,
+    // electives the intake added because a candidate's prerequisites force
+    // them — the UI adopts and announces them, never silently (ADR
+    // `2026-08-injection-des-electifs-forces-par-les-prealables`)
+    pub injected: Vec<String>,
 }
 
 pub fn handle(request: &str, courses: &[Course]) -> String {
@@ -124,6 +128,7 @@ fn generate(query: &PlaceQuery, courses: &[Course]) -> Result<Report, String> {
         sessions,
         placement,
         set_aside: intake.set_aside,
+        injected: intake.injected,
     })
 }
 
@@ -154,6 +159,7 @@ fn verify(query: &PlaceQuery, courses: &[Course]) -> Result<Report, String> {
         sessions,
         placement,
         set_aside: intake.set_aside,
+        injected: intake.injected,
     })
 }
 

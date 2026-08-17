@@ -1059,6 +1059,11 @@ pub struct PlacementReport {
     pub placement: PlacementAnswer,
     #[serde(default)]
     pub set_aside: Vec<String>,
+    // electives the solver's intake added because a candidate's
+    // prerequisites force them — adopted into the plan and announced (ADR
+    // `2026-08-injection-des-electifs-forces-par-les-prealables`)
+    #[serde(default)]
+    pub injected: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]

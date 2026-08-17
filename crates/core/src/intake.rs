@@ -1,8 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::course::{Course, Season};
+use crate::course::{
+    is_preuniversity, Course, PrereqTree, Prerequisites, Season,
+};
 use crate::preparatory::PREPARATORY_RULE_TITLE;
-use crate::program::{Program, RuleCourses, STAGES_RULE_TITLE};
+use crate::program::{Program, RuleCourses, Semester, STAGES_RULE_TITLE};
 use crate::weekly::resolve_offering;
 
 // The intake seam of every consumer of the solvers (the UI, any future
@@ -58,6 +60,11 @@ pub struct PlacementIntake {
     // they land in an été unless pinned (ADR
     // `2026-08-stage-place-en-ete-sauf-epinglage`)
     pub stages: BTreeSet<String>,
+    // electives the intake added itself because a candidate's prerequisites
+    // force them — surfaced so the caller can adopt and announce them,
+    // never silent (ADR
+    // `2026-08-injection-des-electifs-forces-par-les-prealables`)
+    pub injected: Vec<String>,
 }
 
 // The weekly pipeline shared by every harness: session parsed, codes
@@ -87,7 +94,9 @@ pub fn placement_intake(
 ) -> Result<PlacementIntake, IntakeError> {
     let electives = normalize_codes(electives)?;
     let passed_codes = normalize_codes(passed)?;
-    let list = course_list(program, &electives, &passed_codes);
+    let mut list = course_list(program, &electives, &passed_codes);
+    let injected =
+        inject_forced_electives(&mut list, program, &passed_codes, all);
     let explicit: BTreeSet<&str> = electives
         .iter()
         .chain(&passed_codes)
@@ -115,7 +124,180 @@ pub fn placement_intake(
         selection: list.into_iter().collect(),
         set_aside,
         stages,
+        injected,
     })
+}
+
+// GMC-3002, mandatory at the B-GMC, requires GLO-1901 — an elective of a
+// choice rule: no student finishes without it, so the intake takes it
+// itself rather than letting the screen declare the whole program
+// unplaceable. A code is injected when it is *forced* — some candidate's
+// tree is unsatisfiable without it even granting every operand that could
+// ever hold — and a rule of the program lists it (a true elective). A
+// choice between two electives forces neither and stays blocked, as does a
+// forced code from outside the program: the injection never chooses for
+// the student (ADR `2026-08-injection-des-electifs-forces-par-les-prealables`).
+fn inject_forced_electives(
+    list: &mut Vec<String>,
+    program: Option<&Program>,
+    passed: &[String],
+    all: &[Course],
+) -> Vec<String> {
+    let pool: BTreeSet<&str> = program
+        .map(|program| program.rules.as_slice())
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|rule| match &rule.courses {
+            RuleCourses::List { courses } => Some(courses.iter()),
+            _ => None,
+        })
+        .flatten()
+        .map(String::as_str)
+        .collect();
+    let by_code: BTreeMap<&str, &Course> = all
+        .iter()
+        .map(|course| (course.code.as_str(), course))
+        .collect();
+    let passed: BTreeSet<&str> = passed.iter().map(String::as_str).collect();
+    let mut injected: Vec<String> = Vec::new();
+    // an injected course can force further electives through its own tree:
+    // iterate to the fixpoint — each productive round draws at least one
+    // code from the pool, so the bound is the pool itself
+    for _ in 0..=pool.len() {
+        let round = forced_round(list, &pool, &passed, &by_code);
+        if round.is_empty() {
+            break;
+        }
+        injected.extend(round.iter().cloned());
+        list.extend(round);
+    }
+    injected
+}
+
+// one scan of the current list: every leaf a candidate's tree forces, that
+// a program rule lists and that the student neither holds nor passed
+fn forced_round(
+    list: &[String],
+    pool: &BTreeSet<&str>,
+    passed: &BTreeSet<&str>,
+    by_code: &BTreeMap<&str, &Course>,
+) -> Vec<String> {
+    let held: BTreeSet<&str> = list.iter().map(String::as_str).collect();
+    // « could this operand ever hold »: the same optimism the solver's
+    // pre-search screen applies, plus the pool — an injectable elective
+    // counts as holdable since this very pass can take it
+    let possible = |code: &str| {
+        passed.contains(code)
+            || held.contains(code)
+            || is_preuniversity(code)
+            || pool.contains(code)
+    };
+    let mut round: Vec<String> = Vec::new();
+    for code in list {
+        if passed.contains(code.as_str()) {
+            // history: its prerequisites are done with
+            continue;
+        }
+        let Some(nodes) = by_code
+            .get(code.as_str())
+            .and_then(|course| parsed_tree(course))
+            .and_then(flatten_lite)
+        else {
+            continue;
+        };
+        if !eval_lite(&nodes, &possible) {
+            // hopeless even with every possible operand granted — the
+            // screen's to name, not the injection's to guess about
+            continue;
+        }
+        for leaf in nodes.iter().filter_map(|node| match node {
+            LiteNode::Course(leaf) => Some(*leaf),
+            _ => None,
+        }) {
+            if held.contains(leaf)
+                || passed.contains(leaf)
+                || !pool.contains(leaf)
+                || round.iter().any(|kept| kept == leaf)
+            {
+                continue;
+            }
+            if !eval_lite(&nodes, &|code: &str| code != leaf && possible(code))
+            {
+                round.push(leaf.to_string());
+            }
+        }
+    }
+    round
+}
+
+fn parsed_tree(course: &Course) -> Option<&PrereqTree> {
+    match &course.prerequisites {
+        Some(Prerequisites::Parsed { tree, .. }) => Some(tree),
+        _ => None,
+    }
+}
+
+// the injection's view of a tree: course leaves and connectors — raw text
+// and credit thresholds are optimistically satisfiable, so they collapse
+// to `Free`
+enum LiteNode<'a> {
+    Course(&'a str),
+    Free,
+    All(Vec<usize>),
+    Any(Vec<usize>),
+}
+
+// same budget as the solver's `MAX_TREE_NODES` — a tree past it injects
+// nothing and is left to the solver, which refuses it loudly
+const MAX_INJECTION_NODES: usize = 10_000;
+
+// breadth-first, children after their parent, so one reverse scan
+// evaluates children before parents — no recursion, no unbounded loop
+// (the shape the solver's own `flatten` uses)
+fn flatten_lite(tree: &PrereqTree) -> Option<Vec<LiteNode<'_>>> {
+    let mut pending: Vec<&PrereqTree> = vec![tree];
+    let mut nodes: Vec<LiteNode> = Vec::new();
+    for cursor in 0..MAX_INJECTION_NODES {
+        if cursor >= pending.len() {
+            return Some(nodes);
+        }
+        nodes.push(match pending[cursor] {
+            PrereqTree::Course(code) => LiteNode::Course(code),
+            PrereqTree::Raw { .. } | PrereqTree::ProgramCredits { .. } => {
+                LiteNode::Free
+            }
+            PrereqTree::All { all } => {
+                let children =
+                    (pending.len()..pending.len() + all.len()).collect();
+                pending.extend(all.iter());
+                LiteNode::All(children)
+            }
+            PrereqTree::Any { any } => {
+                let children =
+                    (pending.len()..pending.len() + any.len()).collect();
+                pending.extend(any.iter());
+                LiteNode::Any(children)
+            }
+        });
+    }
+    None
+}
+
+fn eval_lite(nodes: &[LiteNode], leaf: &impl Fn(&str) -> bool) -> bool {
+    let mut verdicts = vec![false; nodes.len()];
+    for i in (0..nodes.len()).rev() {
+        verdicts[i] = match &nodes[i] {
+            LiteNode::Course(code) => leaf(code),
+            LiteNode::Free => true,
+            LiteNode::All(children) => {
+                children.iter().all(|&child| verdicts[child])
+            }
+            LiteNode::Any(children) => {
+                children.iter().any(|&child| verdicts[child])
+            }
+        };
+    }
+    verdicts.first().copied().unwrap_or(true)
 }
 
 // `a2026` → (Fall, 2026); a = automne, h = hiver, e = été. Only the season
@@ -158,6 +340,28 @@ pub fn horizon_sessions(start: Season, study_sessions: usize) -> Vec<Season> {
             } else {
                 vec![season]
             }
+        })
+        .collect()
+}
+
+// The horizon's seasons turned into semesters — the only place the app
+// does calendar arithmetic: a hiver belongs to the civil year after its
+// automne, an été and the next automne keep the hiver's year
+// (« A2026 → H2027 → É2027 → A2027 → … »).
+pub fn session_semesters(
+    start: Semester,
+    seasons: &[Season],
+) -> Vec<Semester> {
+    let mut year = start.year;
+    let mut previous: Option<Season> = None;
+    seasons
+        .iter()
+        .map(|&season| {
+            if previous == Some(Season::Fall) {
+                year += 1;
+            }
+            previous = Some(season);
+            Semester { season, year }
         })
         .collect()
 }
@@ -365,6 +569,30 @@ pub fn credit_total(courses: &[Course]) -> Result<u32, IntakeError> {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
+
+    // --- session_semesters ---
+
+    #[test]
+    fn the_semester_walk_crosses_civil_years_at_each_automne() {
+        let seasons = horizon_sessions(Season::Fall, 4);
+        let start = "A26".parse().unwrap_or_else(|e| panic!("{e}"));
+        let labels: Vec<String> = session_semesters(start, &seasons)
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(labels, ["A26", "H27", "E27", "A27", "H28", "E28"]);
+    }
+
+    #[test]
+    fn a_winter_start_keeps_its_own_year() {
+        let seasons = [Season::Winter, Season::Summer, Season::Fall];
+        let start = "H27".parse().unwrap_or_else(|e| panic!("{e}"));
+        let labels: Vec<String> = session_semesters(start, &seasons)
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(labels, ["H27", "E27", "A27"]);
+    }
 
     // --- parse_session ---
 
@@ -796,6 +1024,177 @@ mod tests {
             BTreeSet::from(["GEX-2590".to_string()]),
             "only stages with a Course reach the solver"
         );
+    }
+
+    // --- forced-elective injection ---
+
+    fn program_with_rule(mandatory: &str, listed: &str) -> Program {
+        // the negotiated rule proves a non-list rule feeds the pool nothing
+        serde_json::from_str(&format!(
+            r#"{{"code":"p","slug":"p","semester":"A26","title":"P","cycle":1,
+                "credits_required":120,"mandatory":[{mandatory}],
+                "rules":[{{"title":"Règle 1",
+                           "constraint":{{"type":"course","min":1,"max":1}},
+                           "courses":[{listed}]}},
+                         {{"title":"Règle 2","courses":"negotiated",
+                           "raw":"convenus avec la direction"}}],
+                "concentrations":[],"profiles":[]}}"#
+        ))
+        .unwrap_or_else(|e| panic!("program literal: {e}"))
+    }
+
+    fn with_prereqs(code: &str, nrc: &str, tree: &str) -> Course {
+        let mut course = monday(code, nrc);
+        course.prerequisites = Some(
+            serde_json::from_str(&format!(r#"{{"raw":"r","tree":{tree}}}"#))
+                .unwrap_or_else(|e| panic!("prerequisites literal: {e}")),
+        );
+        course
+    }
+
+    #[test]
+    fn a_forced_elective_is_injected_once_and_surfaced() {
+        let program = program_with_rule(
+            r#""GMC-3002","GMC-3003""#,
+            r#""GLO-1901","IFT-1903""#,
+        );
+        // both mandatory courses force the same elective: injected once —
+        // the raw operand is optimistically satisfiable, never blocking
+        let all = [
+            with_prereqs("GMC-3002", "1", r#""GLO-1901""#),
+            with_prereqs(
+                "GMC-3003",
+                "2",
+                r#"{"all":["GLO-1901",{"raw":"un examen"}]}"#,
+            ),
+            monday("GLO-1901", "3"),
+            monday("IFT-1903", "4"),
+        ];
+        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(intake.injected, ["GLO-1901"]);
+        assert!(intake.selection.contains("GLO-1901"), "counts in coverage");
+        assert!(
+            intake
+                .courses
+                .iter()
+                .any(|course| course.code == "GLO-1901"),
+            "the injected course reaches the solver"
+        );
+        assert!(
+            !intake.selection.contains("IFT-1903"),
+            "the untouched alternative stays unchosen"
+        );
+    }
+
+    #[test]
+    fn a_choice_between_two_listed_electives_forces_neither() {
+        let program =
+            program_with_rule(r#""GMC-3002""#, r#""GLO-1901","IFT-1903""#);
+        let all = [
+            with_prereqs(
+                "GMC-3002",
+                "1",
+                r#"{"any":["GLO-1901","IFT-1903"]}"#,
+            ),
+            monday("GLO-1901", "3"),
+            monday("IFT-1903", "4"),
+        ];
+        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(intake.injected.is_empty(), "the injection never chooses");
+    }
+
+    #[test]
+    fn a_forced_code_from_outside_the_program_is_never_injected() {
+        // XYZ-1000 could never hold: the tree is hopeless, and naming it is
+        // the pre-search screen's job, not the injection's
+        let program = program_with_rule(r#""GMC-3002""#, r#""GLO-1901""#);
+        let all = [
+            with_prereqs("GMC-3002", "1", r#""XYZ-1000""#),
+            monday("GLO-1901", "3"),
+        ];
+        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(intake.injected.is_empty());
+    }
+
+    #[test]
+    fn an_unavailable_alternative_leaves_the_listed_elective_forced() {
+        // any(GLO-1901, XYZ-1000): the outside code could never hold, so
+        // the listed elective is the only satisfying branch — forced
+        let program = program_with_rule(r#""GMC-3002""#, r#""GLO-1901""#);
+        let all = [
+            with_prereqs(
+                "GMC-3002",
+                "1",
+                r#"{"any":["GLO-1901","XYZ-1000"]}"#,
+            ),
+            monday("GLO-1901", "3"),
+        ];
+        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(intake.injected, ["GLO-1901"]);
+    }
+
+    #[test]
+    fn injection_chains_through_the_injected_courses_own_tree() {
+        let program =
+            program_with_rule(r#""GMC-3002""#, r#""GLO-1901","GLO-1902""#);
+        let all = [
+            with_prereqs("GMC-3002", "1", r#""GLO-1901""#),
+            with_prereqs("GLO-1901", "2", r#""GLO-1902""#),
+            monday("GLO-1902", "3"),
+        ];
+        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(intake.injected, ["GLO-1901", "GLO-1902"]);
+    }
+
+    #[test]
+    fn held_or_passed_codes_are_never_reinjected() {
+        let program = program_with_rule(r#""GMC-3002""#, r#""GLO-1901""#);
+        let all = [
+            with_prereqs("GMC-3002", "1", r#""GLO-1901""#),
+            monday("GLO-1901", "3"),
+        ];
+        let chosen = placement_intake(
+            Some(&program),
+            &["glo-1901".to_string()],
+            &[],
+            &[],
+            &all,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert!(chosen.injected.is_empty(), "already an elective");
+
+        let done = placement_intake(
+            Some(&program),
+            &[],
+            &["gmc-3002".to_string()],
+            &[],
+            &all,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert!(done.injected.is_empty(), "a passed course is history");
+    }
+
+    #[test]
+    fn a_tree_over_budget_injects_nothing_and_is_left_to_the_solver() {
+        let program = program_with_rule(r#""GMC-3002""#, r#""GLO-1901""#);
+        let mut wide = monday("GMC-3002", "1");
+        wide.prerequisites = Some(Prerequisites::Parsed {
+            raw: "r".to_string(),
+            tree: PrereqTree::All {
+                all: (0..MAX_INJECTION_NODES)
+                    .map(|_| PrereqTree::Course("GLO-1901".to_string()))
+                    .collect(),
+            },
+        });
+        let all = [wide, monday("GLO-1901", "3")];
+        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(intake.injected.is_empty());
     }
 
     #[test]

@@ -3,14 +3,18 @@ use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
 use crate::organigramme::{self, OrganigrammeInput};
+use crate::questions::{
+    self, CoverageInput, HorizonInput, PrerequisitesInput,
+};
 use crate::schedule::{self, ScheduleInput};
 
 // The whole JS surface, and the only code in the crate that is not plain
-// Rust: four exports, each one conversion in and one out. Everything worth
-// testing lives on the other side of these calls (ADR
-// `2026-08-module-wasm-quatre-fonctions-js`). The `unchecked_*` attributes
-// and the Tsify derives only decorate the generated `.d.ts`; the runtime
-// path is untouched (ADR `2026-08-types-typescript-tsify-declaratif`).
+// Rust: eight exports, each one conversion in and one out. Everything worth
+// testing lives on the other side of these calls (ADRs
+// `2026-08-module-wasm-quatre-fonctions-js`,
+// `2026-08-surface-wasm-etendue-a-huit-fonctions`). The `unchecked_*`
+// attributes and the Tsify derives only decorate the generated `.d.ts`; the
+// runtime path is untouched (ADR `2026-08-types-typescript-tsify-declaratif`).
 
 // The hand-written serde of these core types escapes the Tsify derive, and
 // three shapes the derive would mistype are declared by hand: `Rule`
@@ -89,9 +93,57 @@ pub fn verify_organigramme(
     run::<OrganigrammeInput, _>(input, organigramme::verify)
 }
 
+/// Les sessions qui pourraient accueillir `code` sur l'horizon décrit par
+/// `input` : une sonde de placement par session, numéros 1-based — la forme
+/// que `pinned` parle.
+/// Lève une chaîne décrivant l'erreur si une entrée est invalide.
+#[wasm_bindgen(unchecked_return_type = "number[]")]
+pub fn admissible_sessions(
+    #[wasm_bindgen(unchecked_param_type = "OrganigrammeInput")] input: JsValue,
+    code: String,
+) -> Result<JsValue, JsValue> {
+    run::<OrganigrammeInput, _>(input, move |input| {
+        organigramme::admissible(input, &code)
+    })
+}
+
+/// La question statique des préalables d'un cours, contre ce que l'étudiant
+/// tient déjà (`satisfied`, `credits`) : `met`, plus les opérandes que le
+/// verdict a dû présumer (texte brut, cours préuniversitaires) — remontés,
+/// jamais imposés.
+#[wasm_bindgen(unchecked_return_type = "PrerequisitesReport")]
+pub fn prerequisites_met(
+    #[wasm_bindgen(unchecked_param_type = "PrerequisitesInput")]
+    input: JsValue,
+) -> Result<JsValue, JsValue> {
+    run::<PrerequisitesInput, _>(input, questions::prerequisites)
+}
+
+/// Le bilan de couverture des règles du programme sur la sélection donnée —
+/// une grille partielle suffit, contrairement à `verify_organigramme` qui
+/// exige un placement complet.
+#[wasm_bindgen(unchecked_return_type = "CoverageReport")]
+pub fn coverage_report(
+    #[wasm_bindgen(unchecked_param_type = "CoverageInput")] input: JsValue,
+) -> Result<JsValue, JsValue> {
+    run::<CoverageInput, _>(input, questions::coverage)
+}
+
+/// L'horizon des sessions en codes de millésime (« A26 », « H27 », « E27 »,
+/// …) : `study_sessions` compte la seule alternance A/H, les étés s'insèrent
+/// après chaque hiver, le dernier inclus.
+#[wasm_bindgen(unchecked_return_type = "Semester[]")]
+pub fn horizon_sessions(
+    #[wasm_bindgen(unchecked_param_type = "HorizonInput")] input: JsValue,
+) -> Result<JsValue, JsValue> {
+    run::<HorizonInput, _>(input, questions::horizon)
+}
+
 fn run<I, O>(
     input: JsValue,
-    solve: fn(&I) -> Result<O, String>,
+    // `impl FnOnce`, not a fn pointer: `admissible_sessions` closes over its
+    // second JS argument
+    solve: impl FnOnce(&I) -> Result<O, String>,
 ) -> Result<JsValue, JsValue>
 where
     I: serde::de::DeserializeOwned,

@@ -117,27 +117,9 @@ impl Default for View {
 
 // --- the session identity walk -------------------------------------------
 
-// The horizon's seasons turned into semesters — the only place the app
-// does calendar arithmetic: a hiver belongs to the civil year after its
-// automne, an été and the next automne keep the hiver's year
-// (« A2026 → H2027 → É2027 → A2027 → … »).
-pub fn session_semesters(
-    start: Semester,
-    seasons: &[Season],
-) -> Vec<Semester> {
-    let mut year = start.year;
-    let mut previous: Option<Season> = None;
-    seasons
-        .iter()
-        .map(|&season| {
-            if previous == Some(Season::Fall) {
-                year += 1;
-            }
-            previous = Some(season);
-            Semester { season, year }
-        })
-        .collect()
-}
+// the calendar arithmetic moved to core so the wasm surface serves the same
+// walk to the JS interface (ADR `2026-08-surface-wasm-etendue-a-huit-fonctions`)
+pub use ulaval_scheduler_core::session_semesters;
 
 // the `schedule_intake` naming — « a2026 », « h2027 », « e2027 »
 pub fn session_key(semester: Semester) -> String {
@@ -328,23 +310,6 @@ mod tests {
         Season::Winter,
         Season::Summer,
     ];
-
-    #[test]
-    fn the_semester_walk_crosses_civil_years_at_each_automne() {
-        let semesters = session_semesters(semester("A26"), &HORIZON);
-        let labels: Vec<String> =
-            semesters.iter().map(|s| s.to_string()).collect();
-        assert_eq!(labels, ["A26", "H27", "E27", "A27", "H28", "E28"]);
-    }
-
-    #[test]
-    fn a_winter_start_keeps_its_own_year() {
-        let seasons = [Season::Winter, Season::Summer, Season::Fall];
-        let semesters = session_semesters(semester("H27"), &seasons);
-        let labels: Vec<String> =
-            semesters.iter().map(|s| s.to_string()).collect();
-        assert_eq!(labels, ["H27", "E27", "A27"]);
-    }
 
     #[test]
     fn session_keys_speak_the_intake_naming() {

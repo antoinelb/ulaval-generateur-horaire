@@ -2,8 +2,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use ulaval_scheduler_core::{
     coverage_report, horizon_sessions, place, placement_intake,
-    summer_indices, Course, CoverageReport, Placement, PlacementIntake,
-    PlacementRequest, Program, Season,
+    summer_indices, Course, CoverageReport, Placement, PlacementError,
+    PlacementIntake, PlacementRequest, Program, Season,
 };
 
 // Browser-sized budgets: the search runs on the JS thread, so the defaults
@@ -71,6 +71,10 @@ pub struct OrganigrammeReport {
     // program-derived codes the snapshot does not carry — surfaced, never
     // dropped (ADR `2026-07-cours-sans-offre-ecarte-par-le-harnais`)
     pub set_aside: Vec<String>,
+    // electives the intake added because a candidate's prerequisites force
+    // them — the caller adopts and announces them, never silently (ADR
+    // `2026-08-injection-des-electifs-forces-par-les-prealables`)
+    pub injected: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub coverage: Option<CoverageReport>,
 }
@@ -88,6 +92,7 @@ pub fn generate(
         sessions,
         placement,
         set_aside: intake.set_aside,
+        injected: intake.injected,
         coverage: None,
     })
 }
@@ -139,8 +144,26 @@ pub fn verify(
         sessions,
         placement,
         set_aside: intake.set_aside,
+        injected: intake.injected,
         coverage,
     })
+}
+
+// The sessions that could host `code` — what the JS interface needs for its
+// « + H28 » chips (CORRECTIFS-AMONT item 12): one `place` probe per session,
+// pin semantics answering the very question the click asks. 1-based numbers,
+// the shape `pinned` speaks.
+pub fn admissible(
+    input: &OrganigrammeInput,
+    code: &str,
+) -> Result<Vec<usize>, String> {
+    let intake = intake(input)?;
+    let sessions = horizon_sessions(input.start, input.study_sessions);
+    let code = code.to_uppercase();
+    with_request(input, &intake, &sessions, |request| {
+        ulaval_scheduler_core::admissible_sessions(request, &code)
+    })
+    .map(|admissible| admissible.into_iter().collect())
 }
 
 fn intake(input: &OrganigrammeInput) -> Result<PlacementIntake, String> {
@@ -166,6 +189,15 @@ fn solve(
     intake: &PlacementIntake,
     sessions: &[Season],
 ) -> Result<Placement, String> {
+    with_request(input, intake, sessions, place)
+}
+
+fn with_request<T>(
+    input: &OrganigrammeInput,
+    intake: &PlacementIntake,
+    sessions: &[Season],
+    ask: impl FnOnce(&PlacementRequest) -> Result<T, PlacementError>,
+) -> Result<T, String> {
     // an été absent from the set still hosts stages and pinned courses (ADR
     // `2026-08-stage-place-en-ete-sauf-epinglage`)
     let open_summers = if input.summers_open {
@@ -173,7 +205,7 @@ fn solve(
     } else {
         BTreeSet::new()
     };
-    place(&PlacementRequest {
+    ask(&PlacementRequest {
         sessions,
         credit_cap: input.credit_cap,
         concomitant: input.concomitant,
@@ -299,6 +331,35 @@ mod tests {
         let json = serde_json::to_value(&verified)
             .unwrap_or_else(|e| panic!("serialize: {e}"));
         assert_eq!(json["coverage"]["mandatory"][0]["scope"], "program");
+    }
+
+    #[test]
+    fn admissible_sessions_probe_offer_and_precedence() {
+        let both = input(&format!(r#""program":{PROGRAM}"#));
+        // GEX-1000 must precede GEX-1001, and the movable GEX-1001 has no
+        // seat left past the hiver — so each course has exactly one session
+        assert_eq!(
+            admissible(&both, "gex-1000").unwrap_or_else(|e| panic!("{e}")),
+            [1]
+        );
+        assert_eq!(
+            admissible(&both, "GEX-1001").unwrap_or_else(|e| panic!("{e}")),
+            [2]
+        );
+        // summer-only GEX-1002: a pin is deliberate, so it lands in the été
+        // even closed (ADR `2026-08-stage-place-en-ete-sauf-epinglage`)
+        let summer = input(r#""electives":["gex-1002"]"#);
+        assert_eq!(
+            admissible(&summer, "GEX-1002").unwrap_or_else(|e| panic!("{e}")),
+            [3]
+        );
+    }
+
+    #[test]
+    fn admissible_sessions_surface_every_intake_error() {
+        let error = admissible(&input(r#""electives":["ZZZ-9999"]"#), "Z")
+            .expect_err("a typed typo must not survive");
+        assert!(error.contains("ZZZ-9999"), "{error}");
     }
 
     #[test]

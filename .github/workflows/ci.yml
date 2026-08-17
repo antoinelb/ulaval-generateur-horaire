@@ -74,9 +74,13 @@ jobs:
           cp data/*.json _site/data/
           cp -r data/programmes _site/data/programmes
           mdbook build docs/livre --dest-dir "$GITHUB_WORKSPACE/_site/docs"
-      # Pages serves no directory listing; generate one at assembly time
+      # Pages serves no directory listing; generate one at assembly time —
+      # index.json (a flat array of file names) is the machine-readable one
+      # the JS interface reads, index.html the human-readable one
       - name: Index the data directories
         run: |
+          ls -1 --color=never _site/data/programmes |
+            jq -R . | jq -s . > _site/data/programmes/index.json
           for d in _site/data _site/data/programmes; do
             ls -1 --color=never "$d" | grep -v '^index.html$' |
               sed 's|.*|<a href="&">&</a><br>|' > "$d/index.html"
