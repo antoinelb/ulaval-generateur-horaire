@@ -50,7 +50,7 @@ fn SolverStatus() -> Element {
 #[component]
 pub fn HeaderBar() -> Element {
     let plan = use_context::<Signal<Plan>>();
-    let view = use_context::<Signal<View>>();
+    let mut view = use_context::<Signal<View>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     let read = snapshot.read();
     let Some(snapshot) = read.as_ref() else {
@@ -123,6 +123,10 @@ pub fn HeaderBar() -> Element {
                     class: "status-undo",
                     title: "Revenir au choix de programme (annulable)",
                     onclick: move |_| {
+                        // the search box goes away with the panel: leaving
+                        // its text behind would resurrect stale results
+                        // the moment a program is picked again
+                        view.write().search.clear();
                         super::edit_plan(
                             plan,
                             history,

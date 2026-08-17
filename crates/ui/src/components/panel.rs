@@ -9,9 +9,11 @@ use crate::state::{self, History, Plan, ProgramChoice, View};
 // The single left panel (notes 2026-08-13 : plus d'onglets) : the
 // program's rules and organigramme controls, the catalogue search, the
 // add-by-code field and the manual-course form. The session's own courses
-// live in the schedule and the ribbon — no list here. Everything shown
-// comes from `crate::panel` (pure, tested); this file only wires clicks
-// and signals.
+// live in the schedule and the ribbon — no list here. While no program is
+// chosen the picker *replaces* all of it: nothing to add courses with is
+// worth showing before the only expected click. Everything shown comes
+// from `crate::panel` (pure, tested); this file only wires clicks and
+// signals.
 #[component]
 pub fn LeftPanel() -> Element {
     let plan = use_context::<Signal<Plan>>();
@@ -36,10 +38,11 @@ pub fn LeftPanel() -> Element {
         aside { class: "panel", aria_label: "Choix des cours",
             if plan.read().program.is_none() {
                 ProgramPicker {}
+            } else {
+                PanelBody { model }
+                ManualCourseForm {}
+                AddByCode {}
             }
-            PanelBody { model }
-            ManualCourseForm {}
-            AddByCode {}
         }
     }
 }
