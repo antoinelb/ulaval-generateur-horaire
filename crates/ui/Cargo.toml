@@ -9,7 +9,9 @@ workspace = true
 
 [dependencies]
 ulaval-scheduler-core = { workspace = true }
-ulaval-scheduler-ui-calculations = { path = "../ui-calculations" }
+# the frontier crate's pure modules (credits, merge), called natively here —
+# its worker module is the same artifact the JS interface downloads
+ulaval-scheduler-wasm = { path = "../wasm", default-features = false }
 dioxus = { version = "0.7.1", features = ["router"] }
 serde = { workspace = true }
 serde_json = { workspace = true }

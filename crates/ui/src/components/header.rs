@@ -99,12 +99,11 @@ pub fn HeaderBar() -> Element {
     let bac = chosen.map(|program| {
         let plan_read = plan.read();
         let granted = crate::panel::effective_program(snapshot, &plan_read);
-        let summary =
-            ulaval_scheduler_ui_calculations::credits::credit_summary(
-                granted.as_ref(),
-                &crate::panel::selection(&plan_read),
-                &snapshot.courses,
-            );
+        let summary = ulaval_scheduler_wasm::credits::credit_summary(
+            granted.as_ref(),
+            &crate::panel::selection(&plan_read),
+            &snapshot.courses,
+        );
         (summary.counted, program.credits_required)
     });
     let credits =

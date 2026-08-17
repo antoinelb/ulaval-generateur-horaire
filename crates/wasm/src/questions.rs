@@ -12,7 +12,10 @@ use ulaval_scheduler_core::{
 // What JS hands `prerequisites_met`. Unknown fields are refused rather than
 // ignored, like every input of the crate.
 #[derive(Debug, Clone, serde::Deserialize)]
-#[cfg_attr(target_arch = "wasm32", derive(tsify::Tsify))]
+#[cfg_attr(
+    all(target_arch = "wasm32", feature = "boundary"),
+    derive(tsify::Tsify)
+)]
 #[serde(deny_unknown_fields)]
 pub struct PrerequisitesInput {
     pub course: Course,
@@ -25,7 +28,10 @@ pub struct PrerequisitesInput {
 // `PrereqStatus` flattened for JS: `met` plus the operands the verdict had
 // to presume (raw text, préuniversitaire codes) — surfaced, never imposed.
 #[derive(Debug, PartialEq, serde::Serialize)]
-#[cfg_attr(target_arch = "wasm32", derive(tsify::Tsify))]
+#[cfg_attr(
+    all(target_arch = "wasm32", feature = "boundary"),
+    derive(tsify::Tsify)
+)]
 pub struct PrerequisitesReport {
     pub met: bool,
     pub assumed: BTreeSet<String>,
@@ -59,7 +65,10 @@ pub fn prerequisites(
 // partial grid the student has — `verify_organigramme` keeps demanding a
 // complete placement, this does not (CORRECTIFS-AMONT item 12).
 #[derive(Debug, Clone, serde::Deserialize)]
-#[cfg_attr(target_arch = "wasm32", derive(tsify::Tsify))]
+#[cfg_attr(
+    all(target_arch = "wasm32", feature = "boundary"),
+    derive(tsify::Tsify)
+)]
 #[serde(deny_unknown_fields)]
 pub struct CoverageInput {
     pub program: Program,
@@ -69,10 +78,15 @@ pub struct CoverageInput {
     pub profile: Option<String>,
     // every code the student counts on: passed, placed, granted
     pub selection: Vec<String>,
-    pub courses: Vec<Course>,
+    // Wire format only, resolved by the boundary — see `OrganigrammeInput`.
+    #[serde(default)]
+    pub courses: Option<Vec<Course>>,
 }
 
-pub fn coverage(input: &CoverageInput) -> Result<CoverageReport, String> {
+pub fn coverage(
+    input: &CoverageInput,
+    courses: &[Course],
+) -> Result<CoverageReport, String> {
     let selection: BTreeSet<String> = normalize_codes(&input.selection)
         .map_err(|e| e.to_string())?
         .into_iter()
@@ -82,7 +96,7 @@ pub fn coverage(input: &CoverageInput) -> Result<CoverageReport, String> {
         input.concentration.as_deref(),
         input.profile.as_deref(),
         &selection,
-        &input.courses,
+        courses,
     )
     .map_err(|e| e.to_string())
 }
@@ -91,7 +105,10 @@ pub fn coverage(input: &CoverageInput) -> Result<CoverageReport, String> {
 // semester codes (« A26 », « H27 », « E27 », …) so the été-after-each-hiver
 // rule and the calendar arithmetic both stay out of the view.
 #[derive(Debug, Clone, serde::Deserialize)]
-#[cfg_attr(target_arch = "wasm32", derive(tsify::Tsify))]
+#[cfg_attr(
+    all(target_arch = "wasm32", feature = "boundary"),
+    derive(tsify::Tsify)
+)]
 #[serde(deny_unknown_fields)]
 pub struct HorizonInput {
     pub start: Semester,
@@ -181,30 +198,38 @@ mod tests {
         "rules":[],"concentrations":[],"profiles":[]}"#;
 
     fn coverage_input(fields: &str) -> CoverageInput {
-        serde_json::from_str(&format!(
-            r#"{{"program":{PROGRAM},"courses":[{COURSE}],{fields}}}"#
-        ))
-        .unwrap_or_else(|e| panic!("input literal: {e}"))
+        serde_json::from_str(&format!(r#"{{"program":{PROGRAM},{fields}}}"#))
+            .unwrap_or_else(|e| panic!("input literal: {e}"))
+    }
+
+    fn courses() -> Vec<Course> {
+        serde_json::from_str(&format!("[{COURSE}]"))
+            .unwrap_or_else(|e| panic!("courses literal: {e}"))
     }
 
     #[test]
     fn coverage_counts_a_partial_grid_without_demanding_a_placement() {
-        let report = coverage(&coverage_input(r#""selection":["gex-1001"]"#))
-            .unwrap_or_else(|e| panic!("{e}"));
+        let report = coverage(
+            &coverage_input(r#""selection":["gex-1001"]"#),
+            &courses(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(report.mandatory[0].missing, ["GEX-1000"]);
     }
 
     #[test]
     fn coverage_surfaces_every_selection_and_report_error() {
-        let duplicated = coverage(&coverage_input(
-            r#""selection":["GEX-1001","gex-1001"]"#,
-        ))
+        let duplicated = coverage(
+            &coverage_input(r#""selection":["GEX-1001","gex-1001"]"#),
+            &courses(),
+        )
         .expect_err("a duplicated code is a typo to surface");
         assert!(duplicated.contains("GEX-1001"), "{duplicated}");
 
-        let unknown = coverage(&coverage_input(
-            r#""selection":[],"concentration":"Aucune""#,
-        ))
+        let unknown = coverage(
+            &coverage_input(r#""selection":[],"concentration":"Aucune""#),
+            &courses(),
+        )
         .expect_err("no such concentration");
         assert!(unknown.contains("Aucune"), "{unknown}");
     }

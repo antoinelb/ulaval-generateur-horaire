@@ -3911,20 +3911,10 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.20",
  "ulaval-scheduler-core",
- "ulaval-scheduler-ui-calculations",
+ "ulaval-scheduler-wasm",
  "wasm-bindgen",
  "web-sys",
  "web-time",
-]
-
-[[package]]
-name = "ulaval-scheduler-ui-calculations"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "ulaval-scheduler-core",
- "wasm-bindgen",
 ]
 
 [[package]]

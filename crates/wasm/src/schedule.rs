@@ -11,16 +11,21 @@ use ulaval_scheduler_core::{
 // refused rather than ignored: a typo in the JS object must not be read as
 // a default (« never lose input silently »).
 #[derive(Debug, Clone, serde::Deserialize)]
-#[cfg_attr(target_arch = "wasm32", derive(tsify::Tsify))]
+#[cfg_attr(
+    all(target_arch = "wasm32", feature = "boundary"),
+    derive(tsify::Tsify)
+)]
 #[serde(deny_unknown_fields)]
 pub struct ScheduleInput {
-    pub courses: Vec<Course>,
+    // Wire format only, resolved by the boundary — see `OrganigrammeInput`.
+    #[serde(default)]
+    pub courses: Option<Vec<Course>>,
     // `a2026`, `h2027`, `e2026`
     pub session: String,
     pub codes: Vec<String>,
     #[serde(default)]
     #[cfg_attr(
-        target_arch = "wasm32",
+        all(target_arch = "wasm32", feature = "boundary"),
         tsify(type = "Record<string, string[]>")
     )]
     pub chosen: BTreeMap<String, BTreeSet<String>>,
@@ -29,8 +34,11 @@ pub struct ScheduleInput {
 // Build the week: `chosen` pins whatever the student has already settled —
 // possibly nothing — and every other course takes the first option of a
 // conflict-free combination.
-pub fn generate(input: &ScheduleInput) -> Result<ScheduleReport, String> {
-    let intake = schedule_intake(&input.courses, &input.session, &input.codes)
+pub fn generate(
+    input: &ScheduleInput,
+    courses: &[Course],
+) -> Result<ScheduleReport, String> {
+    let intake = schedule_intake(courses, &input.session, &input.codes)
         .map_err(|e| e.to_string())?;
     schedule_report(&intake.courses, intake.season, &normalized(input))
         .map_err(|e| e.to_string())
@@ -40,7 +48,10 @@ pub fn generate(input: &ScheduleInput) -> Result<ScheduleReport, String> {
 // its chosen option, so the report's `valid` flags judge *his* combination
 // instead of one the solver picked for him. A missing pin is an incomplete
 // question, not a false verdict.
-pub fn verify(input: &ScheduleInput) -> Result<ScheduleReport, String> {
+pub fn verify(
+    input: &ScheduleInput,
+    courses: &[Course],
+) -> Result<ScheduleReport, String> {
     let chosen = normalized(input);
     let unpinned: Vec<String> = input
         .codes
@@ -54,7 +65,7 @@ pub fn verify(input: &ScheduleInput) -> Result<ScheduleReport, String> {
             unpinned.join(", ")
         ));
     }
-    generate(input)
+    generate(input, courses)
 }
 
 // codes are uppercased on the way in (`normalize_codes`), so the pins must
@@ -72,19 +83,25 @@ fn normalized(input: &ScheduleInput) -> BTreeMap<String, BTreeSet<String>> {
 mod tests {
     use super::*;
 
-    // two courses, one in-person option each, offered in fall
     fn input(session: &str, codes: &[&str], chosen: &str) -> ScheduleInput {
         serde_json::from_str(&format!(
             r#"{{"session":"{session}",
                  "codes":{},
-                 "chosen":{chosen},
-                 "courses":[{},{}]}}"#,
+                 "chosen":{chosen}}}"#,
             serde_json::to_string(codes)
                 .unwrap_or_else(|e| panic!("codes: {e}")),
+        ))
+        .unwrap_or_else(|e| panic!("input literal: {e}"))
+    }
+
+    // two courses, one in-person option each, offered in fall
+    fn courses() -> Vec<Course> {
+        serde_json::from_str(&format!(
+            "[{},{}]",
             course("GEX-1000", "monday", "90001"),
             course("GEX-1001", "tuesday", "90002"),
         ))
-        .unwrap_or_else(|e| panic!("input literal: {e}"))
+        .unwrap_or_else(|e| panic!("courses literal: {e}"))
     }
 
     fn course(code: &str, day: &str, nrc: &str) -> String {
@@ -100,9 +117,11 @@ mod tests {
 
     #[test]
     fn generation_lowercases_nothing_and_reports_a_valid_week() {
-        let report =
-            generate(&input("a2026", &["gex-1000", "GEX-1001"], "{}"))
-                .unwrap_or_else(|e| panic!("{e}"));
+        let report = generate(
+            &input("a2026", &["gex-1000", "GEX-1001"], "{}"),
+            &courses(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
         assert!(report.valid);
         let codes: Vec<&str> = report
             .courses
@@ -114,7 +133,7 @@ mod tests {
 
     #[test]
     fn generation_surfaces_every_intake_error() {
-        let error = generate(&input("x2026", &["gex-1000"], "{}"))
+        let error = generate(&input("x2026", &["gex-1000"], "{}"), &courses())
             .expect_err("no such season letter");
         assert!(error.contains("a<year>"), "{error}");
     }
@@ -122,22 +141,24 @@ mod tests {
     #[test]
     fn generation_surfaces_every_report_error() {
         // a pin naming a course that was not requested
-        let error = generate(&input(
-            "a2026",
-            &["gex-1000"],
-            r#"{"gex-1001":["90002"]}"#,
-        ))
+        let error = generate(
+            &input("a2026", &["gex-1000"], r#"{"gex-1001":["90002"]}"#),
+            &courses(),
+        )
         .expect_err("pinned but not requested");
         assert!(error.contains("GEX-1001"), "{error}");
     }
 
     #[test]
     fn verification_needs_a_chosen_option_for_every_course() {
-        let error = verify(&input(
-            "a2026",
-            &["gex-1000", "gex-1001"],
-            r#"{"gex-1000":["90001"]}"#,
-        ))
+        let error = verify(
+            &input(
+                "a2026",
+                &["gex-1000", "gex-1001"],
+                r#"{"gex-1000":["90001"]}"#,
+            ),
+            &courses(),
+        )
         .expect_err("GEX-1001 has no pin");
         assert!(error.contains("GEX-1001"), "{error}");
     }
@@ -146,11 +167,14 @@ mod tests {
     fn verification_judges_the_students_own_combination() {
         // pins uppercase the way the codes do, so a lowercase key still
         // names its course
-        let report = verify(&input(
-            "a2026",
-            &["gex-1000", "gex-1001"],
-            r#"{"gex-1000":["90001"],"GEX-1001":["90002"]}"#,
-        ))
+        let report = verify(
+            &input(
+                "a2026",
+                &["gex-1000", "gex-1001"],
+                r#"{"gex-1000":["90001"],"GEX-1001":["90002"]}"#,
+            ),
+            &courses(),
+        )
         .unwrap_or_else(|e| panic!("{e}"));
         assert!(report.valid);
     }

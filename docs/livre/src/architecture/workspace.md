@@ -6,8 +6,8 @@ Un seul workspace Cargo, tout en Rust, quatre crates :
 |---|---|---|
 | `core` | bibliothèque | toute la logique du domaine, zéro IO, zéro async ; compile en natif et en WASM |
 | `scraper` | binaire natif async | télécharge et parse les pages ULaval en snapshots JSON |
-| `wasm` | `cdylib` | expose `core` au JavaScript nu — voir [La frontière WASM](frontiere-wasm.md) |
-| `ui` | binaire WASM | l'interface Dioxus (jalons à venir) |
+| `wasm` | `cdylib` + rlib | le crate de frontière : `core` exposé au JavaScript nu **et** au worker de l'app Dioxus, plus les fonctions pures que celle-ci appelle nativement — voir [La frontière WASM](frontiere-wasm.md) |
+| `ui` | binaire WASM | l'interface Dioxus |
 
 ## Les invariants porteurs
 
@@ -25,6 +25,7 @@ Ce sont des contraintes, pas des préférences :
 - `make static` : `cargo fmt` + clippy natif (`--all-features`) + clippy du crate wasm sur la cible `wasm32-unknown-unknown`, tout avertissement étant une erreur.
 - `make test` : `cargo +nightly llvm-cov` — la couverture doit être à 100 % une fois une fonctionnalité terminée, et la CI l'exige (`--fail-under-lines 100`).
 - `make wasm` : `wasm-pack build crates/wasm --target web` — le paquet ES publié sur Pages.
+- `make ui-calc` : le même crate construit dans les assets du `ui`, pour son Web Worker — un seul crate, un seul artefact.
 - `make docs` : construit ce livre (`mdbook build docs/livre`).
 
 ## Décisions

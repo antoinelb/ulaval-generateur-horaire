@@ -1,5 +1,9 @@
 # `crates/ui-calculations` : le solveur B dans un Web Worker, hors du fil principal
 
+> **Amendé le 2026-08-17** : le crate a fusionné dans `crates/wasm` (ADR `2026-08-fusion-des-crates-wasm-et-ui-calculations`).
+> Le protocole du worker et ses deux exports (`init_snapshot`, `handle_message`) restent tels quels — ils vivent désormais dans le crate de frontière, aux côtés de la surface JavaScript.
+> L'alternative « réutiliser le pkg de `crates/wasm` » rejetée plus bas a été retenue depuis, son objection (le snapshot dans chaque appel) étant devenue le problème de l'interface JavaScript elle-même.
+
 ## Contexte
 
 Les règles d'interface (AIR LAT-3, `docs/ux/interface-rules.md`) interdisent de bloquer le fil principal plus de 16 ms.

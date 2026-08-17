@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use ulaval_scheduler_core::{Course, Program};
-use ulaval_scheduler_ui_calculations::merge::merge_manual;
+use ulaval_scheduler_wasm::merge::merge_manual;
 
 // Everything the app fetched, still unparsed: the fetch lives in `browser`
 // (wasm-only glue), the parse here — testable without a browser.

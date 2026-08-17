@@ -3,13 +3,12 @@
 static: ui-data ui-calc
 	cargo fmt --all
 	cargo clippy --workspace --all-targets --all-features -- -D warnings
-	# the JS boundary exists only under wasm32: nothing above ever sees it
+	# the browser boundary exists only under wasm32: nothing above ever
+	# sees it, and one crate now carries both surfaces
 	cargo clippy -p ulaval-scheduler-wasm \
 		--target wasm32-unknown-unknown -- -D warnings
-	# the browser glue of the ui and its worker is wasm32-only too
+	# the browser glue of the ui is wasm32-only too
 	cargo clippy -p ulaval-scheduler-ui \
-		--target wasm32-unknown-unknown -- -D warnings
-	cargo clippy -p ulaval-scheduler-ui-calculations \
 		--target wasm32-unknown-unknown -- -D warnings
 
 test: ui-data ui-calc
@@ -34,10 +33,12 @@ ui-data:
 	cp data/programmes/*.json crates/ui/assets/data/programmes/
 
 # the worker's wasm module, dropped into the ui's assets so dx serves it —
-# the ui's asset!() needs the files at every build, hence the make dep
-crates/ui/assets/calc/calc.js: crates/ui-calculations/Cargo.toml \
-		$(wildcard crates/ui-calculations/src/*.rs)
-	wasm-pack build crates/ui-calculations --target web --no-typescript \
+# the ui's asset!() needs the files at every build, hence the make dep. It is
+# the very package `make wasm` publishes: one crate, two surfaces (ADR
+# 2026-08-fusion-des-crates-wasm-et-ui-calculations)
+crates/ui/assets/calc/calc.js: crates/wasm/Cargo.toml \
+		$(wildcard crates/wasm/src/*.rs)
+	wasm-pack build crates/wasm --target web --no-typescript \
 		--out-dir ../ui/assets/calc --out-name calc
 
 ui-calc: crates/ui/assets/calc/calc.js

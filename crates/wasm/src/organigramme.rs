@@ -18,10 +18,18 @@ const DEFAULT_MAX_SOLUTIONS: usize = 100;
 // `horizon_sessions`, so the été-after-each-hiver rule stays in core and
 // out of the view. Unknown fields are refused rather than ignored.
 #[derive(Debug, Clone, serde::Deserialize)]
-#[cfg_attr(target_arch = "wasm32", derive(tsify::Tsify))]
+#[cfg_attr(
+    all(target_arch = "wasm32", feature = "boundary"),
+    derive(tsify::Tsify)
+)]
 #[serde(deny_unknown_fields)]
 pub struct OrganigrammeInput {
-    pub courses: Vec<Course>,
+    // Wire format only: the functions below never read it — the boundary
+    // resolves it against the loaded snapshot (`catalogue::resolve`) and
+    // hands the result as their `courses` argument. Optional since a worker
+    // that called `init_snapshot` stops sending the catalogue per call.
+    #[serde(default)]
+    pub courses: Option<Vec<Course>>,
     #[serde(default)]
     pub program: Option<Program>,
     #[serde(default)]
@@ -36,7 +44,7 @@ pub struct OrganigrammeInput {
     // organigramme the student assembled
     #[serde(default)]
     #[cfg_attr(
-        target_arch = "wasm32",
+        all(target_arch = "wasm32", feature = "boundary"),
         tsify(type = "Record<string, number>")
     )]
     pub pinned: BTreeMap<String, usize>,
@@ -51,7 +59,7 @@ pub struct OrganigrammeInput {
     pub summers_open: bool,
     #[serde(default)]
     #[cfg_attr(
-        target_arch = "wasm32",
+        all(target_arch = "wasm32", feature = "boundary"),
         tsify(type = "Record<string, number>")
     )]
     pub seed: BTreeMap<String, usize>,
@@ -64,7 +72,10 @@ pub struct OrganigrammeInput {
 // The horizon is returned with the placement: the session numbers only mean
 // something next to the seasons they index, and JS never computed them.
 #[derive(Debug, Clone, serde::Serialize)]
-#[cfg_attr(target_arch = "wasm32", derive(tsify::Tsify))]
+#[cfg_attr(
+    all(target_arch = "wasm32", feature = "boundary"),
+    derive(tsify::Tsify)
+)]
 pub struct OrganigrammeReport {
     pub sessions: Vec<Season>,
     pub placement: Placement,
@@ -84,8 +95,9 @@ pub struct OrganigrammeReport {
 // settled.
 pub fn generate(
     input: &OrganigrammeInput,
+    courses: &[Course],
 ) -> Result<OrganigrammeReport, String> {
-    let intake = intake(input)?;
+    let intake = intake(input, courses)?;
     let sessions = horizon_sessions(input.start, input.study_sessions);
     let placement = solve(input, &intake, &sessions)?;
     Ok(OrganigrammeReport {
@@ -106,8 +118,9 @@ pub fn generate(
 // left without a session is an incomplete question, not a false verdict.
 pub fn verify(
     input: &OrganigrammeInput,
+    courses: &[Course],
 ) -> Result<OrganigrammeReport, String> {
-    let intake = intake(input)?;
+    let intake = intake(input, courses)?;
     let unplaced: Vec<String> = intake
         .courses
         .iter()
@@ -155,9 +168,10 @@ pub fn verify(
 // the shape `pinned` speaks.
 pub fn admissible(
     input: &OrganigrammeInput,
+    courses: &[Course],
     code: &str,
 ) -> Result<Vec<usize>, String> {
-    let intake = intake(input)?;
+    let intake = intake(input, courses)?;
     let sessions = horizon_sessions(input.start, input.study_sessions);
     let code = code.to_uppercase();
     with_request(input, &intake, &sessions, |request| {
@@ -166,7 +180,10 @@ pub fn admissible(
     .map(|admissible| admissible.into_iter().collect())
 }
 
-fn intake(input: &OrganigrammeInput) -> Result<PlacementIntake, String> {
+fn intake(
+    input: &OrganigrammeInput,
+    courses: &[Course],
+) -> Result<PlacementIntake, String> {
     // ponytail: `placement_intake` speaks the `CODE=SESSION` shape, so one
     // format! reuses its whole validation instead of a second parser
     let pins: Vec<String> = input
@@ -179,7 +196,7 @@ fn intake(input: &OrganigrammeInput) -> Result<PlacementIntake, String> {
         &input.electives,
         &input.passed,
         &pins,
-        &input.courses,
+        courses,
     )
     .map_err(|e| e.to_string())
 }
@@ -250,18 +267,37 @@ mod tests {
         "mandatory":["GEX-1000","GEX-1001"],
         "rules":[],"concentrations":[],"profiles":[]}"#;
 
+    fn courses() -> Vec<Course> {
+        serde_json::from_str(COURSES)
+            .unwrap_or_else(|e| panic!("courses literal: {e}"))
+    }
+
     fn input(fields: &str) -> OrganigrammeInput {
         serde_json::from_str(&format!(
-            r#"{{"courses":{COURSES},"start":"fall","study_sessions":2,
+            r#"{{"start":"fall","study_sessions":2,
                  "credit_cap":6,{fields}}}"#
         ))
         .unwrap_or_else(|e| panic!("input literal: {e}"))
     }
 
+    // The field the functions never read: its only reader is the boundary,
+    // which no native test compiles — so the wire contract is proven here.
+    #[test]
+    fn the_catalogue_rides_in_the_input_or_stays_out_of_it() {
+        assert!(input(r#""electives":[]"#).courses.is_none());
+        let carried: OrganigrammeInput = serde_json::from_str(&format!(
+            r#"{{"courses":{COURSES},"start":"fall","study_sessions":2,
+                 "credit_cap":6}}"#
+        ))
+        .unwrap_or_else(|e| panic!("input literal: {e}"));
+        assert_eq!(carried.courses.map(|courses| courses.len()), Some(3));
+    }
+
     #[test]
     fn generation_lays_the_program_over_the_horizon() {
-        let report = generate(&input(&format!(r#""program":{PROGRAM}"#)))
-            .unwrap_or_else(|e| panic!("{e}"));
+        let report =
+            generate(&input(&format!(r#""program":{PROGRAM}"#)), &courses())
+                .unwrap_or_else(|e| panic!("{e}"));
         // the horizon inserts an été after the hiver
         assert_eq!(
             report.sessions,
@@ -282,23 +318,26 @@ mod tests {
     fn generation_sets_aside_the_codes_the_snapshot_does_not_carry() {
         let program = PROGRAM
             .replace(r#""GEX-1000","GEX-1001""#, r#""GEX-1000","GHOST-999""#);
-        let report = generate(&input(&format!(r#""program":{program}"#)))
-            .unwrap_or_else(|e| panic!("{e}"));
+        let report =
+            generate(&input(&format!(r#""program":{program}"#)), &courses())
+                .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(report.set_aside, ["GHOST-999"]);
     }
 
     #[test]
     fn a_closed_ete_blocks_a_summer_only_course_an_open_one_hosts_it() {
-        let closed = generate(&input(r#""electives":["gex-1002"]"#))
-            .unwrap_or_else(|e| panic!("{e}"));
+        let closed =
+            generate(&input(r#""electives":["gex-1002"]"#), &courses())
+                .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(
             closed.placement.blocked[0].code, "GEX-1002",
             "the été is closed to regular courses"
         );
 
-        let open = generate(&input(
-            r#""electives":["gex-1002"],"summers_open":true"#,
-        ))
+        let open = generate(
+            &input(r#""electives":["gex-1002"],"summers_open":true"#),
+            &courses(),
+        )
         .unwrap_or_else(|e| panic!("{e}"));
         assert!(open.placement.blocked.is_empty());
         assert_eq!(open.placement.solutions[0].placement["GEX-1002"], 3);
@@ -307,8 +346,9 @@ mod tests {
     // the JSON names are what JS reads off the returned object
     #[test]
     fn the_report_serializes_under_its_published_names() {
-        let generated = generate(&input(&format!(r#""program":{PROGRAM}"#)))
-            .unwrap_or_else(|e| panic!("{e}"));
+        let generated =
+            generate(&input(&format!(r#""program":{PROGRAM}"#)), &courses())
+                .unwrap_or_else(|e| panic!("{e}"));
         let json = serde_json::to_value(&generated)
             .unwrap_or_else(|e| panic!("serialize: {e}"));
         assert_eq!(
@@ -323,10 +363,13 @@ mod tests {
         assert_eq!(json["set_aside"], serde_json::json!([]));
         assert!(json.get("coverage").is_none(), "generation counts no rule");
 
-        let verified = verify(&input(&format!(
-            r#""program":{PROGRAM},
-               "pinned":{{"GEX-1000":1,"GEX-1001":2}}"#
-        )))
+        let verified = verify(
+            &input(&format!(
+                r#""program":{PROGRAM},
+                   "pinned":{{"GEX-1000":1,"GEX-1001":2}}"#
+            )),
+            &courses(),
+        )
         .unwrap_or_else(|e| panic!("{e}"));
         let json = serde_json::to_value(&verified)
             .unwrap_or_else(|e| panic!("serialize: {e}"));
@@ -335,62 +378,74 @@ mod tests {
 
     #[test]
     fn admissible_sessions_probe_offer_and_precedence() {
+        let courses = courses();
         let both = input(&format!(r#""program":{PROGRAM}"#));
         // GEX-1000 must precede GEX-1001, and the movable GEX-1001 has no
         // seat left past the hiver — so each course has exactly one session
         assert_eq!(
-            admissible(&both, "gex-1000").unwrap_or_else(|e| panic!("{e}")),
+            admissible(&both, &courses, "gex-1000")
+                .unwrap_or_else(|e| panic!("{e}")),
             [1]
         );
         assert_eq!(
-            admissible(&both, "GEX-1001").unwrap_or_else(|e| panic!("{e}")),
+            admissible(&both, &courses, "GEX-1001")
+                .unwrap_or_else(|e| panic!("{e}")),
             [2]
         );
         // summer-only GEX-1002: a pin is deliberate, so it lands in the été
         // even closed (ADR `2026-08-stage-place-en-ete-sauf-epinglage`)
         let summer = input(r#""electives":["gex-1002"]"#);
         assert_eq!(
-            admissible(&summer, "GEX-1002").unwrap_or_else(|e| panic!("{e}")),
+            admissible(&summer, &courses, "GEX-1002")
+                .unwrap_or_else(|e| panic!("{e}")),
             [3]
         );
     }
 
     #[test]
     fn admissible_sessions_surface_every_intake_error() {
-        let error = admissible(&input(r#""electives":["ZZZ-9999"]"#), "Z")
-            .expect_err("a typed typo must not survive");
+        let error =
+            admissible(&input(r#""electives":["ZZZ-9999"]"#), &courses(), "Z")
+                .expect_err("a typed typo must not survive");
         assert!(error.contains("ZZZ-9999"), "{error}");
     }
 
     #[test]
     fn generation_surfaces_every_intake_error() {
-        let error = generate(&input(r#""electives":["ZZZ-9999"]"#))
-            .expect_err("a typed typo must not survive");
+        let error =
+            generate(&input(r#""electives":["ZZZ-9999"]"#), &courses())
+                .expect_err("a typed typo must not survive");
         assert!(error.contains("ZZZ-9999"), "{error}");
     }
 
     #[test]
     fn generation_surfaces_every_placement_error() {
-        let error = generate(&input(r#""electives":[]"#))
+        let error = generate(&input(r#""electives":[]"#), &courses())
             .expect_err("no course to place");
         assert!(error.contains("at least one session"), "{error}");
     }
 
     #[test]
     fn verification_needs_a_session_for_every_course_left_to_place() {
-        let error = verify(&input(&format!(
-            r#""program":{PROGRAM},"pinned":{{"GEX-1000":1}}"#
-        )))
+        let error = verify(
+            &input(&format!(
+                r#""program":{PROGRAM},"pinned":{{"GEX-1000":1}}"#
+            )),
+            &courses(),
+        )
         .expect_err("GEX-1001 has no session");
         assert!(error.contains("GEX-1001"), "{error}");
     }
 
     #[test]
     fn verification_proves_the_students_own_path_and_counts_the_rules() {
-        let report = verify(&input(&format!(
-            r#""program":{PROGRAM},
-               "pinned":{{"gex-1000":1,"gex-1001":2}}"#
-        )))
+        let report = verify(
+            &input(&format!(
+                r#""program":{PROGRAM},
+                   "pinned":{{"gex-1000":1,"gex-1001":2}}"#
+            )),
+            &courses(),
+        )
         .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(report.placement.completion, Completion::Complete);
         assert_eq!(report.placement.solutions.len(), 1, "one pinned path");
@@ -402,10 +457,13 @@ mod tests {
     fn verification_refuses_a_path_that_breaks_a_prerequisite() {
         // GEX-1001 before GEX-1000: the pins are honoured, no solution
         // survives, and the search is complete — a proof, not a budget cut
-        let report = verify(&input(&format!(
-            r#""program":{PROGRAM},
-               "pinned":{{"GEX-1000":2,"GEX-1001":1}}"#
-        )))
+        let report = verify(
+            &input(&format!(
+                r#""program":{PROGRAM},
+                   "pinned":{{"GEX-1000":2,"GEX-1001":1}}"#
+            )),
+            &courses(),
+        )
         .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(report.placement.completion, Completion::Complete);
         assert!(report.placement.solutions.is_empty());
@@ -413,9 +471,10 @@ mod tests {
 
     #[test]
     fn verification_without_a_program_proves_the_placement_alone() {
-        let report = verify(&input(
-            r#""electives":["gex-1000"],"pinned":{"GEX-1000":1}"#,
-        ))
+        let report = verify(
+            &input(r#""electives":["gex-1000"],"pinned":{"GEX-1000":1}"#),
+            &courses(),
+        )
         .unwrap_or_else(|e| panic!("{e}"));
         assert!(report.coverage.is_none(), "no program, no rules to count");
     }
@@ -424,27 +483,33 @@ mod tests {
     fn verification_surfaces_every_placement_error() {
         // a session number the horizon does not have — an error, not a
         // « false », since the question itself is malformed
-        let error = verify(&input(&format!(
-            r#""program":{PROGRAM},
-               "pinned":{{"GEX-1000":1,"GEX-1001":9}}"#
-        )))
+        let error = verify(
+            &input(&format!(
+                r#""program":{PROGRAM},
+                   "pinned":{{"GEX-1000":1,"GEX-1001":9}}"#
+            )),
+            &courses(),
+        )
         .expect_err("session 9 of a 3-session horizon");
         assert!(error.contains("outside 1..=3"), "{error}");
     }
 
     #[test]
     fn verification_surfaces_every_coverage_error() {
-        let error = verify(&input(&format!(
-            r#""program":{PROGRAM},"concentration":"Aucune",
-               "pinned":{{"GEX-1000":1,"GEX-1001":2}}"#
-        )))
+        let error = verify(
+            &input(&format!(
+                r#""program":{PROGRAM},"concentration":"Aucune",
+                   "pinned":{{"GEX-1000":1,"GEX-1001":2}}"#
+            )),
+            &courses(),
+        )
         .expect_err("no such concentration");
         assert!(error.contains("Aucune"), "{error}");
     }
 
     #[test]
     fn verification_surfaces_every_intake_error() {
-        let error = verify(&input(r#""electives":["ZZZ-9999"]"#))
+        let error = verify(&input(r#""electives":["ZZZ-9999"]"#), &courses())
             .expect_err("a typed typo must not survive");
         assert!(error.contains("ZZZ-9999"), "{error}");
     }

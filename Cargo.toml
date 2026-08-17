@@ -4,7 +4,6 @@ members = [
     "crates/core",
     "crates/scraper",
     "crates/ui",
-    "crates/ui-calculations",
     "crates/wasm",
 ]
 
