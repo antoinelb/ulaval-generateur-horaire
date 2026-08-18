@@ -22,14 +22,15 @@ jobs:
           targets: wasm32-unknown-unknown
       - uses: taiki-e/install-action@v2
         with:
-          tool: mdbook
+          # `make lint` builds the worker module through ui-calc
+          tool: mdbook,wasm-pack
       - uses: Swatinem/rust-cache@v2
-      # `make static` formats in place; CI only verifies
+      # `make static` formats in place; CI only verifies, then runs the very
+      # same lint set — the makefile is the single definition
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-      - run: cargo clippy -p ulaval-scheduler-wasm --target wasm32-unknown-unknown -- -D warnings
+      - run: make lint
       # deploy never runs on pull requests: a broken book must fail here
-      - run: mdbook build docs/livre
+      - run: make docs
 
   test:
     runs-on: ubuntu-latest
@@ -40,10 +41,10 @@ jobs:
           components: llvm-tools-preview
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-llvm-cov
+          tool: cargo-llvm-cov,wasm-pack
       - uses: Swatinem/rust-cache@v2
-      # same exclusions as `make test`, plus the blocking 100% threshold
-      - run: cargo llvm-cov --ignore-filename-regex '(lib\.rs|/mod\.rs|/main\.rs)$' --fail-under-lines 100
+      # exclusions and the blocking 100% threshold both live in the makefile
+      - run: make test
 
   deploy:
     if: github.event_name != 'pull_request'
@@ -62,18 +63,22 @@ jobs:
           targets: wasm32-unknown-unknown
       - uses: taiki-e/install-action@v2
         with:
-          tool: wasm-pack,mdbook
+          # the CLI is pinned to the version the UI is developed against: a
+          # dx/dioxus mismatch is the classic Dioxus breakage
+          tool: wasm-pack,mdbook,dioxus-cli@0.7.10
       - uses: Swatinem/rust-cache@v2
-      - run: wasm-pack build crates/wasm --target web
-      # the site serves the wasm package, the data snapshots and the book;
-      # the real UI will take the root later (jalons 3-9)
+      - run: make wasm ui-build docs
+      # the UI takes the root; pkg/ (the ES module), data/ (the snapshots)
+      # and docs/ (the book) stay the documented public endpoints — the UI
+      # reads its own hashed copies under /assets, never /data
       - name: Assemble site
         run: |
           mkdir -p _site/data
+          cp -r _ui/public/. _site/
           cp -r crates/wasm/pkg _site/pkg
           cp data/*.json _site/data/
           cp -r data/programmes _site/data/programmes
-          mdbook build docs/livre --dest-dir "$GITHUB_WORKSPACE/_site/docs"
+          cp -r docs/livre/book _site/docs
       # Pages serves no directory listing; generate one at assembly time —
       # index.json (a flat array of file names) is the machine-readable one
       # the JS interface reads, index.html the human-readable one

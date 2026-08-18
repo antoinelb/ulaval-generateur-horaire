@@ -18,10 +18,11 @@ L'application est entièrement statique, sans serveur ni base de données.
 Les données proviennent de snapshots JSON produits par le scraper sur un cron d'intégration continue — jamais de scraping depuis l'application.
 Les solveurs tournent dans le navigateur ; l'état de l'utilisateur vit dans le `localStorage` et un horaire se partage par URL.
 
-Trois morceaux sont publiés sur GitHub Pages, à la même origine :
+Quatre morceaux sont publiés sur GitHub Pages, à la même origine :
 
 | Emplacement | Contenu |
 |---|---|
+| [`/`](https://antoinelb.github.io/ulaval-generateur-horaire/) | l'application : le générateur d'horaire et de cheminement |
 | [`/pkg`](https://antoinelb.github.io/ulaval-generateur-horaire/pkg/ulaval_scheduler_wasm.js) | le module WASM (paquet ES + `.d.ts` typé), importable par URL depuis n'importe quel HTML |
 | [`/data`](https://antoinelb.github.io/ulaval-generateur-horaire/data/cours.json) | les snapshots (cours et programmes) |
 | [`/docs`](https://antoinelb.github.io/ulaval-generateur-horaire/docs/) | la documentation (livre mdBook en français) |

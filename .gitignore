@@ -26,3 +26,6 @@ crates/ui/assets/calc/
 
 # mdBook output (docs/livre/src is the source)
 docs/livre/book/
+
+# Production bundle, re-created by `make ui-build`
+/_ui

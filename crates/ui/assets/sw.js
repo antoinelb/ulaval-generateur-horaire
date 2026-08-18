@@ -2,9 +2,9 @@
 // revalidation, so every read path — snapshot included — survives a lost
 // network once it has been seen once. Hand-written and vendored: no
 // dependency, no build step (~30 lines is the whole strategy).
-// NOTE: to control the page itself the file must be served from the site
-// root — the Pages deploy copies it there; under `dx serve` it caches
-// same-scope assets only.
+// NOTE: a service worker's scope is the directory it is served from, so to
+// control the page this file must sit beside the index — `make ui-build`
+// copies it there. Under `dx serve` it is absent and nothing registers.
 const CACHE = "gh-v1";
 
 self.addEventListener("install", () => self.skipWaiting());

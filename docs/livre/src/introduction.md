@@ -6,10 +6,11 @@ Le générateur d'horaire ULaval aide les étudiantes et étudiants de l'Univers
 - **l'organigramme** du programme : quels cours à quelles sessions, du début du bac à la diplomation, en respectant préalables, plafonds de crédits et règles du programme.
 
 Le projet est entièrement statique : aucun serveur, aucune base de données.
-Trois morceaux sont publiés sur GitHub Pages, à la même origine :
+Quatre morceaux sont publiés sur GitHub Pages, à la même origine :
 
 | Emplacement | Contenu |
 |---|---|
+| [`/`](https://antoinelb.github.io/ulaval-generateur-horaire/) | l'application : le générateur d'horaire et de cheminement |
 | [`/pkg`](https://antoinelb.github.io/ulaval-generateur-horaire/pkg/) | le module WASM (`ulaval_scheduler_wasm.js` + `.wasm` + `.d.ts`), importable par URL depuis n'importe quel HTML |
 | [`/data`](https://antoinelb.github.io/ulaval-generateur-horaire/data/cours.json) | les snapshots de données (cours et programmes), rafraîchis par un cron de scraping |
 | `/docs` | ce livre |

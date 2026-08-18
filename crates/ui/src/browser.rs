@@ -7,42 +7,11 @@ use crate::data::{DataError, RawData};
 
 const COURSES: Asset = asset!("/assets/data/cours.json");
 const META: Asset = asset!("/assets/data/meta.json");
-// `asset!()` is compile-time: the manifest is hardcoded, and a new program
-// snapshot must be added here (the files exist after `make ui-data`)
-const PROGRAMS: &[(&str, Asset)] = &[
-    (
-        "B-ANT-A26.json",
-        asset!("/assets/data/programmes/B-ANT-A26.json"),
-    ),
-    (
-        "B-GCI-A26.json",
-        asset!("/assets/data/programmes/B-GCI-A26.json"),
-    ),
-    (
-        "B-GEX-A24.json",
-        asset!("/assets/data/programmes/B-GEX-A24.json"),
-    ),
-    (
-        "B-GEX-A26.json",
-        asset!("/assets/data/programmes/B-GEX-A26.json"),
-    ),
-    (
-        "B-GIN-A26.json",
-        asset!("/assets/data/programmes/B-GIN-A26.json"),
-    ),
-    (
-        "B-GMC-A26.json",
-        asset!("/assets/data/programmes/B-GMC-A26.json"),
-    ),
-    (
-        "B-GPH-A26.json",
-        asset!("/assets/data/programmes/B-GPH-A26.json"),
-    ),
-    (
-        "M-GEX-A26.json",
-        asset!("/assets/data/programmes/M-GEX-A26.json"),
-    ),
-];
+// `asset!()` is compile-time, so the manifest cannot read the directory at
+// runtime: `build.rs` generates it from whatever `make ui-data` copied —
+// adding a snapshot needs no code change (ADR
+// `2026-08-manifeste-de-programmes-genere`)
+include!(concat!(env!("OUT_DIR"), "/programmes.rs"));
 
 pub async fn fetch_raw_data() -> Result<RawData, DataError> {
     let courses = fetch_text(&COURSES.to_string(), "cours.json").await?;
@@ -222,16 +191,20 @@ pub fn encode_uri(text: &str) -> String {
 
 // --- offline (DEG-3) -------------------------------------------------------
 
-const SW_JS: Asset = asset!("/assets/sw.js");
+// A service worker's scope is the directory it is served from, and
+// `asset!()` would put it under `/assets/` — where it could cache the data
+// but never control the page. A relative URL resolves against the page
+// instead, so the scope is the whole app at any base path; the deploy drops
+// the file beside the index (ADR
+// `2026-08-interface-publiee-a-la-racine-de-pages`).
+const SW_URL: &str = "sw.js";
 
-// best-effort: telemetry-grade plumbing never blocks the app (OBS-6); the
-// Pages deploy serves the file from the root so the whole app is in scope
+// best-effort: telemetry-grade plumbing never blocks the app (OBS-6). Under
+// `dx serve` the file is not beside the index, so registration fails
+// silently — offline is a deployed-site feature.
 pub fn register_service_worker() {
     if let Some(window) = web_sys::window() {
-        let _ = window
-            .navigator()
-            .service_worker()
-            .register(&SW_JS.to_string());
+        let _ = window.navigator().service_worker().register(SW_URL);
     }
 }
 

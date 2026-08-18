@@ -1,7 +1,13 @@
-.PHONY: static test wasm docs ui ui-data ui-calc
+.PHONY: static lint test wasm docs ui ui-build ui-data ui-calc
 
-static: ui-data ui-calc
+static:
 	cargo fmt --all
+	$(MAKE) lint
+
+# the lint set, defined once: `make static` formats then calls it, the CI
+# only checks the formatting and calls it too — neither can drift from the
+# other (ADR 2026-08-makefile-definition-unique-de-la-ci)
+lint: ui-data ui-calc
 	cargo clippy --workspace --all-targets --all-features -- -D warnings
 	# the browser boundary exists only under wasm32: nothing above ever
 	# sees it, and one crate now carries both surfaces
@@ -11,9 +17,12 @@ static: ui-data ui-calc
 	cargo clippy -p ulaval-scheduler-ui \
 		--target wasm32-unknown-unknown -- -D warnings
 
+# the threshold is the CI's: a local run must fail exactly where the push
+# would (build.rs is generated plumbing, not testable code)
 test: ui-data ui-calc
 	cargo +nightly llvm-cov --ignore-filename-regex \
-		'(lib\.rs|/mod\.rs|/main\.rs)$$|crates/ui/src/components/'
+		'(lib\.rs|/mod\.rs|/main\.rs)$$|crates/ui/src/components/|build\.rs$$' \
+		--fail-under-lines 100
 
 wasm:
 	wasm-pack build crates/wasm --target web
@@ -46,6 +55,18 @@ ui-calc: crates/ui/assets/calc/calc.js
 ui: ui-data ui-calc
 	BUILD_HASH=$$(git rev-parse --short HEAD) \
 		dx serve --package ulaval-scheduler-ui --port 8000
+
+# the production bundle: Pages serves the project site under a sub-path, and
+# `asset!()` emits absolute URLs, so the base path has to be baked in. dx
+# nests the web bundle under `public/`: _ui/public is the site root, and the
+# service worker sits beside the index there — its scope is the directory it
+# is served from (ADR 2026-08-interface-publiee-a-la-racine-de-pages)
+ui-build: ui-data ui-calc
+	BUILD_HASH=$$(git rev-parse --short HEAD) \
+		dx bundle --release --platform web \
+			--package ulaval-scheduler-ui \
+			--base-path ulaval-generateur-horaire --out-dir _ui
+	cp crates/ui/assets/sw.js _ui/public/sw.js
 
 docs:
 	mdbook build docs/livre
