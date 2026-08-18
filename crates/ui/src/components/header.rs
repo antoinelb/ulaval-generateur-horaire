@@ -15,6 +15,7 @@ fn SolverStatus() -> Element {
     let solver = use_context::<Signal<SolverState>>();
     let handle = use_context::<SolverHandle>();
     let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
+    let snapshot = use_context::<Signal<Option<crate::data::Snapshot>>>();
     let mut now_ms = use_signal(crate::browser::now_epoch_ms);
     use_future(move || async move {
         // bounded ticker; idles harmlessly when nothing runs
@@ -38,7 +39,7 @@ fn SolverStatus() -> Element {
                 class: "status-undo",
                 onclick: move |_| {
                     super::cancel_search(
-                        &handle, solver, plan, history, alerts, manual,
+                        &handle, solver, plan, history, alerts, manual, snapshot,
                     );
                 },
                 "Annuler la recherche"
@@ -176,6 +177,7 @@ fn ResetButton() -> Element {
     let solver = use_context::<Signal<SolverState>>();
     let handle = use_context::<SolverHandle>();
     let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
+    let snapshot = use_context::<Signal<Option<crate::data::Snapshot>>>();
     rsx! {
         button {
             class: "status-undo",
@@ -185,7 +187,7 @@ fn ResetButton() -> Element {
                 // fresh plan
                 if solver.peek().running.is_some() {
                     super::cancel_search(
-                        &handle, solver, plan, history, alerts, manual,
+                        &handle, solver, plan, history, alerts, manual, snapshot,
                     );
                 }
                 // a shared link left in the address bar would reimport

@@ -530,6 +530,140 @@ fn SectionView(section: Section) -> Element {
     }
 }
 
+// The prerequisites as the student's own program vintage wrote them. The
+// field starts on what the solver currently reads — his correction if one
+// is in force, his vintage's if the shared file carries one, the
+// répertoire's otherwise — and commits on blur or Enter, never on a
+// keystroke (INP-7); a rejected expression keeps the field intact. The live
+// echo says what the grammar understood before the commit (INP-6), in words
+// as well as in colour (INP-3).
+#[component]
+fn PrereqField(code: String) -> Element {
+    let plan = use_context::<Signal<Plan>>();
+    let history = use_context::<Signal<History>>();
+    let snapshot = use_context::<Signal<Option<Snapshot>>>();
+    let current = use_memo({
+        let code = code.clone();
+        move || {
+            snapshot
+                .read()
+                .as_ref()
+                .map(|snapshot| snapshot.prerequisites_draft(&code))
+                .unwrap_or_default()
+        }
+    });
+    let official = use_memo({
+        let code = code.clone();
+        move || {
+            snapshot
+                .read()
+                .as_ref()
+                .map(|snapshot| snapshot.official_prerequisites(&code))
+                .unwrap_or_default()
+        }
+    });
+    let mut draft = use_signal(|| current.read().0.clone());
+    // an undo — or the vintage's own correction landing — moves the text
+    // under the field; a stale draft would then commit what nobody asked
+    use_effect(move || {
+        let (text, _) = current.read().clone();
+        draft.set(text);
+    });
+    let mine = plan.read().prereq_overrides.contains_key(&code);
+    let text = draft.read().clone();
+    let verdict = crate::present::present_prereq_draft(&text);
+    let corrected = current.read().1;
+    let summary = if corrected {
+        "Préalables - corrigés"
+    } else {
+        "Préalables"
+    };
+
+    let commit = {
+        let code = code.clone();
+        move || {
+            let text = draft.peek().trim().to_string();
+            // rejected on commit, never on a keystroke — and the field is
+            // left exactly as typed so nothing has to be retyped (INP-7)
+            if !crate::present::present_prereq_draft(&text).valid {
+                return;
+            }
+            if text == current.peek().0 {
+                return;
+            }
+            let official = official.peek().clone();
+            let code = code.clone();
+            edit_plan(
+                plan,
+                history,
+                &format!("Préalables de {code} corrigés"),
+                move |plan| {
+                    plan.prereq_overrides.insert(
+                        code,
+                        ulaval_scheduler_core::PrereqOverride {
+                            text,
+                            official: Some(official),
+                        },
+                    );
+                },
+            );
+        }
+    };
+
+    rsx! {
+        details { class: "panel-prereq",
+            summary { class: "panel-prereq-summary", "{summary}" }
+            div { class: "panel-prereq-body",
+                input {
+                    class: "panel-prereq-input",
+                    class: if !verdict.valid { "panel-prereq-input--invalid" },
+                    "aria-invalid": if verdict.valid { "false" } else { "true" },
+                    value: "{text}",
+                    placeholder: "aucun préalable",
+                    oninput: move |event| draft.set(event.value()),
+                    onblur: {
+                        let commit = commit.clone();
+                        move |_| commit()
+                    },
+                    onkeydown: move |event| {
+                        if event.key() == Key::Enter {
+                            commit();
+                        }
+                    },
+                }
+                // reserved whether or not it has something to say: the row
+                // below never jumps as the student types (Core-5)
+                div {
+                    class: "panel-prereq-echo",
+                    class: if !verdict.valid { "panel-prereq-echo--invalid" },
+                    "{verdict.echo}"
+                }
+                if mine {
+                    button {
+                        class: "panel-prereq-reset",
+                        title: "Rétablir les préalables du répertoire",
+                        onclick: {
+                            let code = code.clone();
+                            move |_| {
+                                let code = code.clone();
+                                edit_plan(
+                                    plan,
+                                    history,
+                                    &format!("Préalables de {code} rétablis"),
+                                    move |plan| {
+                                        plan.prereq_overrides.remove(&code);
+                                    },
+                                );
+                            }
+                        },
+                        "✕ rétablir"
+                    }
+                }
+            }
+        }
+    }
+}
+
 // « Scolarité préparatoire déjà faite » (notes 2026-08-13) — checked by
 // default; checked, the 0xxx courses count as acquired (they ride as
 // `passed`, ADR `2026-08-retrait-de-la-notion-de-cours-reussi`)
@@ -716,6 +850,9 @@ fn RowView(row: Row) -> Element {
                     div { class: "panel-course-sub",
                         "présumé acquis : {assumed}"
                     }
+                }
+                if !matches!(row.state, RowState::Unknown) {
+                    PrereqField { code: row.code.clone() }
                 }
             }
             // an acquired préparatoire row offers nothing — granting it
@@ -1154,7 +1291,7 @@ fn ManualCourseForm() -> Element {
             );
             // the worker's catalogue must learn the new course too
             super::cancel_search(
-                &handle, solver, plan, history, alerts, manual,
+                &handle, solver, plan, history, alerts, manual, snapshot,
             );
             code.write().clear();
             title.write().clear();

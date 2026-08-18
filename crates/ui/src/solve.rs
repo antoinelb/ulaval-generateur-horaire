@@ -396,6 +396,7 @@ mod tests {
             &RawData {
                 courses: COURSES.to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: Vec::new(),
             },
             Vec::new(),
@@ -660,6 +661,7 @@ mod tests {
             &crate::data::RawData {
                 courses: raw.to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: Vec::new(),
             },
             Vec::new(),
@@ -692,6 +694,7 @@ mod tests {
             &crate::data::RawData {
                 courses: raw.to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: Vec::new(),
             },
             Vec::new(),
@@ -761,6 +764,7 @@ mod tests {
             &crate::data::RawData {
                 courses: raw.to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: Vec::new(),
             },
             Vec::new(),
@@ -1270,6 +1274,7 @@ mod worker_tests {
             &crate::data::RawData {
                 courses: courses.to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: Vec::new(),
             },
             Vec::new(),
@@ -1295,6 +1300,7 @@ mod worker_tests {
             &crate::data::RawData {
                 courses: courses.to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: vec![(
                     "B-GEX-A26.json".to_string(),
                     program.to_string(),

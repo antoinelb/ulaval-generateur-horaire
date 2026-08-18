@@ -7,6 +7,7 @@ use crate::data::{DataError, RawData};
 
 const COURSES: Asset = asset!("/assets/data/cours.json");
 const META: Asset = asset!("/assets/data/meta.json");
+const MANUAL: Asset = asset!("/assets/data/cours.manuel.json");
 // `asset!()` is compile-time, so the manifest cannot read the directory at
 // runtime: `build.rs` generates it from whatever `make ui-data` copied —
 // adding a snapshot needs no code change (ADR
@@ -18,6 +19,12 @@ pub async fn fetch_raw_data() -> Result<RawData, DataError> {
     // the meta is auxiliary: a failed fetch degrades to « date inconnue »
     // in `parse_data` instead of blocking the app (ERR-5)
     let meta = fetch_text(&META.to_string(), "meta.json").await.ok();
+    // same rule for the hand-maintained catalogue: without it the app runs
+    // on the scraped snapshot alone, which is a smaller answer, not a
+    // broken one
+    let manual = fetch_text(&MANUAL.to_string(), "cours.manuel.json")
+        .await
+        .ok();
     let mut programs = Vec::new();
     for (name, asset) in PROGRAMS {
         programs.push((
@@ -28,6 +35,7 @@ pub async fn fetch_raw_data() -> Result<RawData, DataError> {
     Ok(RawData {
         courses,
         meta,
+        manual,
         programs,
     })
 }
@@ -226,6 +234,7 @@ pub struct Solver {
 // strings. `on_message` receives every answer, ready/error included.
 pub fn spawn_solver(
     manual_json: &str,
+    overrides_json: &str,
     mut on_message: impl FnMut(String) + 'static,
 ) -> Option<Solver> {
     let options = web_sys::WorkerOptions::new();
@@ -243,14 +252,18 @@ pub fn spawn_solver(
         as Box<dyn FnMut(web_sys::MessageEvent)>);
     use wasm_bindgen::JsCast;
     worker.set_onmessage(Some(closure.as_ref().unchecked_ref()));
-    send_init(&worker, manual_json);
+    send_init(&worker, manual_json, overrides_json);
     Some(Solver {
         worker,
         _on_message: closure,
     })
 }
 
-fn send_init(worker: &web_sys::Worker, manual_json: &str) {
+fn send_init(
+    worker: &web_sys::Worker,
+    manual_json: &str,
+    overrides_json: &str,
+) {
     let message = js_sys::Object::new();
     let set = |key: &str, value: &str| {
         js_sys::Reflect::set(
@@ -263,8 +276,12 @@ fn send_init(worker: &web_sys::Worker, manual_json: &str) {
     set("calcJs", &CALC_JS.to_string());
     set("calcWasm", &CALC_WASM.to_string());
     set("coursesUrl", &COURSES.to_string());
-    // the student's hand-entered Courses join the worker's catalogue too
+    // the hand-maintained Courses join the worker's catalogue too — the
+    // repo's and the student's alike, so both catalogues hold the same list
     set("manualJson", manual_json);
+    // and the prerequisites his program vintage rewrote, applied there
+    // exactly as they are on the main thread
+    set("overridesJson", overrides_json);
     worker.post_message(&message).ok();
 }
 

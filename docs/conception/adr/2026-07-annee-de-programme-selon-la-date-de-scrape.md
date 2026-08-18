@@ -3,6 +3,8 @@
 Date : 2026-07-29
 
 > **Remplacée par** `2026-08-millesime-de-programme-en-semestre` : le millésime est désormais un semestre (`A26`), plus fin qu'une année civile.
+>
+> Son point 4 — « le futur `{code}.manuel.json` reste sans année » — est révisé par `2026-08-fichier-manuel-de-programme-millesime` : le fichier manuel porte désormais le millésime dans son nom, comme le snapshot scrapé.
 
 ## Contexte
 

@@ -1,7 +1,8 @@
 // Web Worker shim (module worker): wiring only, every computation lives in
 // the wasm module built from crates/ui-calculations (make ui-calc).
 // dx hashes asset file names, so the main thread sends the resolved URLs
-// in one init object {calcJs, calcWasm, coursesUrl, manualJson}; after
+// in one init object {calcJs, calcWasm, coursesUrl, manualJson,
+// overridesJson}; after
 // that, bare request strings go in and response strings come out (see
 // ui-calculations::protocol), plus one initial ready/error envelope.
 let calc = null;
@@ -32,7 +33,11 @@ async function boot(message) {
     throw new Error(`fetch ${message.coursesUrl} : HTTP ${response.status}`);
   }
   const snapshot = await response.text();
-  const summary = mod.init_snapshot(snapshot, message.manualJson);
+  const summary = mod.init_snapshot(
+    snapshot,
+    message.manualJson,
+    message.overridesJson,
+  );
   calc = mod;
   self.postMessage(
     JSON.stringify({ kind: "ready", id: 0, summary: JSON.parse(summary) }),

@@ -1,11 +1,13 @@
 use crate::program::Semester;
 
-// The hand-maintained companion of a program's snapshots —
-// `data/programmes/{code}.manuel.json`, no vintage in the name, never
-// written by the scraper (ADR `2026-07-cheminement-type-en-fichier-manuel`).
-// It carries the cheminements types: no machine-readable source exists, so
-// each grid is encoded by hand, one entry per admission vintage and variant
-// (ADR `2026-08-format-des-cheminements-types-manuels`).
+// The hand-maintained companion of one program snapshot —
+// `data/programmes/{code}-{semester}.manuel.json`, the scraped file's own
+// name plus the suffix, never written by the scraper (ADRs
+// `2026-07-cheminement-type-en-fichier-manuel`,
+// `2026-08-fichier-manuel-de-programme-millesime`). It carries the
+// cheminements types: no machine-readable source exists, so each grid is
+// encoded by hand — one file per admission vintage, one entry per variant
+// inside it.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct ProgramManual {
@@ -15,9 +17,10 @@ pub struct ProgramManual {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct CheminementType {
-    pub admission: Semester,
     // what tells the variants of one admission apart — profile, technique
-    // DEC, five-year pace — exactly as shown to the student
+    // DEC, five-year pace — exactly as shown to the student. Empty when the
+    // vintage holds a single variant with nothing to tell apart: the file
+    // name already says which admission it is.
     pub label: String,
     // courses granted on admission (a technique DEC's recognitions) — the
     // grid's « cours complétés » column
@@ -43,8 +46,7 @@ mod tests {
         let raw = r#"{
   "cheminements_types": [
     {
-      "admission": "H27",
-      "label": "H27 - Technique de génie mécanique",
+      "label": "Technique de génie mécanique",
       "completed": ["GMC-1024", "OPT-ION3"],
       "sessions": [
         { "semester": "A26", "courses": [] },
@@ -56,7 +58,7 @@ mod tests {
         let manual: ProgramManual =
             serde_json::from_str(raw).expect("the sample parses");
         let cheminement = manual.cheminements_types[0].clone();
-        assert_eq!(cheminement.admission.to_string(), "H27");
+        assert_eq!(cheminement.label, "Technique de génie mécanique");
         assert_eq!(cheminement.completed, ["GMC-1024", "OPT-ION3"]);
         assert_eq!(cheminement.sessions[0].courses, Vec::<String>::new());
         assert_eq!(cheminement.sessions[1].semester.to_string(), "H27");
@@ -73,7 +75,8 @@ mod tests {
     fn a_bad_semester_is_a_parse_error_not_a_silent_default() {
         let raw = r#"{
   "cheminements_types": [
-    { "admission": "X99", "label": "", "completed": [], "sessions": [] }
+    { "label": "", "completed": [],
+      "sessions": [{ "semester": "X99", "courses": [] }] }
   ]
 }"#;
         let error = serde_json::from_str::<ProgramManual>(raw)

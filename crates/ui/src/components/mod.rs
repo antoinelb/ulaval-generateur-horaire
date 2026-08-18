@@ -118,13 +118,35 @@ pub fn boot_solver(
     history: Signal<History>,
     alerts: Signal<Vec<Alert>>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
+    snapshot: Signal<Option<Snapshot>>,
 ) {
-    // expect over `?`: serializing Courses provably cannot fail
-    let manual_json = serde_json::to_string(&*manual.read())
+    // the worker's catalogue must hold exactly what the panel's does: the
+    // repo's hand-maintained courses, the student's own, and the
+    // prerequisites his program vintage rewrote
+    let (shared, overrides) = match snapshot.peek().as_ref() {
+        Some(snapshot_ref) => (
+            snapshot_ref.shared_manual.clone(),
+            crate::data::effective_overrides(snapshot_ref, &plan.peek()),
+        ),
+        None => (Vec::new(), std::collections::BTreeMap::new()),
+    };
+    let courses: Vec<ulaval_scheduler_core::Course> = shared
+        .into_iter()
+        .chain(manual.peek().iter().cloned())
+        .collect();
+    // expect over `?`: serializing Courses and corrections provably cannot
+    // fail
+    let manual_json = serde_json::to_string(&courses)
         .expect("Course serialization always succeeds");
-    let solver = crate::browser::spawn_solver(&manual_json, move |text| {
-        handle_worker_answer(&text, state, plan, history, alerts);
-    });
+    let overrides_json = serde_json::to_string(&overrides)
+        .expect("Override serialization always succeeds");
+    let solver = crate::browser::spawn_solver(
+        &manual_json,
+        &overrides_json,
+        move |text| {
+            handle_worker_answer(&text, state, plan, history, alerts);
+        },
+    );
     if solver.is_none() {
         push_alert(
             alerts,
@@ -354,12 +376,13 @@ pub fn cancel_search(
     history: Signal<History>,
     alerts: Signal<Vec<Alert>>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
+    snapshot: Signal<Option<Snapshot>>,
 ) {
     if let Some(solver) = handle.0.borrow_mut().take() {
         solver.terminate();
     }
     state.write().running = None;
-    boot_solver(handle, state, plan, history, alerts, manual);
+    boot_solver(handle, state, plan, history, alerts, manual, snapshot);
 }
 
 #[component]
@@ -389,7 +412,15 @@ pub fn App() -> Element {
     use_hook(|| import_organigramme(plan, view, history, alerts, manual));
     let handle = use_hook(|| {
         let handle = SolverHandle(Rc::new(std::cell::RefCell::new(None)));
-        boot_solver(&handle, solver_state, plan, history, alerts, manual);
+        boot_solver(
+            &handle,
+            solver_state,
+            plan,
+            history,
+            alerts,
+            manual,
+            snapshot,
+        );
         crate::browser::register_service_worker();
         handle
     });
@@ -419,6 +450,15 @@ pub fn App() -> Element {
         state.verify_failed = false;
         state.admissible.clear();
     });
+    apply_corrections(
+        plan,
+        snapshot,
+        alerts,
+        handle.clone(),
+        solver_state,
+        history,
+        manual,
+    );
     heal_preparatory(plan, snapshot, alerts);
     auto_verify(plan, snapshot, solver_state, handle.clone());
     rsx! {
@@ -622,6 +662,63 @@ fn heal_preparatory(
             )
         };
         push_alert(alerts, AlertBody::Note(note));
+    });
+}
+
+// The corrections in force follow the plan — the student's admission
+// vintage and his own edits — so the catalogue is rewritten here and not at
+// parse time, when no program is picked yet. Same shape as
+// `heal_preparatory`: derived state, a direct write (no student act to
+// undo), and a guard that makes it converge — once applied, `applied`
+// matches and the next run returns.
+fn apply_corrections(
+    plan: Signal<Plan>,
+    snapshot: Signal<Option<Snapshot>>,
+    alerts: Signal<Vec<Alert>>,
+    handle: SolverHandle,
+    solver_state: Signal<SolverState>,
+    history: Signal<History>,
+    manual: Signal<Vec<ulaval_scheduler_core::Course>>,
+) {
+    use_effect(move || {
+        // materialize before any write: the read borrows must die first
+        let overrides = {
+            let read = snapshot.read();
+            let Some(snapshot_ref) = read.as_ref() else {
+                return;
+            };
+            let overrides =
+                crate::data::effective_overrides(snapshot_ref, &plan.read());
+            if snapshot_ref.applied == overrides {
+                return;
+            }
+            overrides
+        };
+        let mut snapshot = snapshot;
+        let notes = {
+            let mut write = snapshot.write();
+            let Some(snapshot_mut) = write.as_mut() else {
+                return;
+            };
+            crate::data::set_prereq_overrides(snapshot_mut, &overrides)
+        };
+        for note in &notes {
+            push_alert(
+                alerts,
+                AlertBody::Note(crate::present::present_override_note(note)),
+            );
+        }
+        // the worker keeps its own copy of the catalogue: only a fresh one
+        // learns the corrections
+        cancel_search(
+            &handle,
+            solver_state,
+            plan,
+            history,
+            alerts,
+            manual,
+            snapshot,
+        );
     });
 }
 

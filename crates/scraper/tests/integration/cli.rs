@@ -238,7 +238,7 @@ async fn a_run_leaves_the_programs_it_was_not_given_alone() {
     let programmes = dir.join("programmes");
     fs::create_dir_all(&programmes)
         .unwrap_or_else(|e| panic!("pre-create the programs dir: {e}"));
-    let untouched = ["B-GEX-A25.json", "B-GEX.manuel.json"];
+    let untouched = ["B-GEX-A25.json", "B-GEX-A25.manuel.json"];
     for name in untouched {
         fs::write(programmes.join(name), "earlier run\n")
             .unwrap_or_else(|e| panic!("plant {name}: {e}"));

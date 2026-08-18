@@ -30,8 +30,12 @@ wasm:
 # dx serve only serves asset!() files: the snapshots must live under the
 # crate's assets/ (ADR 2026-07-donnees-servies-en-assets-du-harnais)
 ui-data:
+	# emptied first: a renamed or deleted snapshot would otherwise linger
+	# here forever, served beside the file that replaced it
+	rm -rf crates/ui/assets/data/programmes
 	mkdir -p crates/ui/assets/data/programmes
 	cp data/cours.json crates/ui/assets/data/cours.json
+	cp data/cours.manuel.json crates/ui/assets/data/cours.manuel.json
 	# meta.json appears at the next scrape; until then an explicit unknown
 	# (never a guessed date — ADR 2026-08-meta-json-provenance-du-snapshot)
 	if [ -f data/meta.json ]; then \

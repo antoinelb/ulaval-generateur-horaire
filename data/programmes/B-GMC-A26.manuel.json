@@ -1,0 +1,530 @@
+{
+  "cheminements_types": [
+    {
+      "label": "Sciences de la nature",
+      "completed": [],
+      "sessions": [
+        {
+          "semester": "A26",
+          "courses": [
+            "GMC-1001",
+            "IFT-1903",
+            "GMC-1024",
+            "MAT-1900",
+            "GML-1001",
+            "GMC-1004"
+          ]
+        },
+        {
+          "semester": "H27",
+          "courses": [
+            "GMC-2001",
+            "MAT-2910",
+            "MAT-1910",
+            "GMC-1003",
+            "GMN-2900",
+            "GMC-1005"
+          ]
+        },
+        {
+          "semester": "E27",
+          "courses": []
+        },
+        {
+          "semester": "A27",
+          "courses": [
+            "GMC-2002",
+            "GMC-2003",
+            "GMC-2024",
+            "GMC-2006",
+            "GMC-1002"
+          ]
+        },
+        {
+          "semester": "H28",
+          "courses": [
+            "GMC-3000",
+            "GMC-2005",
+            "GMC-2025",
+            "GMC-2008",
+            "ECN-4901"
+          ]
+        },
+        {
+          "semester": "E28",
+          "courses": [
+            "GMC-2580"
+          ]
+        },
+        {
+          "semester": "A28",
+          "courses": [
+            "GMC-3003",
+            "GMC-3002",
+            "GMC-3024",
+            "GMC-3005",
+            "GMC-3009"
+          ]
+        },
+        {
+          "semester": "H29",
+          "courses": [
+            "GMC-2007",
+            "GMC-3006",
+            "GMC-3025",
+            "STT-1900",
+            "OPT-ION1"
+          ]
+        },
+        {
+          "semester": "E29",
+          "courses": []
+        },
+        {
+          "semester": "A29",
+          "courses": [
+            "PHI-2910",
+            "GMC-3020",
+            "PHI-3900",
+            "OPT-ION2",
+            "OPT-ION3"
+          ]
+        },
+        {
+          "semester": "H30",
+          "courses": [
+            "GMC-3034",
+            "GMC-3035",
+            "LAN-GUES",
+            "OPT-ION4",
+            "OPT-ION5"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Sciences de la nature - Profil international",
+      "completed": [],
+      "sessions": [
+        {
+          "semester": "A26",
+          "courses": [
+            "GMC-1001",
+            "IFT-1903",
+            "GMC-1024",
+            "MAT-1900",
+            "GML-1001",
+            "GMC-1004"
+          ]
+        },
+        {
+          "semester": "H27",
+          "courses": [
+            "GMC-2001",
+            "MAT-2910",
+            "MAT-1910",
+            "GMC-1003",
+            "GMN-2900",
+            "GMC-1005"
+          ]
+        },
+        {
+          "semester": "E27",
+          "courses": []
+        },
+        {
+          "semester": "A27",
+          "courses": [
+            "GMC-2002",
+            "GMC-2003",
+            "GMC-2024",
+            "GMC-2006",
+            "GMC-1002"
+          ]
+        },
+        {
+          "semester": "H28",
+          "courses": [
+            "GMC-3000",
+            "GMC-3006",
+            "GMC-2025",
+            "GMC-2005",
+            "GMC-2007"
+          ]
+        },
+        {
+          "semester": "E28",
+          "courses": [
+            "GMC-2580"
+          ]
+        },
+        {
+          "semester": "A28",
+          "courses": [
+            "GMC-3003",
+            "GMC-3002",
+            "GMC-3024",
+            "GMC-3005",
+            "GMC-3009"
+          ]
+        },
+        {
+          "semester": "H29",
+          "courses": [
+            "OPT-ION1",
+            "OPT-ION2",
+            "OPT-ION3",
+            "OPT-ION4",
+            "OPT-ION5"
+          ]
+        },
+        {
+          "semester": "E29",
+          "courses": []
+        },
+        {
+          "semester": "A29",
+          "courses": [
+            "PHI-2910",
+            "LAN-GUES",
+            "GMC-3025",
+            "STT-1900",
+            "PHI-3900"
+          ]
+        },
+        {
+          "semester": "H30",
+          "courses": [
+            "ECN-4901",
+            "GMC-3020",
+            "GMC-3034",
+            "GMC-3035",
+            "GMC-2008"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Sciences de la nature - Cheminement en 5 ans",
+      "completed": [],
+      "sessions": [
+        {
+          "semester": "A26",
+          "courses": [
+            "GMC-1001",
+            "MAT-1900",
+            "GMC-1024",
+            "IFT-1903",
+            "GMC-1004"
+          ]
+        },
+        {
+          "semester": "H27",
+          "courses": [
+            "GMC-2001",
+            "MAT-2910",
+            "MAT-1910",
+            "GMC-1003",
+            "GMC-1005"
+          ]
+        },
+        {
+          "semester": "E27",
+          "courses": []
+        },
+        {
+          "semester": "A27",
+          "courses": [
+            "GMC-2002",
+            "GMC-2003",
+            "GMC-2006",
+            "GMC-1002"
+          ]
+        },
+        {
+          "semester": "H28",
+          "courses": [
+            "GMC-3000",
+            "GML-1001",
+            "ECN-4901",
+            "GMC-2005",
+            "GMN-2900"
+          ]
+        },
+        {
+          "semester": "E28",
+          "courses": [
+            "GMC-2580"
+          ]
+        },
+        {
+          "semester": "A28",
+          "courses": [
+            "GMC-3009",
+            "GMC-3002",
+            "GMC-2024",
+            "GMC-3005"
+          ]
+        },
+        {
+          "semester": "H29",
+          "courses": [
+            "GMC-2007",
+            "STT-1900",
+            "GMC-2025",
+            "GMC-2008"
+          ]
+        },
+        {
+          "semester": "E29",
+          "courses": []
+        },
+        {
+          "semester": "A29",
+          "courses": [
+            "OPT-ION1",
+            "GMC-3003",
+            "GMC-3024",
+            "LAN-GUES"
+          ]
+        },
+        {
+          "semester": "H30",
+          "courses": [
+            "OPT-ION2",
+            "GMC-3006",
+            "GMC-3025",
+            "PHI-2910"
+          ]
+        },
+        {
+          "semester": "E30",
+          "courses": []
+        },
+        {
+          "semester": "A30",
+          "courses": [
+            "OPT-ION3",
+            "OPT-ION4",
+            "OPT-ION5",
+            "PHI-3900"
+          ]
+        },
+        {
+          "semester": "H31",
+          "courses": [
+            "GMC-3020",
+            "GMC-3034",
+            "GMC-3035"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Technique de génie mécanique - Scolarité préparatoire complétée",
+      "completed": [
+        "GMC-1024",
+        "GMC-2007",
+        "OPT-ION3",
+        "OPT-ION4",
+        "OPT-ION5"
+      ],
+      "sessions": [
+        {
+          "semester": "A26",
+          "courses": [
+            "GMC-1001",
+            "MAT-1900",
+            "GML-1001",
+            "IFT-1903",
+            "STT-1900",
+            "GMC-1004"
+          ]
+        },
+        {
+          "semester": "H27",
+          "courses": [
+            "GMC-2001",
+            "MAT-2910",
+            "MAT-1910",
+            "GMC-1003",
+            "GMN-2900",
+            "GMC-1005"
+          ]
+        },
+        {
+          "semester": "E27",
+          "courses": []
+        },
+        {
+          "semester": "A27",
+          "courses": [
+            "GMC-2002",
+            "GMC-2003",
+            "GMC-2024",
+            "GMC-2006",
+            "GMC-1002"
+          ]
+        },
+        {
+          "semester": "H28",
+          "courses": [
+            "GMC-3000",
+            "GMC-2005",
+            "GMC-2025",
+            "GMC-2008",
+            "ECN-4901"
+          ]
+        },
+        {
+          "semester": "E28",
+          "courses": [
+            "GMC-2580"
+          ]
+        },
+        {
+          "semester": "A28",
+          "courses": [
+            "GMC-3003",
+            "GMC-3002",
+            "GMC-3024",
+            "GMC-3005",
+            "GMC-3009"
+          ]
+        },
+        {
+          "semester": "H29",
+          "courses": [
+            "OPT-ION1",
+            "GMC-3006",
+            "GMC-3025",
+            "LAN-GUES",
+            "PHI-2910"
+          ]
+        },
+        {
+          "semester": "E29",
+          "courses": []
+        },
+        {
+          "semester": "A29",
+          "courses": [
+            "OPT-ION2",
+            "GMC-3020",
+            "GMC-3034",
+            "GMC-3035",
+            "PHI-3900"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Technique de génie mécanique - Scolarité préparatoire non-complétée",
+      "completed": [
+        "GMC-1024",
+        "GMC-2007",
+        "OPT-ION3",
+        "OPT-ION4",
+        "OPT-ION5",
+        "PHY-0150"
+      ],
+      "sessions": [
+        {
+          "semester": "A26",
+          "courses": [
+            "MAT-0130",
+            "MAT-0150",
+            "PHY-0250",
+            "IFT-1903",
+            "GMC-1004"
+          ]
+        },
+        {
+          "semester": "H27",
+          "courses": [
+            "GMC-1001",
+            "MAT-0260",
+            "GML-1001",
+            "ECN-4901",
+            "GMN-2900",
+            "GMC-1005"
+          ]
+        },
+        {
+          "semester": "E27",
+          "courses": []
+        },
+        {
+          "semester": "A27",
+          "courses": [
+            "GMC-2003",
+            "MAT-1900",
+            "GMC-2024",
+            "STT-1900",
+            "GMC-1002"
+          ]
+        },
+        {
+          "semester": "H28",
+          "courses": [
+            "GMC-2001",
+            "MAT-1910",
+            "MAT-2910",
+            "LAN-GUES",
+            "GMC-1003"
+          ]
+        },
+        {
+          "semester": "E28",
+          "courses": [
+            "GMC-2580"
+          ]
+        },
+        {
+          "semester": "A28",
+          "courses": [
+            "GMC-2002",
+            "GMC-2006",
+            "GMC-3024",
+            "GMC-3009",
+            "PHI-2910"
+          ]
+        },
+        {
+          "semester": "H29",
+          "courses": [
+            "GMC-3000",
+            "PHI-3900",
+            "GMC-2025",
+            "GMC-3006",
+            "GMC-2005"
+          ]
+        },
+        {
+          "semester": "E29",
+          "courses": []
+        },
+        {
+          "semester": "A29",
+          "courses": [
+            "GMC-3003",
+            "OPT-ION1",
+            "GMC-3025",
+            "GMC-3002",
+            "GMC-3005"
+          ]
+        },
+        {
+          "semester": "H30",
+          "courses": [
+            "OPT-ION2",
+            "GMC-3020",
+            "GMC-3034",
+            "GMC-3035",
+            "GMC-2008"
+          ]
+        }
+      ]
+    }
+  ]
+}

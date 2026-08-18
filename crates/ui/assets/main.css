@@ -1190,3 +1190,76 @@ code {
   padding: 0.5rem;
   border-radius: 0.25rem;
 }
+
+/* --- la correction des préalables (millésime) ------------------------- */
+
+.panel-prereq {
+  margin-top: 0.25rem;
+}
+
+.panel-prereq-summary {
+  font-size: 0.6875rem;
+  color: var(--muted-2);
+  cursor: pointer;
+  /* INP-1 : la cible reste attrapable au pouce malgré la petite fonte */
+  padding: 0.25rem 0;
+  min-height: 1.5rem;
+}
+
+.panel-prereq-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  padding-bottom: 0.25rem;
+}
+
+.panel-prereq-input {
+  font: inherit;
+  font-size: 0.6875rem;
+  flex: 1 1 12rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.375rem;
+  border: 0.0625rem solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--card);
+  color: var(--ink);
+}
+
+/* jamais la couleur seule (INP-3) : l'écho sous le champ porte le même
+   verdict en toutes lettres, et le trait est doublé d'une épaisseur */
+.panel-prereq-input--invalid {
+  border-color: var(--accent);
+  border-width: 0.125rem;
+  background: var(--accent-bg);
+}
+
+.panel-prereq-echo {
+  flex: 1 1 100%;
+  font-size: 0.6875rem;
+  color: var(--muted);
+  /* réservé en permanence : la ligne suivante ne saute pas à la frappe */
+  min-height: 1rem;
+}
+
+.panel-prereq-echo--invalid {
+  color: var(--accent-dark);
+}
+
+.panel-prereq-reset {
+  font: inherit;
+  font-size: 0.6875rem;
+  min-height: 2rem;
+  padding: 0 0.5rem;
+  border: 0.0625rem solid var(--border);
+  border-radius: 0.375rem;
+  background: none;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.panel-prereq-reset:hover,
+.panel-prereq-reset:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+}

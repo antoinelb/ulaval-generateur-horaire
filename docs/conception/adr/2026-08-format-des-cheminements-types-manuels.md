@@ -2,6 +2,8 @@
 
 Date : 2026-08-15
 
+> **Révisée par** `2026-08-fichier-manuel-de-programme-millesime` : le fichier est désormais `{code}-{semester}.manuel.json`, un par millésime ; le champ `admission` de chaque `CheminementType` disparaît (le nom du fichier le porte) et le `label` perd son préfixe de millésime.
+
 ## Contexte
 
 Les cheminements types n'ont aucune source machine-lisible ; le dépôt JS les servait en CSV locaux (`{prog}/cheminements-types/`), avec un parseur maison, et trois programmes n'en avaient pas du tout (`CORRECTIFS-AMONT.md` item 9).

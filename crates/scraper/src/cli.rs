@@ -428,7 +428,7 @@ fn refresh_urls(
         .collect())
 }
 
-// `{code}.manuel.json` is hand-maintained and never scraped (ADR
+// `{code}-{semester}.manuel.json` is hand-maintained and never scraped (ADR
 // `2026-07-cheminement-type-en-fichier-manuel`); several vintages of one
 // program fold into a single slug; a missing directory holds nothing. A
 // snapshot that cannot yield its slug is a hard error naming the file: a
@@ -548,7 +548,8 @@ fn add_preparatory_rules(
 // One file per program rather than one snapshot holding them all: a run is
 // restricted to the URLs it was handed, so it writes exactly those and
 // leaves every other program's file — including the hand-maintained
-// `{code}.manuel.json` — alone (ADR `2026-07-un-fichier-par-programme`).
+// `{code}-{semester}.manuel.json` — alone (ADR
+// `2026-07-un-fichier-par-programme`).
 // The name carries the semester vintage so students keep the version they
 // enrolled under (ADR `2026-08-millesime-de-programme-en-semestre`).
 fn write_programs(

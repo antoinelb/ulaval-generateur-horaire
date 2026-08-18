@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use ulaval_scheduler_core::{Season, Semester};
+use ulaval_scheduler_core::{PrereqOverride, Season, Semester};
 
 pub const HISTORY_CAP: usize = 100;
 // the reference GEX cheminement tops at 15 credits a session; the student
@@ -48,6 +48,12 @@ pub struct Plan {
     // the rule the course counts toward; pure data, applied by
     // `panel::granted_program` before any coverage call
     pub rule_grants: BTreeMap<String, String>,
+    // code → the prerequisites as the student's own program vintage wrote
+    // them, when they differ from today's répertoire. Layered *over* the
+    // vintage file's own corrections, and applied to the catalogue before
+    // the solver ever reads it (ADR
+    // `2026-08-correction-des-prealables-par-millesime`)
+    pub prereq_overrides: BTreeMap<String, PrereqOverride>,
 }
 
 impl Default for Plan {
@@ -70,6 +76,7 @@ impl Default for Plan {
             manual: BTreeMap::new(),
             special: BTreeMap::new(),
             rule_grants: BTreeMap::new(),
+            prereq_overrides: BTreeMap::new(),
         }
     }
 }

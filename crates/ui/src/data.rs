@@ -1,6 +1,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use ulaval_scheduler_core::{Course, Program};
+use ulaval_scheduler_core::{
+    apply_prereq_overrides, Course, CourseManual, OverrideNote,
+    PrereqOverride, Prerequisites, Program, VintageOverlay,
+};
+
+use crate::state::Plan;
 use ulaval_scheduler_wasm::merge::merge_manual;
 
 // Everything the app fetched, still unparsed: the fetch lives in `browser`
@@ -11,6 +16,9 @@ pub struct RawData {
     // None = meta.json unavailable — an honest unknown, never a blocker
     // (ERR-5: one auxiliary file degrades one line, not the app)
     pub meta: Option<String>,
+    // None = cours.manuel.json unavailable — the scraped snapshot alone is
+    // a smaller catalogue, not a broken one (same ERR-5 rule as the meta)
+    pub manual: Option<String>,
     pub programs: Vec<(String, String)>, // (file name, contents)
 }
 
@@ -28,6 +36,22 @@ pub struct Snapshot {
     pub collisions: Vec<String>,
     // codes that came from the student's hand, marked « manuel » on screen
     pub manual_codes: BTreeSet<String>,
+    // the prerequisites each admission vintage overrides — applied only
+    // once a program is picked, since the vintage is the student's, not the
+    // catalogue's (ADR `2026-08-correction-des-prealables-par-millesime`)
+    pub vintages: BTreeMap<String, VintageOverlay>,
+    // the repo's hand-maintained courses, kept whole so the worker's
+    // catalogue can be made to hold exactly what this one does
+    pub shared_manual: Vec<Course>,
+    // what the corrections currently in force are — the guard that keeps
+    // re-applying them a no-op
+    pub applied: BTreeMap<String, PrereqOverride>,
+    // the official prerequisites of every course a correction currently
+    // rewrites, so the next set is applied to the répertoire's own text
+    // rather than compounding on the previous correction. Keyed by
+    // position: the codes come from `by_code` in the first place, so
+    // resolving them a second time could only fail unreachably
+    overridden: BTreeMap<usize, Option<Prerequisites>>,
     // anything the load had to tolerate — surfaced, never silent
     pub warnings: Vec<String>,
     pub provenance: Provenance,
@@ -70,6 +94,7 @@ pub fn parse_data(
 ) -> Result<Snapshot, DataError> {
     let file: CoursesFile = parse(&raw.courses, "cours.json")?;
     let mut warnings = Vec::new();
+    let repo_manual = parse_manual(raw.manual.as_deref(), &mut warnings);
     let meta = parse_meta(raw.meta.as_deref(), &mut warnings);
     let named_programs: Vec<(String, Program)> = raw
         .programs
@@ -118,7 +143,17 @@ pub fn parse_data(
     let data_hash = format!("{:016x}", hash_raw(raw));
     let manual_codes: BTreeSet<String> =
         manual.iter().map(|course| course.code.clone()).collect();
-    let merged = merge_manual(file.courses, manual);
+    // the repo's hand-maintained courses join the catalogue first, so a
+    // course the student typed before it shipped reads as the collision it
+    // now is instead of silently shadowing the shared entry
+    let shared_manual = repo_manual.courses;
+    let shared = merge_manual(file.courses, shared_manual.clone());
+    let merged = merge_manual(shared.courses, manual);
+    let collisions: Vec<String> = shared
+        .collisions
+        .into_iter()
+        .chain(merged.collisions.iter().cloned())
+        .collect();
     Ok(Snapshot {
         manual_codes: manual_codes
             .into_iter()
@@ -135,11 +170,154 @@ pub fn parse_data(
             course_count: merged.courses.len(),
             data_hash,
         },
-        collisions: merged.collisions,
+        collisions,
+        vintages: repo_manual.vintages,
+        shared_manual,
+        applied: BTreeMap::new(),
+        overridden: BTreeMap::new(),
         warnings,
         courses: merged.courses,
         programs,
     })
+}
+
+impl Snapshot {
+    // The répertoire's own text for a course, whatever a correction has
+    // since put in its place — what the student compares against, and what
+    // the ✕ restores.
+    pub fn official_prerequisites(&self, code: &str) -> String {
+        let Some(&index) = self.by_code.get(code) else {
+            return String::new();
+        };
+        match self.overridden.get(&index) {
+            Some(official) => raw_of(official.as_ref()),
+            None => raw_of(self.courses[index].prerequisites.as_ref()),
+        }
+    }
+
+    // The expression a correction field starts on, and whether one is in
+    // force for this course.
+    pub fn prerequisites_draft(&self, code: &str) -> (String, bool) {
+        let current = self
+            .by_code
+            .get(code)
+            .map(|&index| raw_of(self.courses[index].prerequisites.as_ref()))
+            .unwrap_or_default();
+        (current, self.applied.contains_key(code))
+    }
+}
+
+// a course with no prerequisites reads as the empty expression — the same
+// thing an emptied correction writes
+fn raw_of(prerequisites: Option<&Prerequisites>) -> String {
+    match prerequisites {
+        Some(
+            Prerequisites::Parsed { raw, .. } | Prerequisites::Raw { raw },
+        ) => raw.clone(),
+        None => String::new(),
+    }
+}
+
+// The corrections in force: the student's admission vintage first, then
+// his own edits over them — he is correcting what the shared file did not
+// cover, or did not get right for him.
+pub fn effective_overrides(
+    snapshot: &Snapshot,
+    plan: &Plan,
+) -> BTreeMap<String, PrereqOverride> {
+    let vintage = plan
+        .program
+        .as_ref()
+        .map(|program| program.semester.as_str())
+        .unwrap_or_default();
+    let mut overrides = snapshot
+        .vintages
+        .get(vintage)
+        .map(|overlay| {
+            overlay
+                .prerequisites
+                .iter()
+                .map(|(code, text)| {
+                    (
+                        code.clone(),
+                        PrereqOverride {
+                            text: text.clone(),
+                            official: None,
+                        },
+                    )
+                })
+                .collect::<BTreeMap<_, _>>()
+        })
+        .unwrap_or_default();
+    overrides.extend(
+        plan.prereq_overrides
+            .iter()
+            .map(|(code, value)| (code.clone(), value.clone())),
+    );
+    overrides
+}
+
+// Rewrite the catalogue in place. In place because a correction touches a
+// handful of courses out of 8 834: cloning the snapshot on every keystroke
+// would cost the whole catalogue to change three fields. The previous set
+// is undone first, so the répertoire's own text — not the last correction —
+// is always what a new one replaces.
+pub fn set_prereq_overrides(
+    snapshot: &mut Snapshot,
+    overrides: &BTreeMap<String, PrereqOverride>,
+) -> Vec<OverrideNote> {
+    snapshot.applied = overrides.clone();
+    let undo: Vec<(usize, Option<Prerequisites>)> =
+        std::mem::take(&mut snapshot.overridden)
+            .into_iter()
+            .collect();
+    for (index, official) in undo {
+        snapshot.courses[index].prerequisites = official;
+    }
+    snapshot.overridden = overrides
+        .keys()
+        .filter_map(|code| {
+            let &index = snapshot.by_code.get(code)?;
+            Some((index, snapshot.courses[index].prerequisites.clone()))
+        })
+        .collect();
+    apply_prereq_overrides(&mut snapshot.courses, overrides)
+}
+
+// The hand-maintained catalogue degrades like the meta: unreadable, it
+// costs its own contents and says so, never the whole load. A malformed
+// vintage key is named too — it would correct nobody, in silence.
+fn parse_manual(
+    raw: Option<&str>,
+    warnings: &mut Vec<String>,
+) -> CourseManual {
+    let Some(raw) = raw else {
+        warnings.push(
+            "cours.manuel.json introuvable : seuls les cours du répertoire \
+             sont chargés."
+                .to_string(),
+        );
+        return CourseManual::default();
+    };
+    match serde_json::from_str::<CourseManual>(raw) {
+        Ok(manual) => {
+            for vintage in manual.malformed_vintages() {
+                warnings.push(format!(
+                    "cours.manuel.json : « {vintage} » ne nomme aucune \
+                     session ; ses corrections de préalables ne \
+                     s'appliqueront à personne."
+                ));
+            }
+            manual
+        }
+        Err(error) => {
+            warnings.push(format!(
+                "cours.manuel.json illisible ({error}) : seuls les cours du \
+                 répertoire sont chargés."
+            ));
+            CourseManual::default()
+        }
+    }
 }
 
 fn parse<T: serde::de::DeserializeOwned>(
@@ -207,6 +385,9 @@ mod tests {
 
     fn raw() -> RawData {
         RawData {
+            // present and empty: the file always ships, so its absence is
+            // the exception the dedicated test covers
+            manual: Some("{}".to_string()),
             courses: COURSES.to_string(),
             meta: Some(
                 r#"{"scraped_at":"2026-08-13T18:00:00Z","course_count":1}"#
@@ -217,6 +398,248 @@ mod tests {
                 PROGRAM.to_string(),
             )],
         }
+    }
+
+    // --- the hand-maintained catalogue -----------------------------------
+
+    #[test]
+    fn the_repo_manual_courses_join_the_catalogue_without_being_typed() {
+        let mut raw = raw();
+        raw.manual = Some(
+            r#"{"courses":[{"code":"OPT-ETR1","title":"Optionnel",
+                 "credits":3,"cycle":1,"prerequisites":null,
+                 "equivalents":[],"seasons":{}}]}"#
+                .to_string(),
+        );
+        let snapshot =
+            parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        assert!(snapshot.by_code.contains_key("OPT-ETR1"));
+        assert!(
+            !snapshot.manual_codes.contains("OPT-ETR1"),
+            "a shared course is not the student's own hand"
+        );
+        assert!(snapshot.warnings.is_empty(), "{:?}", snapshot.warnings);
+    }
+
+    #[test]
+    fn a_course_the_student_typed_before_it_shipped_reads_as_a_collision() {
+        let mut raw = raw();
+        raw.manual = Some(
+            r#"{"courses":[{"code":"OPT-ETR1","title":"Optionnel",
+                 "credits":3,"cycle":1,"prerequisites":null,
+                 "equivalents":[],"seasons":{}}]}"#
+                .to_string(),
+        );
+        let snapshot = parse_data(&raw, vec![manual("OPT-ETR1")])
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(snapshot.collisions, ["OPT-ETR1"]);
+        assert!(!snapshot.manual_codes.contains("OPT-ETR1"));
+    }
+
+    #[test]
+    fn the_vintage_overlays_ride_along_unapplied() {
+        let mut raw = raw();
+        raw.manual = Some(
+            r#"{"vintages":{"A24":{"prerequisites":{"GEX-1000":""}}}}"#
+                .to_string(),
+        );
+        let snapshot =
+            parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        assert!(snapshot.vintages.contains_key("A24"));
+        assert!(
+            snapshot.warnings.is_empty(),
+            "a vintage nobody picked yet is not a warning: {:?}",
+            snapshot.warnings
+        );
+    }
+
+    #[test]
+    fn a_missing_or_unreadable_manual_costs_its_contents_and_says_so() {
+        for (manual, expected) in [
+            (None, "introuvable"),
+            (Some("{ nope".to_string()), "illisible"),
+        ] {
+            let mut raw = raw();
+            raw.manual = manual;
+            let snapshot =
+                parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+            assert!(
+                snapshot.warnings.iter().any(|w| w.contains(expected)),
+                "expected {expected:?}, got {:?}",
+                snapshot.warnings
+            );
+            assert!(
+                !snapshot.courses.is_empty(),
+                "the scraped catalogue still loads"
+            );
+        }
+    }
+
+    #[test]
+    fn a_vintage_key_naming_no_session_is_surfaced_not_silently_inert() {
+        let mut raw = raw();
+        raw.manual =
+            Some(r#"{"vintages":{"2024":{"prerequisites":{}}}}"#.to_string());
+        let snapshot =
+            parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        assert!(
+            snapshot.warnings.iter().any(|w| w.contains("« 2024 »")),
+            "{:?}",
+            snapshot.warnings
+        );
+    }
+
+    // --- the corrections in force ----------------------------------------
+
+    fn plan_with(vintage: &str) -> Plan {
+        Plan {
+            program: Some(crate::state::ProgramChoice {
+                code: "B-GEX".to_string(),
+                semester: vintage.to_string(),
+                concentration: None,
+                profile: None,
+            }),
+            ..Plan::default()
+        }
+    }
+
+    fn vintage_snapshot() -> Snapshot {
+        let mut raw = raw();
+        raw.manual = Some(
+            r#"{"vintages":{"A24":{"prerequisites":
+                 {"GEX-1000":"GCI-1000 ET MAT-1902"}}}}"#
+                .to_string(),
+        );
+        parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    #[test]
+    fn the_students_own_correction_wins_over_his_vintages() {
+        let snapshot = vintage_snapshot();
+        let mut plan = plan_with("A24");
+        plan.prereq_overrides.insert(
+            "GEX-1000".to_string(),
+            PrereqOverride {
+                text: "GCI-1000".to_string(),
+                official: Some("GCI-9999".to_string()),
+            },
+        );
+        let overrides = effective_overrides(&snapshot, &plan);
+        assert_eq!(overrides["GEX-1000"].text, "GCI-1000");
+        assert_eq!(
+            overrides["GEX-1000"].official,
+            Some("GCI-9999".to_string()),
+            "his own entry rides whole, staleness check included"
+        );
+    }
+
+    #[test]
+    fn another_vintage_carries_none_of_the_corrections() {
+        let snapshot = vintage_snapshot();
+        assert!(effective_overrides(&snapshot, &plan_with("A26")).is_empty());
+        assert!(
+            effective_overrides(&snapshot, &Plan::default()).is_empty(),
+            "no program picked yet is no vintage"
+        );
+    }
+
+    #[test]
+    fn a_correction_rewrites_the_catalogue_in_place() {
+        let mut snapshot = vintage_snapshot();
+        let index = snapshot.by_code["GEX-1000"];
+        let official = snapshot.courses[index].prerequisites.clone();
+        let overrides = effective_overrides(&snapshot, &plan_with("A24"));
+        let notes = set_prereq_overrides(&mut snapshot, &overrides);
+        assert!(notes.is_empty(), "{notes:?}");
+        assert!(matches!(
+            &snapshot.courses[index].prerequisites,
+            Some(Prerequisites::Parsed { raw, .. })
+                if raw == "GCI-1000 ET MAT-1902"
+        ));
+
+        // a second, different set replaces the répertoire's text — never
+        // the previous correction's
+        let notes = set_prereq_overrides(&mut snapshot, &BTreeMap::new());
+        assert!(notes.is_empty(), "{notes:?}");
+        assert_eq!(
+            snapshot.courses[index].prerequisites, official,
+            "dropping every correction restores the official text"
+        );
+    }
+
+    #[test]
+    fn the_field_starts_on_what_the_solver_reads_and_names_the_official() {
+        let mut snapshot = vintage_snapshot();
+        assert_eq!(
+            snapshot.prerequisites_draft("GEX-1000"),
+            (String::new(), false),
+            "no correction yet: the répertoire's own text, and it is empty"
+        );
+
+        let overrides = effective_overrides(&snapshot, &plan_with("A24"));
+        set_prereq_overrides(&mut snapshot, &overrides);
+        assert_eq!(
+            snapshot.prerequisites_draft("GEX-1000"),
+            ("GCI-1000 ET MAT-1902".to_string(), true)
+        );
+        assert_eq!(
+            snapshot.official_prerequisites("GEX-1000"),
+            "",
+            "the ✕ restores the répertoire's text, not the correction's"
+        );
+    }
+
+    #[test]
+    fn a_course_no_catalogue_holds_has_neither_draft_nor_official() {
+        let snapshot = vintage_snapshot();
+        assert_eq!(
+            snapshot.prerequisites_draft("XXX-9999"),
+            (String::new(), false)
+        );
+        assert_eq!(snapshot.official_prerequisites("XXX-9999"), "");
+    }
+
+    #[test]
+    fn an_expression_the_repertoire_left_as_text_is_shown_as_it_stands() {
+        // `Prerequisites::Raw` — what the scraper keeps when the source is
+        // outside the grammar; the field must still offer it for rewriting
+        let mut raw = raw();
+        raw.courses = r#"{"courses":[
+            {"code":"GEX-1000","title":"T","credits":3,"cycle":1,
+             "prerequisites":{"raw":"Autorisation de la direction"},
+             "equivalents":[],"seasons":{}}
+        ]}"#
+        .to_string();
+        let snapshot =
+            parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(
+            snapshot.prerequisites_draft("GEX-1000"),
+            ("Autorisation de la direction".to_string(), false)
+        );
+        assert_eq!(
+            snapshot.official_prerequisites("GEX-1000"),
+            "Autorisation de la direction"
+        );
+    }
+
+    #[test]
+    fn a_correction_no_catalogue_can_honour_is_surfaced() {
+        let mut snapshot = vintage_snapshot();
+        let mut overrides = BTreeMap::new();
+        overrides.insert(
+            "XXX-9999".to_string(),
+            PrereqOverride {
+                text: "GEX-1000".to_string(),
+                official: None,
+            },
+        );
+        let notes = set_prereq_overrides(&mut snapshot, &overrides);
+        assert_eq!(
+            notes,
+            [OverrideNote::UnknownCode {
+                code: "XXX-9999".to_string()
+            }]
+        );
     }
 
     fn manual(code: &str) -> Course {

@@ -1,0 +1,104 @@
+{
+  "cheminements_types": [
+    {
+      "label": "Sciences de la nature",
+      "completed": [],
+      "sessions": [
+        {
+          "semester": "A22",
+          "courses": [
+            "GMC-1001",
+            "GLO-1901",
+            "GMC-1024",
+            "MAT-1900",
+            "GML-1001"
+          ]
+        },
+        {
+          "semester": "H23",
+          "courses": [
+            "GMC-2001",
+            "MAT-2910",
+            "MAT-1910",
+            "GMC-1003",
+            "MED-1100"
+          ]
+        },
+        {
+          "semester": "E23",
+          "courses": []
+        },
+        {
+          "semester": "A23",
+          "courses": [
+            "GMC-2002",
+            "GMC-2003",
+            "GMC-2024",
+            "GMC-2006",
+            "GMC-1002"
+          ]
+        },
+        {
+          "semester": "H24",
+          "courses": [
+            "GMC-3000",
+            "GMC-2005",
+            "GMC-2025",
+            "GMC-2008",
+            "ECN-4901"
+          ]
+        },
+        {
+          "semester": "E24",
+          "courses": [
+            "GMC-2580"
+          ]
+        },
+        {
+          "semester": "A24",
+          "courses": [
+            "GMC-3009",
+            "GMC-3002",
+            "GMC-3024",
+            "GMC-3005",
+            "STT-1900"
+          ]
+        },
+        {
+          "semester": "H25",
+          "courses": [
+            "GMC-3006",
+            "GMC-3003",
+            "GMC-3025",
+            "GMC-2007",
+            "PHI-2910"
+          ]
+        },
+        {
+          "semester": "E25",
+          "courses": []
+        },
+        {
+          "semester": "A25",
+          "courses": [
+            "OPT-ION1",
+            "GMC-3020",
+            "GMC-3034",
+            "GMC-3035",
+            "PHI-3900"
+          ]
+        },
+        {
+          "semester": "H26",
+          "courses": [
+            "OPT-ION2",
+            "OPT-ION3",
+            "OPT-ION4",
+            "OPT-ION5",
+            "LAN-GUES"
+          ]
+        }
+      ]
+    }
+  ]
+}

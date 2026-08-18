@@ -43,6 +43,128 @@ pub fn present_data_error(error: &DataError) -> UiError {
 
 // deterministic (fnv of the message): the same failure always carries the
 // same id, so two reports of it can be recognized as one
+// A correction the catalogue could not honour, said in French. Every case
+// names the course and what the student can do about it — a correction that
+// quietly did nothing would be worse than none at all.
+pub fn present_override_note(
+    note: &ulaval_scheduler_core::OverrideNote,
+) -> String {
+    use ulaval_scheduler_core::OverrideNote;
+    match note {
+        OverrideNote::Unparsed { code, error } => format!(
+            "Préalables de {code} : la correction n'a pas pu être lue \
+             ({error}) ; ceux du répertoire s'appliquent toujours."
+        ),
+        OverrideNote::UnknownCode { code } => format!(
+            "Préalables de {code} : ce cours n'est pas au catalogue, la \
+             correction ne s'applique à rien."
+        ),
+        OverrideNote::OfficialChanged { code, was, now } => format!(
+            "Préalables de {code} : le répertoire a changé depuis votre \
+             correction (« {was} » est devenu « {now} »). Votre version \
+             reste appliquée."
+        ),
+    }
+}
+
+// What a correction being typed would mean, echoed before it is committed
+// (INP-6). `valid` alone would be colour-shaped feedback, so `echo` always
+// carries the same verdict in words (INP-3).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrereqDraft {
+    pub valid: bool,
+    pub echo: String,
+}
+
+// The parser's guards name themselves in English, like the rest of the
+// code; on screen they are read by a student, in French. The fallback is
+// the label itself rather than a vague « expression invalide »: a guard
+// added later must show up as something, never be swallowed.
+fn prereq_fault(label: &str) -> String {
+    match label {
+        "two operands in a row" => {
+            "deux termes se suivent sans ET ni OU entre eux"
+        }
+        "( where an operator was expected" => {
+            "une parenthèse ouvre là où ET ou OU était attendu"
+        }
+        ") without a left operand" => {
+            "une parenthèse se ferme sans terme devant elle"
+        }
+        "unmatched )" => "une parenthèse fermante n'a pas d'ouvrante",
+        "ET without a left operand" => "ET n'a pas de terme à sa gauche",
+        "OU without a left operand" => "OU n'a pas de terme à sa gauche",
+        "expression ends on an operator" => {
+            "l'expression se termine sur un opérateur"
+        }
+        "unclosed (" => "une parenthèse reste ouverte",
+        other => other,
+    }
+    .to_string()
+}
+
+// the same ceiling the solver's own flattening uses — a pathological
+// expression must not walk forever
+const MAX_DRAFT_NODES: usize = 10_000;
+
+pub fn present_prereq_draft(text: &str) -> PrereqDraft {
+    use ulaval_scheduler_core::parse_prereq_tree;
+
+    let text = text.trim();
+    if text.is_empty() {
+        return PrereqDraft {
+            valid: true,
+            echo: "compris : ce cours n'a aucun préalable.".to_string(),
+        };
+    }
+    let tree = match parse_prereq_tree(text) {
+        Ok(tree) => tree,
+        Err(error) => {
+            return PrereqDraft {
+                valid: false,
+                echo: format!(
+                    "non lu : {} - la correction n'est pas appliquée.",
+                    prereq_fault(&error.error)
+                ),
+            };
+        }
+    };
+    // the operands no catalogue can check (an examination, a range of
+    // course numbers) are the surprising half: the solver presumes them
+    // rather than verifying them, and the student must know which
+    let presumed = presumed_operands(&tree);
+    let echo = if presumed.is_empty() {
+        "compris.".to_string()
+    } else {
+        format!(
+            "compris - {} sera présumé acquis, le solveur ne peut pas le \
+             vérifier.",
+            presumed.join(", ")
+        )
+    };
+    PrereqDraft { valid: true, echo }
+}
+
+// a bounded walk, never a recursion: an arbitrarily deep expression is a
+// student's typing, not a trusted input
+fn presumed_operands(tree: &ulaval_scheduler_core::PrereqTree) -> Vec<String> {
+    use ulaval_scheduler_core::PrereqTree;
+    let mut presumed = Vec::new();
+    let mut stack = vec![tree];
+    for _ in 0..MAX_DRAFT_NODES {
+        let Some(node) = stack.pop() else {
+            break;
+        };
+        match node {
+            PrereqTree::Raw { raw } => presumed.push(format!("« {raw} »")),
+            PrereqTree::All { all } => stack.extend(all.iter()),
+            PrereqTree::Any { any } => stack.extend(any.iter()),
+            PrereqTree::Course(_) | PrereqTree::ProgramCredits { .. } => {}
+        }
+    }
+    presumed
+}
+
 pub fn error_id(detail: &str) -> String {
     let hash = fnv1a_64(0xcbf2_9ce4_8422_2325, detail.as_bytes());
     format!("GH-{:08X}", (hash >> 32) as u32 ^ hash as u32)
@@ -488,6 +610,121 @@ pub fn ribbon_model(
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
+mod override_note_tests {
+    use ulaval_scheduler_core::OverrideNote;
+
+    use super::{present_override_note, present_prereq_draft};
+
+    #[test]
+    fn an_empty_correction_reads_as_no_prerequisites_at_all() {
+        let draft = present_prereq_draft("   ");
+        assert!(draft.valid);
+        assert!(draft.echo.contains("aucun préalable"), "{}", draft.echo);
+    }
+
+    #[test]
+    fn a_readable_expression_says_so_without_repeating_it() {
+        let draft = present_prereq_draft("GCI-1000 ET (MAT-1900 OU MAT-1902)");
+        assert!(draft.valid);
+        assert_eq!(draft.echo, "compris.");
+    }
+
+    #[test]
+    fn an_operand_the_grammar_cannot_check_is_named_before_the_commit() {
+        let draft = present_prereq_draft("Examen de langue OU GCI-1000");
+        assert!(draft.valid, "{}", draft.echo);
+        assert!(
+            draft.echo.contains("« Examen de langue »"),
+            "the student must see what the solver will only presume: {}",
+            draft.echo
+        );
+        assert!(draft.echo.contains("présumé acquis"), "{}", draft.echo);
+    }
+
+    #[test]
+    fn a_broken_expression_is_refused_in_words_not_only_in_colour() {
+        let draft = present_prereq_draft("GCI-1000 ET");
+        assert!(!draft.valid);
+        assert_eq!(
+            draft.echo,
+            "non lu : l'expression se termine sur un opérateur - la \
+             correction n'est pas appliquée.",
+            "the fault is named in French, like everything on screen"
+        );
+        assert!(
+            draft.echo.contains("n'est pas appliquée"),
+            "the echo says the consequence, not just the fault: {}",
+            draft.echo
+        );
+    }
+
+    #[test]
+    fn every_guard_of_the_grammar_names_itself_in_french() {
+        // the eight the parser can raise, plus the fallback that keeps a
+        // future one visible instead of swallowed
+        for (raw, expected) in [
+            ("( GLG-1900 ) GLG-1000", "deux termes se suivent"),
+            ("GLG-1000 (GLG-1900)", "une parenthèse ouvre là où"),
+            ("()", "se ferme sans terme devant"),
+            ("GLG-1000 )", "n'a pas d'ouvrante"),
+            ("GLG-1000 ET", "l'expression se termine sur un opérateur"),
+            ("ET GLG-1000", "ET n'a pas de terme à sa gauche"),
+            ("OU GLG-1000", "OU n'a pas de terme à sa gauche"),
+            ("( GLG-1000", "une parenthèse reste ouverte"),
+        ] {
+            let draft = present_prereq_draft(raw);
+            assert!(!draft.valid, "{raw:?} must be refused");
+            assert!(
+                draft.echo.contains(expected),
+                "{raw:?}: expected {expected:?}, got {:?}",
+                draft.echo
+            );
+        }
+        assert_eq!(super::prereq_fault("brand new guard"), "brand new guard");
+    }
+
+    #[test]
+    fn a_credits_threshold_needs_no_presumption() {
+        let draft = present_prereq_draft("GEX, Crédits exigés : 60");
+        assert!(draft.valid);
+        assert_eq!(draft.echo, "compris.");
+    }
+
+    #[test]
+    fn every_refused_correction_names_the_course_and_what_happened() {
+        let cases = [
+            (
+                OverrideNote::Unparsed {
+                    code: "GCI-2000".to_string(),
+                    error: "expression ends on an operator".to_string(),
+                },
+                "n'a pas pu être lue",
+            ),
+            (
+                OverrideNote::UnknownCode {
+                    code: "GCI-2000".to_string(),
+                },
+                "n'est pas au catalogue",
+            ),
+            (
+                OverrideNote::OfficialChanged {
+                    code: "GCI-2000".to_string(),
+                    was: "GCI-1000".to_string(),
+                    now: "GCI-1005".to_string(),
+                },
+                "a changé depuis votre correction",
+            ),
+        ];
+        for (note, expected) in cases {
+            let message = present_override_note(&note);
+            assert!(message.contains("GCI-2000"), "{message}");
+            assert!(message.contains(expected), "{message}");
+        }
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -536,6 +773,7 @@ mod tests {
                 ]}"#
                 .to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: Vec::new(),
             },
             Vec::new(),
@@ -892,6 +1130,7 @@ mod tests {
                 ]}"#
                 .to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: Vec::new(),
             },
             Vec::new(),
@@ -950,6 +1189,7 @@ mod tests {
                 ]}"#
                 .to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: Vec::new(),
             },
             Vec::new(),

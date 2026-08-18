@@ -1,0 +1,104 @@
+{
+  "cheminements_types": [
+    {
+      "label": "",
+      "completed": [],
+      "sessions": [
+        {
+          "semester": "A26",
+          "courses": [
+            "CHM-1903",
+            "MAT-1900",
+            "GCI-1000",
+            "GCI-1003",
+            "GSC-1000"
+          ]
+        },
+        {
+          "semester": "H27",
+          "courses": [
+            "IFT-1903",
+            "MAT-1910",
+            "STT-1900",
+            "GCI-1004",
+            "GGL-2600"
+          ]
+        },
+        {
+          "semester": "E27",
+          "courses": [
+            "ANL-2020",
+            "GEX-1580"
+          ]
+        },
+        {
+          "semester": "A27",
+          "courses": [
+            "GCI-1007",
+            "GCI-1009",
+            "GCI-2008",
+            "GCI-2009",
+            "MCB-1907"
+          ]
+        },
+        {
+          "semester": "H28",
+          "courses": [
+            "MAT-2910",
+            "GCI-1900",
+            "GCI-2010",
+            "GEX-1000",
+            "GMN-2902"
+          ]
+        },
+        {
+          "semester": "E28",
+          "courses": []
+        },
+        {
+          "semester": "A28",
+          "courses": [
+            "GCI-2012",
+            "GCI-4301",
+            "GEX-2003",
+            "GMC-3009",
+            "OPT-ION1"
+          ]
+        },
+        {
+          "semester": "H29",
+          "courses": [
+            "GEX-2001",
+            "GEX-4006",
+            "GEX-2004",
+            "ECN-4901",
+            "GMN-2902"
+          ]
+        },
+        {
+          "semester": "E29",
+          "courses": []
+        },
+        {
+          "semester": "A29",
+          "courses": [
+            "GCI-3001",
+            "GEX-3333",
+            "PHI-2910",
+            "OPT-ION3",
+            "OPT-ION4"
+          ]
+        },
+        {
+          "semester": "H30",
+          "courses": [
+            "GEX-3335",
+            "PHI-3900",
+            "OPT-ION2",
+            "AUC-HOIX"
+          ]
+        }
+      ]
+    }
+  ]
+}

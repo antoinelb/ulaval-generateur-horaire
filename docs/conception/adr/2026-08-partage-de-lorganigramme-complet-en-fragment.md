@@ -14,6 +14,11 @@ Pipeline stateless (aucun serveur — `docs/conception/shareable_link.md`) :
 `état → postcard → deflate brut (gardé seulement s'il rétrécit) → base64url → fragment #…`
 
 - **`ShareV1` est gelée** : postcard encode par position, tout réordonnancement casserait silencieusement chaque lien déjà partagé. Un futur format sera une `ShareV2` avec son propre octet de version et une migration — jamais une édition de `ShareV1`. Le test `the_frozen_v1_string_still_decodes_byte_for_byte` verrouille l'octet près.
+
+**Suite (2026-08-17, ADR `2026-08-correction-des-prealables-par-millesime`)** : cette `ShareV2` existe.
+Elle **imbrique** `ShareV1` entière plutôt que d'en recopier les dix-huit champs — c'est ce qui garde les deux formats prouvablement identiques à l'ajout près — et lui ajoute `prereq_overrides: Vec<(String, String, Option<String>)>`.
+L'octet de version passe à 2 ; V1 est encore **décodée** (tout lien déjà partagé s'ouvre entier) mais seule V2 est **écrite** : un lien qui perdrait les corrections de préalables montrerait au destinataire un autre verdict que celui de l'expéditeur, ce que la contrainte de partage interdit.
+Le verrou s'est scindé en deux — `the_frozen_v1_link_still_decodes` et `the_frozen_v2_string_still_encodes_byte_for_byte`.
 - Un octet d'en-tête `version|flag` distingue les versions et le deflate ; la décompression est **bornée à 256 Ko** (un lien hostile ne doit pas être une bombe de décompression).
 - Les **cours manuels voyagent entiers**, chacun comme son propre JSON à l'intérieur de la struct (auto-descriptif exprès : `core::Course` peut évoluer sans corrompre les vieux liens) ; à l'import ils rejoignent la liste locale **avant** le parse du catalogue et le démarrage du worker — la copie locale d'un code déjà connu prime.
 - Le **fragment** (`#`) plutôt que la query : il n'atteint jamais un serveur (pas de logs), et le payload base64url n'a pas besoin d'échappement.

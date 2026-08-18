@@ -1166,6 +1166,7 @@ mod tests {
             &RawData {
                 courses: COURSES.to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: vec![(
                     "B-GEX-A26.json".to_string(),
                     PROGRAM.to_string(),
@@ -1406,6 +1407,7 @@ mod tests {
             &RawData {
                 courses: COURSES.to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: vec![(
                     "B-GEX-A26.json".to_string(),
                     preparatory_program.to_string(),
@@ -1444,6 +1446,7 @@ mod tests {
             &RawData {
                 courses: COURSES.to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: vec![(
                     "B-GEX-A26.json".to_string(),
                     preparatory_program.to_string(),
@@ -1797,6 +1800,7 @@ mod tests {
             &RawData {
                 courses: format!(r#"{{"courses":[{}]}}"#, entries.join(",")),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
                 programs: Vec::new(),
             },
             Vec::new(),

@@ -164,7 +164,12 @@ fn unknown_keys<T: serde::Serialize>(
 // state → postcard → raw deflate (kept only if smaller) → base64url, with
 // one version|flag header byte in front (`docs/conception/shareable_link.md`).
 
-const SHARE_VERSION: u8 = 1;
+// V1 is still decoded — every link already shared keeps working — but only
+// V2 is ever written: a link that dropped the prerequisite corrections
+// would show the recipient a different verdict than the sender's, and the
+// whole point of the link is that he adjusts nothing.
+const SHARE_VERSION_V1: u8 = 1;
+const SHARE_VERSION: u8 = 2;
 const FLAG_DEFLATE: u8 = 0x80;
 // a hostile link must not be a zip bomb against someone else's tab
 const MAX_DECOMPRESSED: usize = 256 * 1024;
@@ -201,6 +206,16 @@ struct ShareV1 {
 // one session's pinned sections: (code, sorted NRC set) — frozen too
 type SessionChosenV1 = Vec<(String, Vec<String>)>;
 
+// FROZEN, like V1 — V1 whole, then what it could not carry. Nesting rather
+// than copying its eighteen fields is what keeps the two formats provably
+// identical up to the addition.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+struct ShareV2 {
+    v1: ShareV1,
+    // (code, the rewritten expression, the official text it replaced)
+    prereq_overrides: Vec<(String, String, Option<String>)>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum OrganigrammeShareError {
     #[error("lien vide")]
@@ -221,7 +236,16 @@ pub enum OrganigrammeShareError {
 
 pub fn encode_organigramme(plan: &Plan, manual_courses: &[Course]) -> String {
     use base64::Engine;
-    let state = share_from(plan, manual_courses);
+    let state = ShareV2 {
+        v1: share_from(plan, manual_courses),
+        prereq_overrides: plan
+            .prereq_overrides
+            .iter()
+            .map(|(code, value)| {
+                (code.clone(), value.text.clone(), value.official.clone())
+            })
+            .collect(),
+    };
     // expect over `?`: strings, vecs and integers provably cannot fail
     let raw = postcard::to_allocvec(&state)
         .expect("postcard serialization of plain data always succeeds");
@@ -261,10 +285,29 @@ pub fn decode_organigramme(
         body.to_vec()
     };
     match header & !FLAG_DEFLATE {
-        SHARE_VERSION => {
+        SHARE_VERSION_V1 => {
             let state: ShareV1 = postcard::from_bytes(&raw)
                 .map_err(|_| OrganigrammeShareError::Payload)?;
             share_into(state)
+        }
+        SHARE_VERSION => {
+            let state: ShareV2 = postcard::from_bytes(&raw)
+                .map_err(|_| OrganigrammeShareError::Payload)?;
+            let (mut plan, courses) = share_into(state.v1)?;
+            plan.prereq_overrides = state
+                .prereq_overrides
+                .into_iter()
+                .map(|(code, text, official)| {
+                    (
+                        code,
+                        ulaval_scheduler_core::PrereqOverride {
+                            text,
+                            official,
+                        },
+                    )
+                })
+                .collect();
+            Ok((plan, courses))
         }
         version => Err(OrganigrammeShareError::UnknownVersion(version)),
     }
@@ -366,6 +409,10 @@ fn share_into(
         })
         .collect::<Result<Vec<Course>, _>>()?;
     let plan = Plan {
+        // a V1 link predates the prerequisite corrections: it carries none,
+        // and the recipient starts from the official répertoire (ShareV2
+        // is the format that carries them)
+        prereq_overrides: std::collections::BTreeMap::new(),
         program: state.program_code.map(|code| crate::state::ProgramChoice {
             code,
             semester: state.program_semester.unwrap_or_default(),
@@ -671,18 +718,48 @@ mod tests {
     }
 
     #[test]
-    fn the_frozen_v1_string_still_decodes_byte_for_byte() {
-        // the compatibility lock: if this fails, ShareV1 changed shape and
-        // every link ever shared is broken — write a ShareV2 instead
+    fn the_frozen_v1_link_still_decodes() {
+        // the compatibility lock: every link shared before ShareV2 existed
+        // must still open, whole. If this fails, ShareV1 changed shape.
         let (plan, courses) = shared_plan();
-        assert_eq!(encode_organigramme(&plan, &courses), FROZEN_V1);
         let (back, back_courses) =
             decode_organigramme(FROZEN_V1).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(back, plan);
         assert_eq!(back_courses, courses);
     }
 
+    #[test]
+    fn the_frozen_v2_string_still_encodes_byte_for_byte() {
+        // the same lock, one version on: V2 is what is written now
+        let (plan, courses) = shared_plan();
+        assert_eq!(encode_organigramme(&plan, &courses), FROZEN_V2);
+        let (back, back_courses) =
+            decode_organigramme(FROZEN_V2).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(back, plan);
+        assert_eq!(back_courses, courses);
+    }
+
+    #[test]
+    fn the_link_carries_the_prerequisite_corrections() {
+        // without them the recipient would see another verdict than the
+        // sender's, which is the one thing the link must never do
+        let (mut plan, courses) = shared_plan();
+        plan.prereq_overrides.insert(
+            "GCI-2000".to_string(),
+            ulaval_scheduler_core::PrereqOverride {
+                text: "GCI-1000 ET MAT-1902".to_string(),
+                official: Some("GCI-1005".to_string()),
+            },
+        );
+        let link = encode_organigramme(&plan, &courses);
+        let (back, _) =
+            decode_organigramme(&link).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(back.prereq_overrides, plan.prereq_overrides);
+    }
+
     const FROZEN_V1: &str = "gUWPQUrEQBBFUxlGgqDiDUJt3CSYZDRidqNIENSFK4mItEnN0NB0YndHkSEXceXSOUdu4ynsHtCpRfHr_8eHgulFXF49wGSe5bBXjmvJKezVC-PS834OduAQPAjmdzdxlmQJBJaN0yRJwA_Ky2snz_ytaef_8KdpNjs53ewcfAiqqorPHTXZH79CcTSujWJySWob7XbH9-P3UlCYwSessG4bwgL_YozQcCOcdcu4bqU1akUNNxqLmdUftQvTCDtFil57rrkhm8leiAid8cYESYc_PkWoidkSe6zwnUtDyinBtHluFwtb0GBhv84jbDvDN6ArGobhFw";
+
+    const FROZEN_V2: &str = "gkWPQUrEQBBFUxlGgqDiDUJt3CSYZDRidqNIENSFK4mItEnN0NB0YndHkSEXceXSOUdu4ynsHtCpRfHr_8eHgulFXF49wGSe5bBXjmvJKezVC-PS834OduAQPAjmdzdxlmQJBJaN0yRJwA_Ky2snz_ytaef_8KdpNjs53ewcfAiqqorPHTXZH79CcTSujWJySWob7XbH9-P3UlCYwSessG4bwgL_YozQcCOcdcu4bqU1akUNNxqLmdUftQvTCDtFil57rrkhm8leiAid8cYESYc_PkWoidkSe6zwnUtDyinBtHluFwtb0GBhv84jbDvDN6ArGobB-wU";
 
     #[test]
     fn every_broken_link_is_a_typed_french_error() {
@@ -698,13 +775,16 @@ mod tests {
             Err(OrganigrammeShareError::Base64)
         );
         assert_eq!(
-            decode_organigramme(&of_bytes(&[0x02])),
-            Err(OrganigrammeShareError::UnknownVersion(2))
+            decode_organigramme(&of_bytes(&[0x03])),
+            Err(OrganigrammeShareError::UnknownVersion(3))
         );
-        assert_eq!(
-            decode_organigramme(&of_bytes(&[0x01, 0xFF, 0xFF])),
-            Err(OrganigrammeShareError::Payload)
-        );
+        for version in [0x01, 0x02] {
+            assert_eq!(
+                decode_organigramme(&of_bytes(&[version, 0xFF, 0xFF])),
+                Err(OrganigrammeShareError::Payload),
+                "version {version}"
+            );
+        }
         // a link inflating past the cap is refused, not obeyed
         let bomb = miniz_oxide::deflate::compress_to_vec(
             &vec![0u8; MAX_DECOMPRESSED + 1],
@@ -721,21 +801,38 @@ mod tests {
             start_season: 9,
             ..share_from(&Plan::default(), &[])
         };
-        let raw = postcard::to_allocvec(&broken_season)
-            .unwrap_or_else(|e| panic!("{e}"));
-        let mut bytes = vec![SHARE_VERSION];
-        bytes.extend_from_slice(&raw);
-        assert_eq!(
-            decode_organigramme(&of_bytes(&bytes)),
-            Err(OrganigrammeShareError::UnknownSeason(9))
-        );
+        // both formats refuse it, V2 through the V1 it nests
+        let wrapped = ShareV2 {
+            v1: broken_season.clone(),
+            prereq_overrides: Vec::new(),
+        };
+        for (version, raw) in [
+            (
+                SHARE_VERSION_V1,
+                postcard::to_allocvec(&broken_season)
+                    .unwrap_or_else(|e| panic!("{e}")),
+            ),
+            (
+                SHARE_VERSION,
+                postcard::to_allocvec(&wrapped)
+                    .unwrap_or_else(|e| panic!("{e}")),
+            ),
+        ] {
+            let mut bytes = vec![version];
+            bytes.extend_from_slice(&raw);
+            assert_eq!(
+                decode_organigramme(&of_bytes(&bytes)),
+                Err(OrganigrammeShareError::UnknownSeason(9)),
+                "version {version}"
+            );
+        }
         let broken_course = ShareV1 {
             manual_courses: vec!["pas du json".to_string()],
             ..share_from(&Plan::default(), &[])
         };
         let raw = postcard::to_allocvec(&broken_course)
             .unwrap_or_else(|e| panic!("{e}"));
-        let mut bytes = vec![SHARE_VERSION];
+        let mut bytes = vec![SHARE_VERSION_V1];
         bytes.extend_from_slice(&raw);
         assert!(matches!(
             decode_organigramme(&of_bytes(&bytes)),

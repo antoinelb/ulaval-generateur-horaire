@@ -1,79 +1,77 @@
 {
   "cheminements_types": [
     {
-      "admission": "A26",
-      "label": "A26",
+      "label": "Sciences de la nature",
       "completed": [],
       "sessions": [
         {
           "semester": "A26",
           "courses": [
-            "CHM-1903",
             "MAT-1900",
-            "GCI-1000",
-            "GCI-1003",
-            "GSC-1000"
+            "STT-1900",
+            "GSC-1000",
+            "GIN-1500",
+            "GMC-1000"
           ]
         },
         {
           "semester": "H27",
           "courses": [
-            "IFT-1903",
             "MAT-1910",
-            "STT-1900",
-            "GCI-1004",
-            "GGL-2600"
+            "GLO-1901",
+            "GIN-3040",
+            "ECN-4901",
+            "GIN-2010"
           ]
         },
         {
           "semester": "E27",
-          "courses": [
-            "ANL-2020",
-            "GEX-1580"
-          ]
+          "courses": []
         },
         {
           "semester": "A27",
           "courses": [
-            "GCI-1007",
-            "GCI-1009",
-            "GCI-2008",
-            "GCI-2009",
-            "MCB-1907"
+            "GSO-2100",
+            "MAT-2910",
+            "GIN-2110",
+            "GIN-2120",
+            "GIN-3030"
           ]
         },
         {
           "semester": "H28",
           "courses": [
-            "MAT-2910",
-            "GCI-1900",
-            "GCI-2010",
-            "GEX-1000",
-            "GMN-2902"
+            "GIN-3000",
+            "GIN-3010",
+            "GIN-3020",
+            "LAN-GUES",
+            "MQT-2100"
           ]
         },
         {
           "semester": "E28",
-          "courses": []
+          "courses": [
+            "GIN-3580"
+          ]
         },
         {
           "semester": "A28",
           "courses": [
-            "GCI-2012",
-            "GCI-4301",
-            "GEX-2003",
-            "GMC-3009",
-            "OPT-ION1"
+            "GIN-3050",
+            "GIN-3060",
+            "GIN-3080",
+            "GSO-3103",
+            "GIN-3110"
           ]
         },
         {
           "semester": "H29",
           "courses": [
-            "GEX-2001",
-            "GEX-4006",
-            "GEX-2004",
-            "ECN-4901",
-            "GMN-2902"
+            "GIN-3200",
+            "OPT-ION1",
+            "OPT-ION2",
+            "RLT-3300",
+            "GIN-3220"
           ]
         },
         {
@@ -83,20 +81,21 @@
         {
           "semester": "A29",
           "courses": [
-            "GCI-3001",
-            "GEX-3333",
-            "PHI-2910",
+            "GIN-3310",
             "OPT-ION3",
-            "OPT-ION4"
+            "OPT-ION4",
+            "PHI-3900",
+            "RLT-1700"
           ]
         },
         {
           "semester": "H30",
           "courses": [
-            "GEX-3335",
-            "PHI-3900",
-            "OPT-ION2",
-            "AUC-HOIX"
+            "GIN-3320",
+            "SCI-NATU",
+            "OPT-ION5",
+            "CTB-1001",
+            "SAN-SÉCU"
           ]
         }
       ]

@@ -2,7 +2,7 @@
 
 Date : 2026-07-19
 
-**Statut : chemin révisé par `2026-07-snapshot-unique-des-cours-millesime-par-saison` — le sidecar devient `data/cours.manuel.json` (sans session), toujours jamais écrit par le scraper.**
+**Statut : chemin révisé par `2026-07-snapshot-unique-des-cours-millesime-par-saison` — le sidecar devient `data/cours.manuel.json` (sans session), toujours jamais écrit par le scraper. Étendu par `2026-08-correction-des-prealables-par-millesime` : le fichier porte en plus une surcouche `vintages`, et il est désormais chargé par l'application (il ne l'était pas).**
 
 ## Contexte
 

@@ -2,6 +2,8 @@
 
 Date : 2026-07-20
 
+> **Révisée par** `2026-08-fichier-manuel-de-programme-millesime` : le fichier est `{code}-{semester}.manuel.json`, un par millésime d'admission.
+
 ## Contexte
 
 Le `cheminement_type` (l'organigramme A1→H8) n'a aucune source machine-lisible : il est encodé à la main, pour le bac en génie des eaux seulement (`docs/project_plan.md` § Source de données).

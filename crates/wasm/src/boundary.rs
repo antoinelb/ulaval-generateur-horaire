@@ -1,10 +1,11 @@
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 
 use serde::Serialize;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
-use ulaval_scheduler_core::Course;
+use ulaval_scheduler_core::{apply_prereq_overrides, Course, PrereqOverride};
 
 use crate::catalogue;
 use crate::merge::merge_manual;
@@ -74,22 +75,32 @@ export interface Alternative {
 /// Charge le catalogue une fois pour toutes : les appels suivants peuvent
 /// alors omettre `courses`, au lieu de réexpédier tout le répertoire à
 /// chaque question. `snapshot_json` est le contenu de `cours.json`,
-/// `manual_json` la liste des cours maintenus à la main.
-/// Répond le nombre de cours retenus et les sigles manuels éclipsés par un
-/// cours scrapé — des collisions à afficher, jamais à taire.
+/// `manual_json` la liste des cours maintenus à la main, `overrides_json`
+/// les préalables réécrits — ceux du millésime de l'étudiant et les siens
+/// propres, déjà fusionnés par l'appelant.
+/// Répond le nombre de cours retenus, les sigles manuels éclipsés par un
+/// cours scrapé, et ce qu'une correction n'a pas pu faire — des collisions
+/// et des refus à afficher, jamais à taire.
 #[wasm_bindgen]
 pub fn init_snapshot(
     snapshot_json: &str,
     manual_json: &str,
+    overrides_json: &str,
 ) -> Result<String, JsValue> {
     let snapshot: Snapshot = serde_json::from_str(snapshot_json)
         .map_err(|e| JsValue::from_str(&format!("snapshot : {e}")))?;
     let manual: Vec<Course> = serde_json::from_str(manual_json)
         .map_err(|e| JsValue::from_str(&format!("manual courses : {e}")))?;
-    let merged = merge_manual(snapshot.courses, manual);
+    let overrides: BTreeMap<String, PrereqOverride> =
+        serde_json::from_str(overrides_json).map_err(|e| {
+            JsValue::from_str(&format!("prerequisite overrides : {e}"))
+        })?;
+    let mut merged = merge_manual(snapshot.courses, manual);
+    let notes = apply_prereq_overrides(&mut merged.courses, &overrides);
     let summary = serde_json::json!({
         "course_count": merged.courses.len(),
         "collisions": merged.collisions,
+        "override_notes": notes,
     });
     SNAPSHOT.with(|cell| *cell.borrow_mut() = merged.courses);
     // expect over `?`: serializing a number and strings provably cannot fail
