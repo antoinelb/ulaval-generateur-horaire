@@ -224,6 +224,7 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
     let ready = solver.read().ready;
     let busy = solver.read().running.is_some();
     let truncated = solver.read().truncated;
+    let left_out = solver.read().left_out.clone();
     let verification = solver.read().verification.clone();
     let request = {
         let handle = handle.clone();
@@ -439,6 +440,23 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                         "⚠ Vérification impossible : {why}"
                     }
                 },
+                // « proposez un organigramme » is false once the solver
+                // has just tried and reported what does not fit — the
+                // 2026-08-14 report's « c'est justement ce que je viens de
+                // faire » (ADR `2026-08-placement-au-mieux-en-repli`)
+                Some(Ok(unplaced))
+                    if !unplaced.is_empty() && !left_out.is_empty() =>
+                {
+                    rsx! {
+                        p { class: "panel-verdict",
+                            "{unplaced.len()} cours sans session : le \
+                             solveur a rempli au mieux et n'a pas pu les \
+                             placer — voyez les messages pour la raison, \
+                             puis ajustez le plafond, les sessions ou les \
+                             cours, ou placez-les à la main."
+                        }
+                    }
+                }
                 Some(Ok(unplaced)) if !unplaced.is_empty() => rsx! {
                     p { class: "panel-verdict",
                         "{unplaced.len()} cours sans session — proposez un \

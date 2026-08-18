@@ -1,0 +1,79 @@
+{
+  "sessions": [
+    "fall"
+  ],
+  "credit_cap": 6,
+  "allow_unplaced": true,
+  "courses": [
+    {
+      "code": "TST-3400",
+      "title": "Cours de test 3400",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "93400",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-3401",
+      "title": "Cours de test 3401",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "winter": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "93401",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "complete": true,
+    "solutions": [
+      {}
+    ],
+    "left_out": [
+      [
+        "TST-3400",
+        "TST-3401"
+      ]
+    ]
+  }
+}

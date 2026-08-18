@@ -83,6 +83,11 @@ pub struct SolverState {
     // the last proposal hit the node budget: offer « chercher plus
     // longtemps »
     pub truncated: bool,
+    // the last proposal was a best-effort filling and these are the courses
+    // it could not seat — so the panel stops telling the student to propose
+    // an organigramme he has just proposed (ADR
+    // `2026-08-placement-au-mieux-en-repli`)
+    pub left_out: std::collections::BTreeSet<String>,
     next_id: u64,
 }
 
@@ -246,11 +251,18 @@ fn apply_proposal(
     if let Some(note) = crate::solve::completion_note(&report.placement) {
         push_alert(alerts, AlertBody::Note(note));
     }
-    for blocked in &report.placement.blocked {
-        push_alert(
-            alerts,
-            AlertBody::Note(crate::solve::blocked_note(blocked)),
-        );
+    // a best-effort answer words every culprit itself, blocked ones
+    // included — the per-blocked loop would say each of them twice
+    match crate::solve::left_out_note(&report.placement) {
+        Some(note) => push_alert(alerts, AlertBody::Note(note)),
+        None => {
+            for blocked in &report.placement.blocked {
+                push_alert(
+                    alerts,
+                    AlertBody::Note(crate::solve::blocked_note(blocked)),
+                );
+            }
+        }
     }
     for code in &report.set_aside {
         push_alert(
@@ -264,6 +276,7 @@ fn apply_proposal(
     let Some(solution) = report.placement.solutions.first() else {
         return;
     };
+    state.write().left_out = solution.left_out.clone();
     if !solution.assumed.is_empty() {
         let assumed: Vec<&str> =
             solution.assumed.iter().map(String::as_str).collect();
@@ -449,6 +462,7 @@ pub fn App() -> Element {
         state.verification = None;
         state.verify_failed = false;
         state.admissible.clear();
+        state.left_out.clear();
     });
     apply_corrections(
         plan,

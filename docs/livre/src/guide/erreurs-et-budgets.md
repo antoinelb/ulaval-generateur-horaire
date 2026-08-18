@@ -21,7 +21,7 @@ La règle générale : **une question incomplète ou incohérente est une erreur
 
 Certaines situations sont des réponses, pas des refus :
 
-- un cheminement infaisable → `completion: "complete"` avec `solutions: []`, et `blocked` nomme les cours prouvés implaçables ;
+- un cheminement infaisable → `completion: "complete"` avec `solutions: []`, et `blocked` nomme les cours prouvés implaçables — mais `generate_organigramme` ne s'y arrête pas : il enchaîne sur un [remplissage au mieux](organigramme.md#le-repli-au-mieux), dont `solutions[0].left_out` dit ce qu'il a laissé de côté ;
 - un code exigé par le programme mais absent du snapshot → `set_aside` ;
 - un opérande de préalable invérifiable → `assumed` sur la solution ;
 - un conflit d'horaire → `valid: false` dans le rapport.

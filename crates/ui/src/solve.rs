@@ -1083,6 +1083,11 @@ pub struct SolutionAnswer {
     pub placement: BTreeMap<String, usize>,
     #[serde(default)]
     pub assumed: BTreeSet<String>,
+    // courses the best-effort pass could not seat — non-empty only when
+    // the exact search found nothing (ADR
+    // `2026-08-placement-au-mieux-en-repli`)
+    #[serde(default)]
+    pub left_out: BTreeSet<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
@@ -1098,6 +1103,14 @@ pub fn parse_worker_answer(text: &str) -> Result<WorkerAnswer, String> {
 
 // truncation is never silent (ADR `2026-07-budget-de-b-en-double-borne`)
 pub fn completion_note(answer: &PlacementAnswer) -> Option<String> {
+    // A best-effort answer speaks for itself through `left_out_note`: its
+    // `completion` describes the *relaxed* enumeration, so « d'autres
+    // agencements équivalents existent » or « rien trouvé » would both
+    // contradict the grid the student is looking at (ADR
+    // `2026-08-verdicts-honnetes-et-panneau-jamais-vide`).
+    if answer.solutions.iter().any(|s| !s.left_out.is_empty()) {
+        return None;
+    }
     match answer.completion.as_str() {
         // nothing found ≠ nothing exists: the empty answer must say which
         // (rapport étudiante 2026-08-14 : « rien ne change » sans verdict)
@@ -1132,6 +1145,47 @@ pub fn completion_note(answer: &PlacementAnswer) -> Option<String> {
         }
         _ => None,
     }
+}
+
+// What the best-effort pass had to leave out, and why — the answer the
+// 2026-08-14 report asked for (« rien ne change et aucun message ne me dit
+// si la recherche a abouti »). `blocked` carries the reason when the
+// pre-screen named the culprit; otherwise the honest default is that no
+// room was left, which is exactly what the search found.
+pub fn left_out_note(answer: &PlacementAnswer) -> Option<String> {
+    let solution = answer.solutions.first()?;
+    if solution.left_out.is_empty() {
+        return None;
+    }
+    if solution.placement.is_empty() {
+        return Some(
+            "Aucun cours n'a pu être placé sans briser une contrainte \
+             — la grille reste vide. Ajustez le plafond, les sessions \
+             ou les cours."
+                .to_string(),
+        );
+    }
+    let named: Vec<String> = solution
+        .left_out
+        .iter()
+        .map(|code| {
+            match answer.blocked.iter().find(|blocked| &blocked.code == code) {
+                Some(blocked) => blocked_note(blocked),
+                None => format!(
+                    "{code} : aucune place ne restait — les autres cours \
+                 et le plafond remplissent déjà chaque session où il \
+                 est offert."
+                ),
+            }
+        })
+        .collect();
+    let count = solution.left_out.len();
+    let head = if count == 1 {
+        "Organigramme rempli au mieux : 1 cours n'a pas pu être placé."
+    } else {
+        "Organigramme rempli au mieux : des cours n'ont pas pu être placés."
+    };
+    Some(format!("{head}\n{}", named.join("\n")))
 }
 
 // `Placement.blocked` surfaced by name, with the way out the student can
@@ -1529,6 +1583,91 @@ mod worker_tests {
             .contains("illisible"));
     }
 
+    // The best-effort answer must say what it left out and why, and must
+    // silence the completion note — which describes the *relaxed*
+    // enumeration and would contradict the grid (ADR
+    // `2026-08-placement-au-mieux-en-repli`).
+    #[test]
+    fn a_best_effort_answer_names_what_it_left_out() {
+        let filled = PlacementAnswer {
+            completion: "solution-cap".to_string(),
+            solutions: vec![SolutionAnswer {
+                placement: BTreeMap::from([("GEX-1000".to_string(), 1)]),
+                assumed: BTreeSet::new(),
+                left_out: BTreeSet::from([
+                    "GEX-1002".to_string(),
+                    "MAT-0130".to_string(),
+                ]),
+            }],
+            blocked: vec![BlockedAnswer {
+                code: "GEX-1002".to_string(),
+                reason: "empty-domain".to_string(),
+            }],
+        };
+        assert!(
+            completion_note(&filled).is_none(),
+            "the completion note must not contradict a filled grid"
+        );
+        let note = left_out_note(&filled)
+            .unwrap_or_else(|| panic!("a filling names its holes"));
+        // the pre-screened culprit keeps its own reason...
+        assert!(note.contains("aucune session de l'horizon"), "{note}");
+        // ...and the one only the search could rule out gets the honest
+        // default rather than an invented reason
+        assert!(
+            note.contains("MAT-0130 : aucune place ne restait"),
+            "{note}"
+        );
+
+        // nothing placed at all is a verdict of its own, never a silent
+        // empty grid
+        let empty = PlacementAnswer {
+            solutions: vec![SolutionAnswer {
+                placement: BTreeMap::new(),
+                assumed: BTreeSet::new(),
+                left_out: BTreeSet::from(["GEX-1002".to_string()]),
+            }],
+            ..filled.clone()
+        };
+        let note = left_out_note(&empty)
+            .unwrap_or_else(|| panic!("an empty filling still speaks"));
+        assert!(note.starts_with("Aucun cours n'a pu être placé"), "{note}");
+
+        // a single hole says « 1 cours », not « des cours »
+        let one = PlacementAnswer {
+            solutions: vec![SolutionAnswer {
+                placement: BTreeMap::from([("GEX-1000".to_string(), 1)]),
+                assumed: BTreeSet::new(),
+                left_out: BTreeSet::from(["MAT-0130".to_string()]),
+            }],
+            ..filled.clone()
+        };
+        let note = left_out_note(&one)
+            .unwrap_or_else(|| panic!("one hole still speaks"));
+        assert!(note.starts_with("Organigramme rempli au mieux : 1 cours"));
+
+        // an exact answer is untouched: no note, and the completion note
+        // still does its old job — whether it placed everything...
+        let complete = PlacementAnswer {
+            solutions: vec![SolutionAnswer {
+                placement: BTreeMap::from([("GEX-1000".to_string(), 1)]),
+                assumed: BTreeSet::new(),
+                left_out: BTreeSet::new(),
+            }],
+            ..filled.clone()
+        };
+        assert!(left_out_note(&complete).is_none());
+        assert!(completion_note(&complete).is_some());
+        // ...or nothing at all
+        let exact = PlacementAnswer {
+            completion: "node-budget".to_string(),
+            solutions: Vec::new(),
+            blocked: Vec::new(),
+        };
+        assert!(left_out_note(&exact).is_none());
+        assert!(completion_note(&exact).is_some());
+    }
+
     #[test]
     fn completion_and_blocked_speak_french() {
         let answer = |completion: &str, solutions: usize| PlacementAnswer {
@@ -1537,6 +1676,7 @@ mod worker_tests {
                 .map(|_| SolutionAnswer {
                     placement: BTreeMap::new(),
                     assumed: BTreeSet::new(),
+                    left_out: BTreeSet::new(),
                 })
                 .collect(),
             blocked: Vec::new(),

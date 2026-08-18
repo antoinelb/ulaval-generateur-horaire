@@ -18,7 +18,7 @@ const MAX_TREE_NODES: usize = 10_000;
 // it shapes the search order so the first solution resembles the reference
 // path, never the solution set — codes it names that are absent from
 // `courses` are ignored (a full-bac seed over a partial list is normal).
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct PlacementRequest<'a> {
     pub sessions: &'a [Season],
     pub credit_cap: u32,
@@ -39,7 +39,18 @@ pub struct PlacementRequest<'a> {
     // (expanded partial assignments) and memory (returned solutions)
     pub max_nodes: u64,
     pub max_solutions: usize,
+    // « remplir au mieux » : each candidate gains the sentinel session 0,
+    // « not placed », tried last — so a leaf exists even when no complete
+    // arrangement does. Every placed course still honours every constraint;
+    // relaxing means leaving holes, never filling a slot with a violation
+    // (ADR `2026-08-placement-au-mieux-en-repli`). `verify` and
+    // `admissible_sessions` never set it: proving stays proving.
+    pub allow_unplaced: bool,
 }
+
+// the domain value meaning « this course is not placed » — sessions are
+// 1-based everywhere (`pinned`, `placement`, `domain`), so 0 is free
+const UNPLACED: usize = 0;
 
 // All feasible placements found, in search order, with the three outcomes
 // never confused (ADR `2026-07-b-enumere-toutes-les-solutions`).
@@ -105,6 +116,13 @@ pub struct Solution {
     // and surfaced, never imposed (ADR
     // `2026-07-prealable-inconnu-non-bloquant-remonte`)
     pub assumed: BTreeSet<String>,
+    // codes this solution could not seat anywhere — only ever non-empty
+    // under `allow_unplaced`, where a hole is the honest answer and a
+    // violated slot would be a lie (ADR
+    // `2026-08-placement-au-mieux-en-repli`). Named `left_out` and not
+    // « unplaced » because the UI's `unplaced_codes` already means
+    // something else: the plan's floating courses, whoever left them so.
+    pub left_out: BTreeSet<String>,
 }
 
 // The static answer of `prerequisites_met` : met against what the student
@@ -248,14 +266,21 @@ pub fn place(request: &PlacementRequest) -> Result<Placement, PlacementError> {
             .sum(),
     };
     let blocked = blocked_candidates(&ctx);
-    if !blocked.is_empty() {
+    // relaxed, the screen stops short-circuiting and becomes pure report:
+    // a candidate it names has only the sentinel left as a child anyway —
+    // an empty domain offers nothing else, and an unsatisfiable tree has
+    // every real child pruned by `precedence_admits`
+    if !blocked.is_empty() && !request.allow_unplaced {
         return Ok(Placement {
             completion: Completion::Complete,
             solutions: Vec::new(),
             blocked,
         });
     }
-    Ok(search(&ctx))
+    Ok(Placement {
+        blocked,
+        ..search(&ctx)
+    })
 }
 
 // The static prerequisite question the UI asks per course row (jalon 6,
@@ -328,18 +353,13 @@ pub fn admissible_sessions(
         let mut pinned = request.pinned.clone();
         pinned.insert(code.to_string(), session);
         let probe = PlacementRequest {
-            sessions: request.sessions,
-            credit_cap: request.credit_cap,
-            concomitant: request.concomitant,
-            courses: request.courses,
-            passed: request.passed,
             pinned: &pinned,
-            stages: request.stages,
-            open_summers: request.open_summers,
-            seed: request.seed,
-            max_nodes: request.max_nodes,
             // existence is the whole question
             max_solutions: 1,
+            // a relaxed probe would call every session admissible by
+            // leaving all the others out — the chip must mean « it fits »
+            allow_unplaced: false,
+            ..*request
         };
         if !place(&probe)?.solutions.is_empty() {
             admissible.insert(session);
@@ -739,7 +759,11 @@ fn expand(
     let used: u64 = loads.iter().map(|&load| u64::from(load)).sum();
     let capacity =
         u64::from(ctx.request.credit_cap) * ctx.request.sessions.len() as u64;
-    if ctx.suffix_credits[depth] > capacity - used {
+    // relaxed, the excess is left out rather than making the subtree
+    // impossible — the bound would cut the very branches we are after
+    if !ctx.request.allow_unplaced
+        && ctx.suffix_credits[depth] > capacity - used
+    {
         return;
     }
     // one scratch child per expansion, its last slot rewritten per session
@@ -759,6 +783,20 @@ fn expand(
                 && weekly_admits(&child, depth, ctx, cache)
         })
         .collect();
+    // pushed first so it is popped last: leaving a course out is the
+    // move of last resort, tried only once every real session failed.
+    // It goes through `precedence_admits` like any child — skipping a
+    // course can falsify the tree of a placed course that requires it.
+    // ponytail: greedy in candidate order (itself seeded by the
+    // cheminement type), so the first leaf is a maximal — not a
+    // maximum — filling; branch-and-bound on the skip count if a real
+    // case ever needs the difference.
+    if ctx.request.allow_unplaced {
+        child[depth] = UNPLACED;
+        if precedence_admits(&child, depth, ctx) {
+            stack.push((depth + 1, UNPLACED));
+        }
+    }
     stack.extend(
         children
             .into_iter()
@@ -771,7 +809,9 @@ fn session_loads(chosen: &[usize], ctx: &SearchCtx) -> Vec<u32> {
     chosen.iter().enumerate().fold(
         vec![0u32; ctx.request.sessions.len()],
         |mut loads, (i, &session)| {
-            loads[session - 1] += ctx.candidates[i].credits;
+            if session != UNPLACED {
+                loads[session - 1] += ctx.candidates[i].credits;
+            }
             loads
         },
     )
@@ -783,13 +823,20 @@ fn session_loads(chosen: &[usize], ctx: &SearchCtx) -> Vec<u32> {
 // tiny.
 fn precedence_admits(child: &[usize], depth: usize, ctx: &SearchCtx) -> bool {
     let complete = child.len() == ctx.candidates.len();
+    // A course left out constrains in one direction only: its dependents
+    // must see it missing (`course_leaf`), but its own prerequisites stop
+    // applying — nothing is required in order to *not* take a course.
+    // Evaluating them anyway kills every branch of a candidate the
+    // pre-screen already knows is unsatisfiable, and the relaxed search
+    // silently falls back to finding nothing at all.
+    let own = (child[depth] != UNPLACED).then_some(depth);
     let rechecked = ctx
         .referenced_by
         .get(&ctx.candidates[depth].code)
         .into_iter()
         .flatten()
         .filter(|&&i| i < depth)
-        .chain(std::iter::once(&depth));
+        .chain(own.iter());
     rechecked.into_iter().all(|&evaluated| {
         match &ctx.candidates[evaluated].tree {
             None => true,
@@ -840,6 +887,9 @@ fn finalize(chosen: &[usize], ctx: &SearchCtx) -> Option<Solution> {
         BTreeSet::new(),
         |mut assumed, (evaluated, candidate)| match &candidate.tree {
             None => Some(assumed),
+            // left out: its own tree no longer applies (see
+            // `precedence_admits`), and it contributes no assumption
+            Some(_) if chosen[evaluated] == UNPLACED => Some(assumed),
             // already proven Sat(∅) incrementally — see `needs_final_flags`
             Some(_) if !ctx.needs_final[evaluated] => Some(assumed),
             Some(tree) => {
@@ -862,13 +912,22 @@ fn finalize(chosen: &[usize], ctx: &SearchCtx) -> Option<Solution> {
             }
         },
     )?;
+    let (placed, left_out) = chosen
+        .iter()
+        .enumerate()
+        .partition::<Vec<(usize, &usize)>, _>(|&(_, &session)| {
+            session != UNPLACED
+        });
     Some(Solution {
-        placement: chosen
-            .iter()
-            .enumerate()
+        placement: placed
+            .into_iter()
             .map(|(i, &session)| (ctx.candidates[i].code.clone(), session))
             .collect(),
         assumed,
+        left_out: left_out
+            .into_iter()
+            .map(|(i, _)| ctx.candidates[i].code.clone())
+            .collect(),
     })
 }
 
@@ -920,6 +979,14 @@ fn course_leaf(code: &str, eval_ctx: &EvalCtx) -> Verdict {
     let Some(&placed) = eval_ctx.chosen.get(index) else {
         return Verdict::Unknown;
     };
+    // the sentinel is not a session: `placed < session` would read « left
+    // out » as « placed before » and hand this prerequisite to every
+    // dependent of a course nobody is taking. Leaving a course out
+    // cascades onto whatever required it — that cascade is the honesty of
+    // the relaxation, not a defect of it.
+    if placed == UNPLACED {
+        return Verdict::False;
+    }
     let session = eval_ctx.chosen[eval_ctx.evaluated];
     let self_code = &eval_ctx.ctx.candidates[eval_ctx.evaluated].code;
     // « strictly before », relaxed to « before or same » under the global
@@ -945,7 +1012,7 @@ fn credits_leaf(threshold: u32, eval_ctx: &EvalCtx) -> Verdict {
             .chosen
             .iter()
             .enumerate()
-            .filter(|&(_, &placed)| placed < session)
+            .filter(|&(_, &placed)| placed != UNPLACED && placed < session)
             .map(|(i, _)| eval_ctx.ctx.candidates[i].credits)
             .sum::<u32>();
     if before >= threshold {
@@ -1101,6 +1168,7 @@ mod tests {
         concomitant: bool,
         max_nodes: u64,
         max_solutions: usize,
+        allow_unplaced: bool,
     }
 
     impl Inputs {
@@ -1117,6 +1185,7 @@ mod tests {
                 concomitant: false,
                 max_nodes: 100_000,
                 max_solutions: 10_000,
+                allow_unplaced: false,
             }
         }
 
@@ -1133,6 +1202,7 @@ mod tests {
                 seed: &self.seed,
                 max_nodes: self.max_nodes,
                 max_solutions: self.max_solutions,
+                allow_unplaced: self.allow_unplaced,
             })
         }
 
@@ -1157,6 +1227,8 @@ mod tests {
                     seed: &self.seed,
                     max_nodes: self.max_nodes,
                     max_solutions: self.max_solutions,
+                    // the chip means « it fits », never « the rest is out »
+                    allow_unplaced: false,
                 },
                 code,
             )
@@ -1188,6 +1260,87 @@ mod tests {
             .iter()
             .map(|(code, session)| (code.to_string(), *session))
             .collect()
+    }
+
+    // --- « remplir au mieux » (ADR `2026-08-placement-au-mieux-en-repli`)
+
+    // Relaxed, the sentinel is a domain value of last resort: what fits is
+    // still placed under every constraint, what does not is named. Without
+    // it this same request answers nothing at all.
+    #[test]
+    fn a_relaxed_search_places_what_fits_and_names_the_rest() {
+        // B-2 requires a code nobody takes, C-3 requires B-2: leaving B-2
+        // out must cascade onto C-3 — a sentinel read as « placed before »
+        // would hand C-3 its prerequisite and seat it on nothing
+        let courses = vec![
+            anytime("A-1", "monday"),
+            with_prereq("B-2", "tuesday", &parsed(r#""Z-9""#)),
+            with_prereq("C-3", "wednesday", &parsed(r#""B-2""#)),
+        ];
+        let mut inputs = Inputs::new(&FALL_WINTER, courses);
+        inputs.max_solutions = 1;
+
+        // exact: the pre-screen names B-2 and the search never runs
+        let exact = inputs.solve();
+        assert!(exact.solutions.is_empty());
+        assert_eq!(exact.blocked[0].code, "B-2");
+        assert_eq!(
+            exact.blocked[0].reason,
+            BlockedReason::UnsatisfiablePrerequisites
+        );
+
+        inputs.allow_unplaced = true;
+        let relaxed = inputs.solve();
+        let solution = &relaxed.solutions[0];
+        assert_eq!(
+            solution.placement,
+            BTreeMap::from([("A-1".to_string(), 1)])
+        );
+        assert_eq!(
+            solution.left_out,
+            BTreeSet::from(["B-2".to_string(), "C-3".to_string()]),
+            "leaving a course out cascades onto what required it"
+        );
+        // the screen still reports, it just no longer short-circuits
+        assert_eq!(relaxed.blocked[0].code, "B-2");
+    }
+
+    // The sentinel is tried last at every depth: a request that has a
+    // complete arrangement finds it, relaxed or not.
+    #[test]
+    fn a_relaxed_search_still_prefers_placing_everything() {
+        let inputs = {
+            let mut inputs = Inputs::new(
+                &FALL_WINTER,
+                vec![anytime("A-1", "monday"), anytime("B-2", "tuesday")],
+            );
+            inputs.allow_unplaced = true;
+            inputs.max_solutions = 1;
+            inputs
+        };
+        let solution = &inputs.solve().solutions[0];
+        assert!(solution.left_out.is_empty(), "{:?}", solution.left_out);
+        assert_eq!(solution.placement.len(), 2);
+    }
+
+    // The capacity bound is unsound once the excess may be left out: it
+    // would prune the very branches the relaxation exists to reach.
+    #[test]
+    fn a_relaxed_search_leaves_out_what_the_cap_cannot_hold() {
+        let mut inputs = Inputs::new(
+            &[Season::Fall],
+            vec![
+                anytime("A-1", "monday"),
+                anytime("B-2", "tuesday"),
+                anytime("C-3", "wednesday"),
+            ],
+        );
+        inputs.credit_cap = 6;
+        inputs.allow_unplaced = true;
+        inputs.max_solutions = 1;
+        let solution = &inputs.solve().solutions[0];
+        assert_eq!(solution.placement.len(), 2, "the cap holds two");
+        assert_eq!(solution.left_out.len(), 1);
     }
 
     // --- validation: surfaced, never guessed ---
@@ -2611,6 +2764,7 @@ mod tests {
             solutions: vec![Solution {
                 placement: BTreeMap::from([("TST-1001".to_string(), 1)]),
                 assumed: BTreeSet::from(["FRN-1904".to_string()]),
+                left_out: BTreeSet::from(["TST-1002".to_string()]),
             }],
             blocked: vec![
                 Blocked {
@@ -2636,6 +2790,7 @@ mod tests {
                 "solutions": [{
                     "placement": {"TST-1001": 1},
                     "assumed": ["FRN-1904"],
+                    "left_out": ["TST-1002"],
                 }],
                 "blocked": [
                     {"code": "A-1", "reason": "empty-domain"},

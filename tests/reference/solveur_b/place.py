@@ -30,6 +30,15 @@ def main():
     failures = []
     for path in paths:
         fixture = load_json(path)
+        # The relaxed family (ADR `2026-08-placement-au-mieux-en-repli`) is
+        # out of this oracle's reach: it folds the complete frontier, and a
+        # « not placed » sentinel per course would multiply that space by
+        # (n + 1). Those fixtures are hand-written and guarded by the Rust
+        # integration test alone; the oracle keeps arbitrating the exact
+        # family, which is what it was committed for.
+        if fixture.get("allow_unplaced"):
+            print(f"{'skip':4} {path.stem} (relaxed: hand-written)")
+            continue
         fixture["expected"] = solve(fixture)
         content = dump_canonical(fixture)
         if mode == "fill":

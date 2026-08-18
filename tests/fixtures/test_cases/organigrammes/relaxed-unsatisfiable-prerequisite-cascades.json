@@ -1,0 +1,174 @@
+{
+  "sessions": [
+    "fall",
+    "winter"
+  ],
+  "credit_cap": 6,
+  "allow_unplaced": true,
+  "courses": [
+    {
+      "code": "TST-3200",
+      "title": "Cours de test 3200",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "93200",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "93200",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-3201",
+      "title": "Cours de test 3201",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TST-9999",
+        "tree": "TST-9999"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "93201",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "93201",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-3202",
+      "title": "Cours de test 3202",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TST-3201",
+        "tree": "TST-3201"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "93202",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "93202",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "complete": false,
+    "solutions": [
+      {
+        "TST-3200": 1
+      }
+    ],
+    "left_out": [
+      [
+        "TST-3201",
+        "TST-3202"
+      ]
+    ]
+  }
+}

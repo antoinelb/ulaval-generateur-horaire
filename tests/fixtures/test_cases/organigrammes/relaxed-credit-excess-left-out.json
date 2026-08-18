@@ -1,0 +1,110 @@
+{
+  "sessions": [
+    "fall"
+  ],
+  "credit_cap": 6,
+  "allow_unplaced": true,
+  "courses": [
+    {
+      "code": "TST-3300",
+      "title": "Cours de test 3300",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "93300",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-3301",
+      "title": "Cours de test 3301",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "93301",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-3302",
+      "title": "Cours de test 3302",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "93302",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "complete": false,
+    "solutions": [
+      {
+        "TST-3300": 1,
+        "TST-3301": 1
+      }
+    ],
+    "left_out": [
+      [
+        "TST-3302"
+      ]
+    ]
+  }
+}

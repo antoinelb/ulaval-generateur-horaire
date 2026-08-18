@@ -38,6 +38,13 @@ const FIXTURES: &[&str] = &[
     "unsatisfiable-prerequisite-proves-infeasible",
     "weekly-veto-splits-conflicting-courses",
     "winter-start-inverts-projects",
+    // the relaxed family (ADR `2026-08-placement-au-mieux-en-repli`) —
+    // hand-written: the Python reference enumerates the whole frontier and
+    // a sentinel per course would multiply its space by (n+1)
+    "relaxed-empty-domain-left-out-rest-placed",
+    "relaxed-unsatisfiable-prerequisite-cascades",
+    "relaxed-credit-excess-left-out",
+    "relaxed-nothing-placeable-leaves-everything-out",
 ];
 
 #[derive(serde::Deserialize)]
@@ -54,6 +61,8 @@ struct Fixture {
     stages: BTreeSet<String>,
     #[serde(default)]
     open_summers: BTreeSet<usize>,
+    #[serde(default)]
+    allow_unplaced: bool,
     courses: Vec<Course>,
     expected: Expected,
 }
@@ -62,6 +71,10 @@ struct Fixture {
 struct Expected {
     complete: bool,
     solutions: Vec<BTreeMap<String, usize>>,
+    // one entry per solution, same order — absent means « every solution
+    // places everything », which is the whole exact family
+    #[serde(default)]
+    left_out: Vec<BTreeSet<String>>,
 }
 
 #[test]
@@ -84,7 +97,12 @@ fn reproduces_every_frozen_solution_set() {
             open_summers: &fixture.open_summers,
             seed: &BTreeMap::new(),
             max_nodes: 10_000_000,
-            max_solutions: 100_000,
+            // relaxed, only the first leaf is interesting: the sentinel is
+            // tried last at every depth, so the first one found is the
+            // greedy filling and every later one is strictly worse. That
+            // is also exactly how `wasm::organigramme` calls it.
+            max_solutions: if fixture.allow_unplaced { 1 } else { 100_000 },
+            allow_unplaced: fixture.allow_unplaced,
         })
         .unwrap_or_else(|e| panic!("place {name}: {e}"));
 
@@ -102,15 +120,26 @@ fn reproduces_every_frozen_solution_set() {
                 solution.assumed
             );
         }
-        let mut got: Vec<BTreeMap<String, usize>> = placement
-            .solutions
-            .into_iter()
-            .map(|solution| solution.placement)
-            .collect();
+        let mut got: Vec<(BTreeMap<String, usize>, BTreeSet<String>)> =
+            placement
+                .solutions
+                .into_iter()
+                .map(|solution| (solution.placement, solution.left_out))
+                .collect();
         got.sort();
-        assert_eq!(
-            got, fixture.expected.solutions,
-            "solution set differs on {name}"
-        );
+        let expected_left_out = if fixture.expected.left_out.is_empty() {
+            vec![BTreeSet::new(); fixture.expected.solutions.len()]
+        } else {
+            fixture.expected.left_out.clone()
+        };
+        let mut want: Vec<(BTreeMap<String, usize>, BTreeSet<String>)> =
+            fixture
+                .expected
+                .solutions
+                .into_iter()
+                .zip(expected_left_out)
+                .collect();
+        want.sort();
+        assert_eq!(got, want, "solution set differs on {name}");
     }
 }

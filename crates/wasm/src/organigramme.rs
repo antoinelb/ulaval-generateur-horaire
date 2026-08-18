@@ -99,13 +99,40 @@ pub fn generate(
 ) -> Result<OrganigrammeReport, String> {
     let intake = intake(input, courses)?;
     let sessions = horizon_sessions(input.start, input.study_sessions);
-    let placement = solve(input, &intake, &sessions)?;
+    let placement = with_request(input, &intake, &sessions, place_filling)?;
     Ok(OrganigrammeReport {
         sessions,
         placement,
         set_aside: intake.set_aside,
         injected: intake.injected,
         coverage: None,
+    })
+}
+
+// « Proposer » wants a grid, not a verdict. The exact arrangement first —
+// unchanged, and it answers whenever it can. Only when it yields nothing
+// (blocked candidate, proven infeasible, budget spent) does the best-effort
+// pass run: every course it does place still honours every constraint, and
+// what does not fit is left out and named rather than seated in violation
+// (ADR `2026-08-placement-au-mieux-en-repli`).
+//
+// The second pass is cheap whatever the first cost: the sentinel is
+// available at every depth, so the first leaf is reached in about one
+// expansion per course. It keeps its own `completion` — inheriting the
+// exact pass's would answer a question nobody asked of it.
+fn place_filling(
+    request: &PlacementRequest,
+) -> Result<Placement, PlacementError> {
+    let exact = place(request)?;
+    if !exact.solutions.is_empty() {
+        return Ok(exact);
+    }
+    place(&PlacementRequest {
+        allow_unplaced: true,
+        // the sentinel is tried last, so the first leaf is the greedy
+        // filling and every later one is strictly worse
+        max_solutions: 1,
+        ..*request
     })
 }
 
@@ -223,6 +250,9 @@ fn with_request<T>(
         BTreeSet::new()
     };
     ask(&PlacementRequest {
+        // proving stays proving: only `generate` relaxes, and it says so
+        // by passing `place_filling` as its `ask`
+        allow_unplaced: false,
         sessions,
         credit_cap: input.credit_cap,
         concomitant: input.concomitant,
@@ -291,6 +321,55 @@ mod tests {
         ))
         .unwrap_or_else(|e| panic!("input literal: {e}"));
         assert_eq!(carried.courses.map(|courses| courses.len()), Some(3));
+    }
+
+    // The 2026-08-14 user report: a course nothing can seat used to freeze
+    // the whole proposal, grid untouched and no message. Now the exact pass
+    // still answers nothing and the best-effort pass fills what it can.
+    #[test]
+    fn generation_falls_back_to_a_best_effort_filling() {
+        // GEX-1002 is summer-only and the étés stay closed: no session of
+        // the horizon can host it, so the exact pass proves nothing exists
+        let query =
+            input(&format!(r#""program":{PROGRAM},"electives":["GEX-1002"]"#));
+        let exact = with_request(
+            &query,
+            &intake(&query, &courses()).unwrap_or_else(|e| panic!("{e}")),
+            &horizon_sessions(query.start, query.study_sessions),
+            place,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert!(exact.solutions.is_empty(), "the exact pass finds nothing");
+
+        let report =
+            generate(&query, &courses()).unwrap_or_else(|e| panic!("{e}"));
+        let solution = report
+            .placement
+            .solutions
+            .first()
+            .unwrap_or_else(|| panic!("the fallback answers"));
+        // the two placeable courses land, honouring precedence
+        assert_eq!(solution.placement["GEX-1000"], 1);
+        assert_eq!(solution.placement["GEX-1001"], 2);
+        // the third is left out and named, never seated in violation
+        assert_eq!(
+            solution.left_out,
+            BTreeSet::from(["GEX-1002".to_string()])
+        );
+        // the culprit keeps its reason for the UI to word
+        assert_eq!(report.placement.blocked[0].code, "GEX-1002");
+    }
+
+    // The nominal case must not move an inch: the fallback only ever runs
+    // after an exact pass that answered nothing.
+    #[test]
+    fn a_solvable_program_never_reaches_the_fallback() {
+        let report =
+            generate(&input(&format!(r#""program":{PROGRAM}"#)), &courses())
+                .unwrap_or_else(|e| panic!("{e}"));
+        for solution in &report.placement.solutions {
+            assert!(solution.left_out.is_empty(), "{:?}", solution.left_out);
+        }
     }
 
     #[test]
