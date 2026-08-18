@@ -11,7 +11,7 @@ Vérification faite : les deux fichiers B-GEX diffèrent réellement (`mandatory
 ## Décisions
 
 - Le champ `semester` de `data/programmes/B-GEX-A24.json` est corrigé à `A24` : deux vrais millésimes, deux entrées du sélecteur.
-- Le sélecteur de programme liste chaque `(code, millésime)` — « B-GEX - version A24 - 120 cr » — trié par code puis millésime (tri ajouté dans `parse_data`) ; toute correspondance dans l'app se fait sur le couple `(code, semester)` (l'en-tête cherchait par code seul).
+- ~~Le sélecteur de programme liste chaque `(code, millésime)` — « B-GEX - version A24 - 120 cr » — trié par code puis millésime (tri ajouté dans `parse_data`)~~ **supersédé par `2026-08-selecteur-de-programme-regroupe-par-code` : une rangée par code, le millésime dans un select.** Le tri de `parse_data` et le reste tiennent : toute correspondance dans l'app se fait sur le couple `(code, semester)` (l'en-tête cherchait par code seul).
 - Le dédoublonnage **reste**, restreint à son vrai cas : deux fichiers portant le même `(code, semester)` interne — là, le fichier dont le nom concorde gagne et l'ignoré est nommé.
 
 ## Alternative rejetée

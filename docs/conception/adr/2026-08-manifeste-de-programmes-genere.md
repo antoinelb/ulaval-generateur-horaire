@@ -32,6 +32,8 @@ Trois précisions :
 
 Conséquence assumée : le sélecteur passe de 8 à 24 entrées. C'est le comportement que `parse_data` annonçait déjà — « several vintages of one program are all offered — the picker lists them ». 228 Ko au total, mis en cache par le service worker.
 
+> **Suite** : ces 24 entrées se sont révélées illisibles (dix rangées au même titre). `2026-08-selecteur-de-programme-regroupe-par-code` les regroupe en 8 rangées, une par code, le millésime passant dans un select. Les 24 snapshots restent tous chargés et tous choisissables : c'est la présentation qui change, pas ce que ce manifeste sert.
+
 ## Alternatives rejetées
 
 - **Un blob fusionné** (`make ui-data` concatène les snapshots en un seul `programmes.json` via `jq`) : une seule requête au lieu de 24, mais il faut re-sérialiser chaque entrée pour préserver `RawData.programs`, ou toucher `parse_data` et ses tests. Diff plus large pour un gain de latence négligeable sur 228 Ko.

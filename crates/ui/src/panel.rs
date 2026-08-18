@@ -442,6 +442,66 @@ pub fn selection(plan: &Plan) -> BTreeSet<String> {
         .collect()
 }
 
+// One picker row per program code: several vintages of one program are not
+// several programs (note d'Antoine 2026-08-17) — B-GMC alone ships ten, all
+// titled « Baccalauréat en génie mécanique ». The row carries the vintages
+// so the view can offer them in a select instead of repeating the title.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProgramVintages {
+    pub code: String,
+    // the newest vintage's: two vintages may diverge, and the row announces
+    // the one its select preselects
+    pub title: String,
+    pub credits_required: i64,
+    // « A26 », « H26 », … newest first; the first one is the preselection
+    pub vintages: Vec<String>,
+}
+
+// Codes in the snapshot's order (already sorted by `parse_data`), vintages
+// newest first. Each group carries the newest program it has seen so far,
+// so no step of this ever has an empty list to explain away. The scan is
+// quadratic over a couple of dozen entries — the grouping stays a plain
+// scan rather than a map, which would lose that order.
+pub fn program_vintages(snapshot: &Snapshot) -> Vec<ProgramVintages> {
+    // (the newest vintage of the code, every vintage of it)
+    let mut groups: Vec<(&Program, Vec<&Program>)> = Vec::new();
+    for program in &snapshot.programs {
+        match groups.iter_mut().find(|(newest, _)| newest.code == program.code)
+        {
+            None => groups.push((program, vec![program])),
+            Some((newest, group)) => {
+                // `parse_data` sorts on the « A26 » spelling, which puts
+                // every automne before every hiver: a file that comes later
+                // can still be the newer vintage
+                if state::semester_rank(program.semester)
+                    > state::semester_rank(newest.semester)
+                {
+                    *newest = program;
+                }
+                group.push(program);
+            }
+        }
+    }
+    groups
+        .into_iter()
+        .map(|(newest, mut group)| {
+            // by rank for the same reason, never by the spelling
+            group.sort_by_key(|program| {
+                std::cmp::Reverse(state::semester_rank(program.semester))
+            });
+            ProgramVintages {
+                code: newest.code.clone(),
+                title: newest.title.clone(),
+                credits_required: newest.credits_required,
+                vintages: group
+                    .iter()
+                    .map(|program| program.semester.to_string())
+                    .collect(),
+            }
+        })
+        .collect()
+}
+
 pub fn chosen_program<'a>(
     snapshot: &'a Snapshot,
     plan: &Plan,
@@ -2044,5 +2104,89 @@ mod tests {
         assert!(subjects.contains(&("ANL".to_string(), 1)));
         assert_eq!(subject_of("SANS-TIRET"), "SANS");
         assert_eq!(subject_of("BRUT"), "BRUT");
+    }
+
+    // a program snapshot reduced to what a picker row shows
+    fn bare_program(
+        code: &str,
+        semester: &str,
+        title: &str,
+        credits: i64,
+    ) -> (String, String) {
+        (
+            format!("{code}-{semester}.json"),
+            format!(
+                r#"{{"code":"{code}","slug":"x","semester":"{semester}",
+                    "title":"{title}","cycle":1,
+                    "credits_required":{credits},"mandatory":[],
+                    "rules":[],"concentrations":[],"profiles":[]}}"#
+            ),
+        )
+    }
+
+    fn snapshot_of(programs: Vec<(String, String)>) -> Snapshot {
+        parse_data(
+            &RawData {
+                courses: COURSES.to_string(),
+                meta: None,
+                manual: None,
+                programs,
+            },
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    #[test]
+    fn a_catalogue_without_a_program_offers_no_picker_row() {
+        assert!(program_vintages(&snapshot_of(Vec::new())).is_empty());
+    }
+
+    #[test]
+    fn one_vintage_is_one_row_carrying_it_alone() {
+        let rows = program_vintages(&snapshot());
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].code, "B-GEX");
+        assert_eq!(rows[0].title, "Baccalauréat en génie des eaux");
+        assert_eq!(rows[0].credits_required, 120);
+        assert_eq!(rows[0].vintages, vec!["A26".to_string()]);
+    }
+
+    // the whole point: ten B-GMC files are one row, and the select they
+    // feed runs newest first — « A26, H26, A25 », never the « A25, A26,
+    // H26 » the spelling would give
+    #[test]
+    fn vintages_of_one_code_group_into_one_row_newest_first() {
+        let rows = program_vintages(&snapshot_of(vec![
+            bare_program("B-GMC", "A25", "Génie mécanique", 120),
+            bare_program("B-GMC", "H26", "Génie mécanique", 120),
+            bare_program("B-GMC", "A26", "Génie mécanique", 120),
+        ]));
+        assert_eq!(rows.len(), 1, "one row, not three");
+        assert_eq!(rows[0].vintages, vec!["A26", "H26", "A25"]);
+    }
+
+    // a divergence between vintages is announced by the one preselected
+    #[test]
+    fn the_row_announces_the_newest_vintages_title_and_credits() {
+        let rows = program_vintages(&snapshot_of(vec![
+            bare_program("B-GIN", "A24", "Ancien titre", 117),
+            bare_program("B-GIN", "H27", "Titre courant", 120),
+        ]));
+        assert_eq!(rows[0].title, "Titre courant");
+        assert_eq!(rows[0].credits_required, 120);
+        assert_eq!(rows[0].vintages, vec!["H27", "A24"]);
+    }
+
+    #[test]
+    fn several_codes_keep_the_snapshots_order() {
+        let rows = program_vintages(&snapshot_of(vec![
+            bare_program("M-GEX", "A26", "Maîtrise", 45),
+            bare_program("B-ANT", "A26", "Anthropologie", 90),
+            bare_program("B-GMC", "H27", "Génie mécanique", 120),
+        ]));
+        let codes: Vec<&str> =
+            rows.iter().map(|row| row.code.as_str()).collect();
+        assert_eq!(codes, vec!["B-ANT", "B-GMC", "M-GEX"]);
     }
 }

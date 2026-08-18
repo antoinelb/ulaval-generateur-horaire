@@ -203,17 +203,21 @@ pub fn semester_of_epoch_ms(epoch_ms: u64) -> Semester {
     }
 }
 
-// strictly before, in real time — hiver, été, automne within a civil year
-pub fn semester_precedes(before: Semester, after: Semester) -> bool {
-    let rank = |semester: Semester| {
-        let season = match semester.season {
-            Season::Winter => 0u8,
-            Season::Summer => 1,
-            Season::Fall => 2,
-        };
-        (semester.year, season)
+// Where a semester falls in real time — hiver, été, automne within a civil
+// year. Ordering by this beats ordering by the « A26 » spelling, which sorts
+// every automne before every hiver.
+pub fn semester_rank(semester: Semester) -> (u16, u8) {
+    let season = match semester.season {
+        Season::Winter => 0u8,
+        Season::Summer => 1,
+        Season::Fall => 2,
     };
-    rank(before) < rank(after)
+    (semester.year, season)
+}
+
+// strictly before, in real time
+pub fn semester_precedes(before: Semester, after: Semester) -> bool {
+    semester_rank(before) < semester_rank(after)
 }
 
 // --- what one session holds ----------------------------------------------

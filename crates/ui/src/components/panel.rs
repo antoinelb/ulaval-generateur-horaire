@@ -54,6 +54,12 @@ fn ProgramPicker() -> Element {
     let plan = use_context::<Signal<Plan>>();
     let history = use_context::<Signal<History>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
+    // the vintage a select is on but no click has confirmed, by code — a
+    // setting with no effect yet is nothing to undo, so it stays out of the
+    // plan and its history. Absent = the select still shows its first
+    // option, the newest vintage.
+    let mut pending =
+        use_signal(std::collections::HashMap::<String, String>::new);
     let read = snapshot.read();
     let Some(snapshot) = read.as_ref() else {
         return rsx! {};
@@ -63,35 +69,66 @@ fn ProgramPicker() -> Element {
             p { class: "panel-picker-lead",
                 "Choisissez un programme pour voir ses règles :"
             }
-            for program in snapshot.programs.iter() {
-                button {
-                    class: "panel-picker-item",
-                    key: "{program.code}-{program.semester}",
-                    onclick: {
-                        let code = program.code.clone();
-                        let semester = program.semester.to_string();
-                        move |_| {
-                            let code = code.clone();
-                            let semester = semester.clone();
-                            edit_plan(
-                                plan,
-                                history,
-                                &format!("Programme {code} choisi"),
-                                |plan| {
-                                    plan.program = Some(ProgramChoice {
-                                        code,
-                                        semester,
-                                        concentration: None,
-                                        profile: None,
-                                    });
-                                },
-                            );
+            for row in panel::program_vintages(snapshot) {
+                div { class: "panel-picker-item", key: "{row.code}",
+                    div { class: "panel-picker-title", "{row.title}" }
+                    div { class: "panel-picker-row",
+                        span { class: "panel-picker-sub",
+                            "{row.code} - {row.credits_required} cr"
                         }
-                    },
-                    div { class: "panel-picker-title", "{program.title}" }
-                    div { class: "panel-picker-sub",
-                        "{program.code} - version {program.semester} - "
-                        "{program.credits_required} cr"
+                        select {
+                            class: "panel-picker-vintage",
+                            aria_label: "Version de {row.code}",
+                            onchange: {
+                                let code = row.code.clone();
+                                move |event: Event<FormData>| {
+                                    pending
+                                        .write()
+                                        .insert(code.clone(), event.value());
+                                }
+                            },
+                            for vintage in row.vintages.iter() {
+                                option { value: "{vintage}", "{vintage}" }
+                            }
+                        }
+                        button {
+                            class: "panel-picker-choose",
+                            // seven buttons all reading « Choisir » say
+                            // nothing to a screen reader or a tab-through
+                            aria_label: "Choisir {row.code}",
+                            onclick: {
+                                let code = row.code.clone();
+                                let newest = row.vintages.first().cloned();
+                                move |_| {
+                                    let code = code.clone();
+                                    // nothing touched the select yet: the
+                                    // browser shows the first option, so
+                                    // that is what the click means
+                                    let Some(semester) = pending
+                                        .read()
+                                        .get(&code)
+                                        .cloned()
+                                        .or_else(|| newest.clone())
+                                    else {
+                                        return;
+                                    };
+                                    edit_plan(
+                                        plan,
+                                        history,
+                                        &format!("Programme {code} choisi"),
+                                        |plan| {
+                                            plan.program = Some(ProgramChoice {
+                                                code,
+                                                semester,
+                                                concentration: None,
+                                                profile: None,
+                                            });
+                                        },
+                                    );
+                                }
+                            },
+                            "Choisir"
+                        }
                     }
                 }
             }
