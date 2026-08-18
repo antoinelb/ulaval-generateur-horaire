@@ -257,6 +257,12 @@ pub fn validate_new_code(
              « déjà faite » — décochez la case pour le placer."
         ));
     }
+    if plan.credited.contains(&code) {
+        return Err(format!(
+            "{code} est crédité par entente — retirez le crédit pour le \
+             placer."
+        ));
+    }
     if state::session_codes(plan, session).contains(&code) {
         return Err(format!("{code} est déjà dans cette session."));
     }
@@ -867,6 +873,27 @@ pub fn preparatory_codes(
         .unwrap_or_default()
 }
 
+// Everything the student holds without occupying a session: the
+// « préparatoire faite » 0xxx and the courses an agreement credited him.
+// Both ride as `PlaceQuery.passed`, which is what keeps them out of the
+// placement while their credits and prerequisites still count.
+pub fn passed_codes(
+    plan: &Plan,
+    program: Option<&ulaval_scheduler_core::Program>,
+) -> Vec<String> {
+    let mut codes: Vec<String> = if plan.preparatory_done {
+        program.map(preparatory_codes).unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    for code in &plan.credited {
+        if !codes.contains(code) {
+            codes.push(code.clone());
+        }
+    }
+    codes
+}
+
 // The préparatoire codes « acquis d'office » by the checked box — unless
 // an entente moved one into another rule (the granted program strips it
 // from the préparatoire list, so `rule_grants` mirrors that here).
@@ -887,18 +914,16 @@ pub fn acquired_preparatory(
         .unwrap_or_default()
 }
 
-// The préparatoire codes that still occupy placement state while the box
-// says « déjà faite » — what the healing effect purges, so the grid never
-// draws a course every solver request silently drops. Takes the effective
-// (granted) program, like every request builder.
-pub fn preparatory_leftovers(
+// The acquired codes that still occupy placement state — préparatoire
+// under a checked box, or credited by an agreement. That is what the
+// healing effect purges, so the grid never draws a course every solver
+// request silently drops. Takes the effective (granted) program, like
+// every request builder.
+pub fn acquired_leftovers(
     plan: &Plan,
     program: &ulaval_scheduler_core::Program,
 ) -> Vec<String> {
-    if !plan.preparatory_done {
-        return Vec::new();
-    }
-    preparatory_codes(program)
+    passed_codes(plan, Some(program))
         .into_iter()
         .filter(|code| {
             plan.displayed_placement.contains_key(code)
@@ -908,6 +933,29 @@ pub fn preparatory_leftovers(
                 || plan.chosen.values().any(|pins| pins.contains_key(code))
         })
         .collect()
+}
+
+// « MAT-0130 retiré des sessions : … » — plural and way out follow the
+// family that acquired the course
+pub fn purge_note(codes: &[String], credited: bool) -> String {
+    let (mark, them) = if codes.len() > 1 {
+        ("s", "les")
+    } else {
+        ("", "le")
+    };
+    let list = codes.join(", ");
+    if credited {
+        format!(
+            "{list} retiré{mark} des sessions : crédité{mark} par entente. \
+             Retirez le crédit pour {them} replacer."
+        )
+    } else {
+        format!(
+            "{list} retiré{mark} des sessions : la scolarité préparatoire \
+             est marquée « déjà faite ». Décochez la case pour {them} \
+             replacer."
+        )
+    }
 }
 
 // Verification is only worth asking once every requested course has a
@@ -929,11 +977,7 @@ pub fn unplaced_codes(
             electives.push(code.clone());
         }
     }
-    let passed: Vec<String> = if plan.preparatory_done {
-        program.map(preparatory_codes).unwrap_or_default()
-    } else {
-        Vec::new()
-    };
+    let passed = passed_codes(plan, program);
     let intake = ulaval_scheduler_core::placement_intake(
         program,
         &electives,
@@ -988,12 +1032,7 @@ fn request_json(
             electives.push(code.clone());
         }
     }
-    // « préparatoire faite » : those 0xxx codes are acquired by hypothesis
-    let passed: Vec<String> = if plan.preparatory_done {
-        program.map(preparatory_codes).unwrap_or_default()
-    } else {
-        Vec::new()
-    };
+    let passed = passed_codes(plan, program);
     // a passed course can be neither pinned nor an elective to place
     pinned.retain(|code, _| !passed.contains(code));
     electives.retain(|code| !passed.contains(code));
@@ -1395,7 +1434,7 @@ mod worker_tests {
     }
 
     #[test]
-    fn preparatory_leftovers_find_the_code_in_every_placement_structure() {
+    fn acquired_leftovers_find_the_code_in_every_placement_structure() {
         let program: ulaval_scheduler_core::Program = serde_json::from_str(
             r#"{"code":"B-GEX","slug":"gex","semester":"A26","title":"P",
                 "cycle":1,"credits_required":6,"mandatory":[],
@@ -1406,7 +1445,7 @@ mod worker_tests {
         )
         .unwrap_or_else(|e| panic!("{e}"));
         let mut plan = Plan::default();
-        assert!(preparatory_leftovers(&plan, &program).is_empty());
+        assert!(acquired_leftovers(&plan, &program).is_empty());
         plan.displayed_placement.insert("MAT-0130".to_string(), 1);
         plan.pinned_sessions.insert("PHY-0110".to_string(), 2);
         plan.electives.push("CHM-0100".to_string());
@@ -1416,12 +1455,15 @@ mod worker_tests {
             BTreeMap::from([("MAT-0110".to_string(), BTreeSet::new())]),
         );
         assert_eq!(
-            preparatory_leftovers(&plan, &program),
+            acquired_leftovers(&plan, &program),
             ["MAT-0130", "PHY-0110", "CHM-0100", "BIO-0150", "MAT-0110"]
         );
         // unchecked: the same occupations are legitimate work
         plan.preparatory_done = false;
-        assert!(preparatory_leftovers(&plan, &program).is_empty());
+        assert!(acquired_leftovers(&plan, &program).is_empty());
+        // a credited course is acquired the same way, box or no box
+        plan.credited.insert("CHM-0100".to_string());
+        assert_eq!(acquired_leftovers(&plan, &program), ["CHM-0100"]);
     }
 
     #[test]
@@ -1439,6 +1481,54 @@ mod worker_tests {
         let accepted = validate_new_code(&snapshot, &plan, 1, "gex-1000")
             .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(accepted.code, "GEX-1000");
+        // credited by an agreement: refused too, with its own way out
+        plan.credited.insert("GEX-1000".to_string());
+        let error = validate_new_code(&snapshot, &plan, 1, "gex-1000")
+            .expect_err("credited holds no session");
+        assert!(error.contains("retirez le crédit"), "{error}");
+    }
+
+    #[test]
+    fn passed_codes_gather_both_families_and_the_purge_note_names_the_way_out()
+    {
+        let snapshot = snapshot_with_preparatory();
+        let program = crate::panel::chosen_program(
+            &snapshot,
+            &Plan {
+                program: Some(gex_choice()),
+                ..Plan::default()
+            },
+        )
+        .cloned()
+        .unwrap_or_else(|| panic!("the GEX snapshot carries its program"));
+        let mut plan = Plan::default();
+        // the box is checked by default, so the préparatoire rides alone
+        assert_eq!(passed_codes(&plan, Some(&program)), ["GEX-1000"]);
+        // a credited course joins it, and the already-passed one is not
+        // repeated when an entente credits it too
+        plan.credited.insert("GEX-1000".to_string());
+        plan.credited.insert("GEX-2000".to_string());
+        assert_eq!(
+            passed_codes(&plan, Some(&program)),
+            ["GEX-1000", "GEX-2000"]
+        );
+        plan.preparatory_done = false;
+        assert_eq!(
+            passed_codes(&plan, Some(&program)),
+            ["GEX-1000", "GEX-2000"]
+        );
+        assert_eq!(passed_codes(&Plan::default(), None), Vec::<String>::new());
+        // the note names the control that undoes the purge, in both
+        // families and both numbers
+        let one = ["GEX-1000".to_string()];
+        let two = ["GEX-1000".to_string(), "GEX-2000".to_string()];
+        assert!(purge_note(&one, true).contains("crédité par entente"));
+        assert!(purge_note(&one, true).contains("pour le replacer"));
+        assert!(purge_note(&two, true).contains("crédités par entente"));
+        assert!(purge_note(&two, true).contains("pour les replacer"));
+        assert!(purge_note(&one, false).contains("Décochez la case"));
+        assert!(purge_note(&one, false).contains("retiré des sessions"));
+        assert!(purge_note(&two, false).contains("retirés des sessions"));
     }
 
     #[test]

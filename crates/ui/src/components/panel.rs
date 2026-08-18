@@ -914,6 +914,7 @@ fn RowView(row: Row) -> Element {
             // would resurrect it as ordinary work while the box says done
             if !matches!(row.state, RowState::Unknown | RowState::Acquired) {
                 RuleAttach { code: row.code.clone() }
+                CreditedToggle { code: row.code.clone() }
             }
             if addable {
                 button {
@@ -1017,6 +1018,55 @@ fn RowView(row: Row) -> Element {
                     "✕"
                 }
             }
+        }
+    }
+}
+
+// The « crédité » toggle (note d'Antoine 2026-08-17) : an agreement can
+// credit a course outright — it counts in the credits, in the coverage and
+// as a prerequisite, and takes no session. Marking one purges it from the
+// placement in the *same* undoable act, so « Annuler » gives both back.
+// It stacks with the entente select: crediting says the course is held,
+// the select says which rule it counts toward.
+#[component]
+fn CreditedToggle(code: String) -> Element {
+    let plan = use_context::<Signal<Plan>>();
+    let history = use_context::<Signal<History>>();
+    let credited = plan.read().credited.contains(&code);
+    let title = if credited {
+        format!("Retirer le crédit de {code}")
+    } else {
+        format!("Créditer {code} : compté sans occuper de session")
+    };
+    rsx! {
+        button {
+            class: "panel-credited",
+            class: if credited { "panel-credited--on" },
+            aria_pressed: "{credited}",
+            title: "{title}",
+            onclick: {
+                let code = code.clone();
+                move |_| {
+                    let code = code.clone();
+                    let label = if credited {
+                        format!("Crédit retiré pour {code}")
+                    } else {
+                        format!("{code} crédité (entente)")
+                    };
+                    edit_plan(plan, history, &label, |plan| {
+                        if credited {
+                            plan.credited.remove(&code);
+                        } else {
+                            crate::state::purge_codes(
+                                plan,
+                                std::slice::from_ref(&code),
+                            );
+                            plan.credited.insert(code);
+                        }
+                    });
+                }
+            },
+            if credited { "crédité ✓" } else { "créditer" }
         }
     }
 }

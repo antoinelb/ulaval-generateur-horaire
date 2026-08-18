@@ -473,7 +473,7 @@ pub fn App() -> Element {
         history,
         manual,
     );
-    heal_preparatory(plan, snapshot, alerts);
+    heal_acquired(plan, snapshot, alerts);
     auto_verify(plan, snapshot, solver_state, handle.clone());
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
@@ -626,25 +626,20 @@ fn import_organigramme(
     }
 }
 
-// Note 6 (2026-08-13): verification is not a button — it re-runs by
-// itself, debounced, whenever the plan settles with a program chosen and
-// every requested course placed. The generation counter keeps a burst of
-// edits down to one query; the guards make the effect converge (a fired
-// query sets `running`, its answer sets `verification`, both stop it).
-// The checked « scolarité préparatoire » box is an invariant, not a
-// request filter: no préparatoire code may occupy a session. Whatever
-// slipped one in (an old save, a shared link, an act done while the box
-// was unchecked) is purged here — loudly, never silently. A direct write,
+// An acquired course is an invariant, not a request filter: no code the
+// checked « scolarité préparatoire » box or an entente credits may occupy
+// a session. Whatever slipped one in (an old save, a shared link, an act
+// done before the mark) is purged here — loudly, never silently. A write,
 // not `edit_plan`: a derived correction is no student act; undoing the
 // checkbox itself restores the pre-toggle plan whole, placements included.
-fn heal_preparatory(
+fn heal_acquired(
     plan: Signal<Plan>,
     snapshot: Signal<Option<Snapshot>>,
     alerts: Signal<Vec<Alert>>,
 ) {
     use_effect(move || {
         // materialize before any write: the read borrows must die first
-        let leftovers = {
+        let (credited, preparatory) = {
             let read = snapshot.read();
             let Some(snapshot_ref) = read.as_ref() else {
                 return;
@@ -655,34 +650,35 @@ fn heal_preparatory(
             else {
                 return;
             };
-            crate::solve::preparatory_leftovers(&plan_read, &program)
+            crate::solve::acquired_leftovers(&plan_read, &program)
+                .into_iter()
+                .partition::<Vec<String>, _>(|code| {
+                    plan_read.credited.contains(code)
+                })
         };
+        let leftovers = [&credited[..], &preparatory[..]].concat();
         if leftovers.is_empty() {
             return;
         }
         let mut plan = plan;
         crate::state::purge_codes(&mut plan.write(), &leftovers);
-        let note = if leftovers.len() == 1 {
-            format!(
-                "{} retiré des sessions : la scolarité préparatoire est \
-                 marquée « déjà faite ». Décochez la case pour le replacer.",
-                leftovers[0]
-            )
-        } else {
-            format!(
-                "{} retirés des sessions : la scolarité préparatoire est \
-                 marquée « déjà faite ». Décochez la case pour les replacer.",
-                leftovers.join(", ")
-            )
-        };
-        push_alert(alerts, AlertBody::Note(note));
+        // one note per family: the way out named is the control that
+        // actually undoes it
+        for (codes, credited) in [(&credited, true), (&preparatory, false)] {
+            if !codes.is_empty() {
+                push_alert(
+                    alerts,
+                    AlertBody::Note(crate::solve::purge_note(codes, credited)),
+                );
+            }
+        }
     });
 }
 
 // The corrections in force follow the plan — the student's admission
 // vintage and his own edits — so the catalogue is rewritten here and not at
 // parse time, when no program is picked yet. Same shape as
-// `heal_preparatory`: derived state, a direct write (no student act to
+// `heal_acquired`: derived state, a direct write (no student act to
 // undo), and a guard that makes it converge — once applied, `applied`
 // matches and the next run returns.
 fn apply_corrections(
@@ -736,6 +732,11 @@ fn apply_corrections(
     });
 }
 
+// Note 6 (2026-08-13): verification is not a button — it re-runs by
+// itself, debounced, whenever the plan settles with a program chosen and
+// every requested course placed. The generation counter keeps a burst of
+// edits down to one query; the guards make the effect converge (a fired
+// query sets `running`, its answer sets `verification`, both stop it).
 fn auto_verify(
     plan: Signal<Plan>,
     snapshot: Signal<Option<Snapshot>>,

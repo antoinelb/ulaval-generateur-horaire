@@ -19,6 +19,9 @@ Pipeline stateless (aucun serveur — `docs/conception/shareable_link.md`) :
 Elle **imbrique** `ShareV1` entière plutôt que d'en recopier les dix-huit champs — c'est ce qui garde les deux formats prouvablement identiques à l'ajout près — et lui ajoute `prereq_overrides: Vec<(String, String, Option<String>)>`.
 L'octet de version passe à 2 ; V1 est encore **décodée** (tout lien déjà partagé s'ouvre entier) mais seule V2 est **écrite** : un lien qui perdrait les corrections de préalables montrerait au destinataire un autre verdict que celui de l'expéditeur, ce que la contrainte de partage interdit.
 Le verrou s'est scindé en deux — `the_frozen_v1_link_still_decodes` et `the_frozen_v2_string_still_encodes_byte_for_byte`.
+
+**Suite (2026-08-17, ADR `2026-08-trame-de-partage-unique-avant-deploiement`)** : rien n'ayant jamais été déployé, aucun lien n'a jamais circulé — `ShareV1` et `ShareV2` fusionnent en une struct `Share` plate, l'octet de version repart à 1, et il ne reste qu'un verrou, `the_frozen_string_still_encodes_byte_for_byte`.
+Le gel décrit ci-dessus commence au premier déploiement.
 - Un octet d'en-tête `version|flag` distingue les versions et le deflate ; la décompression est **bornée à 256 Ko** (un lien hostile ne doit pas être une bombe de décompression).
 - Les **cours manuels voyagent entiers**, chacun comme son propre JSON à l'intérieur de la struct (auto-descriptif exprès : `core::Course` peut évoluer sans corrompre les vieux liens) ; à l'import ils rejoignent la liste locale **avant** le parse du catalogue et le démarrage du worker — la copie locale d'un code déjà connu prime.
 - Le **fragment** (`#`) plutôt que la query : il n'atteint jamais un serveur (pas de logs), et le payload base64url n'a pas besoin d'échappement.

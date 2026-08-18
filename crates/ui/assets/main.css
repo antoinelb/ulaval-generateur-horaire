@@ -763,6 +763,27 @@ code {
   min-height: 1.75rem;
 }
 
+/* the « crédité » toggle: same dashed weight as the entente select it
+   stands beside, filled once it is on so the state reads without colour */
+.panel-credited {
+  font: inherit;
+  font-size: 0.6875rem;
+  color: var(--muted);
+  border: 0.0625rem dashed var(--border-strong);
+  border-radius: 0.75rem;
+  background: var(--card);
+  padding: 0.1875rem 0.5rem;
+  min-height: 1.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.panel-credited--on {
+  color: var(--ok);
+  border-style: solid;
+  background: var(--ok-bg);
+}
+
 .panel-chip-none {
   font-size: 0.6875rem;
   color: var(--muted-2);

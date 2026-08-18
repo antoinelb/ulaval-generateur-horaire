@@ -48,6 +48,11 @@ pub struct Plan {
     // the rule the course counts toward; pure data, applied by
     // `panel::granted_program` before any coverage call
     pub rule_grants: BTreeMap<String, String>,
+    // cours crédités par entente : acquired in advance, so they ride as
+    // `PlaceQuery.passed` like the préparatoire ones — counted in the
+    // credits and in the coverage, never given a session (ADR
+    // `2026-08-cours-credite-hors-session`)
+    pub credited: BTreeSet<String>,
     // code → the prerequisites as the student's own program vintage wrote
     // them, when they differ from today's répertoire. Layered *over* the
     // vintage file's own corrections, and applied to the catalogue before
@@ -76,6 +81,7 @@ impl Default for Plan {
             manual: BTreeMap::new(),
             special: BTreeMap::new(),
             rule_grants: BTreeMap::new(),
+            credited: BTreeSet::new(),
             prereq_overrides: BTreeMap::new(),
         }
     }
@@ -241,8 +247,9 @@ pub fn session_codes(plan: &Plan, session: usize) -> Vec<String> {
 }
 
 // Strip the given codes from every placement structure — the derived
-// correction behind « scolarité préparatoire faite » : a code acquired by
-// hypothesis must not occupy any session, wherever it slipped in from.
+// correction behind « scolarité préparatoire faite » and « crédité » : a
+// code acquired by hypothesis must not occupy any session, wherever it
+// slipped in from.
 pub fn purge_codes(plan: &mut Plan, codes: &[String]) {
     plan.electives.retain(|code| !codes.contains(code));
     plan.pinned_sessions.retain(|code, _| !codes.contains(code));

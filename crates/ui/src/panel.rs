@@ -91,6 +91,9 @@ pub enum RowState {
     // préparatoire course covered by the checked « déjà faite » box:
     // counted ✓ by hypothesis, never actionable — no +, no chips
     Acquired,
+    // credited by an agreement with the direction: counted, never placed —
+    // no +, no chips either, but the toggle that undoes it stays
+    Credited,
     // in `electives`, waiting for the solver to place it (jalon 9's
     // « cours voulus »)
     Chosen,
@@ -108,7 +111,7 @@ pub fn panel_model(snapshot: &Snapshot, plan: &Plan) -> PanelModel {
     };
     // the ententes ride as data: the rules gain their granted courses
     // before core counts anything
-    let (granted, warnings) = granted_program(chosen, &plan.rule_grants);
+    let (granted, mut warnings) = granted_program(chosen, &plan.rule_grants);
     let program = &granted;
     let mut selection = selection(plan);
     // « préparatoire faite » : its courses count for the coverage without
@@ -164,6 +167,7 @@ pub fn panel_model(snapshot: &Snapshot, plan: &Plan) -> PanelModel {
         })
         .collect();
     preparatory_badge(&mut rules, plan);
+    warnings.extend(unlisted_credited(plan, Some(&mandatory), &rules));
     PanelModel {
         coverage_error: None,
         mandatory: Some(mandatory),
@@ -172,6 +176,34 @@ pub fn panel_model(snapshot: &Snapshot, plan: &Plan) -> PanelModel {
         notes: program.notes.clone(),
         warnings,
     }
+}
+
+// A credited course must stay visible: it shows up in the rule that lists
+// it (Obligatoires, Règle 2, … — choix d'Antoine 2026-08-17). One no
+// section lists — a « tous les cours » rule browses instead of listing, a
+// course outside the program — would add credits from nowhere, so it is
+// named rather than left silent.
+fn unlisted_credited(
+    plan: &Plan,
+    mandatory: Option<&Section>,
+    rules: &[Section],
+) -> Vec<String> {
+    let shown: BTreeSet<&str> = mandatory
+        .into_iter()
+        .chain(rules)
+        .flat_map(|section| section.rows.iter())
+        .map(|row| row.code.as_str())
+        .collect();
+    plan.credited
+        .iter()
+        .filter(|code| !shown.contains(code.as_str()))
+        .map(|code| {
+            format!(
+                "{code} est crédité mais n'apparaît dans aucune règle de ce \
+                 programme — rattachez-le à une règle pour l'y voir compté."
+            )
+        })
+        .collect()
 }
 
 // The préparatoire rule carries no constraint, so core reports it without
@@ -235,7 +267,7 @@ fn uncounted_panel(
     concentration: Option<&str>,
     profile: Option<&str>,
     message: String,
-    warnings: Vec<String>,
+    mut warnings: Vec<String>,
 ) -> PanelModel {
     let mandatory_rows: Vec<Row> = program
         .mandatory
@@ -283,6 +315,7 @@ fn uncounted_panel(
         );
     }
     preparatory_badge(&mut rules, plan);
+    warnings.extend(unlisted_credited(plan, Some(&mandatory), &rules));
     PanelModel {
         coverage_error: Some(message),
         mandatory: Some(mandatory),
@@ -432,12 +465,14 @@ fn grant_target<'a>(
     }
 }
 
-// the coverage selection: everything the student has laid out or chosen
+// the coverage selection: everything the student has laid out, chosen, or
+// holds by agreement — a credited course counts without a session
 pub fn selection(plan: &Plan) -> BTreeSet<String> {
     plan.displayed_placement
         .keys()
         .chain(plan.manual.values().flatten())
         .chain(plan.electives.iter())
+        .chain(plan.credited.iter())
         .cloned()
         .collect()
 }
@@ -835,6 +870,18 @@ fn base_row(snapshot: &Snapshot, plan: &Plan, code: &str) -> Row {
             assumed: Vec::new(),
         };
     }
+    // same rank as the préparatoire hypothesis, same reason: a credited
+    // course holds no session, so a leftover placement must not be shown
+    if plan.credited.contains(code) {
+        return Row {
+            code: code.to_string(),
+            title,
+            credits,
+            sub: "crédité - ne prend pas de session".to_string(),
+            state: RowState::Credited,
+            assumed: Vec::new(),
+        };
+    }
     if let Some(&session) = plan.displayed_placement.get(code) {
         return Row {
             code: code.to_string(),
@@ -902,14 +949,15 @@ fn base_row(snapshot: &Snapshot, plan: &Plan, code: &str) -> Row {
     }
 }
 
-// what the student holds: everything laid on the organigramme, with the
-// planning credits of those courses (the static prerequisite question of
-// `prerequisites_met`)
+// what the student holds: everything laid on the organigramme plus what an
+// agreement credited him, with the planning credits of those courses (the
+// static prerequisite question of `prerequisites_met`)
 fn acquired(snapshot: &Snapshot, plan: &Plan) -> (BTreeSet<String>, u32) {
     let held: BTreeSet<String> = plan
         .displayed_placement
         .keys()
         .chain(plan.manual.values().flatten())
+        .chain(plan.credited.iter())
         .cloned()
         .collect();
     let credits = held
@@ -1494,6 +1542,62 @@ mod tests {
         plan.displayed_placement.insert("GAE-1000".to_string(), 2);
         let model = panel_model(&snapshot, &plan);
         assert_eq!(model.rules[0].badge, Badge::Ok("✓".to_string()));
+    }
+
+    #[test]
+    fn a_credited_course_counts_without_a_session_and_never_hides() {
+        let snapshot = snapshot();
+        let mut plan = plan();
+        // GAE-1000 (3 cr, Règle 2) is credited by an agreement: nowhere in
+        // the organigramme, yet counted
+        plan.credited.insert("GAE-1000".to_string());
+        let model = panel_model(&snapshot, &plan);
+        let rule_2 = model
+            .rules
+            .iter()
+            .find(|section| section.title == "Règle 2")
+            .unwrap_or_else(|| panic!("Règle 2 is in the fixture"));
+        assert_eq!(rule_2.badge, Badge::Partial("3/6 cr".to_string()));
+        let credited_row = rule_2
+            .rows
+            .iter()
+            .find(|row| row.code == "GAE-1000")
+            .unwrap_or_else(|| panic!("the rule lists it"));
+        assert_eq!(credited_row.state, RowState::Credited);
+        assert_eq!(credited_row.sub, "crédité - ne prend pas de session");
+        // the state wins over a leftover placement: the healing effect is
+        // about to purge it and the row must not offer it meanwhile
+        plan.displayed_placement.insert("GAE-1000".to_string(), 1);
+        assert_eq!(
+            row(&snapshot, &plan, "GAE-1000").state,
+            RowState::Credited
+        );
+        plan.displayed_placement.remove("GAE-1000");
+        // held for the prerequisites too: GEX-9000 asks for GAE-1000
+        assert!(
+            acquired(&snapshot, &plan).0.contains("GAE-1000"),
+            "a credited course is held"
+        );
+        // a credited course no section lists is named, never left to add
+        // credits from nowhere
+        plan.credited.insert("ETE-1000".to_string());
+        let model = panel_model(&snapshot, &plan);
+        assert!(
+            model
+                .warnings
+                .iter()
+                .any(|warning| warning.starts_with("ETE-1000 est crédité")),
+            "{:?}",
+            model.warnings
+        );
+        assert!(
+            !model
+                .warnings
+                .iter()
+                .any(|warning| warning.starts_with("GAE-1000")),
+            "{:?}",
+            model.warnings
+        );
     }
 
     #[test]

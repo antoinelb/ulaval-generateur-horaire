@@ -31,7 +31,7 @@ Les seules échappatoires étaient détournées : recréer le cours en manuel sa
 
 - **Rien n'est appliqué en silence.** `OverrideNote` remonte une expression illisible (le cours garde alors ses préalables officiels — une correction ne retombe **jamais** sur `Prerequisites::Raw`, cette variante préserve ce que l'université a écrit, elle n'accueille pas une faute de frappe), un sigle absent du catalogue, et le fait que le répertoire ait bougé depuis la correction.
 
-- **Le lien de partage devient `ShareV2`** — `ShareV1` gelée est encore décodée, mais seul V2 est écrit : un lien qui perdrait les corrections montrerait au destinataire un autre verdict que celui de l'expéditeur.
+- **Le lien de partage porte les corrections** : un lien qui les perdrait montrerait au destinataire un autre verdict que celui de l'expéditeur. (Écrit d'abord en `ShareV2` imbriquant `ShareV1` ; les deux ont fusionné en une trame unique depuis — ADR `2026-08-trame-de-partage-unique-avant-deploiement`.)
 
 - **Le worker reçoit les mêmes corrections** par un troisième argument de `init_snapshot`, et redémarre quand elles changent — le motif déjà en place pour un cours manuel ajouté.
 
