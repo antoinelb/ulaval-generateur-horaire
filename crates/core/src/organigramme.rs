@@ -1323,6 +1323,39 @@ mod tests {
         assert_eq!(solution.placement.len(), 2);
     }
 
+    // Candidate order is the caller's course order, which nothing forces
+    // to be topological: a dependent can be decided before its own
+    // prerequisite is even reached. Leaving that prerequisite out must
+    // then be refused, or the search answers with a placement whose
+    // prerequisite is nowhere — the relaxation is allowed to drop courses,
+    // never to keep one whose tree it just falsified.
+    #[test]
+    fn skipping_a_course_a_placed_one_already_requires_is_refused() {
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![
+                // the dependent first, so it is placed at depth 0 while
+                // A-1 is still undecided
+                with_prereq("B-2", "monday", &parsed("\"A-1\"")),
+                anytime("A-1", "tuesday"),
+            ],
+        );
+        inputs.allow_unplaced = true;
+        let placement = inputs.solve();
+        assert!(!placement.solutions.is_empty());
+        for solution in &placement.solutions {
+            assert!(
+                !(solution.placement.contains_key("B-2")
+                    && solution.left_out.contains("A-1")),
+                "B-2 kept while its prerequisite was dropped: {solution:?}"
+            );
+        }
+        // and the arrangement that places both is still found
+        assert!(placement.solutions.iter().any(|solution| {
+            solution.left_out.is_empty() && solution.placement.len() == 2
+        }));
+    }
+
     // The capacity bound is unsound once the excess may be left out: it
     // would prune the very branches the relaxation exists to reach.
     #[test]
