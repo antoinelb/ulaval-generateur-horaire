@@ -53,6 +53,7 @@ Toute nouvelle décision est documentée dans un fichier individuel sous `docs/c
 - Respecter les règles du programme (obligatoires, « Règle N – X crédits parmi », sous-groupes) et l'ordre imposé par les préalables (équivalences comprises), selon les sessions d'offre.
 - Partir du cheminement type GEX pré-chargé (encodé à la main — seule donnée sans source machine-lisible).
 - Afficher la couverture des règles : ce qui est satisfait, ce qui reste à combler, et des cours candidats pour combler.
+- Prendre un cours est un geste, le geler en est un autre : chaque rangée du panneau offre « automatique » (le cours est voulu, le solveur choisit sa session) et une puce par session de l'horizon où il est offert (le cours est voulu **et** gelé là). Le choix retenu se voit, un « ✕ » le retire, et un cours obligatoire n'en a pas — il est toujours voulu (ADR `2026-08-choix-automatique-ou-session-gelee`).
 - Produire l'organigramme consommé par l'automatisation de l'horaire hebdomadaire (l'échange JSON ci-dessus).
 
 #### Transversal

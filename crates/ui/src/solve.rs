@@ -233,10 +233,15 @@ pub struct NewCode {
     pub warning: Option<String>,
 }
 
+// The one gate every add goes through. `session` is `None` for the
+// « automatique » choice — the course is taken, the solver picks where — so
+// the session-bound checks (already there, wrong season, closed summer) are
+// the only ones that step aside; nothing else softens (ADR
+// `2026-08-choix-automatique-ou-session-gelee`).
 pub fn validate_new_code(
     snapshot: &Snapshot,
     plan: &Plan,
-    session: usize,
+    session: Option<usize>,
     raw: &str,
 ) -> Result<NewCode, String> {
     let code = raw.trim().to_uppercase();
@@ -263,14 +268,16 @@ pub fn validate_new_code(
              placer."
         ));
     }
-    if state::session_codes(plan, session).contains(&code) {
+    if session.is_some_and(|session| {
+        state::session_codes(plan, session).contains(&code)
+    }) {
         return Err(format!("{code} est déjà dans cette session."));
     }
     // placed at this very session would have been caught just above
     if let Some(&elsewhere) = plan
         .displayed_placement
         .get(&code)
-        .filter(|&&placed| placed != session)
+        .filter(|&&placed| Some(placed) != session)
     {
         return Err(format!(
             "{code} est déjà placé en {} — retirez-le de là d'abord.",
@@ -278,7 +285,9 @@ pub fn validate_new_code(
         ));
     }
     let course = &snapshot.courses[index];
-    if let Some(semester) = session_semester(plan, session) {
+    if let Some(semester) =
+        session.and_then(|session| session_semester(plan, session))
+    {
         if !course.seasons.contains_key(&semester.season) {
             let offered: Vec<&str> = course
                 .seasons
@@ -335,7 +344,8 @@ pub fn validate_new_code(
         };
     // a summer explicitly closed is not a wall either — but adding into
     // it must never be silent (rapport étudiante 2026-08-14)
-    let summer_note = session_semester(plan, session)
+    let summer_note = session
+        .and_then(|session| session_semester(plan, session))
         .filter(|semester| {
             semester.season == ulaval_scheduler_core::Season::Summer
                 && !plan.summers_open
@@ -620,19 +630,19 @@ mod tests {
         let snapshot = snapshot();
         let plan = plan_with(&["GEX-1000"]);
         assert_eq!(
-            validate_new_code(&snapshot, &plan, 1, "  gex-2000 "),
+            validate_new_code(&snapshot, &plan, Some(1), "  gex-2000 "),
             Ok(NewCode {
                 code: "GEX-2000".to_string(),
                 warning: None
             })
         );
-        assert!(validate_new_code(&snapshot, &plan, 1, "")
+        assert!(validate_new_code(&snapshot, &plan, Some(1), "")
             .expect_err("empty")
             .contains("Entrez un code"));
-        assert!(validate_new_code(&snapshot, &plan, 1, "zzz-1")
+        assert!(validate_new_code(&snapshot, &plan, Some(1), "zzz-1")
             .expect_err("unknown")
             .contains("introuvable"));
-        assert!(validate_new_code(&snapshot, &plan, 1, "gex-1000")
+        assert!(validate_new_code(&snapshot, &plan, Some(1), "gex-1000")
             .expect_err("doubled")
             .contains("déjà"));
     }
@@ -641,15 +651,47 @@ mod tests {
     fn an_out_of_season_or_already_placed_code_is_refused_with_its_reason() {
         let snapshot = snapshot();
         // ANL-1010 is winter-only; session 1 is automne
-        let error =
-            validate_new_code(&snapshot, &Plan::default(), 1, "ANL-1010")
-                .expect_err("out of season");
+        let error = validate_new_code(
+            &snapshot,
+            &Plan::default(),
+            Some(1),
+            "ANL-1010",
+        )
+        .expect_err("out of season");
         assert!(error.contains("offert : hiver"), "{error}");
 
         let mut plan = Plan::default();
         plan.displayed_placement.insert("GEX-1000".to_string(), 4);
-        let error = validate_new_code(&snapshot, &plan, 1, "GEX-1000")
+        let error = validate_new_code(&snapshot, &plan, Some(1), "GEX-1000")
             .expect_err("placed elsewhere");
+        assert!(error.contains("déjà placé en A3-A27"), "{error}");
+    }
+
+    #[test]
+    fn taking_a_course_without_a_session_drops_only_the_session_checks() {
+        let snapshot = snapshot();
+        // ANL-1010 is winter-only: no session, no season to be wrong about
+        assert_eq!(
+            validate_new_code(&snapshot, &Plan::default(), None, "anl-1010")
+                .expect("taken, the solver will find it a hiver")
+                .code,
+            "ANL-1010"
+        );
+        // what does not depend on a session still walls
+        let error =
+            validate_new_code(&snapshot, &Plan::default(), None, "ZZZ-1")
+                .expect_err("not in the catalogue");
+        assert!(error.contains("introuvable"), "{error}");
+        let mut plan = Plan::default();
+        plan.credited.insert("GEX-1000".to_string());
+        let error = validate_new_code(&snapshot, &plan, None, "GEX-1000")
+            .expect_err("credited");
+        assert!(error.contains("crédité par entente"), "{error}");
+        // already laid out somewhere: taking it again is still refused
+        let mut plan = Plan::default();
+        plan.displayed_placement.insert("GEX-1000".to_string(), 4);
+        let error = validate_new_code(&snapshot, &plan, None, "GEX-1000")
+            .expect_err("placed already");
         assert!(error.contains("déjà placé en A3-A27"), "{error}");
     }
 
@@ -674,13 +716,21 @@ mod tests {
         )
         .unwrap_or_else(|e| panic!("{e}"));
         // session 2 is hiver: ETE-2000 offers automne and été only
-        let error =
-            validate_new_code(&snapshot, &Plan::default(), 2, "ETE-2000")
-                .expect_err("out of season");
+        let error = validate_new_code(
+            &snapshot,
+            &Plan::default(),
+            Some(2),
+            "ETE-2000",
+        )
+        .expect_err("out of season");
         assert!(error.contains("automne et été"), "{error}");
-        let error =
-            validate_new_code(&snapshot, &Plan::default(), 1, "NUL-1000")
-                .expect_err("never offered");
+        let error = validate_new_code(
+            &snapshot,
+            &Plan::default(),
+            Some(1),
+            "NUL-1000",
+        )
+        .expect_err("never offered");
         assert!(error.contains("aucune saison connue"), "{error}");
     }
 
@@ -708,20 +758,23 @@ mod tests {
         .unwrap_or_else(|e| panic!("{e}"));
         // session 3 is the first été (A1 → H2 → É)
         let mut plan = Plan::default();
-        let accepted = validate_new_code(&snapshot, &plan, 3, "ETE-2000")
-            .unwrap_or_else(|e| panic!("{e}"));
+        let accepted =
+            validate_new_code(&snapshot, &plan, Some(3), "ETE-2000")
+                .unwrap_or_else(|e| panic!("{e}"));
         let warning = accepted.warning.expect("a closed summer must speak");
         assert!(warning.contains("été fermé"), "{warning}");
         // a closed summer AND unmet prerequisites: both spoken, in order
-        let accepted = validate_new_code(&snapshot, &plan, 3, "ETE-3000")
-            .unwrap_or_else(|e| panic!("{e}"));
+        let accepted =
+            validate_new_code(&snapshot, &plan, Some(3), "ETE-3000")
+                .unwrap_or_else(|e| panic!("{e}"));
         let warning = accepted.warning.expect("both warnings must speak");
         assert!(warning.contains("été fermé"), "{warning}");
         assert!(warning.contains("préalables"), "{warning}");
         // summers opened: nothing left to warn about
         plan.summers_open = true;
-        let accepted = validate_new_code(&snapshot, &plan, 3, "ETE-2000")
-            .unwrap_or_else(|e| panic!("{e}"));
+        let accepted =
+            validate_new_code(&snapshot, &plan, Some(3), "ETE-2000")
+                .unwrap_or_else(|e| panic!("{e}"));
         assert!(accepted.warning.is_none());
     }
 
@@ -729,9 +782,13 @@ mod tests {
     fn a_session_outside_the_horizon_accepts_without_a_season_check() {
         // the weekly path will say « hors de l'horizon »; the entry check
         // simply has no season to judge against
-        let accepted =
-            validate_new_code(&snapshot(), &Plan::default(), 99, "GEX-1000")
-                .unwrap_or_else(|e| panic!("{e}"));
+        let accepted = validate_new_code(
+            &snapshot(),
+            &Plan::default(),
+            Some(99),
+            "GEX-1000",
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(accepted.code, "GEX-1000");
     }
 
@@ -750,9 +807,13 @@ mod tests {
                 raw: "deep".to_string(),
                 tree: deep,
             });
-        let accepted =
-            validate_new_code(&snapshot, &Plan::default(), 1, "GEX-1000")
-                .unwrap_or_else(|e| panic!("{e}"));
+        let accepted = validate_new_code(
+            &snapshot,
+            &Plan::default(),
+            Some(1),
+            "GEX-1000",
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
         let warning = accepted.warning.expect("must warn");
         assert!(warning.contains("illisibles"), "{warning}");
     }
@@ -776,9 +837,13 @@ mod tests {
             Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
-        let accepted =
-            validate_new_code(&snapshot, &Plan::default(), 1, "GEX-5000")
-                .unwrap_or_else(|e| panic!("{e}"));
+        let accepted = validate_new_code(
+            &snapshot,
+            &Plan::default(),
+            Some(1),
+            "GEX-5000",
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
         let warning = accepted.warning.expect("must warn");
         assert!(warning.contains("préalables"), "{warning}");
         assert!(warning.contains("ZZZ-1111"), "{warning}");
@@ -1473,17 +1538,18 @@ mod worker_tests {
             program: Some(gex_choice()),
             ..Plan::default()
         };
-        let error = validate_new_code(&snapshot, &plan, 1, "gex-1000")
+        let error = validate_new_code(&snapshot, &plan, Some(1), "gex-1000")
             .expect_err("acquired by the checked box");
         assert!(error.contains("décochez la case"), "{error}");
         // unchecked: the ordinary gates apply and the course is welcome
         plan.preparatory_done = false;
-        let accepted = validate_new_code(&snapshot, &plan, 1, "gex-1000")
-            .unwrap_or_else(|e| panic!("{e}"));
+        let accepted =
+            validate_new_code(&snapshot, &plan, Some(1), "gex-1000")
+                .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(accepted.code, "GEX-1000");
         // credited by an agreement: refused too, with its own way out
         plan.credited.insert("GEX-1000".to_string());
-        let error = validate_new_code(&snapshot, &plan, 1, "gex-1000")
+        let error = validate_new_code(&snapshot, &plan, Some(1), "gex-1000")
             .expect_err("credited holds no session");
         assert!(error.contains("retirez le crédit"), "{error}");
     }

@@ -257,8 +257,8 @@ fn GridBlock(
                 }
             },
             // note 16: a solid block drags toward the ribbon — the probe
-            // fires so the cards can say where it may land; the chips
-            // remain the keyboard path (INP-4)
+            // fires so the cards can say where it may land; the panel's
+            // choice strip remains the keyboard path (INP-4)
             draggable: !ghost,
             ondragstart: move |_| {
                 let cached = solver

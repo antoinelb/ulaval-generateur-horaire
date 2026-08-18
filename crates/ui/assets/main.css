@@ -724,9 +724,17 @@ code {
   border-color: var(--accent);
 }
 
-.panel-chip--ask {
-  color: var(--muted);
-  border-style: dashed;
+/* la puce retenue : pleine, pas seulement teintée — l'encre sur la carte
+   inversée donne le plus fort contraste de la palette (INP-3) */
+.panel-chip--chosen {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--card);
+}
+
+.panel-chip--chosen:hover {
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 /* cibles de dépôt pendant un glissement (note 16) — jamais couleur seule :
@@ -741,13 +749,6 @@ code {
 .ribbon-card--barred,
 .ribbon-summer.ribbon-card--barred {
   opacity: 0.4;
-}
-
-.panel-chip--here {
-  border-style: solid;
-  border-color: var(--muted-2);
-  color: var(--muted);
-  cursor: default;
 }
 
 /* le select d'entente : discret, taille de puce */
@@ -909,6 +910,22 @@ code {
 .panel-course-text {
   flex: 1 1 100%;
   min-width: 100%;
+}
+
+/* un cours retenu se lit à sa bordure, sans dépendre de la couleur */
+.panel-course--chosen {
+  border-color: var(--ink);
+}
+
+/* la bande de choix prend sa propre ligne : jusqu'à douze sessions plus le
+   ✕ ne tiennent pas à côté du select d'entente et du bouton « créditer » */
+.panel-course-choice {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
 }
 
 .panel-course-title {

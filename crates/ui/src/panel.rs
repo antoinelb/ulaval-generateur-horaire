@@ -968,6 +968,121 @@ fn acquired(snapshot: &Snapshot, plan: &Plan) -> (BTreeSet<String>, u32) {
     (held, credits)
 }
 
+// --- the choice strip of a row --------------------------------------------
+
+// What the student decided about a course. « Automatique » is the intuitive
+// act — take the course, let the solver find it a session; a session is the
+// same act plus a freeze (ADR `2026-08-choix-automatique-ou-session-gelee`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Choice {
+    Not,
+    Auto,
+    Pinned(usize),
+}
+
+// Everything the row's choice strip needs, answered pure: is the course
+// imposed by the program, which sessions may host it, and what is chosen
+// today.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChoiceStrip {
+    // a mandatory course is always chosen: no way to un-choose it
+    pub mandatory: bool,
+    // the horizon sessions the course is offered in, 1-based with their
+    // label — a season filter, not an admissibility verdict
+    pub sessions: Vec<(usize, String)>,
+    pub choice: Choice,
+}
+
+pub fn choice_strip(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    code: &str,
+) -> ChoiceStrip {
+    let mandatory = is_mandatory(snapshot, plan, code);
+    ChoiceStrip {
+        mandatory,
+        sessions: candidate_sessions(snapshot, plan, code),
+        choice: choice(plan, code, mandatory),
+    }
+}
+
+// imposed by the program, its chosen concentration or its chosen profile —
+// read from the program itself, so an obligatoire listed under a rule or
+// met while browsing is marked there too
+fn is_mandatory(snapshot: &Snapshot, plan: &Plan, code: &str) -> bool {
+    let Some(program) = chosen_program(snapshot, plan) else {
+        return false;
+    };
+    let choice = plan.program.as_ref();
+    let concentration = choice.and_then(|c| c.concentration.as_deref());
+    let profile = choice.and_then(|c| c.profile.as_deref());
+    let scoped = program
+        .concentrations
+        .iter()
+        .filter(|block| Some(block.title.as_str()) == concentration)
+        .map(|block| &block.mandatory)
+        .chain(
+            program
+                .profiles
+                .iter()
+                .filter(|block| Some(block.title.as_str()) == profile)
+                .map(|block| &block.mandatory),
+        );
+    std::iter::once(&program.mandatory)
+        .chain(scoped)
+        .any(|list| list.iter().any(|held| held == code))
+}
+
+// The sessions offered as freeze targets: a plain season filter over the
+// horizon, read from the snapshot — no solver probe, so every visible row
+// can show its strip at once (a probe per row cost one solve each). A
+// session barred by the prerequisites stays clickable; `validate_new_code`
+// warns then, as it always did.
+fn candidate_sessions(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    code: &str,
+) -> Vec<(usize, String)> {
+    let Some(&index) = snapshot.by_code.get(code) else {
+        return Vec::new();
+    };
+    let course = &snapshot.courses[index];
+    let seasons = ulaval_scheduler_core::horizon_sessions(
+        plan.start.season,
+        plan.study_sessions,
+    );
+    let semesters = state::session_semesters(plan.start, &seasons);
+    semesters
+        .iter()
+        .enumerate()
+        .filter(|(_, semester)| course.seasons.contains_key(&semester.season))
+        .map(|(index, _)| (index + 1, state::session_label(&semesters, index)))
+        .collect()
+}
+
+// A pin — explicit or inherited from a hand-added session — freezes;
+// anything else the student took, plus every mandatory course, is the
+// solver's to place.
+fn choice(plan: &Plan, code: &str, mandatory: bool) -> Choice {
+    let pinned = plan.pinned_sessions.get(code).copied().or_else(|| {
+        plan.manual
+            .iter()
+            .find(|(_, codes)| codes.iter().any(|held| held == code))
+            .map(|(&session, _)| session)
+    });
+    if let Some(session) = pinned {
+        return Choice::Pinned(session);
+    }
+    let taken = mandatory
+        || plan.electives.iter().any(|held| held == code)
+        || plan.displayed_placement.contains_key(code);
+    if taken {
+        Choice::Auto
+    } else {
+        Choice::Not
+    }
+}
+
 fn placed_label(plan: &Plan, session: usize) -> String {
     let seasons = ulaval_scheduler_core::horizon_sessions(
         plan.start.season,
@@ -1256,7 +1371,7 @@ mod tests {
         {"title":"Règle 4","raw":"des cours convenus"}
       ],
       "concentrations":[{"title":"Génie urbain","credits_required":null,
-        "mandatory":[],
+        "mandatory":["ANL-2020"],
         "rules":[{"title":"Règle C1",
                   "constraint":{"type":"course","min":2,"max":2},
                   "courses":["GAE-1000","GMN-1000"]}],
@@ -1302,6 +1417,119 @@ mod tests {
             ]),
             ..Plan::default()
         }
+    }
+
+    #[test]
+    fn the_choice_strip_offers_automatique_then_the_seasons_it_fits() {
+        let snapshot = snapshot();
+        let mut plan = plan();
+        // eight study sessions from an automne: A H É A H É A H É A H É
+        let fall = choice_strip(&snapshot, &plan, "GEX-3000");
+        assert_eq!(
+            fall.sessions
+                .iter()
+                .map(|(index, _)| *index)
+                .collect::<Vec<_>>(),
+            [1, 4, 7, 10],
+            "an automne course only fits the automnes"
+        );
+        assert_eq!(fall.sessions[0].1, "A1-A26");
+        let summer = choice_strip(&snapshot, &plan, "ETE-1000");
+        assert_eq!(
+            summer
+                .sessions
+                .iter()
+                .map(|(index, _)| *index)
+                .collect::<Vec<_>>(),
+            [3, 6, 9, 12]
+        );
+        assert_eq!(summer.sessions[0].1, "É27");
+        // no season known, and no Course at all: nothing to offer, and the
+        // strip still answers instead of blanking
+        assert!(choice_strip(&snapshot, &plan, "HOR-0000")
+            .sessions
+            .is_empty());
+        assert!(choice_strip(&snapshot, &plan, "GHOST-1")
+            .sessions
+            .is_empty());
+
+        // an horizon of two sessions cuts the list to what exists
+        plan.study_sessions = 2;
+        assert_eq!(
+            choice_strip(&snapshot, &plan, "GEX-3000")
+                .sessions
+                .iter()
+                .map(|(index, _)| *index)
+                .collect::<Vec<_>>(),
+            [1]
+        );
+    }
+
+    #[test]
+    fn the_choice_reads_taken_frozen_or_untouched() {
+        let snapshot = snapshot();
+        let mut plan = plan();
+        // untouched: offered, never taken
+        assert_eq!(
+            choice_strip(&snapshot, &plan, "GEX-3000").choice,
+            Choice::Not
+        );
+        // taken and left to the solver
+        plan.electives.push("GEX-3000".to_string());
+        assert_eq!(
+            choice_strip(&snapshot, &plan, "GEX-3000").choice,
+            Choice::Auto
+        );
+        // the solver placed it: still the solver's, no freeze
+        assert_eq!(
+            choice_strip(&snapshot, &plan, "GEX-1000").choice,
+            Choice::Auto,
+            "a displayed placement is a choice, not a pin"
+        );
+        // frozen by the student
+        plan.pinned_sessions.insert("GEX-3000".to_string(), 4);
+        assert_eq!(
+            choice_strip(&snapshot, &plan, "GEX-3000").choice,
+            Choice::Pinned(4)
+        );
+        // a hand-added session is a freeze too — a plan saved before the
+        // strip existed still reads right
+        plan.manual.insert(7, vec!["GEX-2000".to_string()]);
+        assert_eq!(
+            choice_strip(&snapshot, &plan, "GEX-2000").choice,
+            Choice::Pinned(7)
+        );
+    }
+
+    #[test]
+    fn a_mandatory_course_is_always_taken_program_or_concentration() {
+        let snapshot = snapshot();
+        let mut plan = plan();
+        // untouched in the plan, yet imposed: the strip says taken, and
+        // the view gives it no ✕
+        let strip = choice_strip(&snapshot, &plan, "GEX-2000");
+        assert!(strip.mandatory);
+        assert_eq!(strip.choice, Choice::Auto);
+        // ANL-2020 is only mandatory once the concentration is chosen
+        assert!(!choice_strip(&snapshot, &plan, "ANL-2020").mandatory);
+        assert_eq!(
+            choice_strip(&snapshot, &plan, "ANL-2020").choice,
+            Choice::Not
+        );
+        if let Some(choice) = plan.program.as_mut() {
+            choice.concentration = Some("Génie urbain".to_string());
+        }
+        assert!(choice_strip(&snapshot, &plan, "ANL-2020").mandatory);
+        // a freeze still wins over the « automatique » an obligatoire gets
+        plan.pinned_sessions.insert("GEX-2000".to_string(), 1);
+        assert_eq!(
+            choice_strip(&snapshot, &plan, "GEX-2000").choice,
+            Choice::Pinned(1)
+        );
+        // no program, no obligation
+        assert!(
+            !choice_strip(&snapshot, &Plan::default(), "GEX-2000").mandatory
+        );
     }
 
     #[test]

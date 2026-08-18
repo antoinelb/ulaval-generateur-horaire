@@ -851,17 +851,13 @@ fn ResultRows(results: panel::SearchResults) -> Element {
     }
 }
 
-// one course row: state carried by text and shape, the + adds to the
-// displayed session, the chips place (or move) it anywhere admissible,
-// the ✕ removes it — immediate and undoable, never a dialog (ACT-2)
+// one course row: state carried by text and shape, the choice strip takes
+// the course (automatique) or takes and freezes it (a session), the ✕
+// drops it — immediate and undoable, never a dialog (ACT-2)
 #[component]
 fn RowView(row: Row) -> Element {
     let plan = use_context::<Signal<Plan>>();
-    let view = use_context::<Signal<View>>();
-    let history = use_context::<Signal<History>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
-    let SelectedCourse(mut selected) = use_context::<SelectedCourse>();
-    let session = view.read().session;
     // the advisory fit marker, swap semantics — the probe comes from the
     // shared memo, each row costs one mask overlap
     let probe = use_context::<Memo<Option<panel::FitProbe>>>();
@@ -878,24 +874,43 @@ fn RowView(row: Row) -> Element {
             _ => None,
         }
     };
-    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    // the note names the displayed session, which is no longer where a
+    // click lands — advisory only, so it never dims the row either
     let fit_note = match fit {
-        Some(Fit::Fits) => " - rentrerait ✓",
-        Some(Fit::Conflicts) => " - l'ajouter ici créerait un conflit",
+        Some(Fit::Fits) => " - rentrerait dans la session affichée",
+        Some(Fit::Conflicts) => " - conflit dans la session affichée",
         _ => "",
     };
-    // unmet prerequisites warn, they never wall (the student may know
-    // better — an entente, un cours fait ailleurs) ; the + validates
-    let addable =
-        matches!(row.state, RowState::Available | RowState::PrereqUnmet);
+    // Acquired, Credited and Unknown hold no session and offer no choice;
+    // the rest get the strip, unmet prerequisites included — those warn,
+    // they never wall (the student may know better — une entente, un cours
+    // fait ailleurs)
+    let strip = {
+        let read = snapshot.read();
+        read.as_ref()
+            .filter(|_| {
+                !matches!(
+                    row.state,
+                    RowState::Acquired
+                        | RowState::Credited
+                        | RowState::Unknown
+                )
+            })
+            .map(|snapshot| {
+                panel::choice_strip(snapshot, &plan.read(), &row.code)
+            })
+    };
+    let chosen = strip
+        .as_ref()
+        .is_some_and(|strip| strip.choice != panel::Choice::Not);
     let dimmed =
-        matches!(row.state, RowState::PrereqUnmet | RowState::Unknown)
-            || matches!(fit, Some(Fit::Conflicts));
+        matches!(row.state, RowState::PrereqUnmet | RowState::Unknown);
     let assumed = row.assumed.join(", ");
     rsx! {
         div {
             class: "panel-course",
             class: if dimmed { "panel-course--dimmed" },
+            class: if chosen { "panel-course--chosen" },
             div { class: "panel-course-text",
                 div { class: "panel-course-title", "{row.title}" }
                 div { class: "panel-course-sub",
@@ -916,79 +931,141 @@ fn RowView(row: Row) -> Element {
                 RuleAttach { code: row.code.clone() }
                 CreditedToggle { code: row.code.clone() }
             }
-            if addable {
-                button {
-                    class: "panel-course-action",
-                    title: "Ajouter {row.code} à la session affichée",
-                    onclick: {
-                        let code = row.code.clone();
-                        move |_| {
-                            let code = code.clone();
-                            // same gate as the typed entry (saison,
-                            // doublon, préalables) — the + must not be a
-                            // silent side door (rapport étudiante)
-                            let verdict = {
-                                let read = snapshot.read();
-                                let plan_read = plan.read();
-                                read.as_ref().map(|snapshot| {
-                                    solve::validate_new_code(
-                                        snapshot, &plan_read, session, &code,
-                                    )
-                                })
-                            };
-                            match verdict {
-                                Some(Ok(accepted)) => {
-                                    edit_plan(
+            if let Some(strip) = strip {
+                CourseChoice { code: row.code.clone(), strip }
+            }
+        }
+    }
+}
+
+// The choice strip (note d'Antoine 2026-08-17) : « automatique » takes the
+// course and leaves the solver its session, a session chip takes it and
+// freezes it there, and clicking another chip changes the choice — one
+// labelled, undoable act each. The ✕ drops the course outright; a
+// mandatory one has none, it is always taken (ADR
+// `2026-08-choix-automatique-ou-session-gelee`).
+#[component]
+fn CourseChoice(code: String, strip: panel::ChoiceStrip) -> Element {
+    let plan = use_context::<Signal<Plan>>();
+    let history = use_context::<Signal<History>>();
+    let snapshot = use_context::<Signal<Option<Snapshot>>>();
+    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let SelectedCourse(mut selected) = use_context::<SelectedCourse>();
+    let choice = strip.choice;
+    let auto = choice == panel::Choice::Auto;
+    rsx! {
+        div { class: "panel-course-choice",
+            button {
+                class: "panel-chip",
+                class: if auto { "panel-chip--chosen" },
+                aria_pressed: "{auto}",
+                title: "Prendre {code} et laisser le solveur choisir sa session",
+                onclick: {
+                    let code = code.clone();
+                    move |_| {
+                        let code = code.clone();
+                        if auto {
+                            return;
+                        }
+                        let Some(warning) = take_verdict(
+                            snapshot, plan, alerts, &code, choice, None,
+                        ) else {
+                            return;
+                        };
+                        edit_plan(
+                            plan,
+                            history,
+                            &format!("{code} laissé au solveur"),
+                            |plan| {
+                                if !plan.electives.contains(&code) {
+                                    plan.electives.push(code.clone());
+                                }
+                                // the pin falls, the placement stays: the
+                                // grid keeps showing where it sits until
+                                // the next solve may move it
+                                plan.pinned_sessions.remove(&code);
+                                for held in plan.manual.values_mut() {
+                                    held.retain(|kept| kept != &code);
+                                }
+                            },
+                        );
+                        if let Some(warning) = warning {
+                            super::push_alert(
+                                alerts,
+                                super::AlertBody::Note(warning),
+                            );
+                        }
+                    }
+                },
+                "automatique"
+            }
+            for (session, label) in strip.sessions.clone() {
+                {
+                    let here = choice == panel::Choice::Pinned(session);
+                    rsx! {
+                        button {
+                            key: "{session}",
+                            class: "panel-chip",
+                            class: if here { "panel-chip--chosen" },
+                            aria_pressed: "{here}",
+                            title: "Prendre {code} et le geler en {label}",
+                            onclick: {
+                                let code = code.clone();
+                                let label = label.clone();
+                                move |_| {
+                                    let code = code.clone();
+                                    if here {
+                                        return;
+                                    }
+                                    let Some(warning) = take_verdict(
+                                        snapshot,
                                         plan,
-                                        history,
-                                        &format!("Ajout de {code}"),
-                                        |plan| {
-                                            plan.manual
-                                                .entry(session)
-                                                .or_default()
-                                                .push(accepted.code)
-                                        },
+                                        alerts,
+                                        &code,
+                                        choice,
+                                        Some(session),
+                                    ) else {
+                                        return;
+                                    };
+                                    place_course(
+                                        plan, history, &code, session, &label,
                                     );
-                                    if let Some(warning) = accepted.warning {
+                                    if let Some(warning) = warning {
                                         super::push_alert(
                                             alerts,
                                             super::AlertBody::Note(warning),
                                         );
                                     }
                                 }
-                                Some(Err(why)) => super::push_alert(
-                                    alerts,
-                                    super::AlertBody::Note(why),
-                                ),
-                                None => {}
-                            }
+                            },
+                            "{label}"
                         }
-                    },
-                    "+"
+                    }
                 }
-                SessionChips { code: row.code.clone() }
             }
-            if row.state == RowState::Placed {
-                // an already-placed course (obligatoire compris) moves
-                // through the same chips, and can be removed outright
-                SessionChips { code: row.code.clone() }
+            if strip.sessions.is_empty() {
+                span { class: "panel-chip-none",
+                    "aucune session de l'horizon ne l'offre"
+                }
+            }
+            if choice != panel::Choice::Not && !strip.mandatory {
                 button {
                     class: "panel-course-action",
-                    title: "Retirer {row.code} de son organigramme",
+                    title: "Retirer {code}",
                     onclick: {
-                        let code = row.code.clone();
+                        let code = code.clone();
                         move |_| {
                             let code = code.clone();
-                            // the read borrow must die before edit_plan
-                            let held = holding_session(&plan.read(), &code);
-                            let Some(held) = held else {
-                                return;
-                            };
                             edit_plan(
                                 plan,
                                 history,
                                 &format!("{code} retiré"),
-                                |plan| remove_course(plan, held, &code),
+                                |plan| {
+                                    crate::state::purge_codes(
+                                        plan,
+                                        std::slice::from_ref(&code),
+                                    )
+                                },
                             );
                             selected.set(None);
                         }
@@ -996,29 +1073,41 @@ fn RowView(row: Row) -> Element {
                     "✕"
                 }
             }
-            if row.state == RowState::Chosen {
-                button {
-                    class: "panel-course-action",
-                    title: "Retirer {row.code} des cours choisis",
-                    onclick: {
-                        let code = row.code.clone();
-                        move |_| {
-                            let code = code.clone();
-                            edit_plan(
-                                plan,
-                                history,
-                                &format!("{code} retiré des choisis"),
-                                |plan| {
-                                    plan.electives
-                                        .retain(|kept| kept != &code)
-                                },
-                            );
-                        }
-                    },
-                    "✕"
-                }
-            }
         }
+    }
+}
+
+// The same gate as the typed entry (saison, doublon, préalables) — a first
+// take must not be a silent side door (rapport étudiante). Switching from
+// one choice to another is a move: already accepted once, never re-judged.
+// `None` means refused (the alert is already pushed); `Some(warning)` means
+// go ahead, saying that if it is there.
+fn take_verdict(
+    snapshot: Signal<Option<Snapshot>>,
+    plan: Signal<Plan>,
+    alerts: Signal<Vec<super::Alert>>,
+    code: &str,
+    choice: panel::Choice,
+    session: Option<usize>,
+) -> Option<Option<String>> {
+    if choice != panel::Choice::Not {
+        return Some(None);
+    }
+    // the read borrows must die before the caller opens the write one
+    let verdict = {
+        let read = snapshot.read();
+        let plan_read = plan.read();
+        read.as_ref().map(|snapshot| {
+            solve::validate_new_code(snapshot, &plan_read, session, code)
+        })
+    };
+    match verdict {
+        Some(Ok(accepted)) => Some(accepted.warning),
+        Some(Err(why)) => {
+            super::push_alert(alerts, super::AlertBody::Note(why));
+            None
+        }
+        None => None,
     }
 }
 
@@ -1138,111 +1227,9 @@ fn RuleAttach(code: String) -> Element {
     }
 }
 
-// The « + H28 » chips (design 9a): which sessions could host the course if
-// pinned there — answered by the worker (`core::admissible_sessions`), on
-// demand, cached until the plan changes. Clicking a chip is the pin the
-// probe simulated (immediate + undoable); on an already-placed course the
-// same chip is a move.
-#[component]
-fn SessionChips(code: String) -> Element {
-    let plan = use_context::<Signal<Plan>>();
-    let history = use_context::<Signal<History>>();
-    let solver = use_context::<Signal<super::SolverState>>();
-    let handle = use_context::<super::SolverHandle>();
-    let cached = solver.read().admissible.get(&code).cloned();
-    let ready = solver.read().ready;
-    match cached {
-        None => rsx! {
-            button {
-                class: "panel-chip panel-chip--ask",
-                disabled: !ready,
-                title: "Chercher les sessions qui peuvent accueillir {code}",
-                onclick: {
-                    let code = code.clone();
-                    let handle = handle.clone();
-                    move |_| {
-                        let plan_read = plan.read();
-                        super::request_admissible(
-                            &handle, solver, &plan_read, &code,
-                        );
-                    }
-                },
-                "où le placer ?"
-            }
-        },
-        Some(sessions) if sessions.is_empty() => rsx! {
-            span { class: "panel-chip-none",
-                "aucune session ne peut l'accueillir"
-            }
-        },
-        Some(sessions) => {
-            let (labels, held) = {
-                let plan = plan.read();
-                let seasons = ulaval_scheduler_core::horizon_sessions(
-                    plan.start.season,
-                    plan.study_sessions,
-                );
-                let semesters = state::session_semesters(plan.start, &seasons);
-                let labels: Vec<(usize, String)> = sessions
-                    .iter()
-                    .map(|&session| {
-                        (
-                            session,
-                            state::session_label(&semesters, session - 1),
-                        )
-                    })
-                    .collect();
-                (labels, holding_session(&plan, &code))
-            };
-            rsx! {
-                span { class: "panel-chips",
-                    for (session, label) in labels {
-                        if Some(session) == held {
-                            // its current home is not a destination — a
-                            // « + » here promised an ajout qui n'en est
-                            // pas un (rapport étudiante)
-                            span { class: "panel-chip panel-chip--here",
-                                "ici : {label}"
-                            }
-                        } else {
-                            button {
-                                class: "panel-chip",
-                                title: "Placer {code} en {label}",
-                                onclick: {
-                                    let code = code.clone();
-                                    let label = label.clone();
-                                    move |_| {
-                                        place_course(
-                                            plan, history, &code, session,
-                                            &label,
-                                        );
-                                    }
-                                },
-                                "+ {label}"
-                            }
-                        }
-                    }
-                    button {
-                        class: "panel-chip panel-chip--ask",
-                        title: "Refermer les sessions proposées",
-                        onclick: {
-                            let code = code.clone();
-                            move |_| {
-                                let mut solver = solver;
-                                solver.write().admissible.remove(&code);
-                            }
-                        },
-                        "✕"
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Shared by the chips and the ribbon drop (note 16): place — or move —
-// `code` into `session`, any previous location cleared first; one
-// labelled, undoable step.
+// Shared by the choice strip and the ribbon drop (note 16): place — or
+// move — `code` into `session`, every previous trace of it cleared first;
+// one labelled, undoable step.
 pub fn place_course(
     plan: Signal<Plan>,
     history: Signal<History>,
@@ -1259,9 +1246,9 @@ pub fn place_course(
     };
     let code = code.to_string();
     edit_plan(plan, history, &action, |plan| {
-        if let Some(held) = held {
-            remove_course(plan, held, &code);
-        }
+        // a move leaves nothing behind: pin, placement, hand-added entry
+        // and forced sections all go, then the course is laid down anew
+        crate::state::purge_codes(plan, std::slice::from_ref(&code));
         // placing a catalogue course IS choosing it: without the elective
         // the solver would see a pin with no Course behind it (rapport
         // étudiante : « MED-1100 is passed or pinned but has no Course »)
@@ -1271,23 +1258,6 @@ pub fn place_course(
         plan.pinned_sessions.insert(code.clone(), session);
         plan.displayed_placement.insert(code, session);
     });
-}
-
-// removal touches every trace of the course in that session — manual
-// list, elective, placement, pin and chosen sections — one labelled,
-// undoable step (a leftover elective would float back at the next solve)
-fn remove_course(plan: &mut Plan, session: usize, code: &str) {
-    if let Some(manual) = plan.manual.get_mut(&session) {
-        manual.retain(|kept| kept != code);
-    }
-    if plan.displayed_placement.get(code) == Some(&session) {
-        plan.displayed_placement.remove(code);
-        plan.pinned_sessions.remove(code);
-        plan.electives.retain(|kept| kept != code);
-    }
-    if let Some(chosen) = plan.chosen.get_mut(&session) {
-        chosen.remove(code);
-    }
 }
 
 // the session currently holding the course — placed by the solver or
@@ -1391,7 +1361,11 @@ fn ManualCourseForm() -> Element {
                     if let Some(key) = granted_rule {
                         plan.rule_grants.insert(course_code.clone(), key);
                     }
-                    plan.manual.entry(session).or_default().push(course_code)
+                    // created and taken in one act; the strip freezes it
+                    // to a session afterwards if the student wants
+                    if !plan.electives.contains(&course_code) {
+                        plan.electives.push(course_code);
+                    }
                 },
             );
             // the worker's catalogue must learn the new course too
@@ -1623,7 +1597,6 @@ fn ManualCourseActions(course: ulaval_scheduler_core::Course) -> Element {
 #[component]
 fn AddByCode() -> Element {
     let plan = use_context::<Signal<Plan>>();
-    let view = use_context::<Signal<View>>();
     let history = use_context::<Signal<History>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     let alerts = use_context::<Signal<Vec<super::Alert>>>();
@@ -1634,12 +1607,12 @@ fn AddByCode() -> Element {
         let Some(snapshot) = read.as_ref() else {
             return;
         };
-        let session = view.read().session;
         let raw = typed.read().clone();
-        // the read borrow must die before `edit_plan` takes the write one
+        // typing a code is the same act as the strip's « automatique » —
+        // take the course, the solver finds it a session
         let verdict = {
             let plan = plan.read();
-            solve::validate_new_code(snapshot, &plan, session, &raw)
+            solve::validate_new_code(snapshot, &plan, None, &raw)
         };
         match verdict {
             Ok(accepted) => {
@@ -1648,7 +1621,11 @@ fn AddByCode() -> Element {
                     plan,
                     history,
                     &format!("Ajout de {code}"),
-                    |plan| plan.manual.entry(session).or_default().push(code),
+                    |plan| {
+                        if !plan.electives.contains(&code) {
+                            plan.electives.push(code);
+                        }
+                    },
                 );
                 if let Some(warning) = accepted.warning {
                     super::push_alert(alerts, super::AlertBody::Note(warning));
