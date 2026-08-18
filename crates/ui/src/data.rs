@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use ulaval_scheduler_core::{
     apply_prereq_overrides, Course, CourseManual, OverrideNote,
-    PrereqOverride, Prerequisites, Program, VintageOverlay,
+    PrereqOverride, Prerequisites, Program,
 };
 
 use crate::state::Plan;
@@ -36,13 +36,12 @@ pub struct Snapshot {
     pub collisions: Vec<String>,
     // codes that came from the student's hand, marked « manuel » on screen
     pub manual_codes: BTreeSet<String>,
-    // the prerequisites each admission vintage overrides — applied only
-    // once a program is picked, since the vintage is the student's, not the
-    // catalogue's (ADR `2026-08-correction-des-prealables-par-millesime`)
-    pub vintages: BTreeMap<String, VintageOverlay>,
-    // the repo's hand-maintained courses, kept whole so the worker's
-    // catalogue can be made to hold exactly what this one does
-    pub shared_manual: Vec<Course>,
+    // the hand-maintained companion of the snapshot, kept whole so
+    // `overrides_for` stays the one place that layers a vintage's
+    // corrections over the vintage-less ones (ADRs
+    // `2026-08-correction-des-prealables-par-millesime`,
+    // `2026-08-prealables-manuels-sans-millesime`)
+    pub manual: CourseManual,
     // what the corrections currently in force are — the guard that keeps
     // re-applying them a no-op
     pub applied: BTreeMap<String, PrereqOverride>,
@@ -146,8 +145,7 @@ pub fn parse_data(
     // the repo's hand-maintained courses join the catalogue first, so a
     // course the student typed before it shipped reads as the collision it
     // now is instead of silently shadowing the shared entry
-    let shared_manual = repo_manual.courses;
-    let shared = merge_manual(file.courses, shared_manual.clone());
+    let shared = merge_manual(file.courses, repo_manual.courses.clone());
     let merged = merge_manual(shared.courses, manual);
     let collisions: Vec<String> = shared
         .collisions
@@ -171,8 +169,7 @@ pub fn parse_data(
             data_hash,
         },
         collisions,
-        vintages: repo_manual.vintages,
-        shared_manual,
+        manual: repo_manual,
         applied: BTreeMap::new(),
         overridden: BTreeMap::new(),
         warnings,
@@ -218,9 +215,11 @@ fn raw_of(prerequisites: Option<&Prerequisites>) -> String {
     }
 }
 
-// The corrections in force: the student's admission vintage first, then
-// his own edits over them — he is correcting what the shared file did not
-// cover, or did not get right for him.
+// The corrections in force: the shared file's — vintage-less ones, then
+// the student's admission vintage over them — and his own edits over all
+// of it, since he is correcting what the shared file did not cover, or did
+// not get right for him. With no program chosen the vintage is empty,
+// which still leaves the vintage-less layer in force.
 pub fn effective_overrides(
     snapshot: &Snapshot,
     plan: &Plan,
@@ -230,25 +229,7 @@ pub fn effective_overrides(
         .as_ref()
         .map(|program| program.semester.as_str())
         .unwrap_or_default();
-    let mut overrides = snapshot
-        .vintages
-        .get(vintage)
-        .map(|overlay| {
-            overlay
-                .prerequisites
-                .iter()
-                .map(|(code, text)| {
-                    (
-                        code.clone(),
-                        PrereqOverride {
-                            text: text.clone(),
-                            official: None,
-                        },
-                    )
-                })
-                .collect::<BTreeMap<_, _>>()
-        })
-        .unwrap_or_default();
+    let mut overrides = snapshot.manual.overrides_for(vintage);
     overrides.extend(
         plan.prereq_overrides
             .iter()
@@ -445,7 +426,7 @@ mod tests {
         );
         let snapshot =
             parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
-        assert!(snapshot.vintages.contains_key("A24"));
+        assert!(snapshot.manual.vintages.contains_key("A24"));
         assert!(
             snapshot.warnings.is_empty(),
             "a vintage nobody picked yet is not a warning: {:?}",
@@ -534,12 +515,43 @@ mod tests {
     }
 
     #[test]
-    fn another_vintage_carries_none_of_the_corrections() {
+    fn another_vintage_carries_none_of_the_vintage_corrections() {
         let snapshot = vintage_snapshot();
         assert!(effective_overrides(&snapshot, &plan_with("A26")).is_empty());
         assert!(
             effective_overrides(&snapshot, &Plan::default()).is_empty(),
             "no program picked yet is no vintage"
+        );
+    }
+
+    // « le répertoire se trompe » ne dépend d'aucune admission : la
+    // correction sans millésime tient avant même qu'un programme soit
+    // choisi, et le millésime la surcharge là où les deux se prononcent
+    #[test]
+    fn a_vintage_less_correction_holds_before_any_program_is_chosen() {
+        let mut raw = raw();
+        raw.manual = Some(
+            r#"{"prerequisites":{"GEX-1000":"GCI-1000",
+                                 "GEX-2000":"MAT-1902"},
+                 "vintages":{"A24":{"prerequisites":
+                   {"GEX-1000":"GCI-1000 ET MAT-1902"}}}}"#
+                .to_string(),
+        );
+        let snapshot =
+            parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+
+        let bare = effective_overrides(&snapshot, &Plan::default());
+        assert_eq!(bare["GEX-1000"].text, "GCI-1000");
+        assert_eq!(bare["GEX-2000"].text, "MAT-1902");
+
+        let admitted = effective_overrides(&snapshot, &plan_with("A24"));
+        assert_eq!(
+            admitted["GEX-1000"].text, "GCI-1000 ET MAT-1902",
+            "the vintage is the more specific answer"
+        );
+        assert_eq!(
+            admitted["GEX-2000"].text, "MAT-1902",
+            "what the vintage says nothing about still holds"
         );
     }
 

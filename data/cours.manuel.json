@@ -484,5 +484,9 @@
         }
       }
     }
-  ]
+  ],
+  "prerequisites": {
+    "GEX-3333": "(ECN-2901 OU ECN-4901) ET (GCI-1009 OU GCI-1011) ET GMC-3009 ET  Crédits exigés : 72",
+    "GEX-3335": "(ECN-2901 OU ECN-4901) ET (GCI-1009 OU GCI-1011) ET GCI-4301 ET GMC-3009 ET  Crédits exigés : 72"
+  }
 }

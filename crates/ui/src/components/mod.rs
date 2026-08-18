@@ -130,7 +130,7 @@ pub fn boot_solver(
     // prerequisites his program vintage rewrote
     let (shared, overrides) = match snapshot.peek().as_ref() {
         Some(snapshot_ref) => (
-            snapshot_ref.shared_manual.clone(),
+            snapshot_ref.manual.courses.clone(),
             crate::data::effective_overrides(snapshot_ref, &plan.peek()),
         ),
         None => (Vec::new(), std::collections::BTreeMap::new()),
