@@ -466,7 +466,9 @@ pub fn program_vintages(snapshot: &Snapshot) -> Vec<ProgramVintages> {
     // (the newest vintage of the code, every vintage of it)
     let mut groups: Vec<(&Program, Vec<&Program>)> = Vec::new();
     for program in &snapshot.programs {
-        match groups.iter_mut().find(|(newest, _)| newest.code == program.code)
+        match groups
+            .iter_mut()
+            .find(|(newest, _)| newest.code == program.code)
         {
             None => groups.push((program, vec![program])),
             Some((newest, group)) => {
