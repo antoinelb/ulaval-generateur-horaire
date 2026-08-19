@@ -133,7 +133,7 @@ fn SessionCard(card: RibbonCard) -> Element {
                 };
                 dragged.set(None);
                 super::panel::place_course(
-                    plan, history, &code, index, &drop_label,
+                    plan, history, &code, index, &drop_label, None,
                 );
             },
             div { class: "ribbon-card-head",
@@ -231,7 +231,7 @@ fn SummerStrip(card: RibbonCard) -> Element {
                 };
                 dragged.set(None);
                 super::panel::place_course(
-                    plan, history, &code, index, &drop_label,
+                    plan, history, &code, index, &drop_label, None,
                 );
             },
             span { "{card.label} - {content}" }

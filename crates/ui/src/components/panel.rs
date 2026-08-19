@@ -180,7 +180,7 @@ fn PanelBody(model: PanelModel) -> Element {
                     SectionView { section: mandatory }
                 }
                 for section in model.rules.iter().cloned() {
-                    SectionView { section }
+                    SectionView { key: "{section.key}", section }
                 }
                 if let Some(note) = model.language_note.as_ref() {
                     p { class: "panel-note", b { "{note}" } }
@@ -572,12 +572,14 @@ fn SectionView(section: Section) -> Element {
                     for note in section.notes.iter() {
                         p { class: "panel-rule-raw", "{note}" }
                     }
+                    // a free section lists what its ententes attached,
+                    // then keeps browsing — the browse is how a course
+                    // gets attached in the first place
+                    for row in section.rows.iter().cloned() {
+                        RowView { key: "{row.code}", row }
+                    }
                     if section.free {
-                        FreeBrowse {}
-                    } else {
-                        for row in section.rows.iter().cloned() {
-                            RowView { row }
-                        }
+                        FreeBrowse { grant_key: section.key.clone() }
                     }
                 }
             }
@@ -751,8 +753,10 @@ fn PreparatoryToggle() -> Element {
 
 // the « 3 cr libres » rule (design 8a): matière select over the whole
 // first-cycle catalogue, plus the shared search and fit filter
+// `grant_key` names the « tous les cours » rule this browse belongs to:
+// taking a course here attaches it to that rule in the same act
 #[component]
-fn FreeBrowse() -> Element {
+fn FreeBrowse(grant_key: String) -> Element {
     let plan = use_context::<Signal<Plan>>();
     let mut view = use_context::<Signal<View>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
@@ -796,7 +800,7 @@ fn FreeBrowse() -> Element {
                     }
                 }
             }
-            ResultRows { results }
+            ResultRows { results, grant_key }
         }
     }
 }
@@ -829,11 +833,18 @@ fn SearchResults() -> Element {
 }
 
 #[component]
-fn ResultRows(results: panel::SearchResults) -> Element {
+fn ResultRows(
+    results: panel::SearchResults,
+    grant_key: Option<String>,
+) -> Element {
     rsx! {
         div { class: "panel-results",
             for row in results.rows.iter().cloned() {
-                RowView { row }
+                RowView {
+                    key: "{row.code}",
+                    row,
+                    grant_key: grant_key.clone(),
+                }
             }
             p { class: "panel-results-count",
                 if results.matched == 0 {
@@ -855,7 +866,7 @@ fn ResultRows(results: panel::SearchResults) -> Element {
 // the course (automatique) or takes and freezes it (a session), the ✕
 // drops it — immediate and undoable, never a dialog (ACT-2)
 #[component]
-fn RowView(row: Row) -> Element {
+fn RowView(row: Row, grant_key: Option<String>) -> Element {
     let plan = use_context::<Signal<Plan>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     // the advisory fit marker, swap semantics — the probe comes from the
@@ -932,7 +943,7 @@ fn RowView(row: Row) -> Element {
                 CreditedToggle { code: row.code.clone() }
             }
             if let Some(strip) = strip {
-                CourseChoice { code: row.code.clone(), strip }
+                CourseChoice { code: row.code.clone(), strip, grant_key }
             }
         }
     }
@@ -945,7 +956,11 @@ fn RowView(row: Row) -> Element {
 // mandatory one has none, it is always taken (ADR
 // `2026-08-choix-automatique-ou-session-gelee`).
 #[component]
-fn CourseChoice(code: String, strip: panel::ChoiceStrip) -> Element {
+fn CourseChoice(
+    code: String,
+    strip: panel::ChoiceStrip,
+    grant_key: Option<String>,
+) -> Element {
     let plan = use_context::<Signal<Plan>>();
     let history = use_context::<Signal<History>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
@@ -962,6 +977,7 @@ fn CourseChoice(code: String, strip: panel::ChoiceStrip) -> Element {
                 title: "Prendre {code} et laisser le solveur choisir sa session",
                 onclick: {
                     let code = code.clone();
+                    let grant_key = grant_key.clone();
                     move |_| {
                         let code = code.clone();
                         if auto {
@@ -972,6 +988,14 @@ fn CourseChoice(code: String, strip: panel::ChoiceStrip) -> Element {
                         ) else {
                             return;
                         };
+                        // taken from a « tous les cours » browse: the
+                        // entente rides in the same undoable act
+                        let grant = panel::grant_on_take(
+                            &plan.read(),
+                            &code,
+                            choice,
+                            grant_key.as_deref(),
+                        );
                         edit_plan(
                             plan,
                             history,
@@ -979,6 +1003,10 @@ fn CourseChoice(code: String, strip: panel::ChoiceStrip) -> Element {
                             |plan| {
                                 if !plan.electives.contains(&code) {
                                     plan.electives.push(code.clone());
+                                }
+                                if let Some(key) = grant {
+                                    plan.rule_grants
+                                        .insert(code.clone(), key);
                                 }
                                 // the pin falls, the placement stays: the
                                 // grid keeps showing where it sits until
@@ -1012,6 +1040,7 @@ fn CourseChoice(code: String, strip: panel::ChoiceStrip) -> Element {
                             onclick: {
                                 let code = code.clone();
                                 let label = label.clone();
+                                let grant_key = grant_key.clone();
                                 move |_| {
                                     let code = code.clone();
                                     if here {
@@ -1027,8 +1056,15 @@ fn CourseChoice(code: String, strip: panel::ChoiceStrip) -> Element {
                                     ) else {
                                         return;
                                     };
+                                    let grant = panel::grant_on_take(
+                                        &plan.read(),
+                                        &code,
+                                        choice,
+                                        grant_key.as_deref(),
+                                    );
                                     place_course(
                                         plan, history, &code, session, &label,
+                                        grant,
                                     );
                                     if let Some(warning) = warning {
                                         super::push_alert(
@@ -1061,10 +1097,7 @@ fn CourseChoice(code: String, strip: panel::ChoiceStrip) -> Element {
                                 history,
                                 &format!("{code} retiré"),
                                 |plan| {
-                                    crate::state::purge_codes(
-                                        plan,
-                                        std::slice::from_ref(&code),
-                                    )
+                                    crate::state::remove_course(plan, &code)
                                 },
                             );
                             selected.set(None);
@@ -1144,13 +1177,9 @@ fn CreditedToggle(code: String) -> Element {
                     };
                     edit_plan(plan, history, &label, |plan| {
                         if credited {
-                            plan.credited.remove(&code);
+                            crate::state::uncredit_code(plan, &code);
                         } else {
-                            crate::state::purge_codes(
-                                plan,
-                                std::slice::from_ref(&code),
-                            );
-                            plan.credited.insert(code);
+                            crate::state::credit_code(plan, &code);
                         }
                     });
                 }
@@ -1229,13 +1258,16 @@ fn RuleAttach(code: String) -> Element {
 
 // Shared by the choice strip and the ribbon drop (note 16): place — or
 // move — `code` into `session`, every previous trace of it cleared first;
-// one labelled, undoable step.
+// one labelled, undoable step. `grant` carries the entente a « tous les
+// cours » browse decided (`panel::grant_on_take`) so it lands in the same
+// act — the ribbon passes None.
 pub fn place_course(
     plan: Signal<Plan>,
     history: Signal<History>,
     code: &str,
     session: usize,
     label: &str,
+    grant: Option<String>,
 ) {
     // the read borrow must die before edit_plan opens the write
     let already = plan.read().pinned_sessions.get(code) == Some(&session);
@@ -1260,6 +1292,9 @@ pub fn place_course(
         // étudiante : « MED-1100 is passed or pinned but has no Course »)
         if !plan.electives.contains(&code) {
             plan.electives.push(code.clone());
+        }
+        if let Some(key) = grant {
+            plan.rule_grants.insert(code.clone(), key);
         }
         plan.pinned_sessions.insert(code.clone(), session);
         plan.displayed_placement.insert(code, session);

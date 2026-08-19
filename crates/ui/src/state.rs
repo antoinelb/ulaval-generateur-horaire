@@ -246,6 +246,34 @@ pub fn session_codes(plan: &Plan, session: usize) -> Vec<String> {
     codes
 }
 
+// Créditer : the course is held by agreement, so it leaves every session —
+// but keeps its entente: the credit says the course is held, the grant says
+// which rule it counts toward.
+pub fn credit_code(plan: &mut Plan, code: &str) {
+    let code = code.to_string();
+    purge_codes(plan, std::slice::from_ref(&code));
+    plan.credited.insert(code);
+}
+
+// Décréditer : the useful inverse of the credit. The pre-credit session is
+// gone with the purge, so the course re-enters as an elective — counted
+// again at once, the solver gives it a session on the next propose (ADR
+// `2026-08-decrediter-reprend-le-cours-en-electif`).
+pub fn uncredit_code(plan: &mut Plan, code: &str) {
+    plan.credited.remove(code);
+    if !plan.electives.iter().any(|held| held == code) {
+        plan.electives.push(code.to_string());
+    }
+}
+
+// The voluntary ✕ : every placement trace goes, and the entente with it —
+// unlike the credit purge, dropping the course drops the agreement too.
+pub fn remove_course(plan: &mut Plan, code: &str) {
+    let code = code.to_string();
+    purge_codes(plan, std::slice::from_ref(&code));
+    plan.rule_grants.remove(&code);
+}
+
 // Strip the given codes from every placement structure — the derived
 // correction behind « scolarité préparatoire faite » and « crédité » : a
 // code acquired by hypothesis must not occupy any session, wherever it
@@ -411,6 +439,64 @@ mod tests {
         assert_eq!(plan.manual[&1], ["GEX-1000"]);
         assert!(!plan.chosen[&1].contains_key("MAT-0130"));
         assert!(plan.chosen[&1].contains_key("GEX-1000"));
+    }
+
+    #[test]
+    fn crediting_purges_the_placement_but_keeps_the_entente() {
+        let mut plan = Plan {
+            electives: vec!["GEX-1000".to_string()],
+            pinned_sessions: BTreeMap::from([("GEX-1000".to_string(), 2)]),
+            displayed_placement: BTreeMap::from([("GEX-1000".to_string(), 2)]),
+            rule_grants: BTreeMap::from([(
+                "GEX-1000".to_string(),
+                "p/Règle 2".to_string(),
+            )]),
+            ..Plan::default()
+        };
+        credit_code(&mut plan, "GEX-1000");
+        assert!(plan.credited.contains("GEX-1000"));
+        assert!(plan.electives.is_empty());
+        assert!(plan.pinned_sessions.is_empty());
+        assert!(plan.displayed_placement.is_empty());
+        assert_eq!(
+            plan.rule_grants["GEX-1000"], "p/Règle 2",
+            "the credit stacks with the entente"
+        );
+    }
+
+    #[test]
+    fn uncrediting_takes_the_course_back_as_an_elective() {
+        let mut plan = Plan {
+            displayed_placement: BTreeMap::from([("GEX-1000".to_string(), 2)]),
+            ..Plan::default()
+        };
+        credit_code(&mut plan, "GEX-1000");
+        uncredit_code(&mut plan, "GEX-1000");
+        assert!(!plan.credited.contains("GEX-1000"));
+        assert_eq!(
+            plan.electives,
+            ["GEX-1000"],
+            "taken again, session left to the solver"
+        );
+        assert!(plan.displayed_placement.is_empty(), "no ghost session");
+        // a code already elective is not duplicated
+        uncredit_code(&mut plan, "GEX-1000");
+        assert_eq!(plan.electives, ["GEX-1000"]);
+    }
+
+    #[test]
+    fn removing_a_course_drops_its_entente_with_it() {
+        let mut plan = Plan {
+            electives: vec!["GLG-1001".to_string()],
+            rule_grants: BTreeMap::from([(
+                "GLG-1001".to_string(),
+                "p/Règle 5".to_string(),
+            )]),
+            ..Plan::default()
+        };
+        remove_course(&mut plan, "GLG-1001");
+        assert!(plan.electives.is_empty());
+        assert!(plan.rule_grants.is_empty(), "the ✕ purges the entente");
     }
 
     #[test]

@@ -88,6 +88,18 @@ for course in courses.iter() { CoursePill { key: "{course.code}", .. } }
 
 Index keys break drag-and-drop and animation identity the moment the list reorders.
 
+```rust
+// BAD — no key at all: positional diff reuses a scope at its position,
+// so a handler that captured values by move fires with the *previous*
+// occupant's data once the list reorders
+for row in rows.iter().cloned() { RowView { row } }
+
+// GOOD
+for row in rows.iter().cloned() { RowView { key: "{row.code}", row } }
+```
+
+A missing key is worse than an index key: the reused component isn't re-rendered, so every closure inside it (onclick, oninput) keeps the stale captures of the render that created it.
+
 ## AP-9 — Props are owned, `PartialEq + Clone`; signals are `Copy` — pass them
 
 Props take `String`/`Vec<T>`, never `&str`/`&[T]`. For reactive props use `ReadOnlySignal<T>`; for callbacks use `EventHandler<T>`. `Signal<T>` is `Copy`: pass it by value into children and closures — never a reference, never `Rc` wrapping.

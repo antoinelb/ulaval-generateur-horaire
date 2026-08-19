@@ -2,6 +2,8 @@
 
 Date : 2026-08-13
 
+Révisé par `2026-08-entente-vers-une-regle-any.md` : une règle « any » est désormais une cible d'entente (elle n'« acceptait » rien — core ne la comptait jamais).
+
 ## Contexte
 
 Deux besoins des notes d'essai d'Antoine (2026-08-13) :

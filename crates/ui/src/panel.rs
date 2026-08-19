@@ -144,6 +144,7 @@ pub fn panel_model(snapshot: &Snapshot, plan: &Plan) -> PanelModel {
                 snapshot,
                 plan,
                 program,
+                chosen,
                 concentration,
                 profile,
                 coverage_error_message(&error),
@@ -163,7 +164,17 @@ pub fn panel_model(snapshot: &Snapshot, plan: &Plan) -> PanelModel {
                 rule_report.scope,
                 &rule_report.title,
             );
-            rule_section(snapshot, plan, rule_report, rule)
+            // the rule as the program wrote it: a granted « tous les
+            // cours » rule became a list, but its browse and its text
+            // belong to the section still
+            let original = find_rule(
+                chosen,
+                concentration,
+                profile,
+                rule_report.scope,
+                &rule_report.title,
+            );
+            rule_section(snapshot, plan, rule_report, rule, original)
         })
         .collect();
     preparatory_badge(&mut rules, plan);
@@ -258,12 +269,14 @@ fn coverage_error_message(
 }
 
 // the whole panel, badges neutral: sections, rows and raw texts straight
-// from the program, no verdict pretended
+// from the program, no verdict pretended — `chosen` is the program before
+// the agreements, whose keyword rules keep their browse and raw text
 #[allow(clippy::too_many_arguments)]
 fn uncounted_panel(
     snapshot: &Snapshot,
     plan: &Plan,
     program: &Program,
+    chosen: &Program,
     concentration: Option<&str>,
     profile: Option<&str>,
     message: String,
@@ -285,34 +298,36 @@ fn uncounted_panel(
         free: false,
         progress: None,
     };
+    let original = |scope: Scope, title: &str| {
+        find_rule(chosen, concentration, profile, scope, title)
+    };
     let mut rules: Vec<Section> = program
         .rules
         .iter()
-        .map(|rule| bare_section(snapshot, plan, 'p', rule))
+        .map(|rule| {
+            let source = original(Scope::Program, &rule.title);
+            bare_section(snapshot, plan, 'p', rule, source)
+        })
         .collect();
     if let Some(block) = program
         .concentrations
         .iter()
         .find(|block| Some(block.title.as_str()) == concentration)
     {
-        rules.extend(
-            block
-                .rules
-                .iter()
-                .map(|rule| bare_section(snapshot, plan, 'c', rule)),
-        );
+        rules.extend(block.rules.iter().map(|rule| {
+            let source = original(Scope::Concentration, &rule.title);
+            bare_section(snapshot, plan, 'c', rule, source)
+        }));
     }
     if let Some(block) = program
         .profiles
         .iter()
         .find(|block| Some(block.title.as_str()) == profile)
     {
-        rules.extend(
-            block
-                .rules
-                .iter()
-                .map(|rule| bare_section(snapshot, plan, 'f', rule)),
-        );
+        rules.extend(block.rules.iter().map(|rule| {
+            let source = original(Scope::Profile, &rule.title);
+            bare_section(snapshot, plan, 'f', rule, source)
+        }));
     }
     preparatory_badge(&mut rules, plan);
     warnings.extend(unlisted_credited(plan, Some(&mandatory), &rules));
@@ -326,20 +341,16 @@ fn uncounted_panel(
     }
 }
 
-// one rule as a section without any counting — same rows, same raw texts
+// one rule as a section without any counting — same rows, same raw texts;
+// `original` is the ungranted rule, whose browse and raw text survive a
+// grant's Keyword → List transformation
 fn bare_section(
     snapshot: &Snapshot,
     plan: &Plan,
     scope_prefix: char,
     rule: &Rule,
+    original: Option<&Rule>,
 ) -> Section {
-    let free = matches!(
-        rule.courses,
-        RuleCourses::Keyword {
-            courses: ulaval_scheduler_core::Keyword::Any,
-            ..
-        }
-    );
     let rows = match &rule.courses {
         RuleCourses::List { courses } => courses
             .iter()
@@ -347,22 +358,37 @@ fn bare_section(
             .collect(),
         _ => Vec::new(),
     };
-    let raw = match &rule.courses {
-        RuleCourses::Reference { raw, .. }
-        | RuleCourses::Keyword { raw, .. }
-        | RuleCourses::Raw { raw } => Some(raw.clone()),
-        RuleCourses::List { .. } => None,
-    };
     Section {
         key: format!("{scope_prefix}/{}", rule.title),
         title: rule.title.clone(),
         constraint: constraint_label(rule),
         badge: Badge::Neutral("—".to_string()),
         rows,
-        raw,
+        raw: rule_raw(rule).or_else(|| original.and_then(rule_raw)),
         notes: rule.notes.clone(),
-        free,
+        free: browses_catalogue(original.unwrap_or(rule)),
         progress: None,
+    }
+}
+
+// a « tous les cours » rule: its rows come from a catalogue browse
+fn browses_catalogue(rule: &Rule) -> bool {
+    matches!(
+        rule.courses,
+        RuleCourses::Keyword {
+            courses: ulaval_scheduler_core::Keyword::Any,
+            ..
+        }
+    )
+}
+
+// the rule text outside the grammar, whatever shape carries it
+fn rule_raw(rule: &Rule) -> Option<String> {
+    match &rule.courses {
+        RuleCourses::Reference { raw, .. }
+        | RuleCourses::Keyword { raw, .. }
+        | RuleCourses::Raw { raw } => Some(raw.clone()),
+        RuleCourses::List { .. } => None,
     }
 }
 
@@ -393,8 +419,14 @@ pub fn granted_program(
                 }
                 true
             }
+            // a keyword rule (« negotiated », « tous les cours ») is never
+            // counted by core: the grant is the explicit attachment that
+            // turns it into a countable list (ADR
+            // `2026-08-entente-vers-une-regle-any`)
             RuleCourses::Keyword {
-                courses: ulaval_scheduler_core::Keyword::Negotiated,
+                courses:
+                    ulaval_scheduler_core::Keyword::Any
+                    | ulaval_scheduler_core::Keyword::Negotiated,
                 ..
             } => {
                 rule.courses = RuleCourses::List {
@@ -402,8 +434,7 @@ pub fn granted_program(
                 };
                 true
             }
-            // an « any » rule counts every course already; the other
-            // shapes cannot host a list
+            // the remaining shapes (raw, reference) cannot host a list
             _ => {
                 warnings.push(format!(
                     "Entente pour {code} : la règle « {} » n'accepte pas de \
@@ -558,7 +589,8 @@ pub fn effective_program(snapshot: &Snapshot, plan: &Plan) -> Option<Program> {
 }
 
 // the rules an agreement can attach a course to — a plain list, or a
-// « negotiated » rule waiting for exactly that; keyed like the sections
+// keyword rule (« negotiated », « tous les cours ») whose grant is exactly
+// the attachment that makes it countable; keyed like the sections
 pub fn grantable_rules(program: &Program) -> Vec<(String, String)> {
     let grantable = |rule: &Rule| {
         // never the préparatoire: attaching a course there would make it
@@ -568,7 +600,8 @@ pub fn grantable_rules(program: &Program) -> Vec<(String, String)> {
                 rule.courses,
                 RuleCourses::List { .. }
                     | RuleCourses::Keyword {
-                        courses: ulaval_scheduler_core::Keyword::Negotiated,
+                        courses: ulaval_scheduler_core::Keyword::Any
+                            | ulaval_scheduler_core::Keyword::Negotiated,
                         ..
                     }
             )
@@ -598,6 +631,24 @@ pub fn grantable_rules(program: &Program) -> Vec<(String, String)> {
                 .map(|rule| keyed('f', rule)),
         )
         .collect()
+}
+
+// Some(section key) when taking `code` must record an entente as part of
+// the same act: the take came from the browse of a « tous les cours » rule
+// (`browse_key`), it is a first take, and no entente binds the course yet —
+// an agreement already granted is never overwritten (ADR
+// `2026-08-entente-vers-une-regle-any`).
+pub fn grant_on_take(
+    plan: &Plan,
+    code: &str,
+    choice: Choice,
+    browse_key: Option<&str>,
+) -> Option<String> {
+    let key = browse_key?;
+    if choice != Choice::Not || plan.rule_grants.contains_key(code) {
+        return None;
+    }
+    Some(key.to_string())
 }
 
 fn mandatory_section(
@@ -636,19 +687,16 @@ fn mandatory_section(
     }
 }
 
+// `rule` is the granted rule core counted; `original` the rule as the
+// program wrote it — the browse and the raw text of a « tous les cours »
+// rule outlive its grants' Keyword → List transformation
 fn rule_section(
     snapshot: &Snapshot,
     plan: &Plan,
     report: &ulaval_scheduler_core::RuleReport,
     rule: Option<&Rule>,
+    original: Option<&Rule>,
 ) -> Section {
-    let free = matches!(
-        rule.map(|rule| &rule.courses),
-        Some(RuleCourses::Keyword {
-            courses: ulaval_scheduler_core::Keyword::Any,
-            ..
-        })
-    );
     let rows = match rule.map(|rule| &rule.courses) {
         Some(RuleCourses::List { courses }) => courses
             .iter()
@@ -669,9 +717,9 @@ fn rule_section(
         constraint: rule.and_then(constraint_label),
         badge: rule_badge(snapshot, report, rule),
         rows,
-        raw: report.raw.clone(),
+        raw: report.raw.clone().or_else(|| original.and_then(rule_raw)),
         notes: rule.map(|rule| rule.notes.clone()).unwrap_or_default(),
-        free,
+        free: original.or(rule).is_some_and(browses_catalogue),
         progress: None,
     }
 }
@@ -710,6 +758,14 @@ fn rule_badge(
             Some([only]) => Badge::Ok(format!("✓ {only}")),
             _ => Badge::Ok("✓".to_string()),
         },
+        // a reported rule that still carries a countable constraint
+        // (« any », « negotiated ») says what remains — « 0/3 cr » — since
+        // an entente can now fill it; « — » would hide a real requirement
+        RuleStatus::Reported
+            if rule.is_some_and(|rule| rule.constraint.is_some()) =>
+        {
+            incomplete_badge(snapshot, report, rule)
+        }
         RuleStatus::Reported => Badge::Neutral("—".to_string()),
         RuleStatus::Incomplete => incomplete_badge(snapshot, report, rule),
     }
@@ -1598,6 +1654,11 @@ mod tests {
             model.rules[2].raw.as_deref(),
             Some("Tous les cours de premier cycle")
         );
+        assert_eq!(
+            model.rules[2].badge,
+            Badge::Missing("0/3 cr".to_string()),
+            "a reported rule with a constraint says what remains"
+        );
         assert_eq!(model.rules[3].badge, Badge::Neutral("—".to_string()));
         assert_eq!(model.rules[3].raw.as_deref(), Some("des cours convenus"));
         assert_eq!(
@@ -1726,7 +1787,7 @@ mod tests {
                 "raw":"tous les cours de la Règle 1 du cheminement X"}"#,
         )
         .unwrap_or_else(|e| panic!("{e}"));
-        let section = bare_section(&snapshot(), &plan(), 'p', &rule);
+        let section = bare_section(&snapshot(), &plan(), 'p', &rule, None);
         assert_eq!(
             section.raw.as_deref(),
             Some("tous les cours de la Règle 1 du cheminement X")
@@ -1767,6 +1828,129 @@ mod tests {
             RuleCourses::List { courses }
                 if courses.contains(&"GMN-1000".to_string())
         ));
+    }
+
+    #[test]
+    fn an_any_rule_counts_its_grants_and_keeps_its_browse() {
+        let snapshot = snapshot();
+        let mut plan = plan();
+        // GAE-1000 (3 cr) is attached to the « tous les cours » Règle 3
+        // but not taken yet: the rule counts, at zero
+        plan.rule_grants = std::collections::BTreeMap::from([(
+            "GAE-1000".to_string(),
+            "p/Règle 3".to_string(),
+        )]);
+        let model = panel_model(&snapshot, &plan);
+        let rule_3 = &model.rules[2];
+        assert_eq!(rule_3.badge, Badge::Missing("0/3 cr".to_string()));
+        assert!(rule_3.free, "the browse survives the grant");
+        assert_eq!(
+            rule_3.raw.as_deref(),
+            Some("Tous les cours de premier cycle"),
+            "the rule text survives the grant"
+        );
+        let attached = &rule_3.rows[0];
+        assert_eq!(attached.code, "GAE-1000");
+        assert!(attached.sub.ends_with("- entente"), "{}", attached.sub);
+        // taken: the rule is satisfied and the course counted by name
+        plan.electives.push("GAE-1000".to_string());
+        let model = panel_model(&snapshot, &plan);
+        assert_eq!(model.rules[2].badge, Badge::Ok("✓ GAE-1000".to_string()));
+        // the entente moved it out of Règle 2's list (never two rules)
+        assert!(model.rules[1].rows.iter().all(|row| row.code != "GAE-1000"));
+    }
+
+    #[test]
+    fn a_second_grant_to_the_same_any_rule_joins_the_first() {
+        let snapshot = snapshot();
+        let grants = std::collections::BTreeMap::from([
+            ("ETE-1000".to_string(), "p/Règle 3".to_string()),
+            ("GAE-1000".to_string(), "p/Règle 3".to_string()),
+        ]);
+        let (granted, warnings) =
+            granted_program(&snapshot.programs[0], &grants);
+        assert!(warnings.is_empty(), "{warnings:?}");
+        let rule_3 = granted
+            .rules
+            .iter()
+            .find(|rule| rule.title == "Règle 3")
+            .unwrap_or_else(|| panic!("kept"));
+        assert_eq!(
+            rule_3.courses,
+            RuleCourses::List {
+                courses: vec!["ETE-1000".to_string(), "GAE-1000".to_string()]
+            },
+            "the second grant appends to the first's list"
+        );
+    }
+
+    #[test]
+    fn a_credited_course_attached_to_an_any_rule_raises_no_warning() {
+        let snapshot = snapshot();
+        let mut plan = plan();
+        // credited and attached: the rule lists it, so nothing is unlisted
+        plan.credited.insert("ETE-1000".to_string());
+        plan.rule_grants = std::collections::BTreeMap::from([(
+            "ETE-1000".to_string(),
+            "p/Règle 3".to_string(),
+        )]);
+        let model = panel_model(&snapshot, &plan);
+        assert!(model.warnings.is_empty(), "{:?}", model.warnings);
+        assert_eq!(
+            model.rules[2].badge,
+            Badge::Ok("✓ ETE-1000".to_string()),
+            "credited, attached: counted in the any rule"
+        );
+    }
+
+    #[test]
+    fn grant_on_take_grants_only_a_first_take_from_a_browse() {
+        let mut plan = plan();
+        // a first take from the Règle 3 browse records the entente
+        assert_eq!(
+            grant_on_take(&plan, "GAE-1000", Choice::Not, Some("p/Règle 3")),
+            Some("p/Règle 3".to_string())
+        );
+        // outside a browse: nothing to record
+        assert_eq!(grant_on_take(&plan, "GAE-1000", Choice::Not, None), None);
+        // not a first take: the course was already accepted once
+        assert_eq!(
+            grant_on_take(&plan, "GAE-1000", Choice::Auto, Some("p/Règle 3")),
+            None
+        );
+        // an agreement already granted is never overwritten
+        plan.rule_grants
+            .insert("GAE-1000".to_string(), "p/Règle 2".to_string());
+        assert_eq!(
+            grant_on_take(&plan, "GAE-1000", Choice::Not, Some("p/Règle 3")),
+            None
+        );
+    }
+
+    #[test]
+    fn uncrediting_a_mandatory_course_keeps_it_counted_and_in_place() {
+        let snapshot = snapshot();
+        let mut plan = plan();
+        // GEX-1000 is mandatory and placed; credit then uncredit it
+        state::credit_code(&mut plan, "GEX-1000");
+        state::uncredit_code(&mut plan, "GEX-1000");
+        let model = panel_model(&snapshot, &plan);
+        let mandatory = model.mandatory.unwrap_or_else(|| panic!("chosen"));
+        assert_eq!(
+            mandatory.badge,
+            Badge::Partial("1/2".to_string()),
+            "still counted among the obligatoires"
+        );
+        assert_eq!(
+            mandatory.rows[0].code, "GEX-1000",
+            "satisfied first: it never falls to the end of the list"
+        );
+        assert_eq!(mandatory.rows[0].state, RowState::Chosen);
+        assert_eq!(
+            choice_strip(&snapshot, &plan, "GEX-1000").choice,
+            Choice::Auto,
+            "the solver will give it a session again"
+        );
     }
 
     #[test]
@@ -2397,15 +2581,15 @@ mod tests {
         let grants = std::collections::BTreeMap::from([
             ("AAA-1000".to_string(), "p/Règle fantôme".to_string()),
             ("BBB-1000".to_string(), "sans-slash".to_string()),
-            // Règle 3 is « any »: every course counts already
-            ("CCC-1000".to_string(), "p/Règle 3".to_string()),
+            // Règle 4 is raw-only: no list can host the course
+            ("CCC-1000".to_string(), "p/Règle 4".to_string()),
             ("DDD-1000".to_string(), "x/Règle 1".to_string()),
         ]);
         let (granted, warnings) = granted_program(program, &grants);
         assert_eq!(warnings.len(), 4, "{warnings:?}");
         assert!(warnings[0].contains("Règle fantôme"), "{}", warnings[0]);
         assert!(warnings[1].contains("sans-slash"), "{}", warnings[1]);
-        assert!(warnings[2].contains("Règle 3"), "{}", warnings[2]);
+        assert!(warnings[2].contains("Règle 4"), "{}", warnings[2]);
         assert!(warnings[3].contains("Règle 1"), "{}", warnings[3]);
         assert_eq!(&granted.rules, &snapshot.programs[0].rules, "untouched");
         // the warnings reach the panel
@@ -2442,17 +2626,23 @@ mod tests {
     }
 
     #[test]
-    fn grantable_rules_offer_lists_and_negotiated_rules_across_scopes() {
+    fn grantable_rules_offer_lists_and_keyword_rules_across_scopes() {
         let snapshot = snapshot();
         let rules = grantable_rules(&snapshot.programs[0]);
         let keys: Vec<&str> =
             rules.iter().map(|(key, _)| key.as_str()).collect();
         assert_eq!(
             keys,
-            ["p/Règle 1", "p/Règle 2", "c/Règle C1", "f/Règle P1"],
-            "« any » (Règle 3) and raw (Règle 4) shapes stay out"
+            [
+                "p/Règle 1",
+                "p/Règle 2",
+                "p/Règle 3",
+                "c/Règle C1",
+                "f/Règle P1"
+            ],
+            "« any » (Règle 3) is a target now; raw (Règle 4) stays out"
         );
-        assert_eq!(rules[3].1, "Règle P1");
+        assert_eq!(rules[4].1, "Règle P1");
 
         // the préparatoire rule is never an entente target: attaching a
         // course there would make it « acquis » with the checkbox
