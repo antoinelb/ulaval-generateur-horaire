@@ -138,6 +138,12 @@ pub fn HeaderBar() -> Element {
                     "changer"
                 }
             }
+            span { class: "header-notice",
+                "⚠ Horaires à titre indicatif, d'après le site web de \
+                 l'Université. Vérifiez-les et revalidez l'organigramme \
+                 à chaque session au cas où des horaires de cours \
+                 auraient changé."
+            }
             span { class: "header-credits",
                 if let Some((counted, required)) = bac {
                     span { "{counted}/{required} cr au bac - " }

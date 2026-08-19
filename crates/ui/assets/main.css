@@ -138,6 +138,11 @@ code {
   font-size: 0.8125rem;
 }
 
+.header-notice {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
 .header-credits {
   margin-left: auto;
   font-size: 0.8125rem;
