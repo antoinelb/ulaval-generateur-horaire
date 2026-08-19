@@ -22,10 +22,14 @@ pub struct CreditSummary {
 // same convention the solver uses; showing the interval is the row's job.
 pub fn credit_summary(
     program: Option<&Program>,
+    concentration: Option<&str>,
+    profile: Option<&str>,
     selection: &BTreeSet<String>,
     courses: &[Course],
 ) -> CreditSummary {
-    let en_sus = program.map(en_sus_codes).unwrap_or_default();
+    let en_sus = program
+        .map(|program| en_sus_codes(program, concentration, profile))
+        .unwrap_or_default();
     let mut summary = CreditSummary {
         counted: 0,
         in_addition: 0,
@@ -50,15 +54,28 @@ pub fn credit_summary(
     summary
 }
 
-// ponytail: en-sus codes pooled across program, concentrations and
-// profiles — the only en-sus rule today is the program-level « Stages »;
-// scope it per selected concentration if a real program ever needs it
-fn en_sus_codes(program: &Program) -> BTreeSet<String> {
+// En-sus codes of the program and the *chosen* blocks only — an en-sus
+// rule of an unselected concentration must not shelter credits (décision
+// 2026-08-19). An unknown title contributes nothing here: the coverage
+// report is the layer that surfaces it as an error.
+fn en_sus_codes(
+    program: &Program,
+    concentration: Option<&str>,
+    profile: Option<&str>,
+) -> BTreeSet<String> {
+    let concentration_rules = concentration
+        .and_then(|title| program.concentration(title))
+        .map(|block| block.rules.as_slice())
+        .unwrap_or_default();
+    let profile_rules = profile
+        .and_then(|title| program.profile(title))
+        .map(|block| block.rules.as_slice())
+        .unwrap_or_default();
     program
         .rules
         .iter()
-        .chain(program.concentrations.iter().flat_map(|c| &c.rules))
-        .chain(program.profiles.iter().flat_map(|p| &p.rules))
+        .chain(concentration_rules)
+        .chain(profile_rules)
         .filter(|rule| rule.credits_in_addition)
         .filter_map(|rule| match &rule.courses {
             RuleCourses::List { courses } => Some(courses),
@@ -109,6 +126,8 @@ mod tests {
         ];
         let summary = credit_summary(
             Some(&program_with_stage_rule()),
+            None,
+            None,
             &selection(&["GEX-1000", "GEX-1580", "MAT-0130"]),
             &courses,
         );
@@ -121,14 +140,20 @@ mod tests {
     #[test]
     fn without_a_program_every_university_credit_counts() {
         let courses = vec![course("GEX-1580", "6", 1)];
-        let summary =
-            credit_summary(None, &selection(&["GEX-1580"]), &courses);
+        let summary = credit_summary(
+            None,
+            None,
+            None,
+            &selection(&["GEX-1580"]),
+            &courses,
+        );
         assert_eq!(summary.counted, 6, "no rule declares it en sus");
     }
 
     #[test]
     fn a_selected_code_without_a_course_is_surfaced_not_dropped() {
-        let summary = credit_summary(None, &selection(&["GHOST-999"]), &[]);
+        let summary =
+            credit_summary(None, None, None, &selection(&["GHOST-999"]), &[]);
         assert_eq!(summary.counted, 0);
         assert_eq!(summary.unknown, ["GHOST-999"]);
     }
@@ -148,6 +173,8 @@ mod tests {
         let courses = vec![course("GEX-1580", "6", 1)];
         let summary = credit_summary(
             Some(&program),
+            None,
+            None,
             &selection(&["GEX-1580"]),
             &courses,
         );
@@ -155,10 +182,51 @@ mod tests {
     }
 
     #[test]
+    fn a_blocks_en_sus_rule_counts_only_when_the_block_is_chosen() {
+        // the en-sus shelter follows the choice: unchosen, the course
+        // counts toward the diploma like any other
+        let program: Program = serde_json::from_str(
+            r#"{"code":"B-GMC","slug":"gmc","semester":"A26","title":"P",
+                "cycle":1,"credits_required":120,"mandatory":[],"rules":[],
+                "concentrations":[
+                  {"title":"Robotique","mandatory":[],
+                   "rules":[{"title":"R","courses":["GMC-3351"],
+                             "credits_in_addition":true}]}],
+                "profiles":[
+                  {"title":"Profil international","mandatory":[],
+                   "rules":[{"title":"R","courses":["GPL-1000"],
+                             "credits_in_addition":true}]}]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let courses =
+            vec![course("GMC-3351", "3", 1), course("GPL-1000", "3", 1)];
+        let picked = selection(&["GMC-3351", "GPL-1000"]);
+
+        let unchosen =
+            credit_summary(Some(&program), None, None, &picked, &courses);
+        assert_eq!(unchosen.counted, 6, "no block chosen, nothing en sus");
+
+        let chosen = credit_summary(
+            Some(&program),
+            Some("Robotique"),
+            Some("Profil international"),
+            &picked,
+            &courses,
+        );
+        assert_eq!(chosen.counted, 0);
+        assert_eq!(chosen.in_addition, 6, "both chosen blocks shelter theirs");
+    }
+
+    #[test]
     fn a_credits_range_counts_at_its_planning_value() {
         let courses = vec![course("GEX-2500", r#"{"min":6,"max":12}"#, 1)];
-        let summary =
-            credit_summary(None, &selection(&["GEX-2500"]), &courses);
+        let summary = credit_summary(
+            None,
+            None,
+            None,
+            &selection(&["GEX-2500"]),
+            &courses,
+        );
         assert_eq!(summary.counted, 6, "the lower bound, never a guess");
     }
 }

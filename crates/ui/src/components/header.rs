@@ -83,15 +83,10 @@ pub fn HeaderBar() -> Element {
         );
     };
     // (code, millésime) — two vintages of one program are two programs,
-    // and the chosen one stays named on screen (rapport étudiante)
+    // and the chosen one stays named on screen, concentration et profil
+    // compris (rapport étudiante ; décision 2026-08-19)
     let chosen = crate::panel::chosen_program(snapshot, &plan.read());
-    let program_title = chosen
-        .map(|program| {
-            format!(
-                "{} ({} version {})",
-                program.title, program.code, program.semester
-            )
-        })
+    let program_title = crate::panel::program_subtitle(snapshot, &plan.read())
         .unwrap_or_else(|| "aucun programme choisi".to_string());
     let has_program = chosen.is_some();
     let history = use_context::<Signal<crate::state::History>>();
@@ -100,8 +95,11 @@ pub fn HeaderBar() -> Element {
     let bac = chosen.map(|program| {
         let plan_read = plan.read();
         let granted = crate::panel::effective_program(snapshot, &plan_read);
+        let (concentration, profile) = crate::panel::scope_of(&plan_read);
         let summary = ulaval_scheduler_wasm::credits::credit_summary(
             granted.as_ref(),
+            concentration,
+            profile,
             &crate::panel::selection(&plan_read),
             &snapshot.courses,
         );

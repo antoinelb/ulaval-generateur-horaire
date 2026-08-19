@@ -643,6 +643,12 @@ code {
   min-width: 4rem;
 }
 
+/* les menus du cheminement portent des titres longs (« Cheminement sans
+   concentration ») : une rangée pleine largeur chacun, jamais tronqués */
+.panel-knob--cheminement {
+  min-width: 100%;
+}
+
 .panel-knob select,
 .panel-knob input {
   font: inherit;

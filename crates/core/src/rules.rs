@@ -193,23 +193,19 @@ fn resolve_scopes<'a>(
     let mut scopes: Vec<ScopeBlock> =
         vec![(Scope::Program, &program.mandatory, &program.rules)];
     if let Some(title) = concentration {
-        let block = program
-            .concentrations
-            .iter()
-            .find(|block| block.title == title)
-            .ok_or_else(|| CoverageError::UnknownConcentration {
+        let block = program.concentration(title).ok_or_else(|| {
+            CoverageError::UnknownConcentration {
                 title: title.to_string(),
-            })?;
+            }
+        })?;
         scopes.push((Scope::Concentration, &block.mandatory, &block.rules));
     }
     if let Some(title) = profile {
-        let block = program
-            .profiles
-            .iter()
-            .find(|block| block.title == title)
-            .ok_or_else(|| CoverageError::UnknownProfile {
+        let block = program.profile(title).ok_or_else(|| {
+            CoverageError::UnknownProfile {
                 title: title.to_string(),
-            })?;
+            }
+        })?;
         scopes.push((Scope::Profile, &block.mandatory, &block.rules));
     }
     Ok(scopes)

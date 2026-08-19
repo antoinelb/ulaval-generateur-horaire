@@ -291,6 +291,23 @@ pub fn purge_codes(plan: &mut Plan, codes: &[String]) {
     }
 }
 
+// Changing the concentration (prefix 'c') or the profile ('f') retires the
+// ententes attached to the outgoing block: an entente names a rule of that
+// block, and the same title under another block is another rule. The
+// dropped codes come back for the caller to announce — never a silent loss
+// (décision 2026-08-19).
+pub fn purge_scope_grants(plan: &mut Plan, prefix: char) -> Vec<String> {
+    let scoped = format!("{prefix}/");
+    let dropped: Vec<String> = plan
+        .rule_grants
+        .iter()
+        .filter(|(_, key)| key.starts_with(&scoped))
+        .map(|(code, _)| code.clone())
+        .collect();
+    plan.rule_grants.retain(|_, key| !key.starts_with(&scoped));
+    dropped
+}
+
 // --- undo/redo ------------------------------------------------------------
 
 // ACT-2: every mutation of the Plan goes through `apply`, so every one is
@@ -439,6 +456,25 @@ mod tests {
         assert_eq!(plan.manual[&1], ["GEX-1000"]);
         assert!(!plan.chosen[&1].contains_key("MAT-0130"));
         assert!(plan.chosen[&1].contains_key("GEX-1000"));
+    }
+
+    #[test]
+    fn changing_a_scope_purges_its_grants_and_names_them() {
+        let mut plan = Plan {
+            rule_grants: BTreeMap::from([
+                ("GEX-1000".to_string(), "c/Règle C1".to_string()),
+                ("GEX-2000".to_string(), "p/Règle 2".to_string()),
+                ("GEX-3000".to_string(), "f/Règle P1".to_string()),
+            ]),
+            ..Plan::default()
+        };
+        let dropped = purge_scope_grants(&mut plan, 'c');
+        assert_eq!(dropped, ["GEX-1000"], "the outgoing block's only");
+        assert_eq!(plan.rule_grants.len(), 2, "p/ and f/ grants survive");
+        assert!(
+            purge_scope_grants(&mut plan, 'c').is_empty(),
+            "nothing left to purge, nothing announced"
+        );
     }
 
     #[test]

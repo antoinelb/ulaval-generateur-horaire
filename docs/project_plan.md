@@ -39,6 +39,7 @@ Toute nouvelle décision est documentée dans un fichier individuel sous `docs/c
 - Mise en évidence des conflits d'horaire ; s'il n'existe aucune combinaison valide, les plages en conflit sont identifiées et surlignées.
 - Classement des combinaisons valides selon des préférences (journées compactes, matins libres, pause dîner) — modèle exact à concevoir contre des données réelles.
 - Présentation des cours du programme selon ses règles et profils, avec mise en évidence des règles pour chacun des cours.
+- Choix de la concentration et du profil au panneau (deux menus, option neutre « Aucune »/« Aucun » ; défaut : la première concentration du millésime, jamais de profil imposé), changeable à tout moment sans toucher la grille placée ; le solveur, le bilan de couverture et les crédits « en sus » suivent la portée choisie (ADR `2026-08-selection-concentration-et-profil-au-panneau`).
 
 ##### Automatisation de la création d'horaire
 

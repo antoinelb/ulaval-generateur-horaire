@@ -109,16 +109,6 @@ pub fn panel_model(snapshot: &Snapshot, plan: &Plan) -> PanelModel {
     let Some(chosen) = chosen_program(snapshot, plan) else {
         return PanelModel::empty();
     };
-    // the ententes ride as data: the rules gain their granted courses
-    // before core counts anything
-    let (granted, mut warnings) = granted_program(chosen, &plan.rule_grants);
-    let program = &granted;
-    let mut selection = selection(plan);
-    // « préparatoire faite » : its courses count for the coverage without
-    // occupying any session
-    if plan.preparatory_done {
-        selection.extend(crate::solve::preparatory_codes(program));
-    }
     // `chosen_program` proved the choice exists; and_then keeps it total
     let concentration = plan
         .program
@@ -128,6 +118,17 @@ pub fn panel_model(snapshot: &Snapshot, plan: &Plan) -> PanelModel {
         .program
         .as_ref()
         .and_then(|choice| choice.profile.as_deref());
+    // the ententes ride as data: the rules gain their granted courses
+    // before core counts anything
+    let (granted, mut warnings) =
+        granted_program(chosen, concentration, profile, &plan.rule_grants);
+    let program = &granted;
+    let mut selection = selection(plan);
+    // « préparatoire faite » : its courses count for the coverage without
+    // occupying any session
+    if plan.preparatory_done {
+        selection.extend(crate::solve::preparatory_codes(program));
+    }
     let report = match coverage_report(
         program,
         concentration,
@@ -395,15 +396,20 @@ fn rule_raw(rule: &Rule) -> Option<String> {
 // The program as the direction's agreements amend it: each granted code
 // joins its rule's course list — a « negotiated » rule (no fixed list)
 // becomes the list of its grants. Pure data surgery; the counting stays
-// core's. An inapplicable grant is named, never dropped.
+// core's. An inapplicable grant is named, never dropped. A `c/…`/`f/…`
+// key resolves inside the *chosen* block only: every concentration of the
+// B-GMC has a « Règle 1 », and an entente must never land in another
+// block's rule of the same name (décision 2026-08-19).
 pub fn granted_program(
     program: &Program,
+    concentration: Option<&str>,
+    profile: Option<&str>,
     grants: &std::collections::BTreeMap<String, String>,
 ) -> (Program, Vec<String>) {
     let mut granted = program.clone();
     let mut warnings = Vec::new();
     for (code, key) in grants {
-        let rule = grant_target(&mut granted, key);
+        let rule = grant_target(&mut granted, concentration, profile, key);
         let Some(rule) = rule else {
             warnings.push(format!(
                 "Entente pour {code} : la règle « {} » est introuvable dans \
@@ -474,9 +480,12 @@ fn strip_from_other_lists(program: &mut Program, code: &str, keep_key: &str) {
     }
 }
 
-// the rule a section key (« p/Règle 2 », « c/… », « f/… ») names
+// the rule a section key (« p/Règle 2 », « c/… », « f/… ») names — the
+// scoped keys inside the chosen block only
 fn grant_target<'a>(
     program: &'a mut Program,
+    concentration: Option<&str>,
+    profile: Option<&str>,
     key: &str,
 ) -> Option<&'a mut Rule> {
     let (scope, title) = key.split_once('/')?;
@@ -485,12 +494,14 @@ fn grant_target<'a>(
         "c" => program
             .concentrations
             .iter_mut()
-            .flat_map(|concentration| concentration.rules.iter_mut())
+            .filter(|block| Some(block.title.as_str()) == concentration)
+            .flat_map(|block| block.rules.iter_mut())
             .find(|rule| rule.title == title),
         "f" => program
             .profiles
             .iter_mut()
-            .flat_map(|profile| profile.rules.iter_mut())
+            .filter(|block| Some(block.title.as_str()) == profile)
+            .flat_map(|block| block.rules.iter_mut())
             .find(|rule| rule.title == title),
         _ => None,
     }
@@ -584,14 +595,32 @@ pub fn chosen_program<'a>(
 // what the solver and the coverage must see: the chosen program with the
 // direction's agreements applied (inapplicable ones surface in the panel)
 pub fn effective_program(snapshot: &Snapshot, plan: &Plan) -> Option<Program> {
-    chosen_program(snapshot, plan)
-        .map(|program| granted_program(program, &plan.rule_grants).0)
+    let (concentration, profile) = scope_of(plan);
+    chosen_program(snapshot, plan).map(|program| {
+        granted_program(program, concentration, profile, &plan.rule_grants).0
+    })
+}
+
+// the chosen concentration and profile titles, read off the plan's choice
+pub fn scope_of(plan: &Plan) -> (Option<&str>, Option<&str>) {
+    match plan.program.as_ref() {
+        None => (None, None),
+        Some(choice) => {
+            (choice.concentration.as_deref(), choice.profile.as_deref())
+        }
+    }
 }
 
 // the rules an agreement can attach a course to — a plain list, or a
 // keyword rule (« negotiated », « tous les cours ») whose grant is exactly
-// the attachment that makes it countable; keyed like the sections
-pub fn grantable_rules(program: &Program) -> Vec<(String, String)> {
+// the attachment that makes it countable; keyed like the sections. Only
+// the chosen blocks offer their rules: attaching a course to an unselected
+// concentration would count it nowhere.
+pub fn grantable_rules(
+    program: &Program,
+    concentration: Option<&str>,
+    profile: Option<&str>,
+) -> Vec<(String, String)> {
     let grantable = |rule: &Rule| {
         // never the préparatoire: attaching a course there would make it
         // « acquis » the moment the checkbox is on — no entente means that
@@ -618,7 +647,8 @@ pub fn grantable_rules(program: &Program) -> Vec<(String, String)> {
             program
                 .concentrations
                 .iter()
-                .flat_map(|concentration| &concentration.rules)
+                .filter(|block| Some(block.title.as_str()) == concentration)
+                .flat_map(|block| &block.rules)
                 .filter(|rule| grantable(rule))
                 .map(|rule| keyed('c', rule)),
         )
@@ -626,11 +656,81 @@ pub fn grantable_rules(program: &Program) -> Vec<(String, String)> {
             program
                 .profiles
                 .iter()
-                .flat_map(|profile| &profile.rules)
+                .filter(|block| Some(block.title.as_str()) == profile)
+                .flat_map(|block| &block.rules)
                 .filter(|rule| grantable(rule))
                 .map(|rule| keyed('f', rule)),
         )
         .collect()
+}
+
+// The cheminement row's model: the offered titles and the current choice.
+// None when no program is chosen or when the program offers neither — the
+// row has nothing to say (M-GEX). A knob whose own list is empty is not
+// rendered either (B-GEX has no concentrations).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CheminementChoices {
+    pub concentrations: Vec<String>,
+    pub profiles: Vec<String>,
+    pub concentration: Option<String>,
+    pub profile: Option<String>,
+}
+
+pub fn cheminement_choices(
+    snapshot: &Snapshot,
+    plan: &Plan,
+) -> Option<CheminementChoices> {
+    let program = chosen_program(snapshot, plan)?;
+    if program.concentrations.is_empty() && program.profiles.is_empty() {
+        return None;
+    }
+    let (concentration, profile) = scope_of(plan);
+    Some(CheminementChoices {
+        concentrations: program
+            .concentrations
+            .iter()
+            .map(|block| block.title.clone())
+            .collect(),
+        profiles: program
+            .profiles
+            .iter()
+            .map(|block| block.title.clone())
+            .collect(),
+        concentration: concentration.map(str::to_string),
+        profile: profile.map(str::to_string),
+    })
+}
+
+// The expert-safe default (AIR LAY-3, parité avec la version JS) : the
+// page's first concentration when the program has any — never a profile.
+// An explicit « Aucune » afterwards is the student's and persists.
+pub fn default_concentration(
+    snapshot: &Snapshot,
+    code: &str,
+    semester: &str,
+) -> Option<String> {
+    snapshot
+        .programs
+        .iter()
+        .find(|program| {
+            program.code == code && program.semester.to_string() == semester
+        })
+        .and_then(|program| program.concentrations.first())
+        .map(|block| block.title.clone())
+}
+
+// the header's subtitle, the choice named whole (parité avec la version
+// JS) : « Titre (CODE version A26) — Concentration — Profil »
+pub fn program_subtitle(snapshot: &Snapshot, plan: &Plan) -> Option<String> {
+    let program = chosen_program(snapshot, plan)?;
+    let (concentration, profile) = scope_of(plan);
+    let mut parts = vec![format!(
+        "{} ({} version {})",
+        program.title, program.code, program.semester
+    )];
+    parts.extend(concentration.map(str::to_string));
+    parts.extend(profile.map(str::to_string));
+    Some(parts.join(" — "))
 }
 
 // Some(section key) when taking `code` must record an entente as part of
@@ -1804,7 +1904,8 @@ mod tests {
             "GMN-1000".to_string(),
             "p/Règle 2".to_string(),
         )]);
-        let (granted, warnings) = granted_program(program, &grants);
+        let (granted, warnings) =
+            granted_program(program, None, None, &grants);
         assert!(warnings.is_empty(), "{warnings:?}");
         let rule1 = granted
             .rules
@@ -1868,7 +1969,7 @@ mod tests {
             ("GAE-1000".to_string(), "p/Règle 3".to_string()),
         ]);
         let (granted, warnings) =
-            granted_program(&snapshot.programs[0], &grants);
+            granted_program(&snapshot.programs[0], None, None, &grants);
         assert!(warnings.is_empty(), "{warnings:?}");
         let rule_3 = granted
             .rules
@@ -2524,7 +2625,12 @@ mod tests {
             // a concentration rule hosts a grant too
             ("XYZ-3000".to_string(), "c/Règle C1".to_string()),
         ]);
-        let (granted, warnings) = granted_program(program, &grants);
+        let (granted, warnings) = granted_program(
+            program,
+            Some("Génie urbain"),
+            Some("Profil international"),
+            &grants,
+        );
         assert!(warnings.is_empty(), "{warnings:?}");
         let c1 = granted.concentrations[0]
             .rules
@@ -2585,7 +2691,8 @@ mod tests {
             ("CCC-1000".to_string(), "p/Règle 4".to_string()),
             ("DDD-1000".to_string(), "x/Règle 1".to_string()),
         ]);
-        let (granted, warnings) = granted_program(program, &grants);
+        let (granted, warnings) =
+            granted_program(program, None, None, &grants);
         assert_eq!(warnings.len(), 4, "{warnings:?}");
         assert!(warnings[0].contains("Règle fantôme"), "{}", warnings[0]);
         assert!(warnings[1].contains("sans-slash"), "{}", warnings[1]);
@@ -2628,7 +2735,11 @@ mod tests {
     #[test]
     fn grantable_rules_offer_lists_and_keyword_rules_across_scopes() {
         let snapshot = snapshot();
-        let rules = grantable_rules(&snapshot.programs[0]);
+        let rules = grantable_rules(
+            &snapshot.programs[0],
+            Some("Génie urbain"),
+            Some("Profil international"),
+        );
         let keys: Vec<&str> =
             rules.iter().map(|(key, _)| key.as_str()).collect();
         assert_eq!(
@@ -2654,7 +2765,104 @@ mod tests {
                 "concentrations":[],"profiles":[]}"#,
         )
         .unwrap_or_else(|e| panic!("{e}"));
-        assert!(grantable_rules(&with_preparatory).is_empty());
+        assert!(grantable_rules(&with_preparatory, None, None).is_empty());
+    }
+
+    #[test]
+    fn grantable_rules_offer_only_the_chosen_blocks() {
+        let snapshot = snapshot();
+        let rules = grantable_rules(&snapshot.programs[0], None, None);
+        let keys: Vec<&str> =
+            rules.iter().map(|(key, _)| key.as_str()).collect();
+        assert_eq!(
+            keys,
+            ["p/Règle 1", "p/Règle 2", "p/Règle 3"],
+            "no block chosen, no scoped target"
+        );
+    }
+
+    #[test]
+    fn a_scoped_grant_needs_its_block_chosen() {
+        // the same key with no concentration chosen resolves nowhere: the
+        // entente is named as inapplicable, never landed in another block
+        let snapshot = snapshot();
+        let grants = std::collections::BTreeMap::from([(
+            "XYZ-3000".to_string(),
+            "c/Règle C1".to_string(),
+        )]);
+        let (granted, warnings) =
+            granted_program(&snapshot.programs[0], None, None, &grants);
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains("Règle C1"), "{}", warnings[0]);
+        assert_eq!(
+            granted.concentrations, snapshot.programs[0].concentrations,
+            "untouched"
+        );
+    }
+
+    #[test]
+    fn cheminement_choices_offer_the_blocks_and_carry_the_choice() {
+        let snapshot = snapshot();
+        let mut plan = plan();
+        if let Some(choice) = plan.program.as_mut() {
+            choice.concentration = Some("Génie urbain".to_string());
+        }
+        let choices = cheminement_choices(&snapshot, &plan)
+            .expect("the program offers blocks");
+        assert_eq!(choices.concentrations, ["Génie urbain"]);
+        assert_eq!(choices.profiles, ["Profil international"]);
+        assert_eq!(choices.concentration.as_deref(), Some("Génie urbain"));
+        assert_eq!(choices.profile, None);
+        assert!(
+            cheminement_choices(&snapshot, &Plan::default()).is_none(),
+            "no program, no row"
+        );
+        // a program offering neither block has no row either (M-GEX)
+        let mut bare = snapshot;
+        bare.programs[0].concentrations.clear();
+        bare.programs[0].profiles.clear();
+        assert!(cheminement_choices(&bare, &plan).is_none());
+    }
+
+    #[test]
+    fn the_default_concentration_is_the_pages_first() {
+        let snapshot = snapshot();
+        assert_eq!(
+            default_concentration(&snapshot, "B-GEX", "A26").as_deref(),
+            Some("Génie urbain")
+        );
+        assert!(
+            default_concentration(&snapshot, "B-GEX", "H99").is_none(),
+            "an unknown vintage imposes nothing"
+        );
+        let mut bare = snapshot;
+        bare.programs[0].concentrations.clear();
+        assert!(
+            default_concentration(&bare, "B-GEX", "A26").is_none(),
+            "no concentration on the page, none imposed (B-GEX)"
+        );
+    }
+
+    #[test]
+    fn the_subtitle_names_the_chosen_program_concentration_and_profile() {
+        let snapshot = snapshot();
+        let mut plan = plan();
+        assert_eq!(
+            program_subtitle(&snapshot, &plan).as_deref(),
+            Some("Baccalauréat en génie des eaux (B-GEX version A26)")
+        );
+        if let Some(choice) = plan.program.as_mut() {
+            choice.concentration = Some("Génie urbain".to_string());
+            choice.profile = Some("Profil international".to_string());
+        }
+        assert_eq!(
+            program_subtitle(&snapshot, &plan).as_deref(),
+            Some(
+                "Baccalauréat en génie des eaux (B-GEX version A26) — \
+                 Génie urbain — Profil international"
+            )
+        );
+        assert!(program_subtitle(&snapshot, &Plan::default()).is_none());
     }
 
     #[test]

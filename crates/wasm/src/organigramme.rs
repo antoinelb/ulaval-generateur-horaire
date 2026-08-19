@@ -220,6 +220,8 @@ fn intake(
         .collect();
     placement_intake(
         input.program.as_ref(),
+        input.concentration.as_deref(),
+        input.profile.as_deref(),
         &input.electives,
         &input.passed,
         &pins,
@@ -391,6 +393,47 @@ mod tests {
             ])
         );
         assert!(report.coverage.is_none(), "generation does not count rules");
+    }
+
+    #[test]
+    fn generation_places_the_chosen_concentrations_mandatory_courses() {
+        // GEX-1001 is mandatory only inside the concentration: unchosen it
+        // never reaches the solver, chosen it is placed like the program's
+        // own (décision 2026-08-19)
+        let program = r#"{"code":"B-GEX","slug":"gex","semester":"A26",
+            "title":"P","cycle":1,"credits_required":6,
+            "mandatory":["GEX-1000"],"rules":[],
+            "concentrations":[{"title":"Robotique",
+                               "mandatory":["GEX-1001"],"rules":[]}],
+            "profiles":[]}"#;
+        let unchosen =
+            generate(&input(&format!(r#""program":{program}"#)), &courses())
+                .unwrap_or_else(|e| panic!("{e}"));
+        assert!(
+            !unchosen.placement.solutions[0]
+                .placement
+                .contains_key("GEX-1001"),
+            "an unchosen concentration feeds the solver nothing"
+        );
+
+        let chosen = generate(
+            &input(&format!(
+                r#""program":{program},"concentration":"Robotique""#
+            )),
+            &courses(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(chosen.placement.solutions[0].placement["GEX-1001"], 2);
+    }
+
+    #[test]
+    fn generation_surfaces_an_unknown_concentration() {
+        let error = generate(
+            &input(&format!(r#""program":{PROGRAM},"concentration":"Zzz""#)),
+            &courses(),
+        )
+        .expect_err("no concentration titled Zzz");
+        assert!(error.contains("Zzz"), "{error}");
     }
 
     #[test]
@@ -575,6 +618,28 @@ mod tests {
 
     #[test]
     fn verification_surfaces_every_coverage_error() {
+        // an unknown title now dies at the intake (the solver reads the
+        // scope too), so the coverage half is proven by a counting error:
+        // the two pinned courses sum 6 credits over the rule's max of 3
+        let program = PROGRAM.replace(
+            r#""rules":[]"#,
+            r#""rules":[{"title":"Règle 1",
+                         "constraint":{"type":"credits","min":3,"max":3},
+                         "courses":["GEX-1000","GEX-1001"]}]"#,
+        );
+        let error = verify(
+            &input(&format!(
+                r#""program":{program},
+                   "pinned":{{"GEX-1000":1,"GEX-1001":2}}"#
+            )),
+            &courses(),
+        )
+        .expect_err("6 credits over the max of 3");
+        assert!(error.contains("above the max"), "{error}");
+    }
+
+    #[test]
+    fn verification_surfaces_an_unknown_concentration() {
         let error = verify(
             &input(&format!(
                 r#""program":{PROGRAM},"concentration":"Aucune",

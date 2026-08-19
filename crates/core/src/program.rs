@@ -144,6 +144,21 @@ pub struct Profile {
     pub notes: Vec<String>,
 }
 
+impl Program {
+    // A block is identified by its title alone — no id exists in the data —
+    // so these two lookups are the one resolution rule every consumer
+    // (coverage report, solver intake, credit tally) shares.
+    pub fn concentration(&self, title: &str) -> Option<&Concentration> {
+        self.concentrations
+            .iter()
+            .find(|block| block.title == title)
+    }
+
+    pub fn profile(&self, title: &str) -> Option<&Profile> {
+        self.profiles.iter().find(|block| block.title == title)
+    }
+}
+
 // no Tsify derive: the `flatten` would come out as `interface Rule extends
 // RuleCourses`, invalid over a union — declared by hand in the boundary's
 // custom section instead (ADR `2026-08-types-typescript-tsify-declaratif`)

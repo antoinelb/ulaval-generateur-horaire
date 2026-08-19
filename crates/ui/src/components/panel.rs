@@ -54,6 +54,9 @@ fn ProgramPicker() -> Element {
     let plan = use_context::<Signal<Plan>>();
     let history = use_context::<Signal<History>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
+    // the Signal itself, kept from the shadowing below: the choose click
+    // reads the snapshot again to pick the default concentration
+    let snapshot_signal = snapshot;
     // the vintage a select is on but no click has confirmed, by code — a
     // setting with no effect yet is nothing to undo, so it stays out of the
     // plan and its history. Absent = the select still shows its first
@@ -112,6 +115,18 @@ fn ProgramPicker() -> Element {
                                     else {
                                         return;
                                     };
+                                    // défaut expert-sûr (AIR LAY-3, parité
+                                    // avec la version JS) : la première
+                                    // concentration du millésime choisi,
+                                    // jamais de profil imposé
+                                    let concentration = {
+                                        let read = snapshot_signal.read();
+                                        read.as_ref().and_then(|snapshot| {
+                                            panel::default_concentration(
+                                                snapshot, &code, &semester,
+                                            )
+                                        })
+                                    };
                                     edit_plan(
                                         plan,
                                         history,
@@ -120,7 +135,7 @@ fn ProgramPicker() -> Element {
                                             plan.program = Some(ProgramChoice {
                                                 code,
                                                 semester,
-                                                concentration: None,
+                                                concentration,
                                                 profile: None,
                                             });
                                         },
@@ -133,6 +148,144 @@ fn ProgramPicker() -> Element {
                 }
             }
         }
+    }
+}
+
+// Les deux menus du cheminement (décision 2026-08-19) : la concentration
+// et le profil se changent ici, à tout moment — les sections en dessous et
+// le bilan recomposent, la grille placée ne bouge pas (parité avec la
+// version JS). Un menu sans choix réel n'est pas rendu (B-GEX n'a pas de
+// concentrations) ; un programme qui n'offre ni l'un ni l'autre n'a pas la
+// rangée (M-GEX).
+#[component]
+fn CheminementKnobs() -> Element {
+    let plan = use_context::<Signal<Plan>>();
+    let history = use_context::<Signal<History>>();
+    let snapshot = use_context::<Signal<Option<Snapshot>>>();
+    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let choices = use_memo(move || {
+        let read = snapshot.read();
+        let snapshot = read.as_ref()?;
+        panel::cheminement_choices(snapshot, &plan.read())
+    });
+    let Some(choices) = choices() else {
+        return rsx! {};
+    };
+    rsx! {
+        div { class: "panel-knobs",
+            if !choices.concentrations.is_empty() {
+                label { class: "panel-knob panel-knob--cheminement",
+                    "Concentration"
+                    select {
+                        onchange: move |event: Event<FormData>| {
+                            set_scope(
+                                plan,
+                                history,
+                                alerts,
+                                'c',
+                                event.value(),
+                            );
+                        },
+                        option {
+                            value: "",
+                            selected: choices.concentration.is_none(),
+                            "Aucune"
+                        }
+                        for title in choices.concentrations.iter() {
+                            option {
+                                key: "{title}",
+                                value: "{title}",
+                                selected: choices.concentration.as_deref()
+                                    == Some(title.as_str()),
+                                "{title}"
+                            }
+                        }
+                    }
+                }
+            }
+            if !choices.profiles.is_empty() {
+                label { class: "panel-knob panel-knob--cheminement",
+                    "Profil"
+                    select {
+                        onchange: move |event: Event<FormData>| {
+                            set_scope(
+                                plan,
+                                history,
+                                alerts,
+                                'f',
+                                event.value(),
+                            );
+                        },
+                        option {
+                            value: "",
+                            selected: choices.profile.is_none(),
+                            "Aucun"
+                        }
+                        for title in choices.profiles.iter() {
+                            option {
+                                key: "{title}",
+                                value: "{title}",
+                                selected: choices.profile.as_deref()
+                                    == Some(title.as_str()),
+                                "{title}"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// One door for both menus: the act is labelled and undoable, the grid is
+// left untouched, and the ententes attached to the outgoing block are
+// retired and announced — their rule changed meaning with the block.
+fn set_scope(
+    plan: Signal<Plan>,
+    history: Signal<History>,
+    alerts: Signal<Vec<super::Alert>>,
+    prefix: char,
+    value: String,
+) {
+    let title = (!value.is_empty()).then_some(value);
+    let current = {
+        let read = plan.read();
+        let (concentration, profile) = panel::scope_of(&read);
+        if prefix == 'c' {
+            concentration.map(str::to_string)
+        } else {
+            profile.map(str::to_string)
+        }
+    };
+    if current == title {
+        return;
+    }
+    let label = match (prefix, title.as_deref()) {
+        ('c', Some(title)) => format!("Concentration : {title}"),
+        ('c', None) => "Concentration retirée".to_string(),
+        (_, Some(title)) => format!("Profil : {title}"),
+        (_, None) => "Profil retiré".to_string(),
+    };
+    let mut dropped = Vec::new();
+    edit_plan(plan, history, &label, |plan| {
+        if let Some(choice) = plan.program.as_mut() {
+            if prefix == 'c' {
+                choice.concentration = title;
+            } else {
+                choice.profile = title;
+            }
+        }
+        dropped = state::purge_scope_grants(plan, prefix);
+    });
+    if !dropped.is_empty() {
+        super::push_alert(
+            alerts,
+            super::AlertBody::Note(format!(
+                "Ententes retirées avec l'ancien choix : {} — « Annuler » \
+                 les restaure.",
+                dropped.join(", ")
+            )),
+        );
     }
 }
 
@@ -171,6 +324,7 @@ fn PanelBody(model: PanelModel) -> Element {
                 p { class: "warning", "⚠ {warning}" }
             }
             if has_program {
+                CheminementKnobs {}
                 OrganigrammeControls { rules_missing: missing_rules(&model) }
             }
             if searching {
@@ -1200,8 +1354,12 @@ fn RuleAttach(code: String) -> Element {
     let read = snapshot.read();
     let rules = read
         .as_ref()
-        .and_then(|snapshot| panel::chosen_program(snapshot, &plan.read()))
-        .map(panel::grantable_rules)
+        .and_then(|snapshot| {
+            let plan_read = plan.read();
+            let program = panel::chosen_program(snapshot, &plan_read)?;
+            let (concentration, profile) = panel::scope_of(&plan_read);
+            Some(panel::grantable_rules(program, concentration, profile))
+        })
         .unwrap_or_default();
     if rules.is_empty() {
         return rsx! {};
@@ -1474,9 +1632,17 @@ fn ManualCourseForm() -> Element {
                 let rules = read
                     .as_ref()
                     .and_then(|snapshot| {
-                        panel::chosen_program(snapshot, &plan.read())
+                        let plan_read = plan.read();
+                        let program =
+                            panel::chosen_program(snapshot, &plan_read)?;
+                        let (concentration, profile) =
+                            panel::scope_of(&plan_read);
+                        Some(panel::grantable_rules(
+                            program,
+                            concentration,
+                            profile,
+                        ))
                     })
-                    .map(panel::grantable_rules)
                     .unwrap_or_default();
                 let chosen_rule = rule.read().clone();
                 rsx! {

@@ -4,7 +4,10 @@ use crate::course::{
     is_preuniversity, Course, PrereqTree, Prerequisites, Season,
 };
 use crate::preparatory::PREPARATORY_RULE_TITLE;
-use crate::program::{Program, RuleCourses, Semester, STAGES_RULE_TITLE};
+use crate::program::{
+    Concentration, Profile, Program, Rule, RuleCourses, Semester,
+    STAGES_RULE_TITLE,
+};
 use crate::weekly::resolve_offering;
 
 // The intake seam of every consumer of the solvers (the UI, any future
@@ -25,6 +28,13 @@ pub enum IntakeError {
     DuplicatedCodes { codes: Vec<String> },
     #[error("unknown course codes : {}", .codes.join(", "))]
     UnknownCodes { codes: Vec<String> },
+    // the same typo rule as the coverage report: a chosen title the program
+    // does not carry is surfaced, never guessed at (décision 2026-08-19 :
+    // le solveur place aussi les obligatoires du cheminement choisi)
+    #[error("no concentration titled « {title} » in the program")]
+    UnknownConcentration { title: String },
+    #[error("no profile titled « {title} » in the program")]
+    UnknownProfile { title: String },
     #[error("{code} is not offered in the requested season")]
     NotOffered { code: String },
     #[error("pinned expects CODE=SESSION : {spec}")]
@@ -84,19 +94,32 @@ pub fn schedule_intake(
 // The placement pipeline shared by every harness: typed input (electives,
 // passed, pins) strictly validated — a typo must not survive — while
 // program-derived courses without snapshot data degrade loudly into
-// `set_aside`, never silently dropped.
+// `set_aside`, never silently dropped. The chosen concentration and
+// profile join the program scope whole: their mandatory courses enter the
+// list and their rules feed the injection pool (décision 2026-08-19).
 pub fn placement_intake(
     program: Option<&Program>,
+    concentration: Option<&str>,
+    profile: Option<&str>,
     electives: &[String],
     passed: &[String],
     pins: &[String],
     all: &[Course],
 ) -> Result<PlacementIntake, IntakeError> {
+    let concentration = chosen_concentration(program, concentration)?;
+    let profile = chosen_profile(program, profile)?;
     let electives = normalize_codes(electives)?;
     let passed_codes = normalize_codes(passed)?;
-    let mut list = course_list(program, &electives, &passed_codes);
+    let mut list = course_list(
+        program,
+        concentration,
+        profile,
+        &electives,
+        &passed_codes,
+    );
+    let rules = scoped_rules(program, concentration, profile);
     let injected =
-        inject_forced_electives(&mut list, program, &passed_codes, all);
+        inject_forced_electives(&mut list, &rules, &passed_codes, all);
     let explicit: BTreeSet<&str> = electives
         .iter()
         .chain(&passed_codes)
@@ -128,24 +151,79 @@ pub fn placement_intake(
     })
 }
 
+// The chosen blocks, found by title. Choosing one the program does not
+// carry — or choosing one with no program at all — is the student's typo,
+// surfaced with the same words as the coverage report.
+fn chosen_concentration<'a>(
+    program: Option<&'a Program>,
+    title: Option<&str>,
+) -> Result<Option<&'a Concentration>, IntakeError> {
+    let Some(title) = title else {
+        return Ok(None);
+    };
+    program
+        .and_then(|program| program.concentration(title))
+        .map(Some)
+        .ok_or_else(|| IntakeError::UnknownConcentration {
+            title: title.to_string(),
+        })
+}
+
+fn chosen_profile<'a>(
+    program: Option<&'a Program>,
+    title: Option<&str>,
+) -> Result<Option<&'a Profile>, IntakeError> {
+    let Some(title) = title else {
+        return Ok(None);
+    };
+    program
+        .and_then(|program| program.profile(title))
+        .map(Some)
+        .ok_or_else(|| IntakeError::UnknownProfile {
+            title: title.to_string(),
+        })
+}
+
+// every rule of the chosen scopes — the injection pool below, so a
+// concentration's own electives are injectable exactly like the program's
+fn scoped_rules<'a>(
+    program: Option<&'a Program>,
+    concentration: Option<&'a Concentration>,
+    profile: Option<&'a Profile>,
+) -> Vec<&'a Rule> {
+    program
+        .map(|program| program.rules.as_slice())
+        .unwrap_or_default()
+        .iter()
+        .chain(
+            concentration
+                .map(|block| block.rules.as_slice())
+                .unwrap_or_default(),
+        )
+        .chain(
+            profile
+                .map(|block| block.rules.as_slice())
+                .unwrap_or_default(),
+        )
+        .collect()
+}
+
 // GMC-3002, mandatory at the B-GMC, requires GLO-1901 — an elective of a
 // choice rule: no student finishes without it, so the intake takes it
 // itself rather than letting the screen declare the whole program
 // unplaceable. A code is injected when it is *forced* — some candidate's
 // tree is unsatisfiable without it even granting every operand that could
-// ever hold — and a rule of the program lists it (a true elective). A
-// choice between two electives forces neither and stays blocked, as does a
-// forced code from outside the program: the injection never chooses for
+// ever hold — and a rule of the chosen scopes lists it (a true elective).
+// A choice between two electives forces neither and stays blocked, as does
+// a forced code from outside the program: the injection never chooses for
 // the student (ADR `2026-08-injection-des-electifs-forces-par-les-prealables`).
 fn inject_forced_electives(
     list: &mut Vec<String>,
-    program: Option<&Program>,
+    rules: &[&Rule],
     passed: &[String],
     all: &[Course],
 ) -> Vec<String> {
-    let pool: BTreeSet<&str> = program
-        .map(|program| program.rules.as_slice())
-        .unwrap_or_default()
+    let pool: BTreeSet<&str> = rules
         .iter()
         .filter_map(|rule| match &rule.courses {
             RuleCourses::List { courses } => Some(courses.iter()),
@@ -414,13 +492,17 @@ pub fn parse_pins(
 
 // The préparatoire courses first — they gate the rest, and the passed set
 // naturally excludes the ones already done — then the program's mandatory
-// courses (reference order), the mandatory stage (the « Stages » rule
-// lists it first, ADR `2026-08-stage-obligatoire-en-prose-promu-en-regle`),
-// the chosen electives and the passed courses — deduplicated, so a passed
-// mandatory course appears once and carries its Course object (ADR
+// courses (reference order), the chosen concentration's and profile's
+// mandatory courses (décision 2026-08-19), the mandatory stage (the
+// « Stages » rule lists it first, ADR
+// `2026-08-stage-obligatoire-en-prose-promu-en-regle`), the chosen
+// electives and the passed courses — deduplicated, so a passed mandatory
+// course appears once and carries its Course object (ADR
 // `2026-08-stage-obligatoire-et-scolarite-preparatoire-dans-lintake`).
 pub fn course_list(
     program: Option<&Program>,
+    concentration: Option<&Concentration>,
+    profile: Option<&Profile>,
     electives: &[String],
     passed: &[String],
 ) -> Vec<String> {
@@ -431,6 +513,16 @@ pub fn course_list(
         .chain(
             program
                 .map(|program| program.mandatory.clone())
+                .unwrap_or_default(),
+        )
+        .chain(
+            concentration
+                .map(|block| block.mandatory.clone())
+                .unwrap_or_default(),
+        )
+        .chain(
+            profile
+                .map(|block| block.mandatory.clone())
                 .unwrap_or_default(),
         )
         .chain(
@@ -716,6 +808,8 @@ mod tests {
         .unwrap_or_else(|e| panic!("program literal: {e}"));
         let list = course_list(
             Some(&program),
+            None,
+            None,
             &["E-1".to_string(), "M-2".to_string()],
             &["P-1".to_string(), "E-1".to_string()],
         );
@@ -741,6 +835,8 @@ mod tests {
         .unwrap_or_else(|e| panic!("program literal: {e}"));
         let list = course_list(
             Some(&program),
+            None,
+            None,
             &["E-1".to_string()],
             &["Z-0130".to_string()],
         );
@@ -763,7 +859,81 @@ mod tests {
                 "concentrations":[],"profiles":[]}"#,
         )
         .unwrap_or_else(|e| panic!("program literal: {e}"));
-        assert_eq!(course_list(Some(&program), &[], &[]), ["M-1"]);
+        assert_eq!(course_list(Some(&program), None, None, &[], &[]), ["M-1"]);
+    }
+
+    fn program_with_scopes() -> Program {
+        serde_json::from_str(
+            r#"{"code":"p","slug":"p","semester":"A26","title":"P","cycle":1,
+                "credits_required":120,"mandatory":["M-1"],"rules":[],
+                "concentrations":[
+                  {"title":"Robotique","mandatory":["C-1"],
+                   "rules":[{"title":"Règle 1",
+                             "constraint":{"type":"credits","min":3,"max":3},
+                             "courses":["C-2"]}]}],
+                "profiles":[
+                  {"title":"Profil international","mandatory":["F-1"],
+                   "rules":[]}]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"))
+    }
+
+    #[test]
+    fn the_course_list_adds_the_chosen_scopes_mandatory_courses() {
+        // program mandatory first, then the chosen concentration's, then
+        // the chosen profile's — reference order, before the electives
+        let program = program_with_scopes();
+        let list = course_list(
+            Some(&program),
+            program.concentration("Robotique"),
+            program.profile("Profil international"),
+            &["E-1".to_string()],
+            &[],
+        );
+        assert_eq!(list, ["M-1", "C-1", "F-1", "E-1"]);
+        let unscoped =
+            course_list(Some(&program), None, None, &["E-1".to_string()], &[]);
+        assert_eq!(unscoped, ["M-1", "E-1"], "no choice, no scoped course");
+    }
+
+    #[test]
+    fn an_unknown_concentration_or_profile_is_an_error_naming_it() {
+        let program = program_with_scopes();
+        let all: [Course; 0] = [];
+        let concentration = placement_intake(
+            Some(&program),
+            Some("Zzz"),
+            None,
+            &[],
+            &[],
+            &[],
+            &all,
+        )
+        .expect_err("no concentration titled Zzz");
+        assert!(concentration.to_string().contains("Zzz"), "{concentration}");
+        let profile = placement_intake(
+            Some(&program),
+            None,
+            Some("Yyy"),
+            &[],
+            &[],
+            &[],
+            &all,
+        )
+        .expect_err("no profile titled Yyy");
+        assert!(profile.to_string().contains("Yyy"), "{profile}");
+        // a choice with no program at all is the same typo, not a pass
+        let orphan =
+            placement_intake(None, Some("Zzz"), None, &[], &[], &[], &all)
+                .expect_err("a concentration needs a program");
+        assert!(orphan.to_string().contains("Zzz"), "{orphan}");
+        let orphan_profile =
+            placement_intake(None, None, Some("Yyy"), &[], &[], &[], &all)
+                .expect_err("a profile needs a program");
+        assert!(
+            orphan_profile.to_string().contains("Yyy"),
+            "{orphan_profile}"
+        );
     }
 
     // --- selection and equivalents ---
@@ -970,6 +1140,8 @@ mod tests {
 
         let intake = placement_intake(
             Some(&program),
+            None,
+            None,
             &["gci-1000".to_string()],
             &["gex-1000".to_string()],
             &["gci-1000=1".to_string()],
@@ -1011,6 +1183,8 @@ mod tests {
 
         let intake = placement_intake(
             Some(&program),
+            None,
+            None,
             &["gex-2590".to_string()],
             &[],
             &[],
@@ -1070,8 +1244,9 @@ mod tests {
             monday("GLO-1901", "3"),
             monday("IFT-1903", "4"),
         ];
-        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
-            .unwrap_or_else(|e| panic!("{e}"));
+        let intake =
+            placement_intake(Some(&program), None, None, &[], &[], &[], &all)
+                .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(intake.injected, ["GLO-1901"]);
         assert!(intake.selection.contains("GLO-1901"), "counts in coverage");
         assert!(
@@ -1100,8 +1275,9 @@ mod tests {
             monday("GLO-1901", "3"),
             monday("IFT-1903", "4"),
         ];
-        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
-            .unwrap_or_else(|e| panic!("{e}"));
+        let intake =
+            placement_intake(Some(&program), None, None, &[], &[], &[], &all)
+                .unwrap_or_else(|e| panic!("{e}"));
         assert!(intake.injected.is_empty(), "the injection never chooses");
     }
 
@@ -1114,8 +1290,9 @@ mod tests {
             with_prereqs("GMC-3002", "1", r#""XYZ-1000""#),
             monday("GLO-1901", "3"),
         ];
-        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
-            .unwrap_or_else(|e| panic!("{e}"));
+        let intake =
+            placement_intake(Some(&program), None, None, &[], &[], &[], &all)
+                .unwrap_or_else(|e| panic!("{e}"));
         assert!(intake.injected.is_empty());
     }
 
@@ -1132,8 +1309,9 @@ mod tests {
             ),
             monday("GLO-1901", "3"),
         ];
-        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
-            .unwrap_or_else(|e| panic!("{e}"));
+        let intake =
+            placement_intake(Some(&program), None, None, &[], &[], &[], &all)
+                .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(intake.injected, ["GLO-1901"]);
     }
 
@@ -1146,8 +1324,9 @@ mod tests {
             with_prereqs("GLO-1901", "2", r#""GLO-1902""#),
             monday("GLO-1902", "3"),
         ];
-        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
-            .unwrap_or_else(|e| panic!("{e}"));
+        let intake =
+            placement_intake(Some(&program), None, None, &[], &[], &[], &all)
+                .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(intake.injected, ["GLO-1901", "GLO-1902"]);
     }
 
@@ -1160,6 +1339,8 @@ mod tests {
         ];
         let chosen = placement_intake(
             Some(&program),
+            None,
+            None,
             &["glo-1901".to_string()],
             &[],
             &[],
@@ -1170,6 +1351,8 @@ mod tests {
 
         let done = placement_intake(
             Some(&program),
+            None,
+            None,
             &[],
             &["gmc-3002".to_string()],
             &[],
@@ -1177,6 +1360,46 @@ mod tests {
         )
         .unwrap_or_else(|e| panic!("{e}"));
         assert!(done.injected.is_empty(), "a passed course is history");
+    }
+
+    #[test]
+    fn a_concentration_elective_forced_by_its_mandatory_is_injected() {
+        // C-1, mandatory of the chosen concentration, requires C-2 — listed
+        // only by the concentration's own rule: the injection pool covers
+        // the chosen scopes, so the elective is taken and surfaced
+        let program = program_with_scopes();
+        let all = [
+            monday("M-1", "1"),
+            with_prereqs("C-1", "2", r#""C-2""#),
+            monday("C-2", "3"),
+            monday("F-1", "4"),
+        ];
+        let intake = placement_intake(
+            Some(&program),
+            Some("Robotique"),
+            Some("Profil international"),
+            &[],
+            &[],
+            &[],
+            &all,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(intake.injected, ["C-2"]);
+        let codes: Vec<&str> = intake
+            .courses
+            .iter()
+            .map(|course| course.code.as_str())
+            .collect();
+        assert_eq!(codes, ["M-1", "C-1", "F-1", "C-2"]);
+
+        let unscoped =
+            placement_intake(Some(&program), None, None, &[], &[], &[], &all)
+                .unwrap_or_else(|e| panic!("{e}"));
+        assert!(
+            unscoped.injected.is_empty(),
+            "an unchosen concentration feeds the solver nothing"
+        );
+        assert!(!unscoped.selection.contains("C-1"));
     }
 
     #[test]
@@ -1192,8 +1415,9 @@ mod tests {
             },
         });
         let all = [wide, monday("GLO-1901", "3")];
-        let intake = placement_intake(Some(&program), &[], &[], &[], &all)
-            .unwrap_or_else(|e| panic!("{e}"));
+        let intake =
+            placement_intake(Some(&program), None, None, &[], &[], &[], &all)
+                .unwrap_or_else(|e| panic!("{e}"));
         assert!(intake.injected.is_empty());
     }
 
@@ -1202,6 +1426,8 @@ mod tests {
         let all = [monday("GEX-1000", "1")];
         let none: &[String] = &[];
         let duplicated_electives = placement_intake(
+            None,
+            None,
             None,
             &["gex-1000".to_string(), "GEX-1000".to_string()],
             none,
@@ -1215,6 +1441,8 @@ mod tests {
         );
         let duplicated_passed = placement_intake(
             None,
+            None,
+            None,
             none,
             &["gex-1000".to_string(), "GEX-1000".to_string()],
             none,
@@ -1227,6 +1455,8 @@ mod tests {
         );
         let typo = placement_intake(
             None,
+            None,
+            None,
             &["ZZZ-9999".to_string()],
             none,
             none,
@@ -1235,6 +1465,8 @@ mod tests {
         .expect_err("a typed typo must not survive");
         assert!(typo.to_string().contains("ZZZ-9999"), "{typo}");
         let bad_pin = placement_intake(
+            None,
+            None,
             None,
             &["GEX-1000".to_string()],
             none,

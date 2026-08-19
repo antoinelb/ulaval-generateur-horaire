@@ -1008,8 +1008,11 @@ pub fn unplaced_codes(
         }
     }
     let passed = passed_codes(plan, program);
+    let (concentration, profile) = scope_choice(plan);
     let intake = ulaval_scheduler_core::placement_intake(
         program,
+        concentration.as_deref(),
+        profile.as_deref(),
         &electives,
         &passed,
         &[],
@@ -1030,6 +1033,14 @@ pub fn unplaced_codes(
             !placed.contains(code.as_str()) && !intake.passed.contains(code)
         })
         .collect())
+}
+
+// the chosen concentration and profile titles, read off the plan's choice
+fn scope_choice(plan: &Plan) -> (Option<String>, Option<String>) {
+    match plan.program.as_ref() {
+        None => (None, None),
+        Some(choice) => (choice.concentration.clone(), choice.profile.clone()),
+    }
 }
 
 // the query mirrors `ui-calculations::protocol::PlaceQuery`: the manual
@@ -1065,11 +1076,16 @@ fn request_json(
     // a passed course can be neither pinned nor an elective to place
     pinned.retain(|code, _| !passed.contains(code));
     electives.retain(|code| !passed.contains(code));
+    // the chosen scopes ride with every ask: the solver places their
+    // mandatory courses too (décision 2026-08-19)
+    let (concentration, profile) = scope_choice(plan);
     let request = serde_json::json!({
         "kind": kind,
         "id": id,
         "query": {
             "program": program,
+            "concentration": concentration,
+            "profile": profile,
             "electives": electives,
             "passed": passed,
             "pinned": pinned,
@@ -1307,6 +1323,9 @@ mod worker_tests {
         assert_eq!(query["start"], "fall");
         assert_eq!(query["max_solutions"], 1);
         assert_eq!(query["seed"]["GCI-1000"], 2);
+        // the chosen scopes ride with the ask (décision 2026-08-19)
+        assert_eq!(query["concentration"], "Génie urbain");
+        assert_eq!(query["profile"], serde_json::Value::Null);
     }
 
     #[test]
@@ -1579,6 +1598,43 @@ mod worker_tests {
         let unplaced = unplaced_codes(&snapshot, &plan, Some(&program))
             .unwrap_or_else(|e| panic!("{e}"));
         assert!(unplaced.is_empty(), "{unplaced:?}");
+    }
+
+    #[test]
+    fn unplaced_codes_include_the_chosen_concentrations_mandatory() {
+        let snapshot = snapshot();
+        let program: ulaval_scheduler_core::Program = serde_json::from_str(
+            r#"{"code":"B-GEX","slug":"gex","semester":"A26","title":"GEX",
+                "cycle":1,"credits_required":120,
+                "mandatory":["GEX-1000"],"rules":[],
+                "concentrations":[{"title":"Urbain",
+                                   "mandatory":["GEX-2000"],"rules":[]}],
+                "profiles":[]}"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let mut plan = Plan {
+            program: Some(ProgramChoice {
+                code: "B-GEX".to_string(),
+                semester: "A26".to_string(),
+                concentration: None,
+                profile: None,
+            }),
+            ..Plan::default()
+        };
+        plan.displayed_placement.insert("GEX-1000".to_string(), 1);
+        let unplaced = unplaced_codes(&snapshot, &plan, Some(&program))
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(
+            unplaced.is_empty(),
+            "unchosen, the concentration asks nothing: {unplaced:?}"
+        );
+
+        if let Some(choice) = plan.program.as_mut() {
+            choice.concentration = Some("Urbain".to_string());
+        }
+        let unplaced = unplaced_codes(&snapshot, &plan, Some(&program))
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(unplaced, ["GEX-2000"], "chosen, its mandatory floats");
     }
 
     #[test]
