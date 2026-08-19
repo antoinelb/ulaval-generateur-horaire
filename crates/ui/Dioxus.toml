@@ -1,7 +1,7 @@
 [application]
 
 [web.app]
-title = "ulaval-generateur-horaire"
+title = "ULaval - Générateur d'horaires"
 
 [web.resource]
 style = []
