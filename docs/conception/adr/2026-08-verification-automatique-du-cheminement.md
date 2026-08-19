@@ -11,7 +11,7 @@ Date : 2026-08-13
 - Le bouton disparaît. Un effet débouncé (500 ms, motif compteur-génération) envoie `verify` dès que : le snapshot est chargé, un programme est choisi, le solveur est libre, aucun verdict frais n'existe, et **chaque cours demandé a une session** (`solve::unplaced_codes`, qui réutilise `core::placement_intake` — pas de logique dupliquée). L'effet converge : la requête pose `running`, la réponse pose `verification`, les deux le stoppent ; toute édition du plan efface le verdict et relance le cycle.
 - Quand des cours flottent encore, le panneau l'explique passivement (« N cours sans session — … la vérification se relancera d'elle-même ») ; une entrée illisible (code fautif) s'affiche comme « Vérification impossible : … ».
 - **La couverture des règles quitte le protocole worker** : `Response.Report.coverage`, ainsi que `PlaceQuery.concentration`/`profile` qui ne servaient qu'à elle, sont supprimés. Le verdict « règles à combler » vient du `coverage_report` local du panneau (déjà calculé pour les badges, ententes et préparatoire comprises) — une seule source de vérité au lieu de deux comptages parallèles.
-- « Proposer un organigramme » et « Chercher plus longtemps » restent des boutons : ce sont des actions qui changent le document, pas des lectures.
+- « Proposer un organigramme » et « Chercher plus longtemps » restent des boutons : ce sont des actions qui changent le document, pas des lectures. *(Supersédé le 2026-08-19 : les deux boutons disparaissent, le placement tourne en continu — ADR `2026-08-organigramme-en-continu-sans-bouton`.)*
 
 ## Alternatives rejetées
 

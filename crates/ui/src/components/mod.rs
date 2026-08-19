@@ -80,9 +80,10 @@ pub struct SolverState {
     // the last automatic verify errored: do not refire until the plan
     // changes, or the effect would loop on the same failure
     pub verify_failed: bool,
-    // the last proposal hit the node budget: offer « chercher plus
-    // longtemps »
-    pub truncated: bool,
+    // the request of the last automatic proposal, recorded at send: the
+    // same query is never sent twice, which is both the convergence guard
+    // of `auto_propose` and what makes a cancel stick until the next edit
+    pub proposed: Option<String>,
     // the last proposal was a best-effort filling and these are the courses
     // it could not seat — so the panel stops telling the student to propose
     // an organigramme he has just proposed (ADR
@@ -120,7 +121,6 @@ pub fn boot_solver(
     handle: &SolverHandle,
     mut state: Signal<SolverState>,
     plan: Signal<Plan>,
-    history: Signal<History>,
     alerts: Signal<Vec<Alert>>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
     snapshot: Signal<Option<Snapshot>>,
@@ -149,7 +149,7 @@ pub fn boot_solver(
         &manual_json,
         &overrides_json,
         move |text| {
-            handle_worker_answer(&text, state, plan, history, alerts);
+            handle_worker_answer(&text, state, plan, alerts);
         },
     );
     if solver.is_none() {
@@ -172,7 +172,6 @@ fn handle_worker_answer(
     text: &str,
     mut state: Signal<SolverState>,
     plan: Signal<Plan>,
-    history: Signal<History>,
     alerts: Signal<Vec<Alert>>,
 ) {
     match crate::solve::parse_worker_answer(text) {
@@ -212,7 +211,7 @@ fn handle_worker_answer(
             state.write().running = None;
             match running.kind {
                 QueryKind::Propose => {
-                    apply_proposal(&report, state, plan, history, alerts);
+                    apply_proposal(&report, state, plan, alerts);
                 }
                 QueryKind::Verify => {
                     state.write().verification =
@@ -223,17 +222,17 @@ fn handle_worker_answer(
     }
 }
 
-// the proposal is applied through the normal undoable door — the solver
-// never owns state, and everything it presumed or set aside is said
+// The proposal is a derived correction, not a student act: it lands by a
+// direct write, never through `edit_plan` — undoing the act that made the
+// solver move restores the plan whole, and the placement recomputes (same
+// reasoning as `heal_acquired`). Everything the solver presumed or set
+// aside is still said.
 fn apply_proposal(
     report: &crate::solve::PlacementReport,
     mut state: Signal<SolverState>,
     plan: Signal<Plan>,
-    history: Signal<History>,
     alerts: Signal<Vec<Alert>>,
 ) {
-    state.write().truncated =
-        report.placement.completion.as_str() == "node-budget";
     if let Some(note) = crate::solve::completion_note(&report.placement) {
         push_alert(alerts, AlertBody::Note(note));
     }
@@ -293,17 +292,28 @@ fn apply_proposal(
     }
     let placement = solution.placement.clone();
     let injected = report.injected.clone();
-    edit_plan(plan, history, "Organigramme proposé appliqué", |plan| {
-        plan.displayed_placement = placement;
-        // the plan must hold what the grid shows: an injected course left
-        // out of `electives` would vanish from the very next request (the
-        // preparatory-purge lesson)
-        for code in injected {
-            if !plan.electives.contains(&code) {
-                plan.electives.push(code);
-            }
+    // a no-op answer (best-effort that moved nothing, or the re-solve of
+    // an already-applied proposal) must not write: the write is what
+    // re-arms every plan effect, `auto_propose` included
+    let unchanged = {
+        let read = plan.peek();
+        read.displayed_placement == placement
+            && injected.iter().all(|code| read.electives.contains(code))
+    };
+    if unchanged {
+        return;
+    }
+    let mut plan = plan;
+    let mut write = plan.write();
+    write.displayed_placement = placement;
+    // the plan must hold what the grid shows: an injected course left
+    // out of `electives` would vanish from the very next request (the
+    // preparatory-purge lesson)
+    for code in injected {
+        if !write.electives.contains(&code) {
+            write.electives.push(code);
         }
-    });
+    }
 }
 
 // --- sending queries -------------------------------------------------------
@@ -354,7 +364,6 @@ pub fn cancel_search(
     handle: &SolverHandle,
     mut state: Signal<SolverState>,
     plan: Signal<Plan>,
-    history: Signal<History>,
     alerts: Signal<Vec<Alert>>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
     snapshot: Signal<Option<Snapshot>>,
@@ -362,8 +371,11 @@ pub fn cancel_search(
     if let Some(solver) = handle.0.borrow_mut().take() {
         solver.terminate();
     }
+    // `proposed` deliberately survives: the student's cancel must hold
+    // until the next edit, or `auto_propose` would relaunch the very
+    // search just killed
     state.write().running = None;
-    boot_solver(handle, state, plan, history, alerts, manual, snapshot);
+    boot_solver(handle, state, plan, alerts, manual, snapshot);
 }
 
 #[component]
@@ -393,15 +405,7 @@ pub fn App() -> Element {
     use_hook(|| import_organigramme(plan, view, history, alerts, manual));
     let handle = use_hook(|| {
         let handle = SolverHandle(Rc::new(std::cell::RefCell::new(None)));
-        boot_solver(
-            &handle,
-            solver_state,
-            plan,
-            history,
-            alerts,
-            manual,
-            snapshot,
-        );
+        boot_solver(&handle, solver_state, plan, alerts, manual, snapshot);
         crate::browser::register_service_worker();
         handle
     });
@@ -422,14 +426,16 @@ pub fn App() -> Element {
             );
         });
     });
-    // a plan change stales the verify answer
+    // a plan change stales the verify answer — `left_out` stays: it
+    // belongs to the propose answers, each of which overwrites it whole,
+    // and the auto-applied proposal is itself a plan change that must not
+    // erase what its own answer just reported
     use_effect(move || {
         let _ = plan.read();
         let mut solver_state = solver_state;
         let mut state = solver_state.write();
         state.verification = None;
         state.verify_failed = false;
-        state.left_out.clear();
     });
     apply_corrections(
         plan,
@@ -437,10 +443,10 @@ pub fn App() -> Element {
         alerts,
         handle.clone(),
         solver_state,
-        history,
         manual,
     );
     heal_acquired(plan, snapshot, alerts);
+    auto_propose(plan, snapshot, solver_state, handle.clone());
     auto_verify(plan, snapshot, solver_state, handle.clone());
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
@@ -654,7 +660,6 @@ fn apply_corrections(
     alerts: Signal<Vec<Alert>>,
     handle: SolverHandle,
     solver_state: Signal<SolverState>,
-    history: Signal<History>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
 ) {
     use_effect(move || {
@@ -686,16 +691,106 @@ fn apply_corrections(
             );
         }
         // the worker keeps its own copy of the catalogue: only a fresh one
-        // learns the corrections
-        cancel_search(
-            &handle,
-            solver_state,
-            plan,
-            history,
-            alerts,
-            manual,
-            snapshot,
-        );
+        // learns the corrections — and an already-sent proposal may answer
+        // differently against them, so its fingerprint no longer counts
+        let mut solver_state = solver_state;
+        solver_state.write().proposed = None;
+        cancel_search(&handle, solver_state, plan, alerts, manual, snapshot);
+    });
+}
+
+// The proposal is not a button either (décision 2026-08-19, ADR
+// `2026-08-organigramme-en-continu-sans-bouton`): whenever the plan
+// settles with floating courses — or a verify just failed and the grid
+// needs repairing around the student's pins — the placement re-runs by
+// itself, seeded by the displayed placement so it moves as little as
+// possible. Convergence is the `proposed` fingerprint: the same request
+// is never sent twice, so a best-effort answer whose `left_out` persists,
+// a repair that cannot improve, or a cancelled search all stop the loop
+// until the plan changes.
+fn auto_propose(
+    plan: Signal<Plan>,
+    snapshot: Signal<Option<Snapshot>>,
+    solver_state: Signal<SolverState>,
+    handle: SolverHandle,
+) {
+    let mut generation = use_signal(|| 0u64);
+    use_effect(move || {
+        // subscribe to everything that can call for a placement
+        let _ = plan.read();
+        let _ = snapshot.read();
+        let _ = solver_state.read();
+        // peek: the effect must not re-run on its own bookkeeping
+        let current = *generation.peek() + 1;
+        generation.set(current);
+        let handle = handle.clone();
+        spawn(async move {
+            crate::browser::sleep_ms(500).await;
+            if *generation.peek() != current {
+                return;
+            }
+            let idle = {
+                let state = solver_state.peek();
+                state.ready && state.running.is_none()
+            };
+            if !idle {
+                return;
+            }
+            let read = snapshot.peek();
+            let Some(snapshot_ref) = read.as_ref() else {
+                return;
+            };
+            let plan_read = plan.peek();
+            if plan_read.program.is_none() {
+                return;
+            }
+            let program =
+                crate::panel::effective_program(snapshot_ref, &plan_read);
+            // floating courses to seat, or a broken grid to repair — a
+            // verify that answered « no solution » (empty `solutions`,
+            // never a worker error: that one would refuse the repair too)
+            // means a student act broke a constraint, and the placement
+            // reorganizes the unpinned courses around it; an unreadable
+            // input is the verdict area's to explain
+            let needed = match crate::solve::unplaced_codes(
+                snapshot_ref,
+                &plan_read,
+                program.as_ref(),
+            ) {
+                Ok(unplaced) if !unplaced.is_empty() => true,
+                Ok(_) => solver_state
+                    .peek()
+                    .verification
+                    .as_ref()
+                    .is_some_and(|answer| answer.solutions.is_empty()),
+                Err(_) => false,
+            };
+            if !needed {
+                return;
+            }
+            // the request itself is the fingerprint (id 0 is nobody's):
+            // it captures exactly what the solver would see
+            let fingerprint = crate::solve::place_request(
+                0,
+                &plan_read,
+                program.as_ref(),
+                crate::solve::PROPOSE_MAX_NODES,
+            );
+            if solver_state.peek().proposed.as_deref()
+                == Some(fingerprint.as_str())
+            {
+                return;
+            }
+            let mut solver_state = solver_state;
+            solver_state.write().proposed = Some(fingerprint);
+            request_place(
+                &handle,
+                solver_state,
+                &plan_read,
+                program.as_ref(),
+                crate::solve::PROPOSE_MAX_NODES,
+            );
+        });
     });
 }
 

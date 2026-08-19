@@ -369,38 +369,17 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
     let history = use_context::<Signal<History>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     let solver = use_context::<Signal<super::SolverState>>();
-    let handle = use_context::<super::SolverHandle>();
     let start = plan.read().start.to_string();
     let study_sessions = plan.read().study_sessions;
     let credit_cap = plan.read().credit_cap;
     let summers_open = plan.read().summers_open;
     let concomitant = plan.read().concomitant;
-    let ready = solver.read().ready;
-    let busy = solver.read().running.is_some();
-    let truncated = solver.read().truncated;
     let left_out = solver.read().left_out.clone();
     let verification = solver.read().verification.clone();
-    let request = {
-        let handle = handle.clone();
-        move |max_nodes: u64| {
-            let read = snapshot.read();
-            let plan_read = plan.read();
-            let program = read.as_ref().and_then(|snapshot| {
-                panel::effective_program(snapshot, &plan_read)
-            });
-            super::request_place(
-                &handle,
-                solver,
-                &plan_read,
-                program.as_ref(),
-                max_nodes,
-            );
-        }
-    };
-    let request_full = request.clone();
-    let request_quick = request;
-    // the verification runs by itself (note 6) — this only explains why
-    // it has not run yet: courses still floating, or an unreadable input
+    // the placement and the verification both run by themselves (ADR
+    // `2026-08-organigramme-en-continu-sans-bouton`) — this only explains
+    // why no verdict shows yet: courses still floating, or an unreadable
+    // input
     let readiness = {
         let read = snapshot.read();
         let plan_read = plan.read();
@@ -552,31 +531,6 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                 }
                 "Permettre un préalable en concomitance"
             }
-            div { class: "panel-organigramme-actions",
-                button {
-                    class: "panel-solve-button",
-                    disabled: !ready || busy,
-                    title: if ready {
-                        "Remplir les sessions automatiquement (annulable)"
-                    } else {
-                        "Le solveur démarre…"
-                    },
-                    onclick: move |_| {
-                        request_quick(crate::solve::PROPOSE_MAX_NODES);
-                    },
-                    "Proposer un organigramme"
-                }
-                if truncated {
-                    button {
-                        class: "panel-verify-button",
-                        disabled: !ready || busy,
-                        onclick: move |_| {
-                            request_full(crate::solve::FULL_MAX_NODES);
-                        },
-                        "Chercher plus longtemps"
-                    }
-                }
-            }
             if !conflicted.is_empty() {
                 p { class: "panel-verdict panel-verdict--bad",
                     "⚠ Conflit d'horaire en {conflicted} — plages \
@@ -613,9 +567,8 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                 }
                 Some(Ok(unplaced)) if !unplaced.is_empty() => rsx! {
                     p { class: "panel-verdict",
-                        "{unplaced.len()} cours sans session — proposez un \
-                         organigramme ou placez-les ; la vérification se \
-                         relancera d'elle-même."
+                        "{unplaced.len()} cours sans session — placement \
+                         automatique en cours…"
                     }
                 },
                 _ => rsx! {},
@@ -1567,9 +1520,13 @@ fn ManualCourseForm() -> Element {
                     }
                 },
             );
-            // the worker's catalogue must learn the new course too
+            // the worker's catalogue must learn the new course too — and
+            // the last proposal's fingerprint answered against the old
+            // one, so it no longer counts
+            let mut solver = solver;
+            solver.write().proposed = None;
             super::cancel_search(
-                &handle, solver, plan, history, alerts, manual, snapshot,
+                &handle, solver, plan, alerts, manual, snapshot,
             );
             code.write().clear();
             title.write().clear();

@@ -856,9 +856,9 @@ mod tests {
 // pure and tested here; the postMessage plumbing lives in `browser`.
 
 // one proposal, small budget: the first solution lands in tens of
-// milliseconds; « chercher plus longtemps » re-runs with the full budget
+// milliseconds — the automatic re-placement fires on every edit, so the
+// budget must stay cheap (ADR `2026-08-organigramme-en-continu-sans-bouton`)
 pub const PROPOSE_MAX_NODES: u64 = 200_000;
-pub const FULL_MAX_NODES: u64 = 1_000_000;
 
 pub fn place_request(
     id: u64,
@@ -1184,15 +1184,15 @@ pub fn completion_note(answer: &PlacementAnswer) -> Option<String> {
         "node-budget" if answer.solutions.is_empty() => Some(
             "La recherche s'est arrêtée avant d'avoir tout exploré, sans \
              rien trouver pour l'instant — un agencement peut quand même \
-             exister. « Chercher plus longtemps » fouille davantage ; \
-             sinon, simplifiez (plafond, sessions, cours)."
+             exister. Simplifiez (plafond, sessions, cours) pour aider la \
+             recherche."
                 .to_string(),
         ),
         "node-budget" => Some(
             "La recherche s'est arrêtée avant d'avoir tout exploré : il \
              peut exister d'autres agencements — ou un agencement là où \
-             rien n'a été trouvé. « Chercher plus longtemps » fouille \
-             davantage ; sinon, simplifiez (plafond, sessions, cours)."
+             rien n'a été trouvé. Simplifiez (plafond, sessions, cours) \
+             pour aider la recherche."
                 .to_string(),
         ),
         "solution-cap" => Some(

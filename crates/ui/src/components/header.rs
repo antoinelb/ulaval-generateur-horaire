@@ -10,7 +10,6 @@ use crate::state::{self, History, Plan, View};
 #[component]
 fn SolverStatus() -> Element {
     let plan = use_context::<Signal<Plan>>();
-    let history = use_context::<Signal<History>>();
     let alerts = use_context::<Signal<Vec<Alert>>>();
     let solver = use_context::<Signal<SolverState>>();
     let handle = use_context::<SolverHandle>();
@@ -39,7 +38,7 @@ fn SolverStatus() -> Element {
                 class: "status-undo",
                 onclick: move |_| {
                     super::cancel_search(
-                        &handle, solver, plan, history, alerts, manual, snapshot,
+                        &handle, solver, plan, alerts, manual, snapshot,
                     );
                 },
                 "Annuler la recherche"
@@ -191,7 +190,7 @@ fn ResetButton() -> Element {
                 // fresh plan
                 if solver.peek().running.is_some() {
                     super::cancel_search(
-                        &handle, solver, plan, history, alerts, manual, snapshot,
+                        &handle, solver, plan, alerts, manual, snapshot,
                     );
                 }
                 // a shared link left in the address bar would reimport
