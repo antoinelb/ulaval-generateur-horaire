@@ -213,6 +213,10 @@ code {
   padding-top: 0.25rem;
 }
 
+.ribbon-card-codes span {
+  cursor: grab;
+}
+
 .ribbon-card-empty,
 .ribbon-card-special {
   font-size: 0.6875rem;
@@ -749,6 +753,14 @@ code {
 .ribbon-card--barred,
 .ribbon-summer.ribbon-card--barred {
   opacity: 0.4;
+}
+
+/* la carte survolée pendant un glissement : bordure pleine, plus foncée —
+   après --target pour l'emporter sur sa bordure pointillée */
+.ribbon-card--landing,
+.ribbon-summer.ribbon-card--landing {
+  border: 0.1875rem solid var(--ink);
+  background: var(--ok-bg);
 }
 
 /* le select d'entente : discret, taille de puce */

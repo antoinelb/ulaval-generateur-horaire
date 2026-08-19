@@ -866,7 +866,7 @@ pub fn place_request(
     program: Option<&ulaval_scheduler_core::Program>,
     max_nodes: u64,
 ) -> String {
-    request_json("place", id, plan, program, max_nodes, None)
+    request_json("place", id, plan, program, max_nodes)
 }
 
 // prove the displayed organigramme: everything already laid out is pinned,
@@ -879,42 +879,7 @@ pub fn verify_request(
 ) -> String {
     let mut pinned_everything = plan.clone();
     pinned_everything.pinned_sessions = plan.displayed_placement.clone();
-    request_json(
-        "verify",
-        id,
-        &pinned_everything,
-        program,
-        PROPOSE_MAX_NODES,
-        None,
-    )
-}
-
-// The chip probe answers against what is actually laid out — every placed
-// course rides pinned *with its Course* (a pin without one is a
-// `PlacementError`), the floating electives and the program's not-yet-
-// placed courses stay out, so each probe validates instead of solving the
-// whole bac (swap semantics, like the grid's ghosts). The probed course
-// itself floats free: its own pin would answer « its current session »
-// and nothing else.
-pub fn admissible_request(id: u64, plan: &Plan, code: &str) -> String {
-    let mut probe = plan.clone();
-    probe.pinned_sessions = plan.displayed_placement.clone();
-    probe.pinned_sessions.remove(code);
-    probe.displayed_placement.remove(code);
-    for codes in probe.manual.values_mut() {
-        codes.retain(|kept| kept != code);
-    }
-    probe.electives = std::iter::once(code.to_string())
-        .chain(probe.pinned_sessions.keys().cloned())
-        .collect();
-    request_json(
-        "admissible-sessions",
-        id,
-        &probe,
-        None,
-        PROPOSE_MAX_NODES,
-        Some(code),
-    )
+    request_json("verify", id, &pinned_everything, program, PROPOSE_MAX_NODES)
 }
 
 // The codes of the program's « Scolarité préparatoire » rule — the only
@@ -1077,7 +1042,6 @@ fn request_json(
     plan: &Plan,
     program: Option<&ulaval_scheduler_core::Program>,
     max_nodes: u64,
-    code: Option<&str>,
 ) -> String {
     let mut pinned = plan.pinned_sessions.clone();
     let mut electives: Vec<String> = plan.electives.clone();
@@ -1101,7 +1065,7 @@ fn request_json(
     // a passed course can be neither pinned nor an elective to place
     pinned.retain(|code, _| !passed.contains(code));
     electives.retain(|code| !passed.contains(code));
-    let mut request = serde_json::json!({
+    let request = serde_json::json!({
         "kind": kind,
         "id": id,
         "query": {
@@ -1119,9 +1083,6 @@ fn request_json(
             "max_solutions": 1,
         },
     });
-    if let Some(code) = code {
-        request["code"] = serde_json::Value::String(code.to_string());
-    }
     // expect over `?`: serializing maps, vecs and strings provably
     // cannot fail
     serde_json::to_string(&request)
@@ -1135,23 +1096,9 @@ fn request_json(
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum WorkerAnswer {
-    Ready {
-        id: u64,
-        summary: ReadySummary,
-    },
-    Report {
-        id: u64,
-        report: PlacementReport,
-    },
-    Admissible {
-        id: u64,
-        code: String,
-        sessions: std::collections::BTreeSet<usize>,
-    },
-    Error {
-        id: u64,
-        message: String,
-    },
+    Ready { id: u64, summary: ReadySummary },
+    Report { id: u64, report: PlacementReport },
+    Error { id: u64, message: String },
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
@@ -1637,6 +1584,9 @@ mod worker_tests {
     #[test]
     fn a_verify_request_pins_the_whole_displayed_placement() {
         let mut plan = Plan::default();
+        // one placed course is already an elective: it must ride once,
+        // never twice
+        plan.electives.push("GEX-1000".to_string());
         plan.displayed_placement.insert("GEX-1000".to_string(), 1);
         plan.displayed_placement.insert("GEX-2000".to_string(), 4);
         let request = verify_request(2, &plan, None);
@@ -1645,47 +1595,10 @@ mod worker_tests {
         assert_eq!(value["kind"], "verify");
         assert_eq!(value["query"]["pinned"]["GEX-1000"], 1);
         assert_eq!(value["query"]["pinned"]["GEX-2000"], 4);
-    }
-
-    #[test]
-    fn an_admissible_request_probes_only_what_is_laid_out() {
-        let mut plan = Plan::default();
-        plan.electives.push("AUT-1000".to_string());
-        plan.displayed_placement.insert("GEX-1000".to_string(), 2);
-        let request = admissible_request(3, &plan, "GAE-1000");
-        let value: serde_json::Value =
-            serde_json::from_str(&request).unwrap_or_else(|e| panic!("{e}"));
-        assert_eq!(value["kind"], "admissible-sessions");
-        assert_eq!(value["code"], "GAE-1000");
         assert_eq!(
             value["query"]["electives"],
-            serde_json::json!(["GAE-1000", "GEX-1000"]),
-            "the laid-out course rides along (its pin needs its Course); \
-             the floating elective stays out"
+            serde_json::json!(["GEX-1000", "GEX-2000"])
         );
-        assert_eq!(value["query"]["pinned"]["GEX-1000"], 2);
-        assert!(value["query"]["program"].is_null());
-    }
-
-    #[test]
-    fn probing_a_placed_or_manual_course_frees_it_from_its_own_pin() {
-        let mut plan = Plan::default();
-        plan.displayed_placement.insert("GEX-1000".to_string(), 2);
-        plan.displayed_placement.insert("GCI-1000".to_string(), 3);
-        plan.manual.insert(1, vec!["GEX-1000".to_string()]);
-        let request = admissible_request(4, &plan, "GEX-1000");
-        let value: serde_json::Value =
-            serde_json::from_str(&request).unwrap_or_else(|e| panic!("{e}"));
-        assert!(
-            value["query"]["pinned"].get("GEX-1000").is_none(),
-            "its own pin would answer « session 2 » and nothing else"
-        );
-        assert_eq!(value["query"]["pinned"]["GCI-1000"], 3);
-        assert_eq!(
-            value["query"]["electives"],
-            serde_json::json!(["GEX-1000", "GCI-1000"])
-        );
-        assert!(value["query"]["seed"].get("GEX-1000").is_none());
     }
 
     #[test]
@@ -1717,17 +1630,6 @@ mod worker_tests {
         assert_eq!(report.sessions.len(), 3);
         assert_eq!(report.placement.solutions[0].placement["GEX-1000"], 1);
         assert_eq!(report.set_aside, ["GHOST-1"]);
-
-        let admissible = parse_worker_answer(
-            r#"{"kind":"admissible","id":6,"code":"GEX-1000",
-                 "sessions":[1,3]}"#,
-        )
-        .unwrap_or_else(|e| panic!("{e}"));
-        assert!(matches!(
-            admissible,
-            WorkerAnswer::Admissible { code, sessions, .. }
-                if code == "GEX-1000" && sessions.len() == 2
-        ));
 
         let error =
             parse_worker_answer(r#"{"kind":"error","id":9,"message":"boom"}"#)

@@ -200,8 +200,7 @@ fn GridBlock(
     let SelectedCourse(mut selected) = use_context::<SelectedCourse>();
     let super::DraggedCourse(mut dragged) =
         use_context::<super::DraggedCourse>();
-    let solver = use_context::<Signal<super::SolverState>>();
-    let handle = use_context::<super::SolverHandle>();
+    let super::DropHover(mut hover) = use_context::<super::DropHover>();
     let drag_code = block.code.clone();
     let style = format!(
         "top:{:.3}%;height:{:.3}%;left:{:.3}%;width:{:.3}%;",
@@ -256,24 +255,24 @@ fn GridBlock(
                     selected.set(Some(code.clone()));
                 }
             },
-            // note 16: a solid block drags toward the ribbon — the probe
-            // fires so the cards can say where it may land; the panel's
+            // note 16: a solid block drags toward the ribbon — the cards
+            // mark the sessions whose season offers it; the panel's
             // choice strip remains the keyboard path (INP-4)
             draggable: !ghost,
-            ondragstart: move |_| {
-                let cached = solver
-                    .read()
-                    .admissible
-                    .contains_key(drag_code.as_str());
-                if !cached {
-                    let plan_read = plan.read();
-                    super::request_admissible(
-                        &handle, solver, &plan_read, &drag_code,
-                    );
-                }
+            ondragstart: move |event| {
+                // Firefox refuses to carry a drag whose DataTransfer is
+                // empty — the signal stays the payload the drop reads,
+                // this token is the browser's fee (best-effort: the
+                // signal still carries the code if the write fails)
+                let transfer = event.data_transfer();
+                let _ = transfer.set_data("text/plain", &drag_code);
+                transfer.set_effect_allowed("move");
                 dragged.set(Some(drag_code.clone()));
             },
-            ondragend: move |_| dragged.set(None),
+            ondragend: move |_| {
+                dragged.set(None);
+                hover.set(None);
+            },
             div { class: "grid-block-title", "{block.title}" }
             div { class: "grid-block-detail",
                 "{block.detail}"

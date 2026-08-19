@@ -1238,6 +1238,12 @@ pub fn place_course(
     label: &str,
 ) {
     // the read borrow must die before edit_plan opens the write
+    let already = plan.read().pinned_sessions.get(code) == Some(&session);
+    if already {
+        // same guard as the chip strip: re-pinning where the course
+        // already sits would only stack an empty undo entry
+        return;
+    }
     let held = holding_session(&plan.read(), code);
     let action = if held.is_some() {
         format!("{code} déplacé vers {label}")

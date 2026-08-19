@@ -78,6 +78,8 @@ fn Shell() -> Element {
     use_context_provider(|| SelectedCourse(selected));
     let dragged = use_signal(|| None::<String>);
     use_context_provider(|| DraggedCourse(dragged));
+    let hover = use_signal(|| None::<usize>);
+    use_context_provider(|| super::DropHover(hover));
     let plan = use_context::<Signal<crate::state::Plan>>();
     let history = use_context::<Signal<crate::state::History>>();
     rsx! {

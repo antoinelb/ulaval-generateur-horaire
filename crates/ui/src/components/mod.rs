@@ -51,11 +51,18 @@ pub enum AlertBody {
 #[derive(Clone, Copy, PartialEq)]
 pub struct SelectedCourse(pub Signal<Option<String>>);
 
-// the course a grid block is currently dragging toward the ribbon (note
-// 16) — the payload rides in a signal, never in DataTransfer; the chips
-// stay the keyboard-reachable equivalent (INP-4)
+// the course a drag — grid block or ribbon code — is carrying toward a
+// session card (note 16) — the payload rides in a signal, never in
+// DataTransfer (a token is still written there: Firefox refuses to carry
+// an empty drag); the chips stay the keyboard-reachable equivalent (INP-4)
 #[derive(Clone, Copy, PartialEq)]
 pub struct DraggedCourse(pub Signal<Option<String>>);
+
+// the session card the drag is currently over — the darker border that
+// says where the course would land if released (retour d'Antoine,
+// 2026-08-19)
+#[derive(Clone, Copy, PartialEq)]
+pub struct DropHover(pub Signal<Option<usize>>);
 
 // the student's hand-entered Courses, persisted apart from the plan
 #[derive(Clone, Copy, PartialEq)]
@@ -66,20 +73,13 @@ pub struct ManualCourses(pub Signal<Vec<ulaval_scheduler_core::Course>>);
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct SolverState {
     pub ready: bool,
-    // the one blocking query (proposition/vérification); admissible chip
-    // probes are fire-and-forget
+    // the one blocking query (proposition/vérification)
     pub running: Option<Running>,
     // the last verify answer, shown until the plan changes
     pub verification: Option<crate::solve::PlacementAnswer>,
     // the last automatic verify errored: do not refire until the plan
     // changes, or the effect would loop on the same failure
     pub verify_failed: bool,
-    // code → sessions that could host it (the « + H28 » chips)
-    pub admissible:
-        std::collections::BTreeMap<String, std::collections::BTreeSet<usize>>,
-    // chip probes in flight (id → code): their errors must surface too —
-    // a mute button is a broken button
-    pending_probes: std::collections::BTreeMap<u64, String>,
     // the last proposal hit the node budget: offer « chercher plus
     // longtemps »
     pub truncated: bool,
@@ -180,21 +180,7 @@ fn handle_worker_answer(
         Ok(crate::solve::WorkerAnswer::Ready { .. }) => {
             state.write().ready = true;
         }
-        Ok(crate::solve::WorkerAnswer::Admissible { id, code, sessions }) => {
-            let mut state = state.write();
-            state.pending_probes.remove(&id);
-            state.admissible.insert(code, sessions);
-        }
         Ok(crate::solve::WorkerAnswer::Error { id, message }) => {
-            if let Some(code) = state.write().pending_probes.remove(&id) {
-                push_alert(
-                    alerts,
-                    AlertBody::Note(format!(
-                        "Sessions admissibles de {code} : {message}"
-                    )),
-                );
-                return;
-            }
             let running = state.read().running;
             let matches_running =
                 running.is_some_and(|running| running.id == id);
@@ -346,24 +332,6 @@ pub fn request_verify(
     send(handle, &crate::solve::verify_request(id, plan, program));
 }
 
-pub fn request_admissible(
-    handle: &SolverHandle,
-    mut state: Signal<SolverState>,
-    plan: &Plan,
-    code: &str,
-) {
-    // fire-and-forget: cached on answer, no running marker — but tracked,
-    // so a probe that errors says so instead of leaving a mute button
-    let id = {
-        let mut state = state.write();
-        state.next_id += 1;
-        let id = state.next_id;
-        state.pending_probes.insert(id, code.to_string());
-        id
-    };
-    send(handle, &crate::solve::admissible_request(id, plan, code));
-}
-
 fn next_query(state: &mut Signal<SolverState>, kind: QueryKind) -> u64 {
     let mut state = state.write();
     state.next_id += 1;
@@ -454,14 +422,13 @@ pub fn App() -> Element {
             );
         });
     });
-    // a plan change stales the verify answer and the admissible chips
+    // a plan change stales the verify answer
     use_effect(move || {
         let _ = plan.read();
         let mut solver_state = solver_state;
         let mut state = solver_state.write();
         state.verification = None;
         state.verify_failed = false;
-        state.admissible.clear();
         state.left_out.clear();
     });
     apply_corrections(

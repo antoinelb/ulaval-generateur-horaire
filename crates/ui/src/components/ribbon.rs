@@ -42,17 +42,20 @@ pub fn SessionRibbon() -> Element {
     }
 }
 
-// where the dragged course may land, according to the probe's cache:
-// `Some(true)` = admissible target, `Some(false)` = barred, `None` = no
-// drag or probe still running (neutral)
+// where the dragged course may land: `Some(true)` = its season is offered
+// there (kept at full face), `Some(false)` = not offered (faded, refuses
+// the drop), `None` = no drag in progress. The chips' season filter, never
+// the solver probe — instant, and at parity with the keyboard path
+// (retour d'Antoine, 2026-08-19).
 fn drop_state(
+    snapshot: &Option<Snapshot>,
+    plan: &Plan,
     dragged: &Option<String>,
-    solver: &super::SolverState,
     index: usize,
 ) -> Option<bool> {
     let code = dragged.as_ref()?;
-    let sessions = solver.admissible.get(code)?;
-    Some(sessions.contains(&index))
+    let snapshot = snapshot.as_ref()?;
+    Some(crate::panel::offered_sessions(snapshot, plan, code).contains(&index))
 }
 
 #[component]
@@ -63,10 +66,13 @@ fn SessionCard(card: RibbonCard) -> Element {
     let SelectedCourse(mut selected) = use_context::<SelectedCourse>();
     let super::DraggedCourse(mut dragged) =
         use_context::<super::DraggedCourse>();
-    let solver = use_context::<Signal<super::SolverState>>();
+    let super::DropHover(mut hover) = use_context::<super::DropHover>();
+    let snapshot = use_context::<Signal<Option<Snapshot>>>();
     let index = card.index;
-    let target = drop_state(&dragged.read(), &solver.read(), index);
-    let dragging = dragged.read().is_some();
+    let dragged_code = dragged.read().clone();
+    let target =
+        drop_state(&snapshot.read(), &plan.read(), &dragged_code, index);
+    let landing = dragged_code.is_some() && *hover.read() == Some(index);
     let drop_label = card.label.clone();
     let credits = if card.codes.is_empty() {
         "—".to_string()
@@ -87,19 +93,39 @@ fn SessionCard(card: RibbonCard) -> Element {
             class: if card.over_cap { "ribbon-card--over" },
             class: if target == Some(true) { "ribbon-card--target" },
             class: if target == Some(false) { "ribbon-card--barred" },
+            class: if landing { "ribbon-card--landing" },
             aria_current: if card.current { "true" },
             onclick: move |_| {
                 view.write().session = index;
                 selected.set(None);
             },
-            // note 16: a dragged block lands here — barred cards refuse
+            // note 16: a dragged course lands here — non-offered cards
+            // refuse. Everything is read live: the render-time capture may
+            // predate this drag.
             ondragover: move |event| {
-                if dragging && target != Some(false) {
+                let code = dragged.read().clone();
+                let refused = drop_state(
+                    &snapshot.read(), &plan.read(), &code, index,
+                ) == Some(false);
+                if code.is_some() && !refused {
                     event.prevent_default();
+                    let stale = *hover.peek() != Some(index);
+                    if stale {
+                        hover.set(Some(index));
+                    }
+                }
+            },
+            // a leave toward a child is re-set by the same burst's
+            // dragover, so clearing here never flickers
+            ondragleave: move |_| {
+                let here = *hover.peek() == Some(index);
+                if here {
+                    hover.set(None);
                 }
             },
             ondrop: move |event| {
                 event.prevent_default();
+                hover.set(None);
                 // the read borrow must die before place_course writes
                 let code = dragged.read().clone();
                 let Some(code) = code else {
@@ -129,7 +155,7 @@ fn SessionCard(card: RibbonCard) -> Element {
             } else {
                 div { class: "ribbon-card-codes",
                     for code in card.codes.iter() {
-                        span { "{code}" }
+                        RibbonCode { key: "{code}", code: code.clone() }
                     }
                 }
             }
@@ -148,10 +174,13 @@ fn SummerStrip(card: RibbonCard) -> Element {
     let SelectedCourse(mut selected) = use_context::<SelectedCourse>();
     let super::DraggedCourse(mut dragged) =
         use_context::<super::DraggedCourse>();
-    let solver = use_context::<Signal<super::SolverState>>();
+    let super::DropHover(mut hover) = use_context::<super::DropHover>();
+    let snapshot = use_context::<Signal<Option<Snapshot>>>();
     let index = card.index;
-    let target = drop_state(&dragged.read(), &solver.read(), index);
-    let dragging = dragged.read().is_some();
+    let dragged_code = dragged.read().clone();
+    let target =
+        drop_state(&snapshot.read(), &plan.read(), &dragged_code, index);
+    let landing = dragged_code.is_some() && *hover.read() == Some(index);
     let drop_label = card.label.clone();
     let content = card
         .special
@@ -167,18 +196,34 @@ fn SummerStrip(card: RibbonCard) -> Element {
             },
             class: if target == Some(true) { "ribbon-card--target" },
             class: if target == Some(false) { "ribbon-card--barred" },
+            class: if landing { "ribbon-card--landing" },
             aria_current: if card.current { "true" },
             onclick: move |_| {
                 view.write().session = index;
                 selected.set(None);
             },
             ondragover: move |event| {
-                if dragging && target != Some(false) {
+                let code = dragged.read().clone();
+                let refused = drop_state(
+                    &snapshot.read(), &plan.read(), &code, index,
+                ) == Some(false);
+                if code.is_some() && !refused {
                     event.prevent_default();
+                    let stale = *hover.peek() != Some(index);
+                    if stale {
+                        hover.set(Some(index));
+                    }
+                }
+            },
+            ondragleave: move |_| {
+                let here = *hover.peek() == Some(index);
+                if here {
+                    hover.set(None);
                 }
             },
             ondrop: move |event| {
                 event.prevent_default();
+                hover.set(None);
                 // the read borrow must die before place_course writes
                 let code = dragged.read().clone();
                 let Some(code) = code else {
@@ -190,6 +235,37 @@ fn SummerStrip(card: RibbonCard) -> Element {
                 );
             },
             span { "{card.label} - {content}" }
+        }
+    }
+}
+
+// A course code inside a card is itself a drag source: the other half of
+// note 16 — the code rides `DraggedCourse`, same circuit as a grid block,
+// and the panel's chips stay the keyboard path (INP-4).
+#[component]
+fn RibbonCode(code: String) -> Element {
+    let super::DraggedCourse(mut dragged) =
+        use_context::<super::DraggedCourse>();
+    let super::DropHover(mut hover) = use_context::<super::DropHover>();
+    let drag_code = code.clone();
+    rsx! {
+        span {
+            draggable: true,
+            ondragstart: move |event| {
+                // Firefox refuses to carry a drag whose DataTransfer is
+                // empty — the signal stays the payload the drop reads,
+                // this token is the browser's fee (best-effort: the
+                // signal still carries the code if the write fails)
+                let transfer = event.data_transfer();
+                let _ = transfer.set_data("text/plain", &drag_code);
+                transfer.set_effect_allowed("move");
+                dragged.set(Some(drag_code.clone()));
+            },
+            ondragend: move |_| {
+                dragged.set(None);
+                hover.set(None);
+            },
+            "{code}"
         }
     }
 }

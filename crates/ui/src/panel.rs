@@ -1006,6 +1006,22 @@ pub fn choice_strip(
     }
 }
 
+// The horizon sessions whose season offers the course — what the ribbon
+// marks while a course is dragged: offered sessions keep their face,
+// the others fade and refuse the drop. The same season filter as the
+// chips (INP-4 parity), never the solver probe: the probe took seconds
+// and barred nearly every card (retour d'Antoine, 2026-08-19).
+pub fn offered_sessions(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    code: &str,
+) -> std::collections::BTreeSet<usize> {
+    candidate_sessions(snapshot, plan, code)
+        .into_iter()
+        .map(|(index, _)| index)
+        .collect()
+}
+
 // imposed by the program, its chosen concentration or its chosen profile —
 // read from the program itself, so an obligatoire listed under a rule or
 // met while browsing is marked there too
@@ -1417,6 +1433,26 @@ mod tests {
             ]),
             ..Plan::default()
         }
+    }
+
+    #[test]
+    fn offered_sessions_are_the_chips_season_filter_as_indices() {
+        let snapshot = snapshot();
+        let plan = plan();
+        assert_eq!(
+            offered_sessions(&snapshot, &plan, "GEX-3000"),
+            std::collections::BTreeSet::from([1, 4, 7, 10]),
+            "an automne course marks only the automnes"
+        );
+        assert_eq!(
+            offered_sessions(&snapshot, &plan, "GAE-1000"),
+            std::collections::BTreeSet::from([2, 5, 8, 11]),
+            "a winter course marks only the hivers"
+        );
+        assert!(
+            offered_sessions(&snapshot, &plan, "GHOST-1").is_empty(),
+            "no Course at all still answers instead of blanking"
+        );
     }
 
     #[test]
