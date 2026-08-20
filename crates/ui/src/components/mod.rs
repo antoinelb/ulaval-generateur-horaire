@@ -258,6 +258,14 @@ fn apply_proposal(
             )),
         );
     }
+    if !report.summers_forced.is_empty() {
+        push_alert(
+            alerts,
+            AlertBody::Note(crate::solve::summers_forced_note(
+                &report.summers_forced,
+            )),
+        );
+    }
     let Some(solution) = report.placement.solutions.first() else {
         return;
     };

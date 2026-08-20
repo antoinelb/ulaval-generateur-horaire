@@ -521,7 +521,12 @@ fn flatten(code: &str, tree: &PrereqTree) -> Result<FlatTree, PlacementError> {
 // resembles the reference cheminement; without a seed, earliest offered
 // first. A pin reduces the domain to a singleton; a season not offering
 // the course never enters it; the summer rules apply to unpinned courses
-// only, so a pin still intersects with the offer.
+// only, so a pin still intersects with the offer. An open été is a last
+// resort for a regular course: it enters the order after every regular
+// session, the seed included — a course seeded into an été walks back out
+// the moment a regular seat frees up (ADR
+// `2026-08-ete-en-dernier-recours-dans-lordre-des-valeurs`). A stage has
+// the étés for home and is never demoted.
 fn value_ordered_domain(
     course: &Course,
     request: &PlacementRequest,
@@ -541,8 +546,17 @@ fn value_ordered_domain(
                 || summer_admits(&course.code, session, request)
         })
         .collect();
-    if let Some(&anchor) = request.seed.get(&course.code) {
-        domain.sort_by_key(|&session| (session.abs_diff(anchor), session));
+    let demoted = |session: usize| {
+        request.sessions[session - 1] == Season::Summer
+            && !request.stages.contains(&course.code)
+    };
+    match request.seed.get(&course.code) {
+        Some(&anchor) => domain.sort_by_key(|&session| {
+            (demoted(session), session.abs_diff(anchor), session)
+        }),
+        None => {
+            domain.sort_by_key(|&session| (demoted(session), session));
+        }
     }
     domain
 }
@@ -1674,6 +1688,51 @@ mod tests {
                 pairs(&[("A-1", 2)]),
                 pairs(&[("A-1", 3)])
             ]
+        );
+    }
+
+    #[test]
+    fn a_seeded_summer_course_walks_back_to_a_regular_seat() {
+        // the escalation seeds what it placed in an été; the demotion
+        // primes the seed, so the course leaves the été the moment a
+        // regular seat is free
+        let mut inputs = Inputs::new(
+            &FALL_WINTER_SUMMER,
+            vec![all_seasons("A-1", "monday")],
+        );
+        inputs.open_summers = BTreeSet::from([3]);
+        inputs.seed = BTreeMap::from([("A-1".to_string(), 3)]);
+        inputs.max_solutions = 1;
+        let placement = inputs.solve();
+        assert_eq!(sorted_placements(&placement), vec![pairs(&[("A-1", 2)])]);
+    }
+
+    #[test]
+    fn an_early_open_summer_still_comes_last_in_the_order() {
+        // without a seed the order used to be plainly ascending — an été
+        // at the head of the horizon would have been tried first
+        let mut inputs = Inputs::new(
+            &[Season::Summer, Season::Fall],
+            vec![all_seasons("A-1", "monday")],
+        );
+        inputs.open_summers = BTreeSet::from([1]);
+        inputs.max_solutions = 1;
+        let placement = inputs.solve();
+        assert_eq!(sorted_placements(&placement), vec![pairs(&[("A-1", 2)])]);
+    }
+
+    #[test]
+    fn a_stage_is_never_demoted_out_of_its_summers() {
+        let mut inputs = Inputs::new(
+            &[Season::Fall, Season::Summer, Season::Fall, Season::Summer],
+            vec![all_seasons("S-1580", "monday")],
+        );
+        inputs.stages = stages(&["S-1580"]);
+        inputs.max_solutions = 1;
+        let placement = inputs.solve();
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("S-1580", 2)])]
         );
     }
 

@@ -57,12 +57,14 @@ Un été fermé (`summers_open: false`) n'accepte que les stages et les cours é
 - `solutions[i].left_out` : les cours que ce placement n'a pas pu asseoir. Vide sauf en **repli au mieux** (voir plus bas) — ce qui est placé respecte toujours toutes les contraintes.
 - `blocked` : les cours prouvés implaçables *avant* la recherche, avec leur raison (`empty-domain`, `unsatisfiable-prerequisites`, `stage-without-summer`) — une liste non vide est une preuve d'infaisabilité qui nomme ses coupables.
 - `set_aside` : les codes exigés par le programme mais absents du snapshot de cours — écartés et remontés, jamais perdus en silence.
+- `summers_forced` : présent seulement quand l'escalade (ci-dessous) a assis des cours réguliers dans un été que `summers_open: false` fermait — les nommer permet d'expliquer au lieu de changer le réglage en douce. Un stage ou un cours épinglé n'y figure jamais : l'été est leur droit propre.
 - `coverage` : présent seulement pour `verify_organigramme` avec un `program` — le rapport de couverture des règles (voir [Programmes, règles et couverture](../domaine/programmes.md)).
 
-## Le repli au mieux
+## L'escalade et le repli au mieux
 
-`generate_organigramme` tente d'abord l'agencement exact.
-S'il ne rend rien — un cours bloqué, une infaisabilité prouvée, un budget épuisé — il enchaîne de lui-même sur un **remplissage au mieux** plutôt que de rendre une grille vide (ADR `2026-08-placement-au-mieux-en-repli`).
+`generate_organigramme` tente d'abord l'agencement exact, étés selon le réglage.
+S'il ne rend rien et que les étés étaient fermés, il retente **exactement la même question, tous les étés ouverts** — l'ordre des valeurs y défavorise l'été, qui reste un dernier recours (ADRs `2026-08-escalade-etes-ouverts-dans-le-repli`, `2026-08-ete-en-dernier-recours-dans-lordre-des-valeurs`).
+Si rien n'existe même ainsi, il enchaîne sur un **remplissage au mieux**, étés ouverts, plutôt que de rendre une grille vide (ADR `2026-08-placement-au-mieux-en-repli`).
 
 La règle est : *des trous, jamais une faute.*
 Chaque cours placé respecte toutes les contraintes ; ceux qui ne rentrent nulle part sont dans `left_out`, et `blocked` en donne la raison quand le pré-écran les a désignés.

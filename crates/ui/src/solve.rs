@@ -1135,6 +1135,11 @@ pub struct PlacementReport {
     // `2026-08-injection-des-electifs-forces-par-les-prealables`)
     #[serde(default)]
     pub injected: Vec<String>,
+    // regular courses the escalation seated in an été the plan keeps
+    // closed — announced, the setting itself never touched (ADR
+    // `2026-08-escalade-etes-ouverts-dans-le-repli`)
+    #[serde(default)]
+    pub summers_forced: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
@@ -1255,8 +1260,20 @@ pub fn left_out_note(answer: &PlacementAnswer) -> Option<String> {
     Some(format!("{head}\n{}", named.join("\n")))
 }
 
+// The escalation had to open the étés the plan keeps closed — the setting
+// stays the student's, so the note explains instead of silently checking
+// the box (ADR `2026-08-escalade-etes-ouverts-dans-le-repli`)
+pub fn summers_forced_note(codes: &[String]) -> String {
+    format!(
+        "Les étés ont dû être ouverts pour tout placer : {} en été. \
+         Cochez « Ouvrir les étés » pour l'assumer, ou montez le plafond \
+         de crédits / ajoutez des sessions pour l'éviter.",
+        codes.join(", ")
+    )
+}
+
 // `Placement.blocked` surfaced by name, with the way out the student can
-// act on (`docs/next_steps.md` : nommer le coupable)
+// act on (rapport étudiante-cegep 2026-08-19 : nommer le coupable)
 pub fn blocked_note(blocked: &BlockedAnswer) -> String {
     match blocked.reason.as_str() {
         "empty-domain" => format!(
@@ -1695,6 +1712,17 @@ mod worker_tests {
         assert!(parse_worker_answer("pas du json")
             .expect_err("must fail")
             .contains("illisible"));
+    }
+
+    #[test]
+    fn the_summers_forced_note_names_the_codes_and_the_levers() {
+        let note = summers_forced_note(&[
+            "GEX-1002".to_string(),
+            "GMC-2580".to_string(),
+        ]);
+        assert!(note.contains("GEX-1002, GMC-2580"), "{note}");
+        assert!(note.contains("Ouvrir les étés"), "{note}");
+        assert!(note.contains("plafond"), "{note}");
     }
 
     // The best-effort answer must say what it left out and why, and must
