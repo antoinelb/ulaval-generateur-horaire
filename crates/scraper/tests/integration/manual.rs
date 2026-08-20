@@ -66,6 +66,16 @@ fn every_vintage_correction_names_a_semester_and_parses() {
                 .unwrap_or_else(|error| panic!("{vintage}/{code}: {error}"));
         }
     }
+    // the vintage-less layer (the répertoire being plainly wrong, ADR
+    // `2026-08-prealables-manuels-sans-millesime`) walks the same gate: a
+    // correction nobody can parse would quietly correct nothing
+    for (code, text) in &file.prerequisites {
+        if text.trim().is_empty() {
+            continue;
+        }
+        parse_prereq_tree(text)
+            .unwrap_or_else(|error| panic!("{code}: {error}"));
+    }
 }
 
 #[test]
