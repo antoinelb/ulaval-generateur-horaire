@@ -51,6 +51,11 @@ pub enum AlertCause {
     LeftOut(String),
     // nothing could be placed at all — stale once anything is
     EmptyGrid,
+    // the worker refused a query — stale the moment a later one answers:
+    // the refusal described an input that no longer stands (rapport
+    // étudiante-gex 2026-08-20, « ANL-1010 is pinned outside 1..=4 »
+    // survivait au retour à 8 sessions)
+    SolverError,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -211,12 +216,13 @@ fn handle_worker_answer(
                     state.verify_failed = true;
                 }
                 drop(state);
-                push_alert(
+                push_caused_alert(
                     alerts,
                     AlertBody::Note(format!(
                         "Le solveur n'a pas pu répondre — détail \
                          technique : {message}"
                     )),
+                    AlertCause::SolverError,
                 );
             }
         }
@@ -228,6 +234,18 @@ fn handle_worker_answer(
                 return;
             };
             state.write().running = None;
+            // a query just answered: whatever refusal was on screen
+            // described an input that no longer stands
+            if alerts
+                .peek()
+                .iter()
+                .any(|alert| alert.cause == AlertCause::SolverError)
+            {
+                let mut alerts = alerts;
+                alerts
+                    .write()
+                    .retain(|alert| alert.cause != AlertCause::SolverError);
+            }
             match running.kind {
                 QueryKind::Propose => {
                     apply_proposal(&report, state, plan, alerts);
@@ -835,6 +853,8 @@ fn retire_stale_left_out(
                 !floating.iter().any(|float| float == code)
             }
             AlertCause::EmptyGrid => something_placed || floating.is_empty(),
+            // retired by the next worker answer, not by the plan
+            AlertCause::SolverError => false,
         };
         if alerts.peek().iter().any(expired) {
             let mut alerts = alerts;
