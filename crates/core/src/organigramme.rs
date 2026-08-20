@@ -568,11 +568,18 @@ fn prefix_capacity(request: &PlacementRequest) -> Vec<u64> {
     prefix
 }
 
+// « Crédits exigés » counts *program* credits: the préuniversitaire
+// scolarité is en sus of the program (the UI's credit tally already keeps
+// it out of the bac), so a checked « scolarité préparatoire faite » must
+// not advance PHI-2910's 30-crédits threshold by 20 phantom credits — it
+// widened every threshold domain and reopened the search blow-up (ADR
+// `2026-08-seuil-de-credits-elague-au-domaine`).
 fn passed_credits(request: &PlacementRequest) -> u32 {
     request
         .courses
         .iter()
         .filter(|course| request.passed.contains(&course.code))
+        .filter(|course| !is_preuniversity(&course.code))
         .map(|course| course.credits.planning())
         .sum()
 }
@@ -1218,9 +1225,11 @@ fn course_leaf(code: &str, eval_ctx: &EvalCtx) -> Verdict {
     }
 }
 
-// accumulated credits strictly before the evaluated course's session:
-// passed credits count in full (ADR fixture family), placements at the
-// same session never do, concomitant or not
+// accumulated *program* credits strictly before the evaluated course's
+// session: passed credits count in full, préuniversitaire ones never —
+// the scolarité préparatoire is en sus of the program, whether passed or
+// seated in a session; placements at the same session never count,
+// concomitant or not
 fn credits_leaf(threshold: u32, eval_ctx: &EvalCtx) -> Verdict {
     let session = eval_ctx.chosen[eval_ctx.evaluated];
     let before: u32 = eval_ctx.ctx.passed_credits
@@ -1229,6 +1238,9 @@ fn credits_leaf(threshold: u32, eval_ctx: &EvalCtx) -> Verdict {
             .iter()
             .enumerate()
             .filter(|&(_, &placed)| placed != UNPLACED && placed < session)
+            .filter(|&(i, _)| {
+                !is_preuniversity(&eval_ctx.ctx.candidates[i].code)
+            })
             .map(|(i, _)| eval_ctx.ctx.candidates[i].credits)
             .sum::<u32>();
     if before >= threshold {
@@ -1249,6 +1261,7 @@ fn credits_leaf(threshold: u32, eval_ctx: &EvalCtx) -> Verdict {
                 .filter(|candidate| {
                     candidate.domain.iter().any(|&value| value < session)
                 })
+                .filter(|candidate| !is_preuniversity(&candidate.code))
                 .map(|candidate| candidate.credits)
                 .sum::<u32>();
         if potential < threshold {
@@ -3352,11 +3365,14 @@ mod tests {
             Season::Winter => generated.offered[i].1,
             Season::Summer => generated.offered[i].2,
         };
+        // program credits only: C-0 reads as préuniversitaire and stays
+        // out of the thresholds, passed or placed, like the engine
         let passed_credits: u32 = generated
             .passed
             .iter()
             .enumerate()
             .filter(|&(_, &passed)| passed)
+            .filter(|&(i, _)| !is_preuniversity(&code_of(i)))
             .map(|(i, _)| generated.credits[i])
             .sum();
         let before_or_with = |q: usize, session: usize| {
@@ -3384,6 +3400,7 @@ mod tests {
                         let before: u32 = assignment
                             .iter()
                             .filter(|&(_, &t)| t < session)
+                            .filter(|&(&j, _)| !is_preuniversity(&code_of(j)))
                             .map(|(&j, _)| generated.credits[j])
                             .sum();
                         passed_credits + before >= threshold

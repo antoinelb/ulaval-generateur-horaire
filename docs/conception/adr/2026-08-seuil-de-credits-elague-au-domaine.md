@@ -14,6 +14,8 @@ Trois couches, toutes des bornes supérieures prouvées (la concomitance ne rel�
 3. **Propagation** (`credit_watch` + borne de potentiel) : les arbres à seuil sont re-vérifiés à **chaque** extension (ils dépendent de toute l'affectation, `referenced_by` ne les rappelle jamais) ; `credits_leaf` répond `False` dès que `avant + non-affectés-pouvant-encore-précéder < seuil` — le potentiel ne fait que décroître le long d'une descente, l'élagage est définitif. Un cours surveillé **laissé de côté** est sauté (rien n'est exigé pour ne pas suivre un cours — le miroir du saut de `finalize`, sans lequel la sentinelle du dernier candidat mourait à chaque branche).
 
 Le contrôle en feuille reste (« jamais un placement en violation ») ; il est désormais prouvablement inatteignable par `place` et épinglé par un test direct.
+Les seuils comptent des crédits **du programme** : les cours préuniversitaires (0xxx) n'y entrent jamais — ni réussis (« scolarité préparatoire faite » ajoutait 20 crédits fantômes qui élargissaient les domaines et relançaient l'explosion), ni placés — comme le compteur de l'UI qui les garde hors du total du bac. La référence naïve du proptest applique la même règle.
+`PROPOSE_MAX_NODES` passe de 200 k à 2 M : le plafond ne mord que sur les programmes durs (B-GMC broie ses agrégats ~3 s natif), où une proposition lente bat une grille vide.
 Résultat mesuré : B-GMC-H27 passe de 0 placement en 20 M de nœuds à 38/43 cours placés en 140 ms au budget de l'UI.
 
 ## Alternatives rejetées

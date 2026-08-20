@@ -49,8 +49,11 @@ ui-data:
 # the ui's asset!() needs the files at every build, hence the make dep. It is
 # the very package `make wasm` publishes: one crate, two surfaces (ADR
 # 2026-08-fusion-des-crates-wasm-et-ui-calculations)
+# core is compiled into the package: a stale calc.js served a fixed
+# solver's old behaviour for a whole test session (2026-08-20)
 crates/ui/assets/calc/calc.js: crates/wasm/Cargo.toml \
-		$(wildcard crates/wasm/src/*.rs)
+		$(wildcard crates/wasm/src/*.rs) \
+		$(wildcard crates/core/src/*.rs)
 	wasm-pack build crates/wasm --target web --no-typescript \
 		--out-dir ../ui/assets/calc --out-name calc
 

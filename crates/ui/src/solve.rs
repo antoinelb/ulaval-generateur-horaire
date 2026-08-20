@@ -858,7 +858,10 @@ mod tests {
 // one proposal, small budget: the first solution lands in tens of
 // milliseconds — the automatic re-placement fires on every edit, so the
 // budget must stay cheap (ADR `2026-08-organigramme-en-continu-sans-bouton`)
-pub const PROPOSE_MAX_NODES: u64 = 200_000;
+// 2 M nodes ≈ 3 s native, ~10 s in the worker — the cap only bites on the
+// hard programs (B-GMC grinds its aggregates), where a longer one-shot
+// beats an empty grid; the easy ones return long before it
+pub const PROPOSE_MAX_NODES: u64 = 2_000_000;
 
 pub fn place_request(
     id: u64,

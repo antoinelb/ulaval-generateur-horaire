@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 15e7f8054f43bc957525f8fe943a6b80d97f20561af2e0d520669abf7c356938 # shrinks to generated = Generated { sessions: [Fall], summer: false, specs: [Free, CreditsBefore(1)], credits: [1, 1], offered: [(false, false, false), (true, false, true)], days: [0, 0], passed: [true, false], pin: None, stage: None, open_summer: false, credit_cap: 3, concomitant: false }
