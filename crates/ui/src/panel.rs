@@ -283,11 +283,8 @@ fn uncounted_panel(
     message: String,
     mut warnings: Vec<String>,
 ) -> PanelModel {
-    let mandatory_rows: Vec<Row> = program
-        .mandatory
-        .iter()
-        .map(|code| row(snapshot, plan, code))
-        .collect();
+    let mandatory_rows: Vec<Row> =
+        unique_rows(snapshot, plan, program.mandatory.iter());
     let mandatory = Section {
         key: "obligatoires".to_string(),
         title: "Obligatoires".to_string(),
@@ -353,10 +350,9 @@ fn bare_section(
     original: Option<&Rule>,
 ) -> Section {
     let rows = match &rule.courses {
-        RuleCourses::List { courses } => courses
-            .iter()
-            .map(|code| row(snapshot, plan, code))
-            .collect(),
+        RuleCourses::List { courses } => {
+            unique_rows(snapshot, plan, courses.iter())
+        }
         _ => Vec::new(),
     };
     Section {
@@ -763,11 +759,11 @@ fn mandatory_section(
     let missing: Vec<&String> =
         mandatory.iter().flat_map(|scope| &scope.missing).collect();
     let total = satisfied.len() + missing.len();
-    let rows = satisfied
-        .iter()
-        .chain(missing.iter())
-        .map(|code| row(snapshot, plan, code))
-        .collect();
+    let rows = unique_rows(
+        snapshot,
+        plan,
+        satisfied.iter().chain(missing.iter()).copied(),
+    );
     Section {
         key: "obligatoires".to_string(),
         title: "Obligatoires".to_string(),
@@ -798,10 +794,9 @@ fn rule_section(
     original: Option<&Rule>,
 ) -> Section {
     let rows = match rule.map(|rule| &rule.courses) {
-        Some(RuleCourses::List { courses }) => courses
-            .iter()
-            .map(|code| row(snapshot, plan, code))
-            .collect(),
+        Some(RuleCourses::List { courses }) => {
+            unique_rows(snapshot, plan, courses.iter())
+        }
         // a free rule browses the catalogue (search + matière); the other
         // shapes show their raw text below
         _ => Vec::new(),
@@ -822,6 +817,22 @@ fn rule_section(
         free: original.or(rule).is_some_and(browses_catalogue),
         progress: None,
     }
+}
+
+// The répertoire's lists can repeat a code (B-GMC's « Règle 1 » carries
+// GEL-4799 twice); rows are keyed by code in the view, so a duplicate
+// would give two siblings the same key and panic the diff — first
+// occurrence wins, order kept.
+fn unique_rows<'a>(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    codes: impl Iterator<Item = &'a String>,
+) -> Vec<Row> {
+    let mut seen = BTreeSet::new();
+    codes
+        .filter(|code| seen.insert(code.as_str()))
+        .map(|code| row(snapshot, plan, code))
+        .collect()
 }
 
 // « 1 parmi », « 3–9 cr », suffixed « - en sus » when the credits do not
@@ -1878,6 +1889,22 @@ mod tests {
         );
         assert!(credits.contains("12 crédits"), "{credits}");
         assert!(credits.contains("maximum de 9"), "{credits}");
+    }
+
+    #[test]
+    fn a_duplicated_code_in_a_rule_yields_one_row() {
+        // B-GMC's « Règle 1 » lists GEL-4799 twice; two rows would share
+        // a render key and panic Dioxus's keyed diff
+        let rule: Rule = serde_json::from_str(
+            r#"{"title":"Règle 1",
+                "constraint":{"type":"credits","min":3,"max":3},
+                "courses":["GMN-1000","GAE-1000","GMN-1000"]}"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let section = bare_section(&snapshot(), &plan(), 'p', &rule, None);
+        let codes: Vec<&str> =
+            section.rows.iter().map(|row| row.code.as_str()).collect();
+        assert_eq!(codes, ["GMN-1000", "GAE-1000"], "first wins, order kept");
     }
 
     #[test]
