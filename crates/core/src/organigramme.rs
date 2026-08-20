@@ -226,6 +226,12 @@ struct SearchCtx<'a> {
     // O(1) side of the remaining-credits bound in `expand`
     suffix_credits: Vec<u64>,
     passed_credits: u32,
+    // candidates whose tree carries a « Crédits exigés » leaf: their
+    // verdict depends on *every* assignment, not just on codes they
+    // mention, so `referenced_by` alone would never re-check them — each
+    // extension does (the potential bound in `credits_leaf` turns a
+    // doomed threshold into a prune instead of a leaf-by-leaf rejection)
+    credit_watch: Vec<usize>,
 }
 
 // one tree evaluation: candidate `evaluated`'s tree against `chosen`
@@ -258,12 +264,19 @@ pub fn place(request: &PlacementRequest) -> Result<Placement, PlacementError> {
         suffix_credits: suffix_credit_sums(&candidates),
         index_of,
         referenced_by: referencing_map(&candidates),
-        passed_credits: request
-            .courses
+        passed_credits: passed_credits(request),
+        credit_watch: candidates
             .iter()
-            .filter(|course| request.passed.contains(&course.code))
-            .map(|course| course.credits.planning())
-            .sum(),
+            .enumerate()
+            .filter(|(_, candidate)| {
+                candidate.tree.as_ref().is_some_and(|tree| {
+                    tree.nodes
+                        .iter()
+                        .any(|node| matches!(node, FlatNode::Credits(_)))
+                })
+            })
+            .map(|(index, _)| index)
+            .collect(),
     };
     let blocked = blocked_candidates(&ctx);
     // relaxed, the screen stops short-circuiting and becomes pure report:
@@ -442,16 +455,28 @@ fn validate(request: &PlacementRequest) -> Result<(), PlacementError> {
 fn build_candidates(
     request: &PlacementRequest,
 ) -> Result<Vec<Candidate>, PlacementError> {
-    request
+    let held = u64::from(passed_credits(request));
+    let prefix = prefix_capacity(request);
+    let mut candidates: Vec<Candidate> = request
         .courses
         .iter()
         .filter(|course| !request.passed.contains(&course.code))
         .map(|course| {
+            let tree = flat_tree(course)?;
+            let domain = value_ordered_domain(course, request)
+                .into_iter()
+                .filter(|&session| {
+                    tree_admits_ceiling(
+                        tree.as_ref(),
+                        held + prefix[session - 1],
+                    )
+                })
+                .collect();
             Ok(Candidate {
                 code: course.code.clone(),
                 credits: course.credits.planning(),
-                tree: flat_tree(course)?,
-                domain: value_ordered_domain(course, request),
+                tree,
+                domain,
                 masks: course
                     .seasons
                     .iter()
@@ -465,7 +490,165 @@ fn build_candidates(
                     .collect(),
             })
         })
-        .collect()
+        .collect::<Result<_, _>>()?;
+    order_prerequisites_first(&mut candidates);
+    Ok(candidates)
+}
+
+// A « Crédits exigés : N » leaf resolves only at a complete assignment —
+// placed too early, its course survives the whole descent and rejects
+// every leaf, and the DFS re-enumerates the tail forever (B-GMC's
+// PHI-2910 and PHI-3900, « Crédits exigés : 30/60 », each rejected
+// millions of leaves without one placement landing). The ceiling is
+// static — strictly-before credits can never exceed passed plus the
+// prefix capacity, and concomitance never relaxes program_credits — so a
+// session where every reachable threshold still fails leaves the domain
+// before the search starts (ADR
+// `2026-08-seuil-de-credits-elague-au-domaine`). Optimistic everywhere
+// else: only the ceiling is provable here.
+fn tree_admits_ceiling(tree: Option<&FlatTree>, ceiling: u64) -> bool {
+    let Some(tree) = tree else {
+        return true;
+    };
+    let mut verdicts = vec![true; tree.nodes.len()];
+    for i in (0..tree.nodes.len()).rev() {
+        verdicts[i] = match &tree.nodes[i] {
+            FlatNode::Credits(threshold) => ceiling >= u64::from(*threshold),
+            FlatNode::Course(_) | FlatNode::Raw(_) => true,
+            FlatNode::All(children) => {
+                children.iter().all(|&child| verdicts[child])
+            }
+            FlatNode::Any(children) => {
+                children.iter().any(|&child| verdicts[child])
+            }
+        };
+    }
+    verdicts.first().copied().unwrap_or(true)
+}
+
+// prefix_capacity[s] = an upper bound on the credits sessions 1..=s can
+// hold together. Every session a regular course may enter counts the full
+// cap; a closed été only holds stages — and only stages whose own
+// threshold the capacity before that été can still meet — plus whatever
+// is pinned into it, capped at the session cap. Without this refinement
+// the (session − 1) × cap ceiling counts closed étés as full and admits
+// sessions no assignment can ever reach (B-GMC's é3 holds nothing: its
+// only stage needs 42 credits by then).
+fn prefix_capacity(request: &PlacementRequest) -> Vec<u64> {
+    let passed = u64::from(passed_credits(request));
+    let mut prefix = vec![0u64; request.sessions.len() + 1];
+    for session in 1..=request.sessions.len() {
+        let summer = request.sessions[session - 1] == Season::Summer;
+        let open = request.open_summers.contains(&session);
+        let cap = u64::from(request.credit_cap);
+        let slot = if !summer || open {
+            cap
+        } else {
+            let before = passed + prefix[session - 1];
+            request
+                .courses
+                .iter()
+                .filter(|course| {
+                    request.stages.contains(&course.code)
+                        || request.pinned.get(&course.code) == Some(&session)
+                })
+                .filter(|course| {
+                    // an unreadable tree admits: this is an upper bound
+                    tree_admits_ceiling(
+                        flat_tree(course).ok().flatten().as_ref(),
+                        before,
+                    )
+                })
+                .map(|course| u64::from(course.credits.planning()))
+                .sum::<u64>()
+                .min(cap)
+        };
+        prefix[session] = prefix[session - 1] + slot;
+    }
+    prefix
+}
+
+fn passed_credits(request: &PlacementRequest) -> u32 {
+    request
+        .courses
+        .iter()
+        .filter(|course| request.passed.contains(&course.code))
+        .map(|course| course.credits.planning())
+        .sum()
+}
+
+// The variable order is the search's fate: a dependent expanded before its
+// prerequisite seats itself early, and when the prerequisite's turn comes
+// no session precedes — every branch dies and the DFS thrashes. On a real
+// program it is fatal: B-GMC's MAT-11xx prerequisites sort after every
+// GMC code, and the first relaxed leaf sat beyond a 20-million-node budget.
+// Prerequisites first (by depth of the listed-prerequisite chains inside
+// the candidate set), the input order breaking ties, keeps every descent
+// constructive (ADR `2026-08-candidats-ordonnes-prealables-d-abord`).
+fn order_prerequisites_first(candidates: &mut [Candidate]) {
+    let index_of: BTreeMap<&str, usize> = candidates
+        .iter()
+        .enumerate()
+        .map(|(index, candidate)| (candidate.code.as_str(), index))
+        .collect();
+    let mentions: Vec<Vec<usize>> = candidates
+        .iter()
+        .enumerate()
+        .map(|(index, candidate)| {
+            candidate
+                .tree
+                .iter()
+                .flat_map(|tree| tree.nodes.iter())
+                .filter_map(|node| match node {
+                    FlatNode::Course(code) => index_of.get(code.as_str()),
+                    _ => None,
+                })
+                .copied()
+                // a course naming itself must not deepen forever
+                .filter(|&mentioned| mentioned != index)
+                .collect()
+        })
+        .collect();
+    let mut depths = vec![0usize; candidates.len()];
+    // bounded relaxation: n passes settle any acyclic chain; a cycle in
+    // the data simply stops deepening at the cap instead of looping
+    for _ in 0..candidates.len() {
+        let mut changed = false;
+        for index in 0..candidates.len() {
+            let deepest = mentions[index]
+                .iter()
+                .map(|&mentioned| depths[mentioned] + 1)
+                .max()
+                .unwrap_or(0);
+            if deepest > depths[index] && deepest <= candidates.len() {
+                depths[index] = deepest;
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    let key_of: BTreeMap<String, (bool, usize)> = candidates
+        .iter()
+        .zip(&depths)
+        .map(|(candidate, &depth)| {
+            // a « Crédits exigés » course constrains the aggregate: it can
+            // only judge its session once everything else sits — assigned
+            // first it pins itself blind and rejects the whole subtree at
+            // the leaves. It goes last, whatever its chain depth.
+            let aggregate = candidate.tree.as_ref().is_some_and(|tree| {
+                tree.nodes
+                    .iter()
+                    .any(|node| matches!(node, FlatNode::Credits(_)))
+            });
+            (candidate.code.clone(), (aggregate, depth))
+        })
+        .collect();
+    // stable: ties keep the intake's order
+    candidates.sort_by_key(|candidate| {
+        key_of.get(&candidate.code).copied().unwrap_or((false, 0))
+    });
 }
 
 fn flat_tree(course: &Course) -> Result<Option<FlatTree>, PlacementError> {
@@ -630,6 +813,20 @@ fn blocked_candidates(ctx: &SearchCtx) -> Vec<Blocked> {
     ctx.candidates
         .iter()
         .filter_map(|candidate| {
+            // the unsatisfiable tree is the deeper proof and comes first:
+            // a threshold no assignment can reach also empties the domain
+            // (`tree_admits_ceiling` filters it), and « aucune session »
+            // would send the student adjusting sessions for nothing
+            if candidate
+                .tree
+                .as_ref()
+                .is_some_and(|tree| !ever_satisfiable(tree, candidate, ctx))
+            {
+                return Some(Blocked {
+                    code: candidate.code.clone(),
+                    reason: BlockedReason::UnsatisfiablePrerequisites,
+                });
+            }
             if candidate.domain.is_empty() {
                 // an unpinned stage names the summer restriction as the
                 // culprit — pinning it is the way out the student can act on
@@ -645,14 +842,7 @@ fn blocked_candidates(ctx: &SearchCtx) -> Vec<Blocked> {
                     },
                 });
             }
-            candidate
-                .tree
-                .as_ref()
-                .is_some_and(|tree| !ever_satisfiable(tree, candidate, ctx))
-                .then(|| Blocked {
-                    code: candidate.code.clone(),
-                    reason: BlockedReason::UnsatisfiablePrerequisites,
-                })
+            None
         })
         .collect()
 }
@@ -723,9 +913,12 @@ fn search(ctx: &SearchCtx) -> Placement {
                     path.push(session);
                 }
                 if path.len() == ctx.candidates.len() {
-                    if let Some(solution) = finalize(&path, ctx) {
-                        solutions.push(solution);
-                    }
+                    // `None` (a violated tree at the leaf) is provably
+                    // unreachable — the incremental layer re-checks every
+                    // tree at its last relevant assignment, `complete`
+                    // flagged — but the leaf check stays: « jamais un
+                    // placement en violation » deserves its last line
+                    solutions.extend(finalize(&path, ctx));
                 } else {
                     expand(&path, ctx, &mut cache, &mut stack);
                 }
@@ -850,8 +1043,17 @@ fn precedence_admits(child: &[usize], depth: usize, ctx: &SearchCtx) -> bool {
         .into_iter()
         .flatten()
         .filter(|&&i| i < depth)
+        // a credits threshold watches every assignment: each extension
+        // shrinks what could still land before it
+        .chain(ctx.credit_watch.iter().filter(|&&i| i < depth))
         .chain(own.iter());
     rechecked.into_iter().all(|&evaluated| {
+        // a course left out has no tree left to satisfy — the mirror of
+        // `finalize`'s skip; without it a watched threshold whose course
+        // the relaxation set aside would veto every branch below
+        if child[evaluated] == UNPLACED {
+            return true;
+        }
         match &ctx.candidates[evaluated].tree {
             None => true,
             Some(tree) => {
@@ -1034,8 +1236,26 @@ fn credits_leaf(threshold: u32, eval_ctx: &EvalCtx) -> Verdict {
     } else if eval_ctx.complete {
         Verdict::False
     } else {
-        // an unplaced course may still land before and lift the total
-        Verdict::Unknown
+        // an unassigned course may still land before and lift the total —
+        // but only one whose domain reaches an earlier session. Once even
+        // all of those cannot bridge the gap, the verdict is False *now*:
+        // the potential only shrinks as the descent assigns, so pruning
+        // here is what keeps a doomed threshold from rejecting its whole
+        // subtree leaf by leaf (B-GMC's PHI-3900 rejected 3 million
+        // leaves before this bound existed).
+        let potential: u32 = before
+            + eval_ctx.ctx.candidates[eval_ctx.chosen.len()..]
+                .iter()
+                .filter(|candidate| {
+                    candidate.domain.iter().any(|&value| value < session)
+                })
+                .map(|candidate| candidate.credits)
+                .sum::<u32>();
+        if potential < threshold {
+            Verdict::False
+        } else {
+            Verdict::Unknown
+        }
     }
 }
 
@@ -1705,6 +1925,373 @@ mod tests {
         inputs.max_solutions = 1;
         let placement = inputs.solve();
         assert_eq!(sorted_placements(&placement), vec![pairs(&[("A-1", 2)])]);
+    }
+
+    #[test]
+    fn prerequisites_are_assigned_before_their_dependents() {
+        // Z-1 is A-2's prerequisite but sorts after it alphabetically —
+        // exactly B-GMC's MAT-after-GMC pathology. The first solution of a
+        // one-solution search only comes out constructive if Z-1 is
+        // assigned first.
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![
+                with_prereq("A-2", "monday", &parsed(r#""Z-1""#)),
+                anytime("Z-1", "tuesday"),
+            ],
+        );
+        inputs.max_solutions = 1;
+        let placement = inputs.solve();
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("A-2", 2), ("Z-1", 1)])]
+        );
+    }
+
+    #[test]
+    fn a_credits_threshold_course_is_assigned_last() {
+        // the aggregate can only judge its seat once everything else sits;
+        // assigned first it pins itself blind and grinds the node budget
+        // (B-GMC's PHI-2910/PHI-3900)
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![
+                with_prereq(
+                    "AAA-9",
+                    "monday",
+                    &parsed(r#"{"program_credits":{"credits":3}}"#),
+                ),
+                anytime("B-1", "tuesday"),
+            ],
+        );
+        inputs.max_solutions = 1;
+        let placement = inputs.solve();
+        // B-1 first (session 1), AAA-9 after its threshold is met
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("AAA-9", 2), ("B-1", 1)])]
+        );
+    }
+
+    #[test]
+    fn a_threshold_prunes_the_sessions_its_prefix_cannot_reach() {
+        // 6 credits demanded before T-9: session 1 (nothing before) and
+        // session 2 (one 3-credit course at most under cap 3) are pruned
+        // from the domain — the search never grinds them
+        let mut inputs = Inputs::new(
+            &[Season::Fall, Season::Winter, Season::Fall],
+            vec![
+                anytime("A-1", "monday"),
+                anytime("B-1", "tuesday"),
+                with_prereq(
+                    "T-9",
+                    "wednesday",
+                    &parsed(r#"{"program_credits":{"credits":6}}"#),
+                ),
+            ],
+        );
+        inputs.credit_cap = 3;
+        let placement = inputs.solve();
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![
+                pairs(&[("A-1", 1), ("B-1", 2), ("T-9", 3)]),
+                pairs(&[("A-1", 2), ("B-1", 1), ("T-9", 3)]),
+            ],
+            "3 + 3 credits strictly before T-9, both ways"
+        );
+    }
+
+    #[test]
+    fn a_closed_summer_counts_nothing_toward_a_threshold_prefix() {
+        // horizon A-H-É-A, étés closed: the é holds no credits, so the 7
+        // demanded credits are not reachable by session 4 (3 + 3 + 0) and
+        // the search proves infeasibility instead of grinding leaves
+        let mut inputs = Inputs::new(
+            &[Season::Fall, Season::Winter, Season::Summer, Season::Fall],
+            vec![
+                anytime("A-1", "monday"),
+                anytime("B-1", "tuesday"),
+                with_prereq(
+                    "T-9",
+                    "wednesday",
+                    &parsed(r#"{"program_credits":{"credits":7}}"#),
+                ),
+            ],
+        );
+        inputs.credit_cap = 3;
+        let placement = inputs.solve();
+        assert_eq!(placement.completion, Completion::Complete);
+        assert!(placement.solutions.is_empty());
+        assert_eq!(
+            placement.blocked,
+            vec![Blocked {
+                code: "T-9".to_string(),
+                reason: BlockedReason::UnsatisfiablePrerequisites,
+            }],
+            "the threshold-emptied domain names the true culprit"
+        );
+    }
+
+    #[test]
+    fn an_eligible_stage_lifts_a_closed_summers_threshold_prefix() {
+        // same horizon, but a 3-credit stage may sit in the closed é3
+        // (its own threshold of 3 is met by then): 3 + 3 + 3 credits
+        // before session 4 reach the 7 demanded
+        let mut inputs = Inputs::new(
+            &[Season::Fall, Season::Winter, Season::Summer, Season::Fall],
+            vec![
+                anytime("A-1", "monday"),
+                anytime("B-1", "tuesday"),
+                {
+                    let mut stage = all_seasons("S-1", "thursday");
+                    stage.prerequisites = serde_json::from_str(&parsed(
+                        r#"{"program_credits":{"credits":3}}"#,
+                    ))
+                    .unwrap_or_else(|e| panic!("{e}"));
+                    stage
+                },
+                with_prereq(
+                    "T-9",
+                    "wednesday",
+                    &parsed(r#"{"program_credits":{"credits":7}}"#),
+                ),
+            ],
+        );
+        inputs.credit_cap = 3;
+        inputs.stages = stages(&["S-1"]);
+        inputs.max_solutions = 1;
+        let placement = inputs.solve();
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("A-1", 1), ("B-1", 2), ("S-1", 3), ("T-9", 4)])]
+        );
+    }
+
+    #[test]
+    fn a_doomed_threshold_prunes_mid_search_not_leaf_by_leaf() {
+        // T-8 sits in session 2 needing what only session 1 can hold; the
+        // moment too much is assigned elsewhere the potential bound turns
+        // its verdict False and the branch dies before any leaf
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![
+                anytime("A-1", "monday"),
+                anytime("B-1", "tuesday"),
+                with_prereq(
+                    "T-8",
+                    "wednesday",
+                    &parsed(r#"{"program_credits":{"credits":6}}"#),
+                ),
+            ],
+        );
+        inputs.credit_cap = 6;
+        let placement = inputs.solve();
+        // both 3-credit courses must precede T-8: one solution
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("A-1", 1), ("B-1", 1), ("T-8", 2)])]
+        );
+    }
+
+    #[test]
+    fn a_mutual_prerequisite_pair_relaxes_to_both_left_out() {
+        // A-1 and B-2 each require the other strictly before — no real
+        // arrangement exists, and leaving only one of them out is vetoed
+        // the moment the sentinel falsifies the placed one's tree
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![
+                with_prereq("A-1", "monday", &parsed(r#""B-2""#)),
+                with_prereq("B-2", "tuesday", &parsed(r#""A-1""#)),
+            ],
+        );
+        inputs.allow_unplaced = true;
+        inputs.max_solutions = 1;
+        let placement = inputs.solve();
+        let solution = placement
+            .solutions
+            .first()
+            .unwrap_or_else(|| panic!("the relaxation must still answer"));
+        assert!(solution.placement.is_empty());
+        assert_eq!(
+            solution.left_out,
+            BTreeSet::from(["A-1".to_string(), "B-2".to_string()])
+        );
+    }
+
+    #[test]
+    fn an_all_with_an_undecided_child_stays_undecided() {
+        // the prerequisites-first order assigns an ET's operands before
+        // their dependent, so this row of the truth table now only
+        // arises through mention cycles — pinned directly
+        assert_eq!(
+            all_verdict(
+                &[1, 2],
+                &[
+                    Verdict::Unknown,
+                    Verdict::Unknown,
+                    Verdict::Sat(BTreeSet::new()),
+                ]
+            ),
+            Verdict::Unknown
+        );
+    }
+
+    #[test]
+    fn an_undecided_threshold_waits_for_the_remaining_aggregates() {
+        // three aggregates: while the last is still unassigned, an
+        // earlier one short of its threshold stays undecided as long as
+        // what remains could land before it — the enumeration walks that
+        // branch and still proves the full set
+        let mut inputs = Inputs::new(
+            &[Season::Fall, Season::Winter, Season::Fall, Season::Winter],
+            vec![
+                anytime("A-1", "monday"),
+                with_prereq(
+                    "T-7",
+                    "tuesday",
+                    &parsed(r#"{"program_credits":{"credits":3}}"#),
+                ),
+                with_prereq(
+                    "T-8",
+                    "wednesday",
+                    &parsed(r#"{"program_credits":{"credits":3}}"#),
+                ),
+                with_prereq(
+                    "T-9",
+                    "thursday",
+                    &parsed(r#"{"program_credits":{"credits":6}}"#),
+                ),
+            ],
+        );
+        inputs.credit_cap = 3;
+        let placement = inputs.solve();
+        assert_eq!(placement.completion, Completion::Complete);
+        assert!(!placement.solutions.is_empty());
+        for solution in &placement.solutions {
+            assert!(solution.left_out.is_empty());
+            assert_eq!(solution.placement.len(), 4);
+        }
+    }
+
+    #[test]
+    fn an_all_branch_not_yet_assigned_stays_undecided_mid_search() {
+        // A-1 needs both C-3 (already seated) and B-2 — and the A↔B cycle
+        // defeats the prerequisites-first order, so B-2 is still
+        // unassigned when A-1's ET is evaluated: the ET must stay
+        // undecided rather than veto, and the impossible pair still
+        // relaxes to both left out
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![
+                with_prereq(
+                    "A-1",
+                    "monday",
+                    &parsed(r#"{"all":["B-2","C-3"]}"#),
+                ),
+                with_prereq("B-2", "tuesday", &parsed(r#""A-1""#)),
+                anytime("C-3", "wednesday"),
+            ],
+        );
+        inputs.allow_unplaced = true;
+        inputs.max_solutions = 1;
+        let placement = inputs.solve();
+        let solution = placement
+            .solutions
+            .first()
+            .unwrap_or_else(|| panic!("the relaxation must still answer"));
+        assert_eq!(
+            solution.placement,
+            BTreeMap::from([("C-3".to_string(), 1)])
+        );
+        assert_eq!(
+            solution.left_out,
+            BTreeSet::from(["A-1".to_string(), "B-2".to_string()])
+        );
+    }
+
+    #[test]
+    fn the_leaf_check_still_refuses_a_violated_threshold() {
+        // unreachable through `place` today — the incremental layer
+        // refuses first — but the leaf check is the last line of « jamais
+        // un placement en violation », so it is pinned directly
+        let courses = vec![
+            anytime("A-1", "monday"),
+            with_prereq(
+                "T-9",
+                "tuesday",
+                &parsed(r#"{"program_credits":{"credits":6}}"#),
+            ),
+        ];
+        let sessions = FALL_WINTER.to_vec();
+        let empty_set = BTreeSet::new();
+        let empty_map = BTreeMap::new();
+        let request = PlacementRequest {
+            sessions: &sessions,
+            credit_cap: 30,
+            concomitant: false,
+            courses: &courses,
+            passed: &empty_set,
+            pinned: &empty_map,
+            stages: &empty_set,
+            open_summers: &BTreeSet::new(),
+            seed: &empty_map,
+            max_nodes: 0,
+            max_solutions: 1,
+            allow_unplaced: false,
+        };
+        let candidates =
+            build_candidates(&request).unwrap_or_else(|e| panic!("{e}"));
+        let index_of: BTreeMap<String, usize> = candidates
+            .iter()
+            .enumerate()
+            .map(|(i, candidate)| (candidate.code.clone(), i))
+            .collect();
+        let ctx = SearchCtx {
+            request: &request,
+            candidates: &candidates,
+            needs_final: needs_final_flags(&candidates, &index_of, &request),
+            suffix_credits: suffix_credit_sums(&candidates),
+            index_of,
+            referenced_by: referencing_map(&candidates),
+            passed_credits: 0,
+            credit_watch: vec![1],
+        };
+        // A-1 in session 1 gives 3 credits before T-9's session 2 — short
+        // of the 6 demanded: the leaf must refuse, never lie
+        assert!(finalize(&[1, 2], &ctx).is_none());
+        assert!(finalize(&[1, UNPLACED], &ctx).is_some());
+    }
+
+    #[test]
+    fn a_left_out_threshold_course_no_longer_vetoes_its_branch() {
+        // the relaxed pass sets the stage aside: its own threshold stops
+        // applying (nothing is required in order to *not* take a course)
+        // — the guard that unlocked B-GMC's first relaxed leaf
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![
+                anytime("A-1", "monday"),
+                with_prereq(
+                    "T-9",
+                    "wednesday",
+                    &parsed(r#"{"program_credits":{"credits":30}}"#),
+                ),
+            ],
+        );
+        inputs.allow_unplaced = true;
+        inputs.max_solutions = 1;
+        let placement = inputs.solve();
+        let solution = placement
+            .solutions
+            .first()
+            .unwrap_or_else(|| panic!("the relaxation must still answer"));
+        assert_eq!(
+            solution.placement,
+            pairs(&[("A-1", 1)]).into_iter().collect::<BTreeMap<_, _>>()
+        );
+        assert_eq!(solution.left_out, BTreeSet::from(["T-9".to_string()]));
     }
 
     #[test]

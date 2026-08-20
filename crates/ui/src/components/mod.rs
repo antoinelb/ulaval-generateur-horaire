@@ -826,9 +826,14 @@ fn retire_stale_left_out(
         }
         let something_placed = !plan_read.displayed_placement.is_empty()
             || plan_read.manual.values().any(|codes| !codes.is_empty());
+        // judged against what floats *now*, never against `left_out`: a
+        // document swap clears `left_out` first, and the old document's
+        // toasts would otherwise never match anything again
         let expired = |alert: &Alert| match &alert.cause {
             AlertCause::Sticky => false,
-            AlertCause::LeftOut(code) => stale.contains(code),
+            AlertCause::LeftOut(code) => {
+                !floating.iter().any(|float| float == code)
+            }
             AlertCause::EmptyGrid => something_placed || floating.is_empty(),
         };
         if alerts.peek().iter().any(expired) {
