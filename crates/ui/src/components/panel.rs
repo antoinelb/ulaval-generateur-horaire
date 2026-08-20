@@ -208,10 +208,12 @@ fn CheminementKnobs() -> Element {
                                 event.value(),
                             );
                         },
-                        option {
-                            value: "",
-                            selected: choices.concentration.is_none(),
-                            "Aucune"
+                        if choices.offers_none {
+                            option {
+                                value: "",
+                                selected: choices.concentration.is_none(),
+                                "Aucune"
+                            }
                         }
                         for title in choices.concentrations.iter() {
                             option {
@@ -319,6 +321,9 @@ fn PanelBody(model: PanelModel) -> Element {
     let searching = !search.trim().is_empty();
     let only_fitting = view.read().only_fitting;
     let has_program = plan.read().program.is_some();
+    // armed by typing only: a restored page mounts a saved search too,
+    // and an auto-refresh never scrolls (LAT-7)
+    let mut scroll_to_results = use_signal(|| false);
     rsx! {
         div { class: "panel-body",
             div { class: "panel-search-wrap",
@@ -328,7 +333,10 @@ fn PanelBody(model: PanelModel) -> Element {
                     placeholder: "Chercher dans tout le catalogue…",
                     aria_label: "Chercher dans tout le catalogue…",
                     value: "{search}",
-                    oninput: move |event| view.write().search = event.value(),
+                    oninput: move |event| {
+                        scroll_to_results.set(true);
+                        view.write().search = event.value();
+                    },
                 }
                 if searching {
                     button {
@@ -360,7 +368,30 @@ fn PanelBody(model: PanelModel) -> Element {
                 OrganigrammeControls { rules_missing: missing_rules(&model) }
             }
             if searching {
-                SearchResults {}
+                div {
+                    // the results land below the knobs and the
+                    // organigramme block, often under the fold (rapport
+                    // étudiante-gex 2026-08-19) — the first typed letter
+                    // brings them into view
+                    onmounted: move |event: Event<MountedData>| {
+                        if !scroll_to_results() {
+                            return;
+                        }
+                        scroll_to_results.set(false);
+                        spawn(async move {
+                            let _ = event
+                                .data()
+                                .scroll_to_with_options(ScrollToOptions {
+                                    behavior: ScrollBehavior::Smooth,
+                                    vertical: ScrollLogicalPosition::Nearest,
+                                    horizontal:
+                                        ScrollLogicalPosition::Nearest,
+                                })
+                                .await;
+                        });
+                    },
+                    SearchResults {}
+                }
             } else if has_program {
                 if let Some(mandatory) = model.mandatory.clone() {
                     SectionView { section: mandatory }
@@ -669,6 +700,9 @@ fn SectionView(section: Section) -> Element {
     let mut view = use_context::<Signal<View>>();
     let expanded =
         view.read().expanded_rule.as_deref() == Some(section.key.as_str());
+    // only the click below arms the scroll: a restored page mounts the
+    // open section too, and an auto-refresh never scrolls (LAT-7)
+    let mut scroll_on_open = use_signal(|| false);
     let key = section.key.clone();
     let (badge_class, badge_text) = match &section.badge {
         Badge::Ok(text) => ("panel-badge--ok", text.clone()),
@@ -686,6 +720,9 @@ fn SectionView(section: Section) -> Element {
                 class: "panel-rule-head",
                 aria_expanded: expanded,
                 onclick: move |_| {
+                    if !expanded {
+                        scroll_on_open.set(true);
+                    }
                     let mut view = view.write();
                     view.expanded_rule = if expanded {
                         None
@@ -719,6 +756,31 @@ fn SectionView(section: Section) -> Element {
             }
             if expanded {
                 div { class: "panel-rule-content",
+                    // bring what just opened into view — the panel is a
+                    // long internal scroller and the content often lands
+                    // under the fold (rapport étudiante-gex 2026-08-19);
+                    // Nearest moves nothing when it is already visible
+                    // (ERR-6)
+                    onmounted: move |event: Event<MountedData>| {
+                        if !scroll_on_open() {
+                            return;
+                        }
+                        scroll_on_open.set(false);
+                        spawn(async move {
+                            let _ = event
+                                .data()
+                                .scroll_to_with_options(ScrollToOptions {
+                                    behavior: ScrollBehavior::Smooth,
+                                    vertical: ScrollLogicalPosition::Nearest,
+                                    horizontal:
+                                        ScrollLogicalPosition::Nearest,
+                                })
+                                .await;
+                        });
+                    },
+                    if let Some(lead) = section.lead.as_ref() {
+                        p { class: "panel-empty", "{lead}" }
+                    }
                     if section.key
                         == format!(
                             "p/{}",

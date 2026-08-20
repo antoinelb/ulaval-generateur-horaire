@@ -53,6 +53,9 @@ pub struct Section {
     // « 1 parmi », « 3–9 cr », « 3 cr - en sus »
     pub constraint: Option<String>,
     pub badge: Badge,
+    // the expanded rule's first line: what to pick here and that nothing
+    // is ever taken automatically (rapport étudiante-cegep 2026-08-19)
+    pub lead: Option<String>,
     pub rows: Vec<Row>,
     // rule text outside the grammar — always displayed
     pub raw: Option<String>,
@@ -290,6 +293,7 @@ fn uncounted_panel(
         title: "Obligatoires".to_string(),
         constraint: None,
         badge: Badge::Neutral("—".to_string()),
+        lead: None,
         rows: mandatory_rows,
         raw: None,
         notes: Vec::new(),
@@ -360,6 +364,7 @@ fn bare_section(
         title: rule.title.clone(),
         constraint: constraint_label(rule),
         badge: Badge::Neutral("—".to_string()),
+        lead: None,
         rows,
         raw: rule_raw(rule).or_else(|| original.and_then(rule_raw)),
         notes: rule.notes.clone(),
@@ -670,6 +675,12 @@ pub struct CheminementChoices {
     pub profiles: Vec<String>,
     pub concentration: Option<String>,
     pub profile: Option<String>,
+    // whether the synthetic « Aucune » option is offered at all: a program
+    // whose page already carries a neutral block (« Cheminement sans
+    // concentration », « Approche généraliste ») has nothing behind
+    // « Aucune » but a sous-compte of that block's own rule (ADR
+    // `2026-08-aucune-retiree-quand-un-bloc-neutre-existe`)
+    pub offers_none: bool,
 }
 
 pub fn cheminement_choices(
@@ -692,9 +703,20 @@ pub fn cheminement_choices(
             .iter()
             .map(|block| block.title.clone())
             .collect(),
+        offers_none: !program
+            .concentrations
+            .iter()
+            .any(|block| neutral_concentration(&block.title)),
         concentration: concentration.map(str::to_string),
         profile: profile.map(str::to_string),
     })
+}
+
+// the scraped blocks that *are* the no-concentration pathway — B-GCI and
+// B-GMC name it, B-GIN calls it « Approche généraliste »
+fn neutral_concentration(title: &str) -> bool {
+    title == "Cheminement sans concentration"
+        || title == "Approche généraliste"
 }
 
 // The expert-safe default (AIR LAY-3, parité avec la version JS) : the
@@ -775,6 +797,7 @@ fn mandatory_section(
         } else {
             Badge::Partial(format!("{}/{total}", satisfied.len()))
         },
+        lead: None,
         rows,
         raw: None,
         notes: Vec::new(),
@@ -806,17 +829,57 @@ fn rule_section(
         Scope::Concentration => "c",
         Scope::Profile => "f",
     };
+    let badge = rule_badge(snapshot, report, rule);
+    // only an unsatisfied choice needs the explanation — a rule already
+    // filled explains itself, a raw-only rule has no list to pick from
+    let lead = (!rows.is_empty()
+        && matches!(badge, Badge::Missing(_) | Badge::Partial(_)))
+    .then(|| {
+        rule_lead(report.scope, rule.and_then(|rule| rule.constraint.as_ref()))
+    });
     Section {
         key: format!("{scope_prefix}/{}", report.title),
         title: report.title.clone(),
         constraint: rule.and_then(constraint_label),
-        badge: rule_badge(snapshot, report, rule),
+        badge,
+        lead,
         rows,
         raw: report.raw.clone().or_else(|| original.and_then(rule_raw)),
         notes: rule.map(|rule| rule.notes.clone()).unwrap_or_default(),
         free: original.or(rule).is_some_and(browses_catalogue),
         progress: None,
     }
+}
+
+// Nothing in a rule is ever taken automatically, and nothing on screen
+// said so — the very gesture the comparison session repeats (« qu'est-ce
+// que cette concentration change ? ») showed an unchanged grid and a rule
+// at 0 without a word of explanation.
+fn rule_lead(scope: Scope, constraint: Option<&Constraint>) -> String {
+    let pick = match constraint {
+        Some(Constraint::Course { min, max }) if min == max => {
+            format!("Choisissez {min} cours dans cette liste")
+        }
+        Some(Constraint::Course { min, max }) => {
+            format!("Choisissez de {min} à {max} cours dans cette liste")
+        }
+        Some(Constraint::Credits { min, max }) if min == max => {
+            format!("Choisissez {min} crédits de cours dans cette liste")
+        }
+        Some(Constraint::Credits { min, max }) => {
+            format!(
+                "Choisissez de {min} à {max} crédits de cours dans cette \
+                 liste"
+            )
+        }
+        None => "Choisissez dans cette liste".to_string(),
+    };
+    let origin = match scope {
+        Scope::Program => "",
+        Scope::Concentration => " de la concentration",
+        Scope::Profile => " du profil",
+    };
+    format!("{pick}{origin} — rien n'est pris automatiquement.")
 }
 
 // The répertoire's lists can repeat a code (B-GMC's « Règle 1 » carries
@@ -1798,6 +1861,60 @@ mod tests {
         assert_eq!(rows[2].code, "GHOST-1");
         assert_eq!(rows[2].state, RowState::Unknown);
         assert_eq!(rows[2].sub, "absent du catalogue");
+    }
+
+    #[test]
+    fn an_unsatisfied_rule_opens_on_what_to_pick_here() {
+        let model = panel_model(&snapshot(), &plan());
+        // Règle 1 is satisfied by the placed GMN-1000: nothing to explain
+        assert_eq!(model.rules[0].lead, None, "{:?}", model.rules[0].badge);
+        // Règle 2 (6–9 cr) is empty: the lead says what to pick and that
+        // nothing is automatic
+        assert_eq!(
+            model.rules[1].lead.as_deref(),
+            Some(
+                "Choisissez de 6 à 9 crédits de cours dans cette liste — \
+                 rien n'est pris automatiquement."
+            )
+        );
+        // a concentration rule names its origin — the comparison report's
+        // gesture (« qu'est-ce que ça change ? ») now gets an answer
+        let mut plan = plan();
+        if let Some(choice) = plan.program.as_mut() {
+            choice.concentration = Some("Génie urbain".to_string());
+        }
+        let model = panel_model(&snapshot(), &plan);
+        let section = model
+            .rules
+            .iter()
+            .find(|section| section.key == "c/Règle C1")
+            .expect("the concentration rule is listed");
+        let lead = section.lead.clone().expect("unsatisfied rule");
+        assert!(lead.contains("de la concentration"), "{lead}");
+        assert!(lead.starts_with("Choisissez 2 cours"), "{lead}");
+    }
+
+    #[test]
+    fn the_rule_lead_speaks_every_constraint_shape() {
+        let course = |min, max| Constraint::Course { min, max };
+        let credits = |min, max| Constraint::Credits { min, max };
+        assert_eq!(
+            rule_lead(Scope::Program, Some(&course(1, 1))),
+            "Choisissez 1 cours dans cette liste — rien n'est pris \
+             automatiquement."
+        );
+        assert!(rule_lead(Scope::Program, Some(&course(1, 3)))
+            .starts_with("Choisissez de 1 à 3 cours"));
+        let profile = rule_lead(Scope::Profile, Some(&credits(12, 12)));
+        assert!(
+            profile.contains(
+                "12 crédits de cours dans cette liste du \
+                              profil"
+            ),
+            "{profile}"
+        );
+        assert!(rule_lead(Scope::Program, None)
+            .starts_with("Choisissez dans cette liste"));
     }
 
     #[test]
@@ -2840,6 +2957,23 @@ mod tests {
         assert_eq!(choices.profiles, ["Profil international"]);
         assert_eq!(choices.concentration.as_deref(), Some("Génie urbain"));
         assert_eq!(choices.profile, None);
+        assert!(
+            choices.offers_none,
+            "no neutral block scraped: « Aucune » stays offered"
+        );
+        // a scraped neutral block replaces the synthetic « Aucune » — the
+        // option would sous-compter its own rule (décision 2026-08-19)
+        let mut neutral = snapshot.clone();
+        neutral.programs[0].concentrations[0].title =
+            "Cheminement sans concentration".to_string();
+        let choices =
+            cheminement_choices(&neutral, &plan).expect("still offers blocks");
+        assert!(!choices.offers_none);
+        neutral.programs[0].concentrations[0].title =
+            "Approche généraliste".to_string();
+        let choices =
+            cheminement_choices(&neutral, &plan).expect("still offers blocks");
+        assert!(!choices.offers_none, "B-GIN's wording counts too");
         assert!(
             cheminement_choices(&snapshot, &Plan::default()).is_none(),
             "no program, no row"
