@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   # a data push made by scrape.yml with GITHUB_TOKEN never triggers `push`;
   # it redeploys through an explicit `gh workflow run ci.yml` instead
@@ -47,7 +48,9 @@ jobs:
       - run: make test
 
   deploy:
-    if: github.event_name != 'pull_request'
+    # the site only publishes tagged code: on a v* tag push, or on the
+    # data-refresh dispatch from scrape.yml (which redeploys the latest tag)
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     needs: [static, test]
     runs-on: ubuntu-latest
     permissions:
@@ -58,6 +61,23 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          # the tag-picking step below needs every v* tag and origin/main
+          fetch-depth: 0
+      # the published site is always: the latest v* tag's code + main's
+      # current data/ — a data refresh redeploys without retagging
+      - name: Check out the tagged code with main's fresh data
+        run: |
+          tag="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="$(git tag --list 'v*' --sort=-version:refname | head -n 1)"
+          fi
+          if [ -z "$tag" ]; then
+            echo "No v* tag exists yet; nothing to deploy" >&2
+            exit 1
+          fi
+          git checkout "$tag"
+          git checkout origin/main -- data/
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
