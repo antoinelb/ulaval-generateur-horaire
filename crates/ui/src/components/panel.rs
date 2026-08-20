@@ -204,6 +204,7 @@ fn CheminementKnobs() -> Element {
                                 plan,
                                 history,
                                 alerts,
+                                snapshot,
                                 'c',
                                 event.value(),
                             );
@@ -236,6 +237,7 @@ fn CheminementKnobs() -> Element {
                                 plan,
                                 history,
                                 alerts,
+                                snapshot,
                                 'f',
                                 event.value(),
                             );
@@ -268,6 +270,7 @@ fn set_scope(
     plan: Signal<Plan>,
     history: Signal<History>,
     alerts: Signal<Vec<super::Alert>>,
+    snapshot: Signal<Option<Snapshot>>,
     prefix: char,
     value: String,
 ) {
@@ -284,6 +287,26 @@ fn set_scope(
     if current == title {
         return;
     }
+    // the departing block's own electives that nothing under the new
+    // scope lists — materialized before the edit, purged inside it
+    let orphans = {
+        let read = snapshot.read();
+        let plan_read = plan.read();
+        read.as_ref()
+            .and_then(|snapshot| panel::chosen_program(snapshot, &plan_read))
+            .map(|program| {
+                let (concentration, profile) = panel::scope_of(&plan_read);
+                let (departing, next_c, next_f) = if prefix == 'c' {
+                    (concentration, title.as_deref(), profile)
+                } else {
+                    (profile, concentration, title.as_deref())
+                };
+                panel::scope_orphans(
+                    program, &plan_read, departing, next_c, next_f,
+                )
+            })
+            .unwrap_or_default()
+    };
     let label = match (prefix, title.as_deref()) {
         ('c', Some(title)) => format!("Concentration : {title}"),
         ('c', None) => "Concentration retirée".to_string(),
@@ -300,6 +323,7 @@ fn set_scope(
             }
         }
         dropped = state::purge_scope_grants(plan, prefix);
+        state::purge_codes(plan, &orphans);
     });
     if !dropped.is_empty() {
         super::push_alert(
@@ -308,6 +332,16 @@ fn set_scope(
                 "Ententes retirées avec l'ancien choix : {} — « Annuler » \
                  les restaure.",
                 dropped.join(", ")
+            )),
+        );
+    }
+    if !orphans.is_empty() {
+        super::push_alert(
+            alerts,
+            super::AlertBody::Note(format!(
+                "Cours de l'ancien bloc retirés : {} — rien sous le \
+                 nouveau choix ne les liste ; « Annuler » les restaure.",
+                orphans.join(", ")
             )),
         );
     }

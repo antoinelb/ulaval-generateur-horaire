@@ -719,6 +719,95 @@ fn neutral_concentration(title: &str) -> bool {
         || title == "Approche généraliste"
 }
 
+// The electives the departing block brought along and nothing under the
+// new scope lists: an auto-placed « Robotique » elective surviving under
+// « Génie du développement durable » sat in the grid and the totals
+// attached to nothing (contre-test étudiante-cegep 2026-08-20). Purged
+// with the very act that changes the block — one « Annuler » restores
+// everything. Coverage means the explicit lists (mandatory, List rules, a
+// one-hop Reference resolved), never the « tous les cours » keyword: a
+// course only an entente could attach is an orphan until the entente
+// exists (ADR `2026-08-electifs-orphelins-purges-au-changement-de-bloc`).
+pub fn scope_orphans(
+    program: &Program,
+    plan: &Plan,
+    departing: Option<&str>,
+    concentration: Option<&str>,
+    profile: Option<&str>,
+) -> Vec<String> {
+    let Some(departing) = departing else {
+        return Vec::new();
+    };
+    // Concentration and Profile are distinct types with the same face —
+    // flattened to (title, mandatory, rules) so one walk serves both
+    let blocks = || {
+        program
+            .concentrations
+            .iter()
+            .map(|block| {
+                (block.title.as_str(), &block.mandatory, &block.rules)
+            })
+            .chain(program.profiles.iter().map(|block| {
+                (block.title.as_str(), &block.mandatory, &block.rules)
+            }))
+    };
+    let mut from_block = BTreeSet::new();
+    for (title, mandatory, rules) in blocks() {
+        if title == departing {
+            from_block.extend(mandatory.iter().map(String::as_str));
+            listed_codes(program, rules, &mut from_block);
+        }
+    }
+    let mut covered: BTreeSet<&str> =
+        program.mandatory.iter().map(String::as_str).collect();
+    listed_codes(program, &program.rules, &mut covered);
+    for (title, mandatory, rules) in blocks() {
+        if Some(title) == concentration || Some(title) == profile {
+            covered.extend(mandatory.iter().map(String::as_str));
+            listed_codes(program, rules, &mut covered);
+        }
+    }
+    plan.electives
+        .iter()
+        .filter(|code| from_block.contains(code.as_str()))
+        .filter(|code| !covered.contains(code.as_str()))
+        .cloned()
+        .collect()
+}
+
+// the codes a rule set lists explicitly — a Reference resolves one hop to
+// its target's list (references never chain, core refuses them)
+fn listed_codes<'a>(
+    program: &'a Program,
+    rules: &'a [Rule],
+    into: &mut BTreeSet<&'a str>,
+) {
+    for rule in rules {
+        match &rule.courses {
+            RuleCourses::List { courses } => {
+                into.extend(courses.iter().map(String::as_str));
+            }
+            RuleCourses::Reference { courses, .. } => {
+                for block in &program.concentrations {
+                    if block.title != courses.concentration {
+                        continue;
+                    }
+                    for target in &block.rules {
+                        if target.title != courses.rule {
+                            continue;
+                        }
+                        if let RuleCourses::List { courses } = &target.courses
+                        {
+                            into.extend(courses.iter().map(String::as_str));
+                        }
+                    }
+                }
+            }
+            RuleCourses::Keyword { .. } | RuleCourses::Raw { .. } => {}
+        }
+    }
+}
+
 // The expert-safe default (AIR LAY-3, parité avec la version JS) : the
 // page's first concentration when the program has any — never a profile.
 // An explicit « Aucune » afterwards is the student's and persists.
@@ -1892,6 +1981,64 @@ mod tests {
         let lead = section.lead.clone().expect("unsatisfied rule");
         assert!(lead.contains("de la concentration"), "{lead}");
         assert!(lead.starts_with("Choisissez 2 cours"), "{lead}");
+    }
+
+    #[test]
+    fn changing_block_purges_the_electives_nothing_else_lists() {
+        let snapshot = snapshot();
+        let program = &snapshot.programs[0];
+        let mut plan = plan();
+        // ANL-2020 exists only in « Génie urbain »'s mandatory list;
+        // GAE-1000 sits in the concentration too but the program's
+        // Règle 2 lists it as well — covered, it stays
+        plan.electives = vec!["ANL-2020".to_string(), "GAE-1000".to_string()];
+        assert_eq!(
+            scope_orphans(program, &plan, Some("Génie urbain"), None, None),
+            ["ANL-2020"]
+        );
+        // arriving on the very same block: everything still listed
+        assert!(scope_orphans(
+            program,
+            &plan,
+            Some("Génie urbain"),
+            Some("Génie urbain"),
+            None
+        )
+        .is_empty());
+        // no departing block, nothing brought along
+        assert!(scope_orphans(program, &plan, None, None, None).is_empty());
+    }
+
+    #[test]
+    fn a_reference_covers_its_targets_list_one_hop() {
+        // Y's rule references X's Règle 1: leaving X for Y keeps ZZZ-1
+        let program: Program = serde_json::from_str(
+            r#"{"code":"B-T","slug":"t","semester":"A26","title":"T",
+                "cycle":1,"credits_required":90,"mandatory":[],"rules":[],
+                "concentrations":[
+                  {"title":"X","mandatory":[],
+                   "rules":[{"title":"Règle 0",
+                             "constraint":{"type":"course","min":1,"max":1},
+                             "courses":["AAA-1"]},
+                            {"title":"Règle 1",
+                             "constraint":{"type":"credits","min":3,"max":3},
+                             "courses":["ZZZ-1","ZZZ-2"]}]},
+                  {"title":"Y","mandatory":[],
+                   "rules":[{"title":"Règle A",
+                             "constraint":{"type":"credits","min":3,"max":3},
+                             "courses":{"concentration":"X",
+                                        "rule":"Règle 1"},
+                             "raw":"tous les cours de la Règle 1 de X"}]}
+                ],"profiles":[]}"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let mut plan = plan();
+        plan.electives = vec!["ZZZ-1".to_string()];
+        assert!(
+            scope_orphans(&program, &plan, Some("X"), Some("Y"), None)
+                .is_empty(),
+            "the reference resolves to X's list"
+        );
     }
 
     #[test]

@@ -56,6 +56,11 @@ pub enum AlertCause {
     // étudiante-gex 2026-08-20, « ANL-1010 is pinned outside 1..=4 »
     // survivait au retour à 8 sessions)
     SolverError,
+    // an announcement about the current document (injection, étés forcés,
+    // acquis présumés…) — it leaves with it at a swap: « GMC-3020 en
+    // été » under B-GIN named a course of another program (contre-test
+    // étudiante-cegep 2026-08-20)
+    Document,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -271,7 +276,7 @@ fn apply_proposal(
     alerts: Signal<Vec<Alert>>,
 ) {
     if let Some(note) = crate::solve::completion_note(&report.placement) {
-        push_alert(alerts, AlertBody::Note(note));
+        push_caused_alert(alerts, AlertBody::Note(note), AlertCause::Document);
     }
     // a best-effort answer words every culprit itself, blocked ones
     // included — the per-blocked loop would say each of them twice
@@ -314,20 +319,22 @@ fn apply_proposal(
         }
     }
     for code in &report.set_aside {
-        push_alert(
+        push_caused_alert(
             alerts,
             AlertBody::Note(format!(
                 "{code} : au programme mais absent du catalogue — mis de \
                  côté, à suivre à la main."
             )),
+            AlertCause::Document,
         );
     }
     if !report.summers_forced.is_empty() {
-        push_alert(
+        push_caused_alert(
             alerts,
             AlertBody::Note(crate::solve::summers_forced_note(
                 &report.summers_forced,
             )),
+            AlertCause::Document,
         );
     }
     // every answer overwrites `left_out` whole — an answer with no
@@ -344,7 +351,7 @@ fn apply_proposal(
     if !solution.assumed.is_empty() {
         let assumed: Vec<&str> =
             solution.assumed.iter().map(String::as_str).collect();
-        push_alert(
+        push_caused_alert(
             alerts,
             AlertBody::Note(format!(
                 "Le cheminement présume ces acquis (préalables que \
@@ -352,6 +359,7 @@ fn apply_proposal(
                  cela vous décrit.",
                 assumed.join(", ")
             )),
+            AlertCause::Document,
         );
     }
     if !report.injected.is_empty() {
@@ -364,9 +372,10 @@ fn apply_proposal(
             "ajoutés aux cours à option : des cours obligatoires les \
              exigent comme préalables"
         };
-        push_alert(
+        push_caused_alert(
             alerts,
             AlertBody::Note(format!("{} {added}.", injected.join(", "))),
+            AlertCause::Document,
         );
     }
     let placement = solution.placement.clone();
@@ -679,6 +688,19 @@ pub fn swap_document(
     let mut state = solver_state.write();
     state.left_out.clear();
     state.proposed = None;
+    drop(state);
+    // the document's own announcements and verdicts leave with it — only
+    // the Sticky alerts (load warnings, confirmations) outlive a swap
+    if alerts
+        .peek()
+        .iter()
+        .any(|alert| alert.cause != AlertCause::Sticky)
+    {
+        let mut alerts = alerts;
+        alerts
+            .write()
+            .retain(|alert| alert.cause == AlertCause::Sticky);
+    }
 }
 
 // A `#…` address imports a whole shared organigramme (note 9): the plan
@@ -855,6 +877,8 @@ fn retire_stale_left_out(
             AlertCause::EmptyGrid => something_placed || floating.is_empty(),
             // retired by the next worker answer, not by the plan
             AlertCause::SolverError => false,
+            // retired by the document swap, not by the plan
+            AlertCause::Document => false,
         };
         if alerts.peek().iter().any(expired) {
             let mut alerts = alerts;
