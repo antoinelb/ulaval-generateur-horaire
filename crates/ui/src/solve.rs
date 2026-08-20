@@ -1219,45 +1219,43 @@ pub fn completion_note(answer: &PlacementAnswer) -> Option<String> {
     }
 }
 
-// What the best-effort pass had to leave out, and why — the answer the
-// 2026-08-14 report asked for (« rien ne change et aucun message ne me dit
-// si la recherche a abouti »). `blocked` carries the reason when the
-// pre-screen named the culprit; otherwise the honest default is that no
-// room was left, which is exactly what the search found.
-pub fn left_out_note(answer: &PlacementAnswer) -> Option<String> {
-    let solution = answer.solutions.first()?;
-    if solution.left_out.is_empty() {
-        return None;
+// What the best-effort pass had to leave out, and why — one line per code
+// so each message stands and retires with its own cause. `blocked` carries
+// the reason when the pre-screen named the culprit; a session the student
+// pinned deserves the message the act asked for — never « chaque session »
+// when he chose exactly one (rapport étudiante-gex 2026-08-19); otherwise
+// the honest default is that no room was left, which is exactly what the
+// search found.
+pub fn left_out_line(
+    code: &str,
+    blocked: Option<&BlockedAnswer>,
+    plan: &Plan,
+) -> String {
+    match (blocked, plan.pinned_sessions.get(code)) {
+        // the pre-screen's reason is more precise than the pin (a pin
+        // toward a season the course never offers is an empty domain)
+        (Some(blocked), _) => blocked_note(blocked),
+        (None, Some(&session)) => format!(
+            "{code} : la session {} que vous avez épinglée ne peut pas \
+             l'accueillir (plafond, horaire ou préalables) — dépinglez-le \
+             ou montez le plafond de crédits.",
+            session_label_of(plan, session)
+        ),
+        (None, None) => format!(
+            "{code} : aucune place ne restait — les autres cours et le \
+             plafond remplissent déjà chaque session où il est offert."
+        ),
     }
-    if solution.placement.is_empty() {
-        return Some(
-            "Aucun cours n'a pu être placé sans briser une contrainte \
-             — la grille reste vide. Ajustez le plafond, les sessions \
-             ou les cours."
-                .to_string(),
-        );
-    }
-    let named: Vec<String> = solution
-        .left_out
-        .iter()
-        .map(|code| {
-            match answer.blocked.iter().find(|blocked| &blocked.code == code) {
-                Some(blocked) => blocked_note(blocked),
-                None => format!(
-                    "{code} : aucune place ne restait — les autres cours \
-                 et le plafond remplissent déjà chaque session où il \
-                 est offert."
-                ),
-            }
-        })
-        .collect();
-    let count = solution.left_out.len();
-    let head = if count == 1 {
-        "Organigramme rempli au mieux : 1 cours n'a pas pu être placé."
-    } else {
-        "Organigramme rempli au mieux : des cours n'ont pas pu être placés."
-    };
-    Some(format!("{head}\n{}", named.join("\n")))
+}
+
+// Nothing placed at all is a verdict of its own, never a silent empty grid
+// — and the étés were already tried by the escalation, so the remaining
+// levers are the cap, the sessions and the courses.
+pub fn empty_grid_note() -> String {
+    "Aucun cours n'a pu être placé sans briser une contrainte — la \
+     grille reste vide. Montez le plafond de crédits, ajoutez des \
+     sessions ou retirez des cours."
+        .to_string()
 }
 
 // The escalation had to open the étés the plan keeps closed — the setting
@@ -1277,14 +1275,15 @@ pub fn summers_forced_note(codes: &[String]) -> String {
 pub fn blocked_note(blocked: &BlockedAnswer) -> String {
     match blocked.reason.as_str() {
         "empty-domain" => format!(
-            "{} : aucune session de l'horizon ne peut l'accueillir — les \
-             saisons où il est offert et les cours déjà placés ne \
-             laissent aucune place.",
+            "{} : aucune session de l'horizon ne peut l'accueillir — \
+             ajoutez des sessions à l'horizon ou vérifiez les saisons où \
+             il est offert.",
             blocked.code
         ),
         "unsatisfiable-prerequisites" => format!(
-            "{} : ses préalables sont insatisfiables avec les cours \
-             fournis.",
+            "{} : un de ses préalables n'est dans aucune session ni \
+             acquis — ajoutez le cours préalable manquant aux cours à \
+             option, ou réglez-le par entente avec la direction.",
             blocked.code
         ),
         "stage-without-summer" => format!(
@@ -1725,71 +1724,50 @@ mod worker_tests {
         assert!(note.contains("plafond"), "{note}");
     }
 
-    // The best-effort answer must say what it left out and why, and must
-    // silence the completion note — which describes the *relaxed*
+    // The best-effort messages: one line per code, each with its own
+    // cause, and the completion note silenced — it describes the *relaxed*
     // enumeration and would contradict the grid (ADR
     // `2026-08-placement-au-mieux-en-repli`).
     #[test]
     fn a_best_effort_answer_names_what_it_left_out() {
+        let mut plan = Plan::default();
+        plan.pinned_sessions.insert("ANL-1010".to_string(), 1);
+        // a pinned course names the very session the student chose —
+        // never « chaque session » when he chose exactly one
+        let line = left_out_line("ANL-1010", None, &plan);
+        assert!(line.contains("que vous avez épinglée"), "{line}");
+        assert!(line.starts_with("ANL-1010"), "{line}");
+        // the one only the search could rule out gets the honest default
+        // rather than an invented reason
+        let line = left_out_line("MAT-0130", None, &plan);
+        assert!(line.contains("aucune place ne restait"), "{line}");
+        // the pre-screen's reason is more precise than the pin
+        let blocked = BlockedAnswer {
+            code: "ANL-1010".to_string(),
+            reason: "empty-domain".to_string(),
+        };
+        let line = left_out_line("ANL-1010", Some(&blocked), &plan);
+        assert!(line.contains("aucune session de l'horizon"), "{line}");
+        // nothing placed at all is a verdict of its own, never a silent
+        // empty grid — the étés were already escalated, so the note names
+        // the levers that remain
+        let note = empty_grid_note();
+        assert!(note.starts_with("Aucun cours n'a pu être placé"), "{note}");
+        assert!(note.contains("plafond"), "{note}");
+
+        // the completion note must not contradict a filled grid
         let filled = PlacementAnswer {
             completion: "solution-cap".to_string(),
             solutions: vec![SolutionAnswer {
                 placement: BTreeMap::from([("GEX-1000".to_string(), 1)]),
                 assumed: BTreeSet::new(),
-                left_out: BTreeSet::from([
-                    "GEX-1002".to_string(),
-                    "MAT-0130".to_string(),
-                ]),
-            }],
-            blocked: vec![BlockedAnswer {
-                code: "GEX-1002".to_string(),
-                reason: "empty-domain".to_string(),
-            }],
-        };
-        assert!(
-            completion_note(&filled).is_none(),
-            "the completion note must not contradict a filled grid"
-        );
-        let note = left_out_note(&filled)
-            .unwrap_or_else(|| panic!("a filling names its holes"));
-        // the pre-screened culprit keeps its own reason...
-        assert!(note.contains("aucune session de l'horizon"), "{note}");
-        // ...and the one only the search could rule out gets the honest
-        // default rather than an invented reason
-        assert!(
-            note.contains("MAT-0130 : aucune place ne restait"),
-            "{note}"
-        );
-
-        // nothing placed at all is a verdict of its own, never a silent
-        // empty grid
-        let empty = PlacementAnswer {
-            solutions: vec![SolutionAnswer {
-                placement: BTreeMap::new(),
-                assumed: BTreeSet::new(),
                 left_out: BTreeSet::from(["GEX-1002".to_string()]),
             }],
-            ..filled.clone()
+            blocked: Vec::new(),
         };
-        let note = left_out_note(&empty)
-            .unwrap_or_else(|| panic!("an empty filling still speaks"));
-        assert!(note.starts_with("Aucun cours n'a pu être placé"), "{note}");
-
-        // a single hole says « 1 cours », not « des cours »
-        let one = PlacementAnswer {
-            solutions: vec![SolutionAnswer {
-                placement: BTreeMap::from([("GEX-1000".to_string(), 1)]),
-                assumed: BTreeSet::new(),
-                left_out: BTreeSet::from(["MAT-0130".to_string()]),
-            }],
-            ..filled.clone()
-        };
-        let note = left_out_note(&one)
-            .unwrap_or_else(|| panic!("one hole still speaks"));
-        assert!(note.starts_with("Organigramme rempli au mieux : 1 cours"));
-
-        // an exact answer is untouched: no note, and the completion note
-        // still does its old job — whether it placed everything...
+        assert!(completion_note(&filled).is_none());
+        // an exact answer is untouched: the completion note still does its
+        // old job — whether it placed everything...
         let complete = PlacementAnswer {
             solutions: vec![SolutionAnswer {
                 placement: BTreeMap::from([("GEX-1000".to_string(), 1)]),
@@ -1798,7 +1776,6 @@ mod worker_tests {
             }],
             ..filled.clone()
         };
-        assert!(left_out_note(&complete).is_none());
         assert!(completion_note(&complete).is_some());
         // ...or nothing at all
         let exact = PlacementAnswer {
@@ -1806,7 +1783,6 @@ mod worker_tests {
             solutions: Vec::new(),
             blocked: Vec::new(),
         };
-        assert!(left_out_note(&exact).is_none());
         assert!(completion_note(&exact).is_some());
     }
 

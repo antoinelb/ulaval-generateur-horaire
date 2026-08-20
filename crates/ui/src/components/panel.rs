@@ -386,6 +386,11 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
     let concomitant = plan.read().concomitant;
     let left_out = solver.read().left_out.clone();
     let verification = solver.read().verification.clone();
+    let nothing_placed = {
+        let plan_read = plan.read();
+        plan_read.displayed_placement.is_empty()
+            && plan_read.manual.values().all(Vec::is_empty)
+    };
     // the placement and the verification both run by themselves (ADR
     // `2026-08-organigramme-en-continu-sans-bouton`) — this only explains
     // why no verdict shows yet: courses still floating, or an unreadable
@@ -558,6 +563,23 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                         "⚠ Vérification impossible : {why}"
                     }
                 },
+                // an empty grid is a verdict of its own — « rempli au
+                // mieux » would minimize a total failure (rapport
+                // étudiante-cegep 2026-08-19, B-GMC à 0/120)
+                Some(Ok(unplaced))
+                    if !unplaced.is_empty()
+                        && !left_out.is_empty()
+                        && nothing_placed =>
+                {
+                    rsx! {
+                        p { class: "panel-verdict panel-verdict--bad",
+                            "Aucun cours n'a pu être placé. Montez le \
+                             plafond de crédits, ajoutez des sessions ou \
+                             retirez des cours — le placement repartira \
+                             de lui-même."
+                        }
+                    }
+                }
                 // « proposez un organigramme » is false once the solver
                 // has just tried and reported what does not fit — the
                 // 2026-08-14 report's « c'est justement ce que je viens de

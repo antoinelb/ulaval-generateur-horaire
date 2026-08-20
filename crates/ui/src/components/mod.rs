@@ -238,9 +238,33 @@ fn apply_proposal(
     }
     // a best-effort answer words every culprit itself, blocked ones
     // included — the per-blocked loop would say each of them twice
-    match crate::solve::left_out_note(&report.placement) {
-        Some(note) => push_alert(alerts, AlertBody::Note(note)),
-        None => {
+    match report.placement.solutions.first() {
+        Some(solution) if !solution.left_out.is_empty() => {
+            if solution.placement.is_empty() {
+                // one aggregate verdict, not one toast per code: the
+                // whole grid failing is a single fact
+                push_alert(
+                    alerts,
+                    AlertBody::Note(crate::solve::empty_grid_note()),
+                );
+            } else {
+                let plan_read = plan.peek();
+                for code in &solution.left_out {
+                    let blocked = report
+                        .placement
+                        .blocked
+                        .iter()
+                        .find(|blocked| &blocked.code == code);
+                    push_alert(
+                        alerts,
+                        AlertBody::Note(crate::solve::left_out_line(
+                            code, blocked, &plan_read,
+                        )),
+                    );
+                }
+            }
+        }
+        _ => {
             for blocked in &report.placement.blocked {
                 push_alert(
                     alerts,
