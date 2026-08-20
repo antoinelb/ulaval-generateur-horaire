@@ -35,6 +35,22 @@ pub enum LoadState {
 pub struct Alert {
     pub key: u64,
     pub body: AlertBody,
+    // what the alert reports on — a caused alert also retires by itself
+    // when its cause disappears (ADR
+    // `2026-08-peremption-des-toasts-par-cause`)
+    pub cause: AlertCause,
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub enum AlertCause {
+    // lives until dismissed (ALR-4)
+    #[default]
+    Sticky,
+    // this code could not be seated — stale once it sits somewhere or
+    // leaves the plan
+    LeftOut(String),
+    // nothing could be placed at all — stale once anything is
+    EmptyGrid,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -87,7 +103,10 @@ pub struct SolverState {
     // the last proposal was a best-effort filling and these are the courses
     // it could not seat — so the panel stops telling the student to propose
     // an organigramme he has just proposed (ADR
-    // `2026-08-placement-au-mieux-en-repli`)
+    // `2026-08-placement-au-mieux-en-repli`). Overwritten whole by every
+    // propose answer, purged code by code once a course stops floating
+    // (`retire_stale_left_out`, ADR
+    // `2026-08-peremption-des-toasts-par-cause`)
     pub left_out: std::collections::BTreeSet<String>,
     next_id: u64,
 }
@@ -243,9 +262,10 @@ fn apply_proposal(
             if solution.placement.is_empty() {
                 // one aggregate verdict, not one toast per code: the
                 // whole grid failing is a single fact
-                push_alert(
+                push_caused_alert(
                     alerts,
                     AlertBody::Note(crate::solve::empty_grid_note()),
+                    AlertCause::EmptyGrid,
                 );
             } else {
                 let plan_read = plan.peek();
@@ -255,20 +275,22 @@ fn apply_proposal(
                         .blocked
                         .iter()
                         .find(|blocked| &blocked.code == code);
-                    push_alert(
+                    push_caused_alert(
                         alerts,
                         AlertBody::Note(crate::solve::left_out_line(
                             code, blocked, &plan_read,
                         )),
+                        AlertCause::LeftOut(code.clone()),
                     );
                 }
             }
         }
         _ => {
             for blocked in &report.placement.blocked {
-                push_alert(
+                push_caused_alert(
                     alerts,
                     AlertBody::Note(crate::solve::blocked_note(blocked)),
+                    AlertCause::LeftOut(blocked.code.clone()),
                 );
             }
         }
@@ -290,10 +312,17 @@ fn apply_proposal(
             )),
         );
     }
+    // every answer overwrites `left_out` whole — an answer with no
+    // solution at all must clear it, not leave the previous one frozen
+    state.write().left_out = report
+        .placement
+        .solutions
+        .first()
+        .map(|solution| solution.left_out.clone())
+        .unwrap_or_default();
     let Some(solution) = report.placement.solutions.first() else {
         return;
     };
-    state.write().left_out = solution.left_out.clone();
     if !solution.assumed.is_empty() {
         let assumed: Vec<&str> =
             solution.assumed.iter().map(String::as_str).collect();
@@ -458,10 +487,10 @@ pub fn App() -> Element {
             );
         });
     });
-    // a plan change stales the verify answer — `left_out` stays: it
-    // belongs to the propose answers, each of which overwrites it whole,
-    // and the auto-applied proposal is itself a plan change that must not
-    // erase what its own answer just reported
+    // a plan change stales the verify answer — `left_out` has its own
+    // retirement: `retire_stale_left_out` purges entry and toast together
+    // when the cause disappears, and keeps what an answer just reported
+    // (its codes still float)
     use_effect(move || {
         let _ = plan.read();
         let mut solver_state = solver_state;
@@ -469,6 +498,7 @@ pub fn App() -> Element {
         state.verification = None;
         state.verify_failed = false;
     });
+    retire_stale_left_out(plan, snapshot, manual, solver_state, alerts);
     apply_corrections(
         plan,
         snapshot,
@@ -544,11 +574,20 @@ fn seed_alerts(notes: &[String]) -> Vec<Alert> {
         .map(|note| Alert {
             key: next_alert_key(),
             body: AlertBody::Note(note.clone()),
+            cause: AlertCause::Sticky,
         })
         .collect()
 }
 
-pub fn push_alert(mut alerts: Signal<Vec<Alert>>, body: AlertBody) {
+pub fn push_alert(alerts: Signal<Vec<Alert>>, body: AlertBody) {
+    push_caused_alert(alerts, body, AlertCause::Sticky);
+}
+
+pub fn push_caused_alert(
+    mut alerts: Signal<Vec<Alert>>,
+    body: AlertBody,
+    cause: AlertCause,
+) {
     let mut list = alerts.write();
     // never the same message twice (ALR-3) — but a repeat is refreshed to
     // the front instead of swallowed: relaunching a search that ends on
@@ -557,6 +596,7 @@ pub fn push_alert(mut alerts: Signal<Vec<Alert>>, body: AlertBody) {
     list.push(Alert {
         key: next_alert_key(),
         body,
+        cause,
     });
 }
 
@@ -676,6 +716,62 @@ fn heal_acquired(
                     AlertBody::Note(crate::solve::purge_note(codes, credited)),
                 );
             }
+        }
+    });
+}
+
+// A left-out warning retires with its cause: a code seated since (by a
+// later answer or by hand) or gone from the plan stops floating, and its
+// toast and `SolverState.left_out` entry go together. `solver_state` and
+// `alerts` are read by peek — the effect must not re-run on its own
+// purges — and the codes an answer has *just* reported still float by
+// construction (its auto-application writes them nowhere), so they
+// survive: the bug this replaces was the answer erasing its own report
+// (ADR `2026-08-peremption-des-toasts-par-cause`).
+fn retire_stale_left_out(
+    plan: Signal<Plan>,
+    snapshot: Signal<Option<Snapshot>>,
+    manual: Signal<Vec<ulaval_scheduler_core::Course>>,
+    solver_state: Signal<SolverState>,
+    alerts: Signal<Vec<Alert>>,
+) {
+    use_effect(move || {
+        let plan_read = plan.read();
+        let read = snapshot.read();
+        let _ = manual.read();
+        let Some(snapshot_ref) = read.as_ref() else {
+            return;
+        };
+        let program =
+            crate::panel::effective_program(snapshot_ref, &plan_read);
+        let Ok(floating) = crate::solve::unplaced_codes(
+            snapshot_ref,
+            &plan_read,
+            program.as_ref(),
+        ) else {
+            return;
+        };
+        let stale = crate::solve::stale_left_out(
+            &solver_state.peek().left_out,
+            &floating,
+        );
+        if !stale.is_empty() {
+            let mut solver_state = solver_state;
+            solver_state
+                .write()
+                .left_out
+                .retain(|code| !stale.contains(code));
+        }
+        let something_placed = !plan_read.displayed_placement.is_empty()
+            || plan_read.manual.values().any(|codes| !codes.is_empty());
+        let expired = |alert: &Alert| match &alert.cause {
+            AlertCause::Sticky => false,
+            AlertCause::LeftOut(code) => stale.contains(code),
+            AlertCause::EmptyGrid => something_placed || floating.is_empty(),
+        };
+        if alerts.peek().iter().any(expired) {
+            let mut alerts = alerts;
+            alerts.write().retain(|alert| !expired(alert));
         }
     });
 }

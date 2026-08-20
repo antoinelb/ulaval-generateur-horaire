@@ -1248,6 +1248,23 @@ pub fn left_out_line(
     }
 }
 
+// The left-out entries whose cause has disappeared: a code no longer
+// floating sits somewhere (a later answer, a hand placement) or left the
+// plan — its warning has nothing left to warn about. The codes an answer
+// has *just* reported still float by construction (its auto-application
+// writes them nowhere), so they survive: the 6f36d0c lesson (ADR
+// `2026-08-peremption-des-toasts-par-cause`).
+pub fn stale_left_out(
+    left_out: &BTreeSet<String>,
+    still_floating: &[String],
+) -> BTreeSet<String> {
+    left_out
+        .iter()
+        .filter(|code| !still_floating.iter().any(|float| &float == code))
+        .cloned()
+        .collect()
+}
+
 // Nothing placed at all is a verdict of its own, never a silent empty grid
 // — and the étés were already tried by the escalation, so the remaining
 // levers are the cap, the sessions and the courses.
@@ -1711,6 +1728,19 @@ mod worker_tests {
         assert!(parse_worker_answer("pas du json")
             .expect_err("must fail")
             .contains("illisible"));
+    }
+
+    #[test]
+    fn stale_left_out_keeps_what_still_floats() {
+        let left_out =
+            BTreeSet::from(["ANL-1010".to_string(), "GMN-2902".to_string()]);
+        // ANL-1010 still floats (the answer that reported it did not seat
+        // it) — only GMN-2902, placed or removed since, is stale
+        let stale = stale_left_out(&left_out, &["ANL-1010".to_string()]);
+        assert_eq!(stale, BTreeSet::from(["GMN-2902".to_string()]));
+        // nothing floating: everything retires
+        let stale = stale_left_out(&left_out, &[]);
+        assert_eq!(stale, left_out);
     }
 
     #[test]
