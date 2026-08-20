@@ -767,11 +767,22 @@ pub fn scope_orphans(
             listed_codes(program, rules, &mut covered);
         }
     }
-    plan.electives
+    // wherever the plan holds the course: a concentration's mandatory is
+    // auto-placed straight into `displayed_placement` without ever being
+    // an elective — and the placement self-perpetuates through the next
+    // request's seed if it survives here
+    let held: BTreeSet<&str> = plan
+        .electives
         .iter()
-        .filter(|code| from_block.contains(code.as_str()))
-        .filter(|code| !covered.contains(code.as_str()))
-        .cloned()
+        .chain(plan.displayed_placement.keys())
+        .chain(plan.pinned_sessions.keys())
+        .chain(plan.manual.values().flatten())
+        .map(String::as_str)
+        .collect();
+    held.into_iter()
+        .filter(|code| from_block.contains(code))
+        .filter(|code| !covered.contains(code))
+        .map(str::to_string)
         .collect()
 }
 
@@ -1992,6 +2003,14 @@ mod tests {
         // GAE-1000 sits in the concentration too but the program's
         // Règle 2 lists it as well — covered, it stays
         plan.electives = vec!["ANL-2020".to_string(), "GAE-1000".to_string()];
+        assert_eq!(
+            scope_orphans(program, &plan, Some("Génie urbain"), None, None),
+            ["ANL-2020"]
+        );
+        // an auto-placed concentration mandatory never was an elective —
+        // it lives in `displayed_placement` alone and must go too
+        plan.electives.clear();
+        plan.displayed_placement.insert("ANL-2020".to_string(), 2);
         assert_eq!(
             scope_orphans(program, &plan, Some("Génie urbain"), None, None),
             ["ANL-2020"]
