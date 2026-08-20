@@ -17,7 +17,7 @@
 ## Résultats attendus
 
 - Le changement de programme recharge le catalogue, l'index des millésimes, le menu des spécialisations et le panneau de règles.
-- **La grille est vidée** au passage : sans la sauvegarde préalable, le travail est perdu.
+- **La grille est vidée** au passage : le travail n'est pas perdu pour autant — chaque (programme, millésime) garde son instantané local, et le rechoisir le restaure tel quel (le CSV reste la copie qu'on s'échange).
 - Le CSV rechargé replace chaque sigle dans la colonne dont l'en-tête porte le même code de session; une session absente de la nouvelle grille fait apparaître une colonne supplémentaire.
 - Un cours du B-GMC qui n'appartient à aucune règle du B-GIN reste affichable dans la grille — il vient du catalogue complet — mais ne compte dans aucune règle du bilan.
 

@@ -158,6 +158,104 @@ fn unknown_keys<T: serde::Serialize>(
     }
 }
 
+// --- the per-(program, vintage) shelf ---------------------------------------
+// `gh.v1.plan` stays the living document, picker state included — it *is*
+// the pointer, no « dernier » key needed. Leaving a program shelves the
+// document whole under its own key, synchronously (never behind the save
+// debounce); entering one restores that snapshot exactly, or starts fresh.
+// No migration: nothing is deployed (ADR
+// `2026-08-instantane-de-plan-par-programme-et-millesime`).
+
+// « gh.v1.plan/B-GEX-A26 » — the same naming as `data/programmes/`
+pub fn snapshot_key(choice: &crate::state::ProgramChoice) -> String {
+    format!("{PLAN_KEY}/{}-{}", choice.code, choice.semester)
+}
+
+// Everything one document swap decides, computed pure — the component
+// only writes localStorage and the signals around it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DocumentSwap {
+    // (shelf key, encoded envelope) of the document being left
+    pub stash: Option<(String, String)>,
+    // the living document afterwards
+    pub next: Plan,
+    // the loud tolerance of a damaged shelf snapshot, as at boot
+    pub notes: Vec<String>,
+    pub backup: Option<String>,
+}
+
+// « changer » : shelve the current document, hand back the picker — the
+// placements leave with it, so nothing is counted under no program (US-10 :
+// « la grille est vidée au passage »)
+pub fn leave_document(current: &Plan) -> DocumentSwap {
+    DocumentSwap {
+        stash: stash_of(current),
+        next: Plan {
+            start: current.start,
+            ..Plan::default()
+        },
+        notes: Vec::new(),
+        backup: None,
+    }
+}
+
+// « Choisir » : shelve whatever is being left (normally the picker —
+// nothing), then restore the shelf snapshot exactly, or start fresh. The
+// key is the identity, so its code and semester are forced back onto the
+// restored document; the snapshot's concentration and profile win over the
+// click's defaults — they are the student's own last state.
+pub fn enter_document(
+    current: &Plan,
+    choice: crate::state::ProgramChoice,
+    stored: Option<&str>,
+) -> DocumentSwap {
+    let stash = stash_of(current);
+    let restored = restore_plan(stored);
+    let mut next = restored.state;
+    match next.program.take() {
+        Some(held) => {
+            next.program = Some(crate::state::ProgramChoice {
+                code: choice.code,
+                semester: choice.semester,
+                concentration: held.concentration,
+                profile: held.profile,
+            });
+        }
+        // nothing on the shelf, or a damaged snapshot restarted fresh
+        // (and kept): a new document, only the calendar identity carried
+        None => {
+            next = crate::state::fresh_plan(current.start, choice);
+        }
+    }
+    DocumentSwap {
+        stash,
+        next,
+        notes: restored.notes,
+        backup: restored.backup,
+    }
+}
+
+// The fragment import stashes the current document only when the shared
+// plan belongs to another (program, vintage): stashing the same key would
+// let a later « changer » overwrite the shelf with the shared version.
+pub fn import_stash(
+    current: &Plan,
+    shared: &Plan,
+) -> Option<(String, String)> {
+    let (key, encoded) = stash_of(current)?;
+    if shared.program.as_ref().map(snapshot_key) == Some(key.clone()) {
+        return None;
+    }
+    Some((key, encoded))
+}
+
+// a picker document (no program) has no shelf to go to
+fn stash_of(plan: &Plan) -> Option<(String, String)> {
+    plan.program
+        .as_ref()
+        .map(|choice| (snapshot_key(choice), encode_plan(plan)))
+}
+
 // --- the whole-organigramme share (fragment codec) --------------------------
 // The link must carry *everything* — the recipient pastes it and sees the
 // organigramme whole, no adjustment (note 9, 2026-08-13). Pipeline:
@@ -598,6 +696,156 @@ mod tests {
         let fresh = restore_manual(None);
         assert!(fresh.state.is_empty());
         assert!(fresh.backup.is_none());
+    }
+
+    fn choice(code: &str, semester: &str) -> crate::state::ProgramChoice {
+        crate::state::ProgramChoice {
+            code: code.to_string(),
+            semester: semester.to_string(),
+            concentration: None,
+            profile: None,
+        }
+    }
+
+    #[test]
+    fn the_shelf_key_names_the_program_and_the_vintage() {
+        assert_eq!(
+            snapshot_key(&choice("B-GEX", "A26")),
+            "gh.v1.plan/B-GEX-A26"
+        );
+    }
+
+    #[test]
+    fn leaving_a_document_shelves_it_and_hands_back_the_picker() {
+        let (plan, _) = shared_plan();
+        let swap = leave_document(&plan);
+        let (key, encoded) = swap.stash.expect("a program was open");
+        assert_eq!(key, "gh.v1.plan/B-GEX-A26");
+        assert_eq!(restore_plan(Some(&encoded)).state, plan, "shelved whole");
+        // the picker document: nothing placed, nothing counted — only the
+        // calendar identity survives (the header-count bug's fix)
+        assert_eq!(
+            swap.next,
+            Plan {
+                start: plan.start,
+                ..Plan::default()
+            }
+        );
+        assert!(swap.notes.is_empty());
+        assert!(swap.backup.is_none());
+        // a picker document has no shelf to go to
+        assert!(leave_document(&Plan::default()).stash.is_none());
+    }
+
+    #[test]
+    fn entering_a_program_restores_its_shelf_snapshot_exactly() {
+        let (shelved, _) = shared_plan();
+        let encoded = encode_plan(&shelved);
+        let picker = Plan::default();
+        // the click's default concentration differs: the snapshot's own
+        // choice must win — it is the student's last state
+        let click = crate::state::ProgramChoice {
+            concentration: Some("Autre".to_string()),
+            ..choice("B-GEX", "A26")
+        };
+        let swap = enter_document(&picker, click, Some(&encoded));
+        assert_eq!(swap.next, shelved, "restored exactly");
+        assert!(swap.notes.is_empty());
+        assert!(swap.stash.is_none(), "the picker shelves nothing");
+    }
+
+    #[test]
+    fn the_shelf_key_is_the_identity_of_what_it_restores() {
+        // a snapshot whose ProgramChoice diverges from its key (a moved
+        // save): code and semester are forced back to the click's
+        let (mut divergent, _) = shared_plan();
+        if let Some(held) = divergent.program.as_mut() {
+            held.code = "AUTRE".to_string();
+            held.semester = "H99".to_string();
+        }
+        let encoded = encode_plan(&divergent);
+        let swap = enter_document(
+            &Plan::default(),
+            choice("B-GEX", "A26"),
+            Some(&encoded),
+        );
+        let restored = swap.next.program.expect("a program");
+        assert_eq!(restored.code, "B-GEX");
+        assert_eq!(restored.semester, "A26");
+        assert_eq!(
+            restored.concentration.as_deref(),
+            Some("Génie urbain"),
+            "the snapshot's own scope survives"
+        );
+    }
+
+    #[test]
+    fn entering_without_a_shelf_starts_fresh_with_the_start_kept() {
+        let picker = Plan {
+            start: "H27"
+                .parse::<ulaval_scheduler_core::Semester>()
+                .unwrap_or_else(|e| panic!("{e}")),
+            ..Plan::default()
+        };
+        let click = choice("B-GIN", "H27");
+        let swap = enter_document(&picker, click.clone(), None);
+        assert_eq!(
+            swap.next,
+            crate::state::fresh_plan(picker.start, click),
+            "defaults plus the click, calendar identity carried"
+        );
+        assert!(swap.notes.is_empty());
+        assert!(swap.backup.is_none());
+    }
+
+    #[test]
+    fn a_damaged_shelf_starts_fresh_loudly_and_keeps_the_copy() {
+        let picker = Plan::default();
+        let click = choice("B-GIN", "H27");
+        let swap = enter_document(&picker, click.clone(), Some("pas du json"));
+        assert_eq!(swap.next, crate::state::fresh_plan(picker.start, click));
+        assert_eq!(swap.notes.len(), 1);
+        assert!(swap.notes[0].contains("conservée"), "{:?}", swap.notes);
+        assert_eq!(swap.backup.as_deref(), Some("pas du json"));
+    }
+
+    #[test]
+    fn the_import_stashes_only_across_documents() {
+        let (current, _) = shared_plan();
+        // same (program, vintage): no stash — a later « changer » must
+        // not overwrite the shelf with the shared version
+        assert!(import_stash(&current, &current).is_none());
+        let mut other = current.clone();
+        if let Some(held) = other.program.as_mut() {
+            held.semester = "A24".to_string();
+        }
+        let (key, encoded) =
+            import_stash(&current, &other).expect("another vintage");
+        assert_eq!(key, "gh.v1.plan/B-GEX-A26");
+        assert_eq!(restore_plan(Some(&encoded)).state, current);
+        // a shared plan with no program still stashes the current one
+        assert!(import_stash(&current, &Plan::default()).is_some());
+        // a picker current has nothing to stash
+        assert!(import_stash(&Plan::default(), &other).is_none());
+    }
+
+    // user story 10, the contract: A rempli → changer → B rempli →
+    // changer → re-choisir A redonne exactement le même document
+    #[test]
+    fn switching_programs_and_back_restores_the_same_document() {
+        let (plan_a, _) = shared_plan();
+        let left_a = leave_document(&plan_a);
+        let (key_a, stash_a) = left_a.stash.clone().expect("A shelved");
+        let entered_b =
+            enter_document(&left_a.next, choice("B-GIN", "A26"), None);
+        let mut plan_b = entered_b.next;
+        plan_b.displayed_placement.insert("IFT-1000".to_string(), 1);
+        let left_b = leave_document(&plan_b);
+        let (key_b, _) = left_b.stash.clone().expect("B shelved");
+        assert_ne!(key_a, key_b, "two documents, two shelves");
+        let choice_a = plan_a.program.clone().expect("A has a program");
+        let back = enter_document(&left_b.next, choice_a, Some(&stash_a));
+        assert_eq!(back.next, plan_a, "byte-identical document");
     }
 
     // a plan touching every field, deterministic — the frozen-string test

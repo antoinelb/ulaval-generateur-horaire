@@ -70,7 +70,7 @@ rsx! { if over_cap() { Warning {} } }
 
 ## AP-6 — Every mutation goes through `edit_plan` → `state::apply`
 
-Components never mutate `Plan`/`View`/`History` directly. Route every change through `edit_plan` so it is labeled and undoable (ACT-2 — no confirmation dialogs, always reversible). A `.write()` on plan state anywhere else is a review-blocking defect.
+Components never mutate `Plan`/`View`/`History` directly. Two doors exist: `edit_plan` for editing the current document — labeled and undoable (ACT-2 — no confirmation dialogs, always reversible) — and `swap_document` for replacing it (« changer », « Choisir »), which shelves the old document, installs the next one whole and resets `History`/`View` (ADR `2026-08-historique-par-document-vide-a-la-bascule`). A `.write()` on plan state anywhere else is a review-blocking defect.
 
 ## AP-7 — Respect the wasm32 boundary
 

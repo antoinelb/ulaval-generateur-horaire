@@ -613,6 +613,56 @@ pub fn edit_plan(
     state::apply(&mut plan, &mut history, label, edit);
 }
 
+// The second door beside `edit_plan`: swapping documents — « changer »,
+// « Choisir » — replaces the document instead of editing it. The history
+// dies with its document (an undo across documents would fork the shelf
+// copy); reversibility comes from the shelf itself (ADR
+// `2026-08-historique-par-document-vide-a-la-bascule`). All the decisions
+// are in `swap` (`persist::leave_document`/`enter_document`, tested
+// natively) — this only writes localStorage and the signals, in an order
+// that never lets a stale answer land in the next document.
+#[allow(clippy::too_many_arguments)]
+pub fn swap_document(
+    plan: Signal<Plan>,
+    view: Signal<View>,
+    history: Signal<History>,
+    alerts: Signal<Vec<Alert>>,
+    solver_state: Signal<SolverState>,
+    handle: &SolverHandle,
+    manual: Signal<Vec<ulaval_scheduler_core::Course>>,
+    snapshot: Signal<Option<Snapshot>>,
+    swap: persist::DocumentSwap,
+) {
+    // a search in flight must not land its proposal in the next document
+    if solver_state.peek().running.is_some() {
+        cancel_search(handle, solver_state, plan, alerts, manual, snapshot);
+    }
+    // the shelf write is synchronous — never behind the save debounce, so
+    // a tab closed right after the swap loses nothing
+    if let Some((key, encoded)) = &swap.stash {
+        crate::browser::local_set(key, encoded);
+    }
+    if let Some(backup) = &swap.backup {
+        crate::browser::stash_backup(backup);
+    }
+    for note in &swap.notes {
+        push_alert(alerts, AlertBody::Note(note.clone()));
+    }
+    let mut plan = plan;
+    plan.set(swap.next);
+    let mut history = history;
+    history.set(History::default());
+    let mut view = view;
+    view.set(View::default());
+    // the plan-change effect clears the verification; these two belong to
+    // the propose answers of the *previous* document and would otherwise
+    // survive into the new one
+    let mut solver_state = solver_state;
+    let mut state = solver_state.write();
+    state.left_out.clear();
+    state.proposed = None;
+}
+
 // A `#…` address imports a whole shared organigramme (note 9): the plan
 // replaces the student's — one undoable step gives theirs back — and the
 // link's manual courses join the local list *before* the catalogue parse
@@ -649,6 +699,18 @@ fn import_organigramme(
                 persist::MANUAL_KEY,
                 &persist::encode_manual(&manual.read()),
             );
+            // the current document goes to its shelf first — unless the
+            // link is the same (program, vintage): a later « changer »
+            // would overwrite the shelf with the shared version. The
+            // history restarts so the one undoable step below is the way
+            // back to the student's own document.
+            if let Some((key, encoded)) =
+                persist::import_stash(&plan.peek(), &shared)
+            {
+                crate::browser::local_set(&key, &encoded);
+            }
+            let mut history = history;
+            history.set(History::default());
             edit_plan(
                 plan,
                 history,

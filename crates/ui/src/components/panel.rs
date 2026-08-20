@@ -47,12 +47,19 @@ pub fn LeftPanel() -> Element {
     }
 }
 
-// choosing the program is an ordinary, labelled, undoable edit — and the
-// panel fills with its rules the moment it lands
+// Choosing a program swaps documents: the shelf snapshot of this
+// (code, millésime) comes back exactly if one exists, a fresh document
+// starts otherwise — the picker document itself has nothing to shelve
+// (ADR `2026-08-instantane-de-plan-par-programme-et-millesime`).
 #[component]
 fn ProgramPicker() -> Element {
     let plan = use_context::<Signal<Plan>>();
+    let view = use_context::<Signal<View>>();
     let history = use_context::<Signal<History>>();
+    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let solver = use_context::<Signal<super::SolverState>>();
+    let handle = use_context::<super::SolverHandle>();
+    let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     // the Signal itself, kept from the shadowing below: the choose click
     // reads the snapshot again to pick the default concentration
@@ -102,6 +109,7 @@ fn ProgramPicker() -> Element {
                             onclick: {
                                 let code = row.code.clone();
                                 let newest = row.vintages.first().cloned();
+                                let handle = handle.clone();
                                 move |_| {
                                     let code = code.clone();
                                     // nothing touched the select yet: the
@@ -118,7 +126,9 @@ fn ProgramPicker() -> Element {
                                     // défaut expert-sûr (AIR LAY-3, parité
                                     // avec la version JS) : la première
                                     // concentration du millésime choisi,
-                                    // jamais de profil imposé
+                                    // jamais de profil imposé — l'instantané
+                                    // de l'étagère, s'il existe, garde son
+                                    // propre choix
                                     let concentration = {
                                         let read = snapshot_signal.read();
                                         read.as_ref().and_then(|snapshot| {
@@ -127,18 +137,30 @@ fn ProgramPicker() -> Element {
                                             )
                                         })
                                     };
-                                    edit_plan(
+                                    let choice = ProgramChoice {
+                                        code,
+                                        semester,
+                                        concentration,
+                                        profile: None,
+                                    };
+                                    let stored = crate::browser::local_get(
+                                        &crate::persist::snapshot_key(&choice),
+                                    );
+                                    let swap = crate::persist::enter_document(
+                                        &plan.peek(),
+                                        choice,
+                                        stored.as_deref(),
+                                    );
+                                    super::swap_document(
                                         plan,
+                                        view,
                                         history,
-                                        &format!("Programme {code} choisi"),
-                                        |plan| {
-                                            plan.program = Some(ProgramChoice {
-                                                code,
-                                                semester,
-                                                concentration,
-                                                profile: None,
-                                            });
-                                        },
+                                        alerts,
+                                        solver,
+                                        &handle,
+                                        manual,
+                                        snapshot_signal,
+                                        swap,
                                     );
                                 }
                             },

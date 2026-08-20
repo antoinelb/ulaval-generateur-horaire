@@ -101,6 +101,18 @@ pub struct ProgramChoice {
     pub profile: Option<String>,
 }
 
+// The seed of a new document: everything at its default, only the
+// student's calendar identity (`start`) carried over — the cap, the
+// sessions and the étés are facts of the program being opened (ADR
+// `2026-08-reglages-transversaux-dans-linstantane`).
+pub fn fresh_plan(start: Semester, choice: ProgramChoice) -> Plan {
+    Plan {
+        program: Some(choice),
+        start,
+        ..Plan::default()
+    }
+}
+
 // Ephemeral-but-restored navigation state: never undoable (undo acts on
 // the document, not on where the student is looking), fully persisted so a
 // reload lands exactly where he was (ACT-7).
@@ -374,6 +386,30 @@ mod tests {
         Season::Winter,
         Season::Summer,
     ];
+
+    #[test]
+    fn a_fresh_plan_carries_only_the_start_and_the_choice() {
+        let start = semester("H27");
+        let choice = ProgramChoice {
+            code: "B-GIN".to_string(),
+            semester: "H27".to_string(),
+            concentration: Some("Approche généraliste".to_string()),
+            profile: None,
+        };
+        let fresh = fresh_plan(start, choice.clone());
+        assert_eq!(fresh.program, Some(choice));
+        assert_eq!(fresh.start, start);
+        // everything else is the default — field by field, so a new Plan
+        // field forgetting this contract fails here
+        assert_eq!(
+            Plan {
+                program: None,
+                start: Plan::default().start,
+                ..fresh
+            },
+            Plan::default()
+        );
+    }
 
     #[test]
     fn session_keys_speak_the_intake_naming() {

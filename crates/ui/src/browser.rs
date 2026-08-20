@@ -86,6 +86,13 @@ pub fn local_set(key: &str, value: &str) {
     }
 }
 
+// removal is as best-effort as saving: an absent key is already the goal
+pub fn local_remove(key: &str) {
+    if let Some(storage) = storage() {
+        storage.remove_item(key).ok();
+    }
+}
+
 // a damaged save is copied under a fresh key before anything overwrites it
 pub fn stash_backup(raw: &str) {
     local_set(&format!("gh.backup.{}", now_epoch_ms()), raw);

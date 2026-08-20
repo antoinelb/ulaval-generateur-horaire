@@ -50,8 +50,13 @@ fn SolverStatus() -> Element {
 #[component]
 pub fn HeaderBar() -> Element {
     let plan = use_context::<Signal<Plan>>();
-    let mut view = use_context::<Signal<View>>();
+    let view = use_context::<Signal<View>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
+    // the Signal itself, kept from the shadowing below: « changer » swaps
+    // documents and needs the signals, not one render's borrow
+    let snapshot_signal = snapshot;
+    let solver = use_context::<Signal<SolverState>>();
+    let handle = use_context::<SolverHandle>();
     let read = snapshot.read();
     let Some(snapshot) = read.as_ref() else {
         return rsx! {};
@@ -119,18 +124,28 @@ pub fn HeaderBar() -> Element {
             if has_program {
                 button {
                     class: "status-undo",
-                    title: "Revenir au choix de programme (annulable)",
-                    onclick: move |_| {
-                        // the search box goes away with the panel: leaving
-                        // its text behind would resurrect stale results
-                        // the moment a program is picked again
-                        view.write().search.clear();
-                        super::edit_plan(
-                            plan,
-                            history,
-                            "Choix de programme rouvert",
-                            |plan| plan.program = None,
-                        );
+                    title: "Revenir au choix de programme — ce cheminement \
+                            est conservé et revient en le rechoisissant",
+                    onclick: {
+                        let handle = handle.clone();
+                        move |_| {
+                            // the document goes to its shelf whole; the
+                            // picker takes over with an empty grid (US-10)
+                            let swap = crate::persist::leave_document(
+                                &plan.peek(),
+                            );
+                            super::swap_document(
+                                plan,
+                                view,
+                                history,
+                                alerts,
+                                solver,
+                                &handle,
+                                manual,
+                                snapshot_signal,
+                                swap,
+                            );
+                        }
                     },
                     "changer"
                 }
@@ -166,9 +181,12 @@ pub fn HeaderBar() -> Element {
     }
 }
 
-// « Tout réinitialiser » : one click, undoable — never a confirmation
-// (ACT-2). The document (plan) goes back to zero through the history;
-// the hand-entered course fiches stay, they extend the catalogue, not the
+// « Réinitialiser » : one click, undoable — never a confirmation (ACT-2).
+// The current document goes back to zero through the history, and its
+// shelf copy goes with it — re-choosing the program must not resurrect the
+// pre-reset grid; the other programs' shelves survive (ADR
+// `2026-08-reinitialiser-le-document-courant-et-son-etagere`). The
+// hand-entered course fiches stay, they extend the catalogue, not the
 // document — an undo may restore a plan that references them (ADR
 // `2026-08-bouton-tout-reinitialiser`).
 #[component]
@@ -184,7 +202,8 @@ fn ResetButton() -> Element {
     rsx! {
         button {
             class: "status-undo",
-            title: "Repartir de zéro — annulable avec « Annuler »",
+            title: "Repartir de zéro — ce programme seulement, annulable \
+                    avec « Annuler »",
             onclick: move |_| {
                 // a search in flight must not land its proposal in the
                 // fresh plan
@@ -196,15 +215,26 @@ fn ResetButton() -> Element {
                 // a shared link left in the address bar would reimport
                 // everything at the next reload
                 crate::browser::strip_query();
+                // materialized before the edit erases the program: the
+                // shelf copy must go too, or re-choosing the program
+                // would resurrect the pre-reset grid
+                let shelf = plan
+                    .peek()
+                    .program
+                    .as_ref()
+                    .map(crate::persist::snapshot_key);
                 super::edit_plan(plan, history, "Réinitialisation", |plan| {
                     *plan = Plan::default();
                 });
+                if let Some(key) = shelf {
+                    crate::browser::local_remove(&key);
+                }
                 view.set(View::default());
                 super::push_alert(
                     alerts,
                     AlertBody::Success(
-                        "Tout a été réinitialisé — « Annuler » restaure \
-                         votre organigramme."
+                        "Ce programme a été réinitialisé — « Annuler » \
+                         restaure votre organigramme."
                             .to_string(),
                     ),
                 );
