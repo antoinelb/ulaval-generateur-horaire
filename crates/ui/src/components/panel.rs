@@ -299,13 +299,23 @@ fn PanelBody(model: PanelModel) -> Element {
     let has_program = plan.read().program.is_some();
     rsx! {
         div { class: "panel-body",
-            input {
-                class: "panel-search",
-                r#type: "search",
-                placeholder: "Chercher dans tout le catalogue…",
-                aria_label: "Chercher dans tout le catalogue…",
-                value: "{search}",
-                oninput: move |event| view.write().search = event.value(),
+            div { class: "panel-search-wrap",
+                input {
+                    class: "panel-search",
+                    r#type: "search",
+                    placeholder: "Chercher dans tout le catalogue…",
+                    aria_label: "Chercher dans tout le catalogue…",
+                    value: "{search}",
+                    oninput: move |event| view.write().search = event.value(),
+                }
+                if searching {
+                    button {
+                        class: "panel-search-clear",
+                        aria_label: "Effacer la recherche",
+                        onclick: move |_| view.write().search.clear(),
+                        "✕"
+                    }
+                }
             }
             label { class: "panel-fit",
                 input {

@@ -379,15 +379,43 @@ code {
   gap: 0.5rem;
 }
 
+.panel-search-wrap {
+  position: relative;
+}
+
 .panel-search {
   font: inherit;
   font-size: 0.8125rem;
-  padding: 0.4375rem 0.5625rem;
+  padding: 0.4375rem 2.25rem 0.4375rem 0.5625rem;
   border: 0.0625rem solid var(--border-strong);
   border-radius: 0.4375rem;
   background: var(--card);
   color: var(--ink);
   width: 100%;
+}
+
+/* le bouton « ✕ » remplace celui de WebKit, absent de Firefox */
+.panel-search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.panel-search-clear {
+  position: absolute;
+  right: 0.125rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--muted);
+  min-width: 2rem;
+  min-height: 2rem;
+}
+
+.panel-search-clear:hover {
+  color: var(--accent);
 }
 
 .panel-fit {
