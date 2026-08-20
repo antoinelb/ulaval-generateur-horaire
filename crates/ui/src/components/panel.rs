@@ -325,24 +325,28 @@ fn set_scope(
         dropped = state::purge_scope_grants(plan, prefix);
         state::purge_codes(plan, &orphans);
     });
+    // Document-caused: after a program swap the history is fresh and the
+    // « Annuler » these advertise no longer applies
     if !dropped.is_empty() {
-        super::push_alert(
+        super::push_caused_alert(
             alerts,
             super::AlertBody::Note(format!(
                 "Ententes retirées avec l'ancien choix : {} — « Annuler » \
                  les restaure.",
                 dropped.join(", ")
             )),
+            super::AlertCause::Document,
         );
     }
     if !orphans.is_empty() {
-        super::push_alert(
+        super::push_caused_alert(
             alerts,
             super::AlertBody::Note(format!(
                 "Cours de l'ancien bloc retirés : {} — rien sous le \
                  nouveau choix ne les liste ; « Annuler » les restaure.",
                 orphans.join(", ")
             )),
+            super::AlertCause::Document,
         );
     }
 }
