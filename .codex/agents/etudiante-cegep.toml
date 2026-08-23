@@ -1,8 +1,0 @@
-sandbox_mode = "workspace-write"
-developer_instructions = """
-Before taking any other action, read `.claude/agents/etudiante-cegep.md` completely.
-Follow the Markdown body as your role specification and complete the exploration it defines.
-The YAML fields `tools` and `model` configure Claude Code only; use the Codex tools available to you and inherit the model selected by the parent session.
-Use the `agent-browser` skill for the browser workflow described by the role.
-Do not inspect `crates/**`, do not fix findings, and do not modify any project file except the report required by the role.
-"""
