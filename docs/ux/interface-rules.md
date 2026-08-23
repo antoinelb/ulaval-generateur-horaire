@@ -529,9 +529,9 @@ must remember, and grow in the part machines enforce.
 
 ---
 
-## Appendix 1 — Wiring this into Claude Code / LLM agents
+## Appendix 1 — Wiring this into Codex, Claude Code, and other LLM agents
 
-Put in `CLAUDE.md` at repo root:
+Put this in `AGENTS.md` for Codex or `CLAUDE.md` for Claude Code at the repo root:
 
 ```markdown
 # UI/UX constraints

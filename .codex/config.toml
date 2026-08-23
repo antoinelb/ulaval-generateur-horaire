@@ -1,0 +1,7 @@
+[agents.etudiante_cegep]
+description = "Simule une finissante du cégep qui compare génie civil, mécanique et physique dans l'interface, puis rédige un rapport UX sans corriger le code."
+config_file = "./agents/etudiante-cegep.toml"
+
+[agents.etudiante_gex]
+description = "Simule une étudiante en génie des eaux qui planifie réellement son cheminement dans l'interface, puis rédige un rapport UX sans corriger le code."
+config_file = "./agents/etudiante-gex.toml"

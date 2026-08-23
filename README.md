@@ -68,6 +68,13 @@ L'interface se lance avec la CLI Dioxus (`cargo install dioxus-cli`) : `dx serve
 
 Chaque décision est consignée dans un ADR sous [`docs/conception/adr/`](docs/conception/adr/).
 
+### Assistants de programmation
+
+Le dépôt prend en charge Codex et Claude Code en parallèle.
+Codex charge [`AGENTS.md`](AGENTS.md), les rôles sous `.codex/` et les compétences sous `.agents/skills/`.
+Claude Code continue de charger [`CLAUDE.md`](CLAUDE.md) et `.claude/`.
+Les adaptateurs Codex réutilisent les consignes Claude existantes afin de conserver une seule source de vérité pendant la transition.
+
 ## Références
 
 - [Documentation](https://antoinelb.github.io/ulaval-generateur-horaire/docs/) — guide JavaScript, architecture et domaine.
