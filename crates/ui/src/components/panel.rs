@@ -802,11 +802,6 @@ fn SectionView(section: Section) -> Element {
                 },
                 span { class: "panel-rule-title",
                     "{section.title}"
-                    if let Some(constraint) = section.constraint.as_ref() {
-                        span { class: "panel-rule-constraint",
-                            " - {constraint}"
-                        }
-                    }
                 }
                 if let Some((done, total)) = section.progress {
                     if total > 0 {

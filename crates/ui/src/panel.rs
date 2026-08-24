@@ -61,8 +61,6 @@ pub struct Section {
     // stable expansion identity (persisted in View.expanded_rule)
     pub key: String,
     pub title: String,
-    // « 1 parmi », « 3–9 cr », « 3 cr - en sus »
-    pub constraint: Option<String>,
     pub badge: Badge,
     // the expanded rule's first line: what to pick here and that nothing
     // is ever taken automatically (rapport étudiante-cegep 2026-08-19)
@@ -342,7 +340,6 @@ fn uncounted_panel(
     let mandatory = Section {
         key: "obligatoires".to_string(),
         title: "Obligatoires".to_string(),
-        constraint: None,
         badge: Badge::Neutral("—".to_string()),
         lead: None,
         rows: mandatory_rows,
@@ -476,7 +473,6 @@ fn uncounted_scope_group(
         Some(Section {
             key: format!("{prefix}obligatoires"),
             title: "Cours obligatoires".to_string(),
-            constraint: None,
             badge: Badge::Neutral("—".to_string()),
             lead: None,
             rows: unique_rows(snapshot, plan, mandatory.iter()),
@@ -632,7 +628,6 @@ fn scoped_mandatory_section(
     Some(Section {
         key: format!("{prefix}/obligatoires"),
         title: "Cours obligatoires".to_string(),
-        constraint: None,
         badge: if satisfied == total {
             Badge::Ok(format!("{satisfied}/{total}"))
         } else if satisfied == 0 {
@@ -702,8 +697,12 @@ fn bare_section(
     Section {
         key: format!("{scope_prefix}/{}", rule.title),
         title: rule.title.clone(),
-        constraint: constraint_label(rule),
-        badge: Badge::Neutral("—".to_string()),
+        // aucun comptage ici (ADR 2026-08-verdicts-honnetes-et-panneau-
+        // jamais-vide) : le badge dit ce que la règle exige, sans inventer
+        // de numérateur
+        badge: Badge::Neutral(
+            constraint_label(rule).unwrap_or_else(|| "—".to_string()),
+        ),
         lead: None,
         rows,
         raw: rule_raw(rule).or_else(|| original.and_then(rule_raw)),
@@ -1278,7 +1277,6 @@ fn mandatory_section(
     Section {
         key: "obligatoires".to_string(),
         title: "Obligatoires".to_string(),
-        constraint: None,
         badge: if missing.is_empty() && total > 0 {
             Badge::Ok(format!("{}/{total}", satisfied.len()))
         } else if satisfied.is_empty() {
@@ -1332,7 +1330,6 @@ fn rule_section(
     Section {
         key: format!("{scope_prefix}/{}", report.title),
         title: report.title.clone(),
-        constraint: rule.and_then(constraint_label),
         badge,
         lead,
         rows,
@@ -1454,10 +1451,7 @@ fn constraint_label(rule: &Rule) -> Option<String> {
             Some(format!("{min}–{max} cr"))
         }
     };
-    match (label, rule.credits_in_addition) {
-        (Some(label), true) => Some(format!("{label} - en sus")),
-        (label, _) => label,
-    }
+    label.map(|label| en_sus(label, rule))
 }
 
 fn rule_badge(
@@ -1466,9 +1460,17 @@ fn rule_badge(
     rule: Option<&Rule>,
 ) -> Badge {
     match report.status {
-        RuleStatus::Satisfied => match report.counted.as_deref() {
-            Some([only]) => Badge::Ok(format!("✓ {only}")),
-            _ => Badge::Ok("✓".to_string()),
+        RuleStatus::Satisfied => match constrained(rule) {
+            Some((rule, constraint)) => {
+                let (text, _) = constraint_fraction(
+                    snapshot,
+                    report.counted.as_deref().unwrap_or_default(),
+                    rule,
+                    constraint,
+                );
+                Badge::Ok(format!("✓ {text}"))
+            }
+            None => Badge::Ok("✓".to_string()),
         },
         // a reported rule that still carries a countable constraint
         // (« any », « negotiated ») says what remains — « 0/3 cr » — since
@@ -1483,7 +1485,7 @@ fn rule_badge(
     }
 }
 
-// « 0/3 » (credits counted / minimum) or « 1/2 » (courses) — the design's
+// « 0/3 » (credits counted / maximum) or « 1/2 » (courses) — the design's
 // wording, computed from what the report already counted
 fn incomplete_badge(
     snapshot: &Snapshot,
@@ -1491,26 +1493,14 @@ fn incomplete_badge(
     rule: Option<&Rule>,
 ) -> Badge {
     let counted = report.counted.as_deref().unwrap_or_default();
-    match rule.and_then(|rule| rule.constraint.as_ref()) {
-        Some(Constraint::Course { min, .. }) => {
-            let badge = format!("{}/{min}", counted.len());
-            if counted.is_empty() {
-                Badge::Missing(badge)
+    match constrained(rule) {
+        Some((rule, constraint)) => {
+            let (text, any) =
+                constraint_fraction(snapshot, counted, rule, constraint);
+            if any {
+                Badge::Partial(text)
             } else {
-                Badge::Partial(badge)
-            }
-        }
-        Some(Constraint::Credits { min, .. }) => {
-            let sum: u32 = counted
-                .iter()
-                .filter_map(|code| snapshot.by_code.get(code))
-                .map(|&index| snapshot.courses[index].credits.planning())
-                .sum();
-            let badge = format!("{sum}/{min} cr");
-            if sum == 0 {
-                Badge::Missing(badge)
-            } else {
-                Badge::Partial(badge)
+                Badge::Missing(text)
             }
         }
         // no constraint to count against: name what remains if given
@@ -1523,6 +1513,50 @@ fn incomplete_badge(
             }
             None => Badge::Neutral("—".to_string()),
         },
+    }
+}
+
+// une règle et sa contrainte quand les deux existent — le badge ne compte
+// que dans ce cas
+fn constrained(rule: Option<&Rule>) -> Option<(&Rule, &Constraint)> {
+    let rule = rule?;
+    rule.constraint
+        .as_ref()
+        .map(|constraint| (rule, constraint))
+}
+
+// « 6/9 cr », « 1/1 » : ce que la règle a compté sur le maximum de sa
+// contrainte — le numérateur n'est jamais borné — et si elle a compté
+// quoi que ce soit (Missing contre Partial)
+fn constraint_fraction(
+    snapshot: &Snapshot,
+    counted: &[String],
+    rule: &Rule,
+    constraint: &Constraint,
+) -> (String, bool) {
+    let (label, any) = match *constraint {
+        Constraint::Course { max, .. } => {
+            (format!("{}/{max}", counted.len()), !counted.is_empty())
+        }
+        Constraint::Credits { max, .. } => {
+            let sum: u32 = counted
+                .iter()
+                .filter_map(|code| snapshot.by_code.get(code))
+                .map(|&index| snapshot.courses[index].credits.planning())
+                .sum();
+            (format!("{sum}/{max} cr"), sum > 0)
+        }
+    };
+    (en_sus(label, rule), any)
+}
+
+// les crédits du stage promu sont en sus du total du diplôme : le libellé
+// le dit, sur le badge comme sur l'en-tête
+fn en_sus(label: String, rule: &Rule) -> String {
+    if rule.credits_in_addition {
+        format!("{label} - en sus")
+    } else {
+        label
     }
 }
 
@@ -2355,11 +2389,10 @@ mod tests {
         assert_eq!(model.rules.len(), 4);
         assert_eq!(
             model.rules[0].badge,
-            Badge::Ok("✓ GMN-1000".to_string()),
-            "the single counted course is named"
+            Badge::Ok("✓ 1/1".to_string()),
+            "the count is shown, never the course code"
         );
-        assert_eq!(model.rules[0].constraint.as_deref(), Some("1 parmi"));
-        assert_eq!(model.rules[1].badge, Badge::Missing("0/6 cr".to_string()));
+        assert_eq!(model.rules[1].badge, Badge::Missing("0/9 cr".to_string()));
         assert_eq!(model.rules[1].notes, ["une note de règle"]);
         assert!(model.rules[2].free, "the any rule browses the catalogue");
         assert_eq!(
@@ -2498,6 +2531,40 @@ mod tests {
         );
     }
 
+    // a one-hop reference resolves only a `List` target — a target with
+    // no fixed list (keyword « any ») is left uncovered rather than
+    // guessed at, so the departing elective still shows as an orphan
+    #[test]
+    fn a_reference_to_a_non_list_target_covers_nothing() {
+        let program: Program = serde_json::from_str(
+            r#"{"code":"B-T","slug":"t","semester":"A26","title":"T",
+                "cycle":1,"credits_required":90,"mandatory":[],"rules":[],
+                "concentrations":[
+                  {"title":"X","mandatory":[],
+                   "rules":[{"title":"Règle 1",
+                             "constraint":{"type":"credits","min":3,"max":3},
+                             "courses":["ZZZ-1","ZZZ-2"]},
+                            {"title":"Règle 2","courses":"any",
+                             "raw":"tous les cours de premier cycle"}]},
+                  {"title":"Y","mandatory":[],
+                   "rules":[{"title":"Règle A",
+                             "constraint":{"type":"credits","min":3,"max":3},
+                             "courses":{"concentration":"X",
+                                        "rule":"Règle 2"},
+                             "raw":"tous les cours de la Règle 2 de X"}]}
+                ],"profiles":[]}"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let mut plan = plan();
+        plan.electives = vec!["ZZZ-1".to_string()];
+        assert_eq!(
+            scope_orphans(&program, &plan, Some("X"), Some("Y"), None),
+            ["ZZZ-1"],
+            "Règle A references a keyword rule, not a list: nothing \
+             resolves, so ZZZ-1 stays uncovered and orphans"
+        );
+    }
+
     #[test]
     fn the_rule_lead_speaks_every_constraint_shape() {
         let course = |min, max| Constraint::Course { min, max };
@@ -2550,10 +2617,15 @@ mod tests {
         assert_eq!(mandatory.rows.len(), 2);
         assert_eq!(mandatory.badge, Badge::Neutral("—".to_string()));
         assert_eq!(model.rules.len(), 4, "the program rules still render");
-        assert!(model
-            .rules
-            .iter()
-            .all(|section| section.badge == Badge::Neutral("—".to_string())));
+        // the constraint stays readable even without a count (no chip left
+        // to carry it): the neutral badge names it instead of a bare « — »
+        assert_eq!(
+            model.rules[0].badge,
+            Badge::Neutral("1 parmi".to_string())
+        );
+        assert_eq!(model.rules[1].badge, Badge::Neutral("6–9 cr".to_string()));
+        assert_eq!(model.rules[2].badge, Badge::Neutral("3 cr".to_string()));
+        assert_eq!(model.rules[3].badge, Badge::Neutral("—".to_string()));
         assert!(model.rules[2].free, "the any rule still browses");
         assert_eq!(
             model.rules[3].raw.as_deref(),
@@ -2659,6 +2731,7 @@ mod tests {
         let codes: Vec<&str> =
             section.rows.iter().map(|row| row.code.as_str()).collect();
         assert_eq!(codes, ["GMN-1000", "GAE-1000"], "first wins, order kept");
+        assert_eq!(section.badge, Badge::Neutral("3 cr".to_string()));
     }
 
     #[test]
@@ -2682,6 +2755,7 @@ mod tests {
             Some("tous les cours de la Règle 1 du cheminement X")
         );
         assert!(section.rows.is_empty());
+        assert_eq!(section.badge, Badge::Neutral("—".to_string()));
     }
 
     #[test]
@@ -2894,10 +2968,10 @@ mod tests {
         let attached = &rule_3.rows[0];
         assert_eq!(attached.code, "GAE-1000");
         assert!(attached.sub.ends_with("- entente"), "{}", attached.sub);
-        // taken: the rule is satisfied and the course counted by name
+        // taken: the rule is satisfied and its badge shows the fraction
         plan.electives.push("GAE-1000".to_string());
         let model = panel_model(&snapshot, &plan);
-        assert_eq!(model.rules[2].badge, Badge::Ok("✓ GAE-1000".to_string()));
+        assert_eq!(model.rules[2].badge, Badge::Ok("✓ 3/3 cr".to_string()));
         // the entente moved it out of Règle 2's list (never two rules)
         assert!(model.rules[1].rows.iter().all(|row| row.code != "GAE-1000"));
     }
@@ -2940,7 +3014,7 @@ mod tests {
         assert!(model.warnings.is_empty(), "{:?}", model.warnings);
         assert_eq!(
             model.rules[2].badge,
-            Badge::Ok("✓ ETE-1000".to_string()),
+            Badge::Ok("✓ 3/3 cr".to_string()),
             "credited, attached: counted in the any rule"
         );
     }
@@ -3055,7 +3129,7 @@ mod tests {
             .iter()
             .find(|section| section.title == "Règle 2")
             .unwrap_or_else(|| panic!("Règle 2 is in the fixture"));
-        assert_eq!(rule_2.badge, Badge::Partial("3/6 cr".to_string()));
+        assert_eq!(rule_2.badge, Badge::Partial("3/9 cr".to_string()));
         let credited_row = rule_2
             .rows
             .iter()
@@ -3297,7 +3371,7 @@ mod tests {
             .iter()
             .find(|section| section.key == "c/Règle C1")
             .expect("the concentration rule is reported");
-        assert_eq!(c1.badge, Badge::Ok("✓".to_string()));
+        assert_eq!(c1.badge, Badge::Ok("✓ 2/2".to_string()));
         let p1 = model
             .rules
             .iter()
@@ -3322,10 +3396,10 @@ mod tests {
             .find(|section| section.key == "c/Règle C1")
             .expect("reported");
         assert_eq!(c1.badge, Badge::Partial("1/2".to_string()));
-        // Règle 2 (6–9 cr) with GAE-1000 laid out: 3/6 cr partial
+        // Règle 2 (6–9 cr) with GAE-1000 laid out: 3/9 cr partial
         plan.displayed_placement.insert("GAE-1000".to_string(), 2);
         let model = panel_model(&snapshot, &plan);
-        assert_eq!(model.rules[1].badge, Badge::Partial("3/6 cr".to_string()));
+        assert_eq!(model.rules[1].badge, Badge::Partial("3/9 cr".to_string()));
     }
 
     #[test]
@@ -3400,6 +3474,162 @@ mod tests {
         assert_eq!(
             incomplete_badge(&snapshot, &report(None), None),
             Badge::Neutral("—".to_string())
+        );
+    }
+
+    #[test]
+    fn a_constrained_incomplete_rule_counts_against_the_maximum() {
+        let rule = |constraint: &str, en_sus: bool| -> Rule {
+            serde_json::from_str(&format!(
+                r#"{{"title":"R","constraint":{constraint},
+                     "courses":["X-1"],
+                     "credits_in_addition":{en_sus}}}"#
+            ))
+            .unwrap_or_else(|e| panic!("rule literal: {e}"))
+        };
+        let report =
+            |counted: Option<Vec<String>>| ulaval_scheduler_core::RuleReport {
+                scope: Scope::Program,
+                title: "R".to_string(),
+                status: RuleStatus::Incomplete,
+                counted,
+                elsewhere: Vec::new(),
+                missing: None,
+                candidates: None,
+                raw: None,
+            };
+        let snapshot = snapshot();
+
+        let course_rule = rule(r#"{"type":"course","min":1,"max":3}"#, false);
+        assert_eq!(
+            incomplete_badge(&snapshot, &report(None), Some(&course_rule)),
+            Badge::Missing("0/3".to_string())
+        );
+        assert_eq!(
+            incomplete_badge(
+                &snapshot,
+                &report(Some(vec!["GMN-1000".to_string()])),
+                Some(&course_rule)
+            ),
+            Badge::Partial("1/3".to_string())
+        );
+
+        let credits_rule =
+            rule(r#"{"type":"credits","min":3,"max":9}"#, false);
+        assert_eq!(
+            incomplete_badge(
+                &snapshot,
+                &report(Some(vec!["GAE-1000".to_string()])),
+                Some(&credits_rule)
+            ),
+            Badge::Partial("3/9 cr".to_string())
+        );
+
+        let credits_rule_en_sus =
+            rule(r#"{"type":"credits","min":3,"max":9}"#, true);
+        assert_eq!(
+            incomplete_badge(
+                &snapshot,
+                &report(None),
+                Some(&credits_rule_en_sus)
+            ),
+            Badge::Missing("0/9 cr - en sus".to_string())
+        );
+    }
+
+    #[test]
+    fn a_satisfied_rule_without_a_constraint_keeps_a_bare_check() {
+        let snapshot = snapshot();
+        let report = ulaval_scheduler_core::RuleReport {
+            scope: Scope::Program,
+            title: "R".to_string(),
+            status: RuleStatus::Satisfied,
+            counted: Some(vec!["GMN-1000".to_string()]),
+            elsewhere: Vec::new(),
+            missing: None,
+            candidates: None,
+            raw: None,
+        };
+        assert_eq!(
+            rule_badge(&snapshot, &report, None),
+            Badge::Ok("✓".to_string())
+        );
+    }
+
+    #[test]
+    fn a_satisfied_constrained_rule_shows_its_fraction() {
+        let snapshot = snapshot();
+        let report = ulaval_scheduler_core::RuleReport {
+            scope: Scope::Program,
+            title: "R".to_string(),
+            status: RuleStatus::Satisfied,
+            counted: Some(vec!["GAE-1000".to_string()]),
+            elsewhere: Vec::new(),
+            missing: None,
+            candidates: None,
+            raw: None,
+        };
+        let en_sus_rule: Rule = serde_json::from_str(
+            r#"{"title":"R","constraint":{"type":"credits","min":1,"max":8},
+                 "courses":["GAE-1000"],"credits_in_addition":true}"#,
+        )
+        .unwrap_or_else(|e| panic!("rule literal: {e}"));
+        assert_eq!(
+            rule_badge(&snapshot, &report, Some(&en_sus_rule)),
+            Badge::Ok("✓ 3/8 cr - en sus".to_string())
+        );
+
+        // min ≠ max, numerator strictly between the two: a « 3–9 cr »
+        // rule satisfied at 6 cr must not round up to the min nor clamp
+        // to the max
+        let open_report = ulaval_scheduler_core::RuleReport {
+            counted: Some(vec![
+                "GAE-1000".to_string(),
+                "GMN-1000".to_string(),
+            ]),
+            ..report
+        };
+        let open_rule: Rule = serde_json::from_str(
+            r#"{"title":"R","constraint":{"type":"credits","min":3,"max":9},
+                 "courses":["GAE-1000","GMN-1000"]}"#,
+        )
+        .unwrap_or_else(|e| panic!("rule literal: {e}"));
+        assert_eq!(
+            rule_badge(&snapshot, &open_report, Some(&open_rule)),
+            Badge::Ok("✓ 6/9 cr".to_string())
+        );
+    }
+
+    // `core` refuses a count over the maximum before it ever reaches a
+    // `Satisfied` report (`CoverageError::CountOverMax`/`CreditsOverMax`),
+    // so this exact input never occurs today; the badge must still not
+    // clamp on its own, so a future relaxation over there does not get
+    // silently hidden here
+    #[test]
+    fn a_satisfied_rule_over_its_maximum_keeps_the_true_numerator() {
+        let snapshot = snapshot();
+        let rule: Rule = serde_json::from_str(
+            r#"{"title":"R","constraint":{"type":"credits","min":1,"max":6},
+                 "courses":["GAE-1000","GMN-1000","ANL-2020"]}"#,
+        )
+        .unwrap_or_else(|e| panic!("rule literal: {e}"));
+        let report = ulaval_scheduler_core::RuleReport {
+            scope: Scope::Program,
+            title: "R".to_string(),
+            status: RuleStatus::Satisfied,
+            counted: Some(vec![
+                "GAE-1000".to_string(),
+                "GMN-1000".to_string(),
+                "ANL-2020".to_string(),
+            ]),
+            elsewhere: Vec::new(),
+            missing: None,
+            candidates: None,
+            raw: None,
+        };
+        assert_eq!(
+            rule_badge(&snapshot, &report, Some(&rule)),
+            Badge::Ok("✓ 9/6 cr".to_string())
         );
     }
 
@@ -3573,7 +3803,7 @@ mod tests {
         let model = panel_model(&snapshot, &plan);
 
         // Règle 1 claims all three: satisfied, shown placed normally
-        assert_eq!(model.rules[0].badge, Badge::Ok("✓".to_string()));
+        assert_eq!(model.rules[0].badge, Badge::Ok("✓ 3/3".to_string()));
         let rule1_gex = model.rules[0]
             .rows
             .iter()
@@ -3966,7 +4196,7 @@ mod tests {
         let model = panel_model(&snapshot, &plan);
         assert_eq!(
             model.rules[1].badge,
-            Badge::Partial("3/6 cr".to_string()),
+            Badge::Partial("3/9 cr".to_string()),
             "GEX-1000 (placé) compte maintenant dans la Règle 2"
         );
         let entente = &model.rules[1].rows[3];

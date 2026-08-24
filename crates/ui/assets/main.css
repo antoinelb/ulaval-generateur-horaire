@@ -604,12 +604,6 @@ code {
   flex: 1;
 }
 
-.panel-rule-constraint {
-  font-family: var(--font-sans);
-  font-weight: 400;
-  color: var(--muted);
-}
-
 .panel-progress {
   width: 3.5rem;
   height: 0.25rem;
