@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ["v*"]
+    tags: ["[0-9]*.[0-9]*.[0-9]*"]
   pull_request:
   # a data push made by scrape.yml with GITHUB_TOKEN never triggers `push`;
   # it redeploys through an explicit `gh workflow run ci.yml` instead
@@ -78,6 +78,14 @@ jobs:
           fi
           git checkout "$tag"
           git checkout origin/main -- data/
+          # the footer names both commits, and they differ here: the code
+          # is the tag, the data is whatever main last wrote to data/.
+          # Only this step knows the second one — ui-build's own fallback
+          # would read the tag's history and name the wrong commit.
+          {
+            echo "DATA_HASH=$(git log -1 --format=%h origin/main -- data/)"
+            echo "DEPLOYED_TAG=$tag"
+          } >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
@@ -88,6 +96,17 @@ jobs:
           tool: wasm-pack,mdbook,dioxus-cli@0.7.10
       - uses: Swatinem/rust-cache@v2
       - run: make wasm ui-build docs
+      # the two commits the footer shows, findable from the run itself
+      - name: Record what was deployed
+        run: |
+          {
+            echo "### Déploiement"
+            echo ""
+            echo "| | commit |"
+            echo "|---|---|"
+            echo "| Code (tag \`$DEPLOYED_TAG\`) | \`$(git rev-parse --short HEAD)\` |"
+            echo "| Données | \`$DATA_HASH\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
       # the UI takes the root; pkg/ (the ES module), data/ (the snapshots)
       # and docs/ (the book) stay the documented public endpoints — the UI
       # reads its own hashed copies under /assets, never /data
