@@ -151,6 +151,24 @@ fn Footer() -> Element {
                 "{scraped} - empreinte "
                 code { "{snapshot.provenance.data_hash}" }
             }
+            // Le seul point de contact de l'application : sans lui, un
+            // étudiant qui trouve un bogue n'a nulle part où le dire.
+            // Écart INP-1 assumé : les cibles font ~28 px, pas 48 — la
+            // bande reste compacte pour ne pas voler de hauteur à la
+            // grille.
+            p { class: "footer-contact",
+                "Pour tout problème, contacter "
+                a { href: "mailto:antoinelb@proton.me",
+                    "antoinelb@proton.me"
+                }
+                " ou créer un issue à "
+                a {
+                    href: "https://github.com/antoinelb/ulaval-generateur-horaire",
+                    target: "_blank",
+                    rel: "noopener",
+                    "https://github.com/antoinelb/ulaval-generateur-horaire"
+                }
+            }
         }
     }
 }
