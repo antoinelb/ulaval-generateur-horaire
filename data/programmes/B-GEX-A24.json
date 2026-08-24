@@ -111,8 +111,39 @@
         "min": 3,
         "max": 3
       },
-      "courses": "any",
-      "raw": "tous les cours de premier cycle, à l’exception des cours correctifs de français."
+      "courses": [
+        "DDU-2000",
+        "ENT-1000",
+        "GLO-1901",
+        "ENT-3020",
+        "GGL-2601",
+        "GGR-1006",
+        "GGR-2307",
+        "MCB-4003",
+        "IFT-4902",
+        "GGR-2305"
+      ]
+    },
+    {
+      "title": "Règle 6",
+      "constraint": {
+        "type": "credits",
+        "min": 3,
+        "max": 3
+      },
+      "courses": [
+        "ANL-2020",
+        "ANL-3010",
+        "ANL-3020",
+        "ANL-3900",
+        "ANL-3905",
+        "EDC-1001",
+        "FLS-2093",
+        "FRN-1113",
+        "FRN-1914",
+        "PHI-1900",
+        "RUS-1010"
+      ]
     },
     {
       "title": "Stages",
