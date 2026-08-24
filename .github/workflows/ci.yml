@@ -48,9 +48,12 @@ jobs:
       - run: make test
 
   deploy:
-    # the site only publishes tagged code: on a v* tag push, or on the
-    # data-refresh dispatch from scrape.yml (which redeploys the latest tag)
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    # the site only publishes tagged code: on a version tag push, or on the
+    # data-refresh dispatch from scrape.yml (which redeploys the latest tag).
+    # `on.push.tags` above already filters to bare version tags (`0.2.0`,
+    # never `v`-prefixed — release.yml agrees), so being a tag at all is
+    # the whole condition here
+    if: github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
     needs: [static, test]
     runs-on: ubuntu-latest
     permissions:
@@ -62,18 +65,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          # the tag-picking step below needs every v* tag and origin/main
+          # the tag-picking step below needs every version tag and origin/main
           fetch-depth: 0
-      # the published site is always: the latest v* tag's code + main's
+      # the published site is always: the latest version tag's code + main's
       # current data/ — a data refresh redeploys without retagging
       - name: Check out the tagged code with main's fresh data
         run: |
           tag="${{ github.ref_name }}"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            tag="$(git tag --list 'v*' --sort=-version:refname | head -n 1)"
+            tag="$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)"
           fi
           if [ -z "$tag" ]; then
-            echo "No v* tag exists yet; nothing to deploy" >&2
+            echo "No version tag exists yet; nothing to deploy" >&2
             exit 1
           fi
           git checkout "$tag"

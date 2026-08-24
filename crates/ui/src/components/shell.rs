@@ -127,6 +127,8 @@ fn Shell() -> Element {
     }
 }
 
+const REPO: &str = "https://github.com/antoinelb/ulaval-generateur-horaire";
+
 // BLD-4: version, build hash and data provenance — visible on screen and
 // carried by any screenshot
 #[component]
@@ -142,14 +144,19 @@ fn Footer() -> Element {
         .clone()
         .unwrap_or_else(|| "date de récolte inconnue".to_string());
     let build = option_env!("BUILD_HASH").unwrap_or("dev");
+    // the site deploys a tag's code with main's data, so the two commits
+    // differ and each needs naming (ADR
+    // `2026-08-le-pied-nomme-les-donnees-par-leur-commit`)
+    let data = option_env!("DATA_HASH").unwrap_or("dev");
     let version = env!("CARGO_PKG_VERSION");
     rsx! {
         footer { class: "footer",
             p {
-                "v{version} - build {build} - "
-                "{snapshot.provenance.course_count} cours - données : "
-                "{scraped} - empreinte "
-                code { "{snapshot.provenance.data_hash}" }
+                "v{version} - code "
+                Commit { sha: build }
+                " - {snapshot.provenance.course_count} cours - données : "
+                "{scraped}, "
+                Commit { sha: data }
             }
             // Le seul point de contact de l'application : sans lui, un
             // étudiant qui trouve un bogue n'a nulle part où le dire.
@@ -163,12 +170,35 @@ fn Footer() -> Element {
                 }
                 " ou créer un issue à "
                 a {
-                    href: "https://github.com/antoinelb/ulaval-generateur-horaire",
+                    href: "{REPO}",
                     target: "_blank",
                     rel: "noopener",
-                    "https://github.com/antoinelb/ulaval-generateur-horaire"
+                    "{REPO}"
                 }
             }
+        }
+    }
+}
+
+// A commit is only provenance if it resolves: linked to its GitHub page
+// so a screenshot leads to the exact code or data that produced it. A
+// local build has no commit to point at — « dev » stays plain text
+// rather than becoming a link that goes nowhere (TRU-1: never claim more
+// than is known).
+#[component]
+fn Commit(sha: String) -> Element {
+    if sha == "dev" {
+        return rsx! {
+            code { "{sha}" }
+        };
+    }
+    rsx! {
+        a {
+            href: "{REPO}/commit/{sha}",
+            target: "_blank",
+            rel: "noopener",
+            title: "Ouvre ce commit sur GitHub",
+            code { "{sha}" }
         }
     }
 }

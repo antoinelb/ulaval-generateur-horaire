@@ -62,8 +62,12 @@ ui-calc: crates/ui/assets/calc/calc.js
 
 ui: ui-data ui-calc
 	BUILD_HASH=$$(git rev-parse --short HEAD) \
+	DATA_HASH=$${DATA_HASH:-$$(git log -1 --format=%h -- data/)} \
 		dx serve --package ulaval-scheduler-ui --port 8000
 
+# DATA_HASH names the commit the snapshots come from, and is overridable:
+# the deploy job builds a tag's code over main's data/, so only it knows
+# that commit (ADR 2026-08-le-pied-nomme-les-donnees-par-leur-commit).
 # the production bundle: Pages serves the project site under a sub-path, and
 # `asset!()` emits absolute URLs, so the base path has to be baked in. dx
 # nests the web bundle under `public/`: _ui/public is the site root, and the
@@ -71,6 +75,7 @@ ui: ui-data ui-calc
 # is served from (ADR 2026-08-interface-publiee-a-la-racine-de-pages)
 ui-build: ui-data ui-calc
 	BUILD_HASH=$$(git rev-parse --short HEAD) \
+	DATA_HASH=$${DATA_HASH:-$$(git log -1 --format=%h -- data/)} \
 		dx bundle --release --platform web \
 			--package ulaval-scheduler-ui \
 			--base-path ulaval-generateur-horaire --out-dir _ui

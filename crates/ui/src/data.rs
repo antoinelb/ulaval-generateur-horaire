@@ -65,8 +65,6 @@ pub struct Provenance {
     // récolte inconnue », never a guessed date
     pub scraped_at: Option<String>,
     pub course_count: usize,
-    // fnv1a-64 of the raw bytes, hex — ties any screenshot to its data
-    pub data_hash: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -139,7 +137,6 @@ pub fn parse_data(
     programs.sort_by_key(|program| {
         (program.code.clone(), program.semester.to_string())
     });
-    let data_hash = format!("{:016x}", hash_raw(raw));
     let manual_codes: BTreeSet<String> =
         manual.iter().map(|course| course.code.clone()).collect();
     // the repo's hand-maintained courses join the catalogue first, so a
@@ -166,7 +163,6 @@ pub fn parse_data(
         provenance: Provenance {
             scraped_at: meta.scraped_at,
             course_count: merged.courses.len(),
-            data_hash,
         },
         collisions,
         manual: repo_manual,
@@ -334,14 +330,10 @@ fn parse_meta(meta: Option<&str>, warnings: &mut Vec<String>) -> Meta {
     }
 }
 
-fn hash_raw(raw: &RawData) -> u64 {
-    let seed = fnv1a_64(0xcbf2_9ce4_8422_2325, raw.courses.as_bytes());
-    raw.programs.iter().fold(seed, |hash, (_, contents)| {
-        fnv1a_64(hash, contents.as_bytes())
-    })
-}
-
-// FNV-1a, 64 bits — 8 lines beat a hashing dependency (BLD-5)
+// FNV-1a, 64 bits — 8 lines beat a hashing dependency (BLD-5). The one
+// caller left is `present.rs`, which stamps every error with a copyable
+// id (ERR-1); the footer now names the data by its git commit instead
+// (ADR `2026-08-le-pied-nomme-les-donnees-par-leur-commit`).
 pub fn fnv1a_64(seed: u64, bytes: &[u8]) -> u64 {
     bytes.iter().fold(seed, |hash, &byte| {
         (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
@@ -674,7 +666,6 @@ mod tests {
             Some("2026-08-13T18:00:00Z")
         );
         assert_eq!(snapshot.provenance.course_count, 1);
-        assert_eq!(snapshot.provenance.data_hash.len(), 16);
         assert!(snapshot.warnings.is_empty());
         assert!(snapshot.collisions.is_empty());
     }
@@ -913,7 +904,7 @@ mod tests {
     }
 
     #[test]
-    fn the_hash_is_the_known_fnv1a_vector_and_tracks_every_file() {
+    fn the_hash_is_the_known_fnv1a_vector() {
         // the empty input keeps the offset basis — the published vector
         assert_eq!(
             fnv1a_64(0xcbf2_9ce4_8422_2325, b""),
@@ -923,11 +914,6 @@ mod tests {
             fnv1a_64(0xcbf2_9ce4_8422_2325, b"a"),
             0xaf63_dc4c_8601_ec8c
         );
-
-        let mut touched = raw();
-        touched.programs =
-            vec![("B-GEX-A26.json".to_string(), "{}".to_string())];
-        assert_ne!(hash_raw(&raw()), hash_raw(&touched));
     }
 
     #[test]
