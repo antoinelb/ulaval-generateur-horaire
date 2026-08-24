@@ -1,6 +1,7 @@
 .PHONY: static lint test wasm docs ui ui-build ui-data ui-calc
 
 static:
+	rm -f *.profraw
 	cargo fmt --all
 	$(MAKE) lint
 
