@@ -1,0 +1,64 @@
+{
+  "program": {
+    "code": "X-TEST",
+    "slug": "x-test",
+    "semester": "A26",
+    "title": "Programme de test",
+    "cycle": 1,
+    "credits_required": 120,
+    "mandatory": [],
+    "rules": [
+      {
+        "title": "Scolarité préparatoire",
+        "courses": [
+          "ZZZ-0100"
+        ]
+      },
+      {
+        "title": "Règle 1",
+        "constraint": {
+          "type": "course",
+          "min": 1,
+          "max": 1
+        },
+        "courses": [
+          "ZZZ-0100"
+        ]
+      }
+    ],
+    "concentrations": [],
+    "profiles": []
+  },
+  "selection": [
+    "ZZZ-0100"
+  ],
+  "expected": {
+    "mandatory": [
+      {
+        "scope": "program",
+        "satisfied": [],
+        "missing": []
+      }
+    ],
+    "rules": [
+      {
+        "scope": "program",
+        "title": "Scolarité préparatoire",
+        "status": "reported",
+        "counted": [
+          "ZZZ-0100"
+        ],
+        "candidates": []
+      },
+      {
+        "scope": "program",
+        "title": "Règle 1",
+        "status": "satisfied",
+        "counted": [
+          "ZZZ-0100"
+        ],
+        "candidates": []
+      }
+    ]
+  }
+}

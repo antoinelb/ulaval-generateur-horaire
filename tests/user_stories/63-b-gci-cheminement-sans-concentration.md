@@ -5,8 +5,7 @@
 
 ## Préconditions
 
-Le B-GCI n'est pas encore servi par ce dépôt.
-Pour jouer le scénario : déposer `data/programmes/B-GCI-A26.json`, ajouter `b-gci;Baccalauréat en génie civil` à `index-programmes.csv`, créer `b-gci/cours/cours-hors-catalogue.csv` et régénérer `data/programmes/index.json`.
+Le millésime A26 du B-GCI est présent dans les instantanés livrés.
 
 ## Ce que la spécialisation ajoute
 
@@ -23,7 +22,7 @@ Pour jouer le scénario : déposer `data/programmes/B-GCI-A26.json`, ajouter `b-
 
 ## Résultats attendus
 
-- L'en-tête de section affiche `Cheminement sans concentration : 15 cr. / 15 cr.` une fois les cinq cours placés.
+- L'en-tête du groupe affiche `Concentration — Cheminement sans concentration` et `15/15 cr` une fois les cinq cours placés.
 - La carte de la Règle 1 liste les 25 cours, chacun glissable.
 - Les crédits sont plafonnés à 15 : placer un sixième cours de la liste n'augmente pas la contribution de la section.
 
@@ -31,7 +30,7 @@ Pour jouer le scénario : déposer `data/programmes/B-GCI-A26.json`, ajouter `b-
 
 - `#cheminement-select` contient quatre concentrations puis deux profils, dans cet ordre.
 - `.rule-card` de la Règle 1 contient 25 `.course-line`.
-- La contribution de section plafonne à 15 dans `#log-content`.
+- La progression du groupe plafonne à `15/15 cr`.
 
 ## Variantes et cas limites
 

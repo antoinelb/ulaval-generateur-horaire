@@ -38,6 +38,15 @@ Le cours d'anglais (ou de français) exigé pour diplômer, dont un score de tes
       "counted": ["GGL-2601"],
       "missing": {"credits": 9},
       "candidates": ["GLG-1000", "…"]
+    },
+    {
+      "scope": "concentration",
+      "title": "Règle 2",
+      "status": "incomplete",
+      "counted": [],
+      "elsewhere": ["GGL-2601"],
+      "missing": {"credits": 3},
+      "candidates": ["GLG-2000", "…"]
     }
   ],
   "language_requirement": {"status": "reported"}
@@ -46,6 +55,9 @@ Le cours d'anglais (ou de français) exigé pour diplômer, dont un score de tes
 
 - `scope` : d'où vient l'exigence — `program`, `concentration` ou `profile` (la concentration et le profil choisis seulement).
 - `status` : `satisfied`, `incomplete` (avec `missing`, le manque en cours ou en crédits, et `candidates`, la liste moins la sélection), ou `reported` — la règle n'a pas pu être comptée (pas de contrainte, mot-clé négocié, texte brut) et son `raw` est montré.
+- `elsewhere` : les sigles que cette règle liste aussi, mais qu'une règle *précédente de la même portée* compte déjà — ici `GGL-2601`, réclamé par la Règle 1 — montrés pour que le cours ne semble pas oublié, mais absents de `counted` et de `candidates` : il ne compte jamais deux fois dans une même portée.
+  Le champ est omis quand il est vide.
+  Les portées restent indépendantes : le même cours peut être `counted` par une règle de la concentration et par une règle du profil à la fois.
 - `language_requirement.status` : `satisfied` si un cours d'une branche est dans la sélection, sinon `reported` — jamais « manquant », car un score de test peut en dispenser et le module ne peut pas le voir.
 
 Les candidats ne sont volontairement **pas** filtrés par la faisabilité hebdomadaire : la couverture est la couche comptable ; composer avec l'horaire est un choix d'interface.

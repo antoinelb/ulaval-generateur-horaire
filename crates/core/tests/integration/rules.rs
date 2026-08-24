@@ -14,6 +14,7 @@ const FIXTURE_DIR: &str = concat!(
 
 const FIXTURES: &[&str] = &[
     "concentration-mandatory-missing",
+    "concentration-overlap-counted-once",
     "constraint-none-reported",
     "gex-rule1-count-missing",
     "gex-rule1-count-satisfied",
@@ -28,6 +29,7 @@ const FIXTURES: &[&str] = &[
     "profile-mandatory-and-rules",
     "raw-only-rule-reported",
     "reference-rule-resolved",
+    "unconstrained-rule-before-constrained",
 ];
 
 #[derive(serde::Deserialize)]

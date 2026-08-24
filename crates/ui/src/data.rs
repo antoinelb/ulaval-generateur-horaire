@@ -285,7 +285,7 @@ fn parse_manual(
             for vintage in manual.malformed_vintages() {
                 warnings.push(format!(
                     "cours.manuel.json : « {vintage} » ne nomme aucune \
-                     session ; ses corrections de préalables ne \
+                     session; ses corrections de préalables ne \
                      s'appliqueront à personne."
                 ));
             }

@@ -33,7 +33,12 @@ pub struct MandatoryReport {
 // exactly when the rule could be counted; a `reported` rule carries its
 // `raw` text instead — surfaced to the student, never invented (ADRs
 // `2026-07-contrainte-de-regle-optionnelle`,
-// `2026-07-regles-negociees-reconnues`).
+// `2026-07-regles-negociees-reconnues`). `elsewhere` lists codes this rule
+// also lists but that a *previous* evaluated rule of the same scope already
+// counted — shown to the student so the course doesn't look forgotten, but
+// excluded from `counted`/`candidates` because it must not count twice
+// (decision d'Antoine 2026-08-23, ADR
+// `2026-08-un-cours-compte-dans-une-seule-regle-par-portee`).
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 #[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct RuleReport {
@@ -42,6 +47,8 @@ pub struct RuleReport {
     pub status: RuleStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub counted: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub elsewhere: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub missing: Option<Missing>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -57,6 +64,17 @@ pub enum Scope {
     Program,
     Concentration,
     Profile,
+}
+
+// same words as serde's `rename_all = "lowercase"`, used in error text
+impl std::fmt::Display for Scope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Scope::Program => "program",
+            Scope::Concentration => "concentration",
+            Scope::Profile => "profile",
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
@@ -132,17 +150,27 @@ pub enum CoverageError {
     // semantics undecided — violation or uncounted surplus — so no verdict
     // is invented (ADR `2026-07-somme-au-dessus-du-max-en-erreur-typee`)
     #[error(
-        "{rule} : the selection sums {total} credits, above the max {max} \
-         — semantics await the director's ruling"
+        "{rule} ({scope} scope) : the selection sums {total} credits, \
+         above the max {max} — semantics await the director's ruling"
     )]
-    CreditsOverMax { rule: String, total: i64, max: i64 },
+    CreditsOverMax {
+        rule: String,
+        scope: Scope,
+        total: i64,
+        max: i64,
+    },
     // the course-count twin of `CreditsOverMax`, same undecided semantics
     // (ADR `2026-08-contrainte-etiquetee-min-max`)
     #[error(
-        "{rule} : the selection counts {total} courses, above the max {max} \
-         — semantics await the director's ruling"
+        "{rule} ({scope} scope) : the selection counts {total} courses, \
+         above the max {max} — semantics await the director's ruling"
     )]
-    CountOverMax { rule: String, total: i64, max: i64 },
+    CountOverMax {
+        rule: String,
+        scope: Scope,
+        total: i64,
+        max: i64,
+    },
 }
 
 // The pure function the UI calls on every selection change. `selection`
@@ -170,17 +198,44 @@ pub fn coverage_report(
             .collect(),
         rules: scopes
             .iter()
-            .flat_map(|(scope, _, rules)| {
-                rules.iter().map(|rule| {
-                    rule_report(*scope, rule, program, selection, &credits)
-                })
+            .map(|(scope, _, rules)| {
+                scope_reports(*scope, rules, program, selection, &credits)
             })
-            .collect::<Result<Vec<_>, _>>()?,
+            .collect::<Result<Vec<Vec<RuleReport>>, _>>()?
+            .concat(),
         language_requirement: program
             .language_requirement
             .as_ref()
             .map(|requirement| language_report(requirement, selection)),
     })
+}
+
+// one scope's rules, in order, each attributed against what earlier rules
+// of *this same scope* already claimed — the accumulator starts empty per
+// scope so a course counts once in the concentration and once in the
+// profile (decision d'Antoine 2026-08-23). Only a constrained rule's
+// `counted` claims codes: an unconstrained list (« Scolarité préparatoire »)
+// never removes a course from a later rule's count.
+fn scope_reports(
+    scope: Scope,
+    rules: &[Rule],
+    program: &Program,
+    selection: &BTreeSet<String>,
+    credits: &BTreeMap<&str, u32>,
+) -> Result<Vec<RuleReport>, CoverageError> {
+    let mut claimed: BTreeSet<String> = BTreeSet::new();
+    rules
+        .iter()
+        .map(|rule| {
+            let report = rule_report(
+                scope, rule, program, selection, credits, &claimed,
+            )?;
+            if rule.constraint.is_some() {
+                claimed.extend(report.counted.iter().flatten().cloned());
+            }
+            Ok(report)
+        })
+        .collect()
 }
 
 // the program scope always, plus each chosen block found by its title — an
@@ -240,13 +295,14 @@ fn rule_report(
     program: &Program,
     selection: &BTreeSet<String>,
     credits: &BTreeMap<&str, u32>,
+    claimed: &BTreeSet<String>,
 ) -> Result<RuleReport, CoverageError> {
     // a reference is resolved before the constraint check: a broken
     // reference is an error even on a rule that then only gets reported
-    match (resolved_courses(rule, program)?, &rule.constraint) {
-        (Some(listed), Some(constraint)) => {
-            evaluated(scope, rule, listed, constraint, selection, credits)
-        }
+    match (resolved_rule_courses(program, rule)?, &rule.constraint) {
+        (Some(listed), Some(constraint)) => evaluated(
+            scope, rule, listed, constraint, selection, credits, claimed,
+        ),
         // a list naming no number — « Scolarité préparatoire » : nothing to
         // verdict, but the split is still shown (ADR
         // `2026-08-regle-sans-contrainte-comptee-mais-reportee`)
@@ -258,9 +314,9 @@ fn rule_report(
     }
 }
 
-fn resolved_courses<'a>(
-    rule: &'a Rule,
+pub fn resolved_rule_courses<'a>(
     program: &'a Program,
+    rule: &'a Rule,
 ) -> Result<Option<&'a [String]>, CoverageError> {
     match &rule.courses {
         RuleCourses::List { courses } => Ok(Some(courses)),
@@ -313,15 +369,22 @@ fn evaluated(
     constraint: &Constraint,
     selection: &BTreeSet<String>,
     credits: &BTreeMap<&str, u32>,
+    claimed: &BTreeSet<String>,
 ) -> Result<RuleReport, CoverageError> {
     let (counted, candidates) = split_selection(listed, selection);
+    // a code an earlier rule of this scope already claimed no longer counts
+    // here — shown as `elsewhere` instead so the student sees it, but the
+    // verdict is computed on the reduced set (that is the whole point)
+    let (elsewhere, counted): (Vec<String>, Vec<String>) =
+        counted.into_iter().partition(|code| claimed.contains(code));
     let (status, missing) =
-        verdict(&rule.title, constraint, &counted, credits)?;
+        verdict(scope, &rule.title, constraint, &counted, credits)?;
     Ok(RuleReport {
         scope,
         title: rule.title.clone(),
         status,
         counted: Some(counted),
+        elsewhere,
         missing,
         candidates: Some(candidates),
         raw: None,
@@ -344,6 +407,7 @@ fn listed_reported(
         title: rule.title.clone(),
         status: RuleStatus::Reported,
         counted: Some(counted),
+        elsewhere: Vec::new(),
         missing: None,
         candidates: Some(candidates),
         raw: rule_raw(rule).map(str::to_string),
@@ -371,6 +435,7 @@ fn split_selection(
 }
 
 fn verdict(
+    scope: Scope,
     title: &str,
     constraint: &Constraint,
     counted: &[String],
@@ -382,6 +447,7 @@ fn verdict(
             if total > max {
                 Err(CoverageError::CountOverMax {
                     rule: title.to_string(),
+                    scope,
                     total,
                     max,
                 })
@@ -407,6 +473,7 @@ fn verdict(
             if total > max {
                 Err(CoverageError::CreditsOverMax {
                     rule: title.to_string(),
+                    scope,
                     total,
                     max,
                 })
@@ -430,6 +497,7 @@ fn reported(scope: Scope, rule: &Rule) -> RuleReport {
         title: rule.title.clone(),
         status: RuleStatus::Reported,
         counted: None,
+        elsewhere: Vec::new(),
         missing: None,
         candidates: None,
         raw: rule_raw(rule).map(str::to_string),
@@ -586,10 +654,87 @@ mod tests {
             error,
             CoverageError::CountOverMax {
                 rule: "Règle 1".to_string(),
+                scope: Scope::Program,
                 total: 2,
                 max: 1,
             }
         );
+    }
+
+    // --- one course, one rule per scope ---
+
+    #[test]
+    fn a_course_listed_by_two_program_rules_counts_only_in_the_first() {
+        // decision d'Antoine 2026-08-23: strictly the first evaluated rule
+        // of the scope that lists the course, no overflow to a later one
+        let program = bare(
+            r#"[{"title":"Règle 1","constraint":{"type":"course","min":1,"max":1},
+                 "courses":["X-1"]},
+                {"title":"Règle 2","constraint":{"type":"course","min":1,"max":1},
+                 "courses":["X-1","X-2"]}]"#,
+        );
+        let coverage = report(&program, &["X-1"], &[]);
+        let r1 = &coverage.rules[0];
+        assert_eq!(r1.counted.as_deref(), Some(&["X-1".to_string()][..]));
+        assert!(r1.elsewhere.is_empty());
+        assert_eq!(r1.status, RuleStatus::Satisfied);
+        let r2 = &coverage.rules[1];
+        assert_eq!(r2.counted.as_deref(), Some(&[][..]));
+        assert_eq!(r2.elsewhere, ["X-1".to_string()]);
+        assert_eq!(r2.candidates.as_deref(), Some(&["X-2".to_string()][..]));
+        assert_eq!(r2.status, RuleStatus::Incomplete);
+    }
+
+    #[test]
+    fn scopes_attribute_a_shared_course_independently() {
+        // a course counts in the concentration and in the profile at once:
+        // each scope's accumulator starts empty
+        let program = program(
+            r#""mandatory":[],"rules":[],
+               "concentrations":[{"title":"Géotechnique","mandatory":[],
+                 "rules":[{"title":"Règle C","constraint":{"type":"course","min":1,"max":1},
+                           "courses":["X-1"]}]}],
+               "profiles":[{"title":"Profil international","mandatory":[],
+                 "rules":[{"title":"Règle P","constraint":{"type":"course","min":1,"max":1},
+                           "courses":["X-1"]}]}]"#,
+        );
+        let coverage = coverage_report(
+            &program,
+            Some("Géotechnique"),
+            Some("Profil international"),
+            &selection(&["X-1"]),
+            &[],
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        for rule in &coverage.rules {
+            assert_eq!(
+                rule.counted.as_deref(),
+                Some(&["X-1".to_string()][..]),
+                "{:?}",
+                rule.scope
+            );
+            assert!(rule.elsewhere.is_empty(), "{:?}", rule.scope);
+        }
+    }
+
+    #[test]
+    fn an_unconstrained_rule_before_a_constrained_one_does_not_claim_its_course(
+    ) {
+        // « Scolarité préparatoire » never claims a code (no constraint to
+        // enforce): it comes first here, so if it fed `claimed` the later
+        // constrained rule would see X-1 as `elsewhere` instead of counting
+        // it — the `if rule.constraint.is_some()` guard in `scope_reports`
+        // is what prevents that
+        let program = bare(
+            r#"[{"title":"Règle 1","courses":["X-1"]},
+                {"title":"Règle 2","constraint":{"type":"course","min":1,"max":1},
+                 "courses":["X-1"]}]"#,
+        );
+        let coverage = report(&program, &["X-1"], &[]);
+        let r2 = &coverage.rules[1];
+        assert_eq!(r2.counted.as_deref(), Some(&["X-1".to_string()][..]));
+        assert!(r2.elsewhere.is_empty());
+        assert_eq!(r2.status, RuleStatus::Satisfied);
     }
 
     // --- credits rules ---
@@ -656,6 +801,7 @@ mod tests {
             error,
             CoverageError::CreditsOverMax {
                 rule: "Règle 2".to_string(),
+                scope: Scope::Program,
                 total: 6,
                 max: 3,
             }
@@ -742,6 +888,11 @@ mod tests {
         assert_eq!(
             coverage.rules[0].counted.as_deref(),
             Some(&["A-1".to_string()][..])
+        );
+        assert_eq!(
+            resolved_rule_courses(&program, &program.rules[0])
+                .unwrap_or_else(|e| panic!("{e}")),
+            Some(&["A-1".to_string(), "B-2".to_string()][..])
         );
     }
 
@@ -996,15 +1147,24 @@ mod tests {
         .contains("A-1"));
         assert!(text(CoverageError::CreditsOverMax {
             rule: "R".to_string(),
+            scope: Scope::Program,
             total: 6,
             max: 3
         })
         .contains("6"));
         assert!(text(CoverageError::CountOverMax {
             rule: "R".to_string(),
+            scope: Scope::Program,
             total: 2,
             max: 1
         })
         .contains("2"));
+    }
+
+    #[test]
+    fn scope_displays_the_same_words_as_its_serde_rename() {
+        assert_eq!(Scope::Program.to_string(), "program");
+        assert_eq!(Scope::Concentration.to_string(), "concentration");
+        assert_eq!(Scope::Profile.to_string(), "profile");
     }
 }

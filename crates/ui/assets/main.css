@@ -373,6 +373,26 @@ code {
   overflow-y: auto;
 }
 
+/* matches .panel-course-title, the panel body's text, instead of
+   inheriting the 1rem of body */
+.panel .warning {
+  font-size: 0.8125rem;
+}
+
+/* Au zoom texte, le bandeau peut devenir plus haut que la fenêtre.
+   Il cède alors sa place au contenu et défile lui-même; le panneau garde
+   toujours une hauteur utile pour atteindre la règle ouverte. */
+@media (min-width: 48rem) {
+  .header-bar {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .main-split {
+    min-height: min(12rem, 50vh);
+  }
+}
+
 .panel-body {
   display: flex;
   flex-direction: column;
@@ -505,6 +525,32 @@ code {
 }
 
 /* accordéons de règles */
+.panel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.panel-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.panel-group-title {
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 0.875rem;
+  margin: 0.375rem 0 0;
+}
+
+.panel-group-progress {
+  color: var(--muted);
+  font-size: 0.6875rem;
+  text-align: right;
+}
+
 .panel-rule {
   border: 0.0625rem solid var(--border);
   border-radius: 0.5rem;
@@ -513,6 +559,7 @@ code {
 
 .panel-rule--open {
   border: 0.09375rem solid var(--ink);
+  overflow: visible;
 }
 
 .panel-rule--missing {
@@ -539,6 +586,14 @@ code {
 
 .panel-rule--open .panel-rule-head {
   background: var(--active-bg);
+  position: sticky;
+  top: -0.875rem;
+  z-index: 2;
+}
+
+.panel-course-sub--error {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .panel-rule-title {

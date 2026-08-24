@@ -24,6 +24,8 @@ pub struct PanelModel {
     pub coverage_error: Option<String>,
     pub mandatory: Option<Section>,
     pub rules: Vec<Section>,
+    pub groups: Vec<PanelGroup>,
+    pub preparatory: Option<Section>,
     // « Exigence linguistique - ANL-2020 ou VEPT ≥ 53 » (± ✓)
     pub language_note: Option<String>,
     // program prose no grammar covers — surfaced, never dropped
@@ -38,11 +40,20 @@ impl PanelModel {
             coverage_error: None,
             mandatory: None,
             rules: Vec::new(),
+            groups: Vec::new(),
+            preparatory: None,
             language_note: None,
             notes: Vec::new(),
             warnings: Vec::new(),
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PanelGroup {
+    pub title: String,
+    pub progress: Option<String>,
+    pub sections: Vec<Section>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -106,6 +117,10 @@ pub enum RowState {
     PrereqUnmet,
     // no Course in the snapshot: named, never actionable
     Unknown,
+    // already counted by an earlier rule of the same scope (`report.
+    // elsewhere`, decision d'Antoine 2026-08-23): shown selected, no
+    // choice strip — an entente is still the only way to move it
+    CountedElsewhere,
 }
 
 pub fn panel_model(snapshot: &Snapshot, plan: &Plan) -> PanelModel {
@@ -178,15 +193,34 @@ pub fn panel_model(snapshot: &Snapshot, plan: &Plan) -> PanelModel {
                 rule_report.scope,
                 &rule_report.title,
             );
-            rule_section(snapshot, plan, rule_report, rule, original)
+            rule_section(
+                snapshot,
+                plan,
+                program,
+                rule_report,
+                rule,
+                original,
+                &report.rules,
+            )
         })
         .collect();
     preparatory_badge(&mut rules, plan);
+    let (groups, preparatory) = grouped_sections(
+        snapshot,
+        plan,
+        program,
+        concentration,
+        profile,
+        &report,
+        &rules,
+    );
     warnings.extend(unlisted_credited(plan, Some(&mandatory), &rules));
     PanelModel {
         coverage_error: None,
         mandatory: Some(mandatory),
         rules,
+        groups,
+        preparatory,
         language_note: language_note(program, &report),
         notes: program.notes.clone(),
         warnings,
@@ -254,17 +288,34 @@ fn coverage_error_message(
 ) -> String {
     use ulaval_scheduler_core::CoverageError;
     match error {
-        CoverageError::CreditsOverMax { rule, total, max } => format!(
-            "{rule} : les cours sélectionnés y totalisent {total} crédits, \
-             au-dessus de son maximum de {max}. Retirez-en un (ou déplacez \
-             une entente) ; en attendant, les règles s'affichent sans \
-             comptage."
-        ),
-        CoverageError::CountOverMax { rule, total, max } => format!(
-            "{rule} : {total} cours sélectionnés y comptent, au-dessus de \
-             son maximum de {max}. Retirez-en un (ou déplacez une entente) \
-             ; en attendant, les règles s'affichent sans comptage."
-        ),
+        CoverageError::CreditsOverMax {
+            rule,
+            scope,
+            total,
+            max,
+        } => {
+            let origin = scope_origin(*scope);
+            format!(
+                "{rule}{origin} : les cours sélectionnés y totalisent \
+                 {total} crédits, au-dessus de son maximum de {max}. \
+                 Retirez-en un (ou déplacez une entente); en attendant, \
+                 les règles s'affichent sans comptage."
+            )
+        }
+        CoverageError::CountOverMax {
+            rule,
+            scope,
+            total,
+            max,
+        } => {
+            let origin = scope_origin(*scope);
+            format!(
+                "{rule}{origin} : {total} cours sélectionnés y comptent, \
+                 au-dessus de son maximum de {max}. Retirez-en un (ou \
+                 déplacez une entente); en attendant, les règles \
+                 s'affichent sans comptage."
+            )
+        }
         other => format!(
             "Les règles ne peuvent pas être comptées pour l'instant — \
              elles s'affichent sans comptage. Détail : {other}."
@@ -308,7 +359,7 @@ fn uncounted_panel(
         .iter()
         .map(|rule| {
             let source = original(Scope::Program, &rule.title);
-            bare_section(snapshot, plan, 'p', rule, source)
+            bare_section(snapshot, plan, program, 'p', rule, source)
         })
         .collect();
     if let Some(block) = program
@@ -318,7 +369,7 @@ fn uncounted_panel(
     {
         rules.extend(block.rules.iter().map(|rule| {
             let source = original(Scope::Concentration, &rule.title);
-            bare_section(snapshot, plan, 'c', rule, source)
+            bare_section(snapshot, plan, program, 'c', rule, source)
         }));
     }
     if let Some(block) = program
@@ -328,19 +379,308 @@ fn uncounted_panel(
     {
         rules.extend(block.rules.iter().map(|rule| {
             let source = original(Scope::Profile, &rule.title);
-            bare_section(snapshot, plan, 'f', rule, source)
+            bare_section(snapshot, plan, program, 'f', rule, source)
         }));
     }
     preparatory_badge(&mut rules, plan);
+    let (groups, preparatory) = uncounted_groups(
+        snapshot,
+        plan,
+        program,
+        concentration,
+        profile,
+        &rules,
+    );
     warnings.extend(unlisted_credited(plan, Some(&mandatory), &rules));
     PanelModel {
         coverage_error: Some(message),
         mandatory: Some(mandatory),
         rules,
+        groups,
+        preparatory,
         language_note: language_parts(program),
         notes: program.notes.clone(),
         warnings,
     }
+}
+
+fn uncounted_groups(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    program: &Program,
+    concentration: Option<&str>,
+    profile: Option<&str>,
+    rules: &[Section],
+) -> (Vec<PanelGroup>, Option<Section>) {
+    let preparatory = rules
+        .iter()
+        .find(|section| {
+            section.title == ulaval_scheduler_core::PREPARATORY_RULE_TITLE
+        })
+        .cloned();
+    let mut groups = vec![uncounted_scope_group(
+        snapshot,
+        plan,
+        "Programme".to_string(),
+        &program.mandatory,
+        "p/",
+        None,
+        rules,
+    )];
+    if let Some(block) = program
+        .concentrations
+        .iter()
+        .find(|block| Some(block.title.as_str()) == concentration)
+    {
+        groups.push(uncounted_scope_group(
+            snapshot,
+            plan,
+            format!("Concentration — {}", block.title),
+            &block.mandatory,
+            "c/",
+            block.credits_required,
+            rules,
+        ));
+    }
+    if let Some(block) = program
+        .profiles
+        .iter()
+        .find(|block| Some(block.title.as_str()) == profile)
+    {
+        groups.push(uncounted_scope_group(
+            snapshot,
+            plan,
+            format!("Profil — {}", block.title),
+            &block.mandatory,
+            "f/",
+            block.credits_required,
+            rules,
+        ));
+    }
+    (groups, preparatory)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn uncounted_scope_group(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    title: String,
+    mandatory: &[String],
+    prefix: &str,
+    credits_required: Option<i64>,
+    rules: &[Section],
+) -> PanelGroup {
+    let mandatory_section = if mandatory.is_empty() {
+        None
+    } else {
+        Some(Section {
+            key: format!("{prefix}obligatoires"),
+            title: "Cours obligatoires".to_string(),
+            constraint: None,
+            badge: Badge::Neutral("—".to_string()),
+            lead: None,
+            rows: unique_rows(snapshot, plan, mandatory.iter()),
+            raw: None,
+            notes: Vec::new(),
+            free: false,
+            progress: None,
+        })
+    };
+    let sections = mandatory_section
+        .into_iter()
+        .chain(
+            rules
+                .iter()
+                .filter(|section| section.key.starts_with(prefix))
+                .filter(|section| {
+                    section.title
+                        != ulaval_scheduler_core::PREPARATORY_RULE_TITLE
+                })
+                .cloned(),
+        )
+        .collect();
+    PanelGroup {
+        title,
+        progress: credits_required.map(|required| {
+            format!("—/{required} cr — progression indisponible")
+        }),
+        sections,
+    }
+}
+
+fn grouped_sections(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    program: &Program,
+    concentration: Option<&str>,
+    profile: Option<&str>,
+    report: &ulaval_scheduler_core::CoverageReport,
+    rules: &[Section],
+) -> (Vec<PanelGroup>, Option<Section>) {
+    let preparatory_key =
+        format!("p/{}", ulaval_scheduler_core::PREPARATORY_RULE_TITLE);
+    let preparatory = rules
+        .iter()
+        .find(|section| section.key == preparatory_key)
+        .cloned();
+    let mut groups = Vec::new();
+    groups.push(scope_group(
+        snapshot,
+        plan,
+        report,
+        rules,
+        Scope::Program,
+        "Programme".to_string(),
+        "p/",
+        None,
+    ));
+    if let Some(block) = program
+        .concentrations
+        .iter()
+        .find(|block| Some(block.title.as_str()) == concentration)
+    {
+        groups.push(scope_group(
+            snapshot,
+            plan,
+            report,
+            rules,
+            Scope::Concentration,
+            format!("Concentration — {}", block.title),
+            "c/",
+            block.credits_required,
+        ));
+    }
+    if let Some(block) = program
+        .profiles
+        .iter()
+        .find(|block| Some(block.title.as_str()) == profile)
+    {
+        groups.push(scope_group(
+            snapshot,
+            plan,
+            report,
+            rules,
+            Scope::Profile,
+            format!("Profil — {}", block.title),
+            "f/",
+            block.credits_required,
+        ));
+    }
+    (groups, preparatory)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn scope_group(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    report: &ulaval_scheduler_core::CoverageReport,
+    rules: &[Section],
+    scope: Scope,
+    title: String,
+    prefix: &str,
+    credits_required: Option<i64>,
+) -> PanelGroup {
+    let mandatory = report
+        .mandatory
+        .iter()
+        .find(|mandatory| mandatory.scope == scope)
+        .and_then(|mandatory| {
+            scoped_mandatory_section(snapshot, plan, scope, mandatory)
+        });
+    let sections = mandatory
+        .into_iter()
+        .chain(
+            rules
+                .iter()
+                .filter(|section| section.key.starts_with(prefix))
+                .filter(|section| {
+                    section.title
+                        != ulaval_scheduler_core::PREPARATORY_RULE_TITLE
+                })
+                .cloned(),
+        )
+        .collect();
+    PanelGroup {
+        title,
+        progress: credits_required
+            .map(|required| scope_progress(snapshot, report, scope, required)),
+        sections,
+    }
+}
+
+fn scoped_mandatory_section(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    scope: Scope,
+    mandatory: &ulaval_scheduler_core::MandatoryReport,
+) -> Option<Section> {
+    let total = mandatory.satisfied.len() + mandatory.missing.len();
+    if total == 0 {
+        return None;
+    }
+    let rows = unique_rows(
+        snapshot,
+        plan,
+        mandatory.satisfied.iter().chain(&mandatory.missing),
+    );
+    let satisfied = mandatory.satisfied.len();
+    let prefix = match scope {
+        Scope::Program => "p",
+        Scope::Concentration => "c",
+        Scope::Profile => "f",
+    };
+    Some(Section {
+        key: format!("{prefix}/obligatoires"),
+        title: "Cours obligatoires".to_string(),
+        constraint: None,
+        badge: if satisfied == total {
+            Badge::Ok(format!("{satisfied}/{total}"))
+        } else if satisfied == 0 {
+            Badge::Missing(format!("0/{total}"))
+        } else {
+            Badge::Partial(format!("{satisfied}/{total}"))
+        },
+        lead: None,
+        rows,
+        raw: None,
+        notes: Vec::new(),
+        free: false,
+        progress: Some((satisfied, total)),
+    })
+}
+
+fn scope_progress(
+    snapshot: &Snapshot,
+    report: &ulaval_scheduler_core::CoverageReport,
+    scope: Scope,
+    required: i64,
+) -> String {
+    let codes: BTreeSet<&str> = report
+        .mandatory
+        .iter()
+        .filter(|mandatory| mandatory.scope == scope)
+        .flat_map(|mandatory| mandatory.satisfied.iter().map(String::as_str))
+        .chain(
+            report
+                .rules
+                .iter()
+                .filter(|rule| rule.scope == scope)
+                .flat_map(|rule| rule.counted.iter().flatten())
+                .map(String::as_str),
+        )
+        .collect();
+    let missing = codes
+        .iter()
+        .find(|code| !snapshot.by_code.contains_key(**code));
+    if let Some(code) = missing {
+        return format!("—/{required} cr — crédits inconnus pour {code}");
+    }
+    let earned: i64 = codes
+        .iter()
+        .filter_map(|code| snapshot.by_code.get(*code))
+        .map(|&index| i64::from(snapshot.courses[index].credits.planning()))
+        .sum();
+    format!("{}/{required} cr", earned.min(required))
 }
 
 // one rule as a section without any counting — same rows, same raw texts;
@@ -349,16 +689,16 @@ fn uncounted_panel(
 fn bare_section(
     snapshot: &Snapshot,
     plan: &Plan,
+    program: &Program,
     scope_prefix: char,
     rule: &Rule,
     original: Option<&Rule>,
 ) -> Section {
-    let rows = match &rule.courses {
-        RuleCourses::List { courses } => {
-            unique_rows(snapshot, plan, courses.iter())
-        }
-        _ => Vec::new(),
-    };
+    let rows = ulaval_scheduler_core::resolved_rule_courses(program, rule)
+        .ok()
+        .flatten()
+        .map(|courses| unique_rows(snapshot, plan, courses.iter()))
+        .unwrap_or_default();
     Section {
         key: format!("{scope_prefix}/{}", rule.title),
         title: rule.title.clone(),
@@ -410,12 +750,13 @@ pub fn granted_program(
     let mut granted = program.clone();
     let mut warnings = Vec::new();
     for (code, key) in grants {
+        let label = grant_label(&granted, concentration, profile, key);
         let rule = grant_target(&mut granted, concentration, profile, key);
         let Some(rule) = rule else {
             warnings.push(format!(
                 "Entente pour {code} : la règle « {} » est introuvable dans \
                  ce programme — le cours n'y est pas compté.",
-                key.split_once('/').map(|(_, title)| title).unwrap_or(key)
+                label
             ));
             continue;
         };
@@ -446,14 +787,17 @@ pub fn granted_program(
                 warnings.push(format!(
                     "Entente pour {code} : la règle « {} » n'accepte pas de \
                      liste de cours — le cours n'y est pas compté.",
-                    rule.title
+                    label
                 ));
                 false
             }
         };
-        // an entente MOVES the course: it must stop counting in any other
-        // rule's list, or one course credits two rules at once (rapport
-        // étudiante 2026-08-13)
+        // an entente MOVES the course within its own scope: it must stop
+        // counting in the other rules of that same scope, or one course
+        // credits two rules of the same scope at once (rapport étudiante
+        // 2026-08-13) — scopes count independently, so a course entendu in
+        // the concentration keeps counting in the profile too (ADR
+        // `2026-08-un-cours-compte-dans-une-seule-regle-par-portee`)
         if applied {
             strip_from_other_lists(&mut granted, code, key);
         }
@@ -472,12 +816,20 @@ fn strip_from_other_lists(program: &mut Program, code: &str, keep_key: &str) {
             }
         }
     }
-    strip('p', &mut program.rules, code, keep_key);
-    for block in &mut program.concentrations {
-        strip('c', &mut block.rules, code, keep_key);
-    }
-    for block in &mut program.profiles {
-        strip('f', &mut block.rules, code, keep_key);
+    match keep_key.split_once('/').map(|(prefix, _)| prefix) {
+        Some("c") => {
+            for block in &mut program.concentrations {
+                strip('c', &mut block.rules, code, keep_key);
+            }
+        }
+        Some("f") => {
+            for block in &mut program.profiles {
+                strip('f', &mut block.rules, code, keep_key);
+            }
+        }
+        // programme scope: `strip_from_other_lists` is only called after a
+        // successful `grant_target`, so the key is well-formed here
+        _ => strip('p', &mut program.rules, code, keep_key),
     }
 }
 
@@ -636,33 +988,70 @@ pub fn grantable_rules(
                     }
             )
     };
-    let keyed = |prefix: char, rule: &Rule| {
-        (format!("{prefix}/{}", rule.title), rule.title.clone())
+    let keyed = |prefix: char, scope: &str, rule: &Rule| {
+        (
+            format!("{prefix}/{}", rule.title),
+            format!("{scope} — {}", rule.title),
+        )
     };
     program
         .rules
         .iter()
         .filter(|rule| grantable(rule))
-        .map(|rule| keyed('p', rule))
+        .map(|rule| keyed('p', "Programme", rule))
         .chain(
             program
                 .concentrations
                 .iter()
                 .filter(|block| Some(block.title.as_str()) == concentration)
-                .flat_map(|block| &block.rules)
-                .filter(|rule| grantable(rule))
-                .map(|rule| keyed('c', rule)),
+                .flat_map(|block| {
+                    block.rules.iter().filter(|rule| grantable(rule)).map(
+                        |rule| {
+                            keyed(
+                                'c',
+                                &format!("Concentration « {} »", block.title),
+                                rule,
+                            )
+                        },
+                    )
+                }),
         )
         .chain(
             program
                 .profiles
                 .iter()
                 .filter(|block| Some(block.title.as_str()) == profile)
-                .flat_map(|block| &block.rules)
-                .filter(|rule| grantable(rule))
-                .map(|rule| keyed('f', rule)),
+                .flat_map(|block| {
+                    block.rules.iter().filter(|rule| grantable(rule)).map(
+                        |rule| {
+                            keyed(
+                                'f',
+                                &format!("Profil « {} »", block.title),
+                                rule,
+                            )
+                        },
+                    )
+                }),
         )
         .collect()
+}
+
+fn grant_label(
+    program: &Program,
+    concentration: Option<&str>,
+    profile: Option<&str>,
+    key: &str,
+) -> String {
+    grantable_rules(program, concentration, profile)
+        .into_iter()
+        .find(|(candidate, _)| candidate == key)
+        .map(|(_, label)| label)
+        .unwrap_or_else(|| {
+            key.split_once('/')
+                .map(|(_, title)| title)
+                .unwrap_or(key)
+                .to_string()
+        })
 }
 
 // The cheminement row's model: the offered titles and the current choice.
@@ -912,18 +1301,21 @@ fn mandatory_section(
 fn rule_section(
     snapshot: &Snapshot,
     plan: &Plan,
+    program: &Program,
     report: &ulaval_scheduler_core::RuleReport,
     rule: Option<&Rule>,
     original: Option<&Rule>,
+    all: &[ulaval_scheduler_core::RuleReport],
 ) -> Section {
-    let rows = match rule.map(|rule| &rule.courses) {
-        Some(RuleCourses::List { courses }) => {
-            unique_rows(snapshot, plan, courses.iter())
-        }
-        // a free rule browses the catalogue (search + matière); the other
-        // shapes show their raw text below
-        _ => Vec::new(),
-    };
+    let rows = rule
+        .and_then(|rule| {
+            ulaval_scheduler_core::resolved_rule_courses(program, rule)
+                .ok()
+                .flatten()
+        })
+        .map(|courses| unique_rows(snapshot, plan, courses.iter()))
+        .unwrap_or_default();
+    let rows = mark_counted_elsewhere(rows, report, all);
     let scope_prefix = match report.scope {
         Scope::Program => "p",
         Scope::Concentration => "c",
@@ -951,6 +1343,45 @@ fn rule_section(
     }
 }
 
+// A row `report.elsewhere` names is already counted by an earlier rule of
+// the same scope (core's doing, decision d'Antoine 2026-08-23) — the state
+// is carried by the row's own text, never a border alone (AIR INP-3), so
+// this rewrites its `state` and appends to whatever `sub` text `row(...)`
+// already computed instead of replacing it: a crédité or entente row must
+// keep saying so, not just wherever this rule counted it.
+fn mark_counted_elsewhere(
+    mut rows: Vec<Row>,
+    report: &ulaval_scheduler_core::RuleReport,
+    all: &[ulaval_scheduler_core::RuleReport],
+) -> Vec<Row> {
+    for row in &mut rows {
+        // a code absent from the catalogue was never actionable to begin
+        // with, and an Acquired row already sits at its own rank (no +, no
+        // chips) — demoting either to CountedElsewhere would either invent
+        // an owner for a row that never had one, or hand an Acquired row
+        // controls (the entente strip) the view refuses it
+        if matches!(row.state, RowState::Unknown | RowState::Acquired)
+            || !report.elsewhere.contains(&row.code)
+        {
+            continue;
+        }
+        let Some(owner) = all.iter().find(|other| {
+            other.scope == report.scope
+                && other
+                    .counted
+                    .as_deref()
+                    .is_some_and(|counted| counted.contains(&row.code))
+        }) else {
+            // core's own invariant guarantees an owner exists; if it ever
+            // doesn't, no invented text beats a plain, honest fallback
+            continue;
+        };
+        row.state = RowState::CountedElsewhere;
+        row.sub = format!("{} - compté dans la {}", row.sub, owner.title);
+    }
+    rows
+}
+
 // Nothing in a rule is ever taken automatically, and nothing on screen
 // said so — the very gesture the comparison session repeats (« qu'est-ce
 // que cette concentration change ? ») showed an unchanged grid and a rule
@@ -974,12 +1405,19 @@ fn rule_lead(scope: Scope, constraint: Option<&Constraint>) -> String {
         }
         None => "Choisissez dans cette liste".to_string(),
     };
-    let origin = match scope {
+    let origin = scope_origin(scope);
+    format!("{pick}{origin} — rien n'est pris automatiquement.")
+}
+
+// the French suffix naming a rule's scope, shared between the rule
+// header (`rule_lead`) and the over-max error message
+// (`coverage_error_message`) so the wording never drifts between the two
+fn scope_origin(scope: Scope) -> &'static str {
+    match scope {
         Scope::Program => "",
         Scope::Concentration => " de la concentration",
         Scope::Profile => " du profil",
-    };
-    format!("{pick}{origin} — rien n'est pris automatiquement.")
+    }
 }
 
 // The répertoire's lists can repeat a code (B-GMC's « Règle 1 » carries
@@ -2166,12 +2604,37 @@ mod tests {
         let credits = coverage_error_message(
             &ulaval_scheduler_core::CoverageError::CreditsOverMax {
                 rule: "Règle 2".to_string(),
+                scope: Scope::Concentration,
                 total: 12,
                 max: 9,
             },
         );
+        assert!(
+            credits.starts_with("Règle 2 de la concentration"),
+            "{credits}"
+        );
         assert!(credits.contains("12 crédits"), "{credits}");
         assert!(credits.contains("maximum de 9"), "{credits}");
+
+        let count = coverage_error_message(
+            &ulaval_scheduler_core::CoverageError::CountOverMax {
+                rule: "Règle 3".to_string(),
+                scope: Scope::Profile,
+                total: 2,
+                max: 1,
+            },
+        );
+        assert!(count.contains("du profil"), "{count}");
+
+        let program = coverage_error_message(
+            &ulaval_scheduler_core::CoverageError::CountOverMax {
+                rule: "Règle 1".to_string(),
+                scope: Scope::Program,
+                total: 2,
+                max: 1,
+            },
+        );
+        assert!(program.starts_with("Règle 1 :"), "{program}");
     }
 
     #[test]
@@ -2184,7 +2647,15 @@ mod tests {
                 "courses":["GMN-1000","GAE-1000","GMN-1000"]}"#,
         )
         .unwrap_or_else(|e| panic!("{e}"));
-        let section = bare_section(&snapshot(), &plan(), 'p', &rule, None);
+        let snapshot = snapshot();
+        let section = bare_section(
+            &snapshot,
+            &plan(),
+            &snapshot.programs[0],
+            'p',
+            &rule,
+            None,
+        );
         let codes: Vec<&str> =
             section.rows.iter().map(|row| row.code.as_str()).collect();
         assert_eq!(codes, ["GMN-1000", "GAE-1000"], "first wins, order kept");
@@ -2197,12 +2668,172 @@ mod tests {
                 "raw":"tous les cours de la Règle 1 du cheminement X"}"#,
         )
         .unwrap_or_else(|e| panic!("{e}"));
-        let section = bare_section(&snapshot(), &plan(), 'p', &rule, None);
+        let snapshot = snapshot();
+        let section = bare_section(
+            &snapshot,
+            &plan(),
+            &snapshot.programs[0],
+            'p',
+            &rule,
+            None,
+        );
         assert_eq!(
             section.raw.as_deref(),
             Some("tous les cours de la Règle 1 du cheminement X")
         );
         assert!(section.rows.is_empty());
+    }
+
+    #[test]
+    fn a_reference_rule_renders_its_target_rows_and_keeps_its_raw() {
+        let program: Program = serde_json::from_str(
+            r#"{"code":"X","slug":"x","semester":"A26","title":"X",
+                "cycle":1,"credits_required":6,"mandatory":[],
+                "rules":[{"title":"Règle 2",
+                  "courses":{"concentration":"Réservoir","rule":"Règle 1"},
+                  "raw":"tous les cours de la Règle 1"}],
+                "concentrations":[{"title":"Réservoir","mandatory":[],
+                  "rules":[{"title":"Règle 1","courses":["GAE-1000",
+                    "GMN-1000","GAE-1000"]}]}],"profiles":[]}"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let snapshot = snapshot();
+        let section = bare_section(
+            &snapshot,
+            &plan(),
+            &program,
+            'p',
+            &program.rules[0],
+            None,
+        );
+        assert_eq!(
+            section
+                .rows
+                .iter()
+                .map(|row| row.code.as_str())
+                .collect::<Vec<_>>(),
+            ["GAE-1000", "GMN-1000"]
+        );
+        assert_eq!(
+            section.raw.as_deref(),
+            Some("tous les cours de la Règle 1")
+        );
+    }
+
+    #[test]
+    fn panel_groups_are_ordered_and_keep_mandatory_scoped() {
+        let mut plan = plan();
+        if let Some(choice) = plan.program.as_mut() {
+            choice.concentration = Some("Génie urbain".to_string());
+            choice.profile = Some("Profil international".to_string());
+        }
+        let model = panel_model(&snapshot(), &plan);
+        assert_eq!(
+            model
+                .groups
+                .iter()
+                .map(|group| group.title.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "Programme",
+                "Concentration — Génie urbain",
+                "Profil — Profil international"
+            ]
+        );
+        assert_eq!(model.groups[0].sections[0].key, "p/obligatoires");
+        assert_eq!(model.groups[1].sections[0].key, "c/obligatoires");
+        assert!(model.groups[2]
+            .sections
+            .iter()
+            .all(|section| section.key != "f/obligatoires"));
+    }
+
+    #[test]
+    fn scope_progress_deduplicates_caps_and_names_missing_credits() {
+        use ulaval_scheduler_core::{MandatoryReport, RuleReport};
+        let snapshot = snapshot();
+        let report = ulaval_scheduler_core::CoverageReport {
+            mandatory: vec![MandatoryReport {
+                scope: Scope::Concentration,
+                satisfied: vec!["GAE-1000".to_string()],
+                missing: Vec::new(),
+            }],
+            rules: vec![RuleReport {
+                scope: Scope::Concentration,
+                title: "Règle 1".to_string(),
+                status: RuleStatus::Satisfied,
+                counted: Some(vec![
+                    "GAE-1000".to_string(),
+                    "GMN-1000".to_string(),
+                ]),
+                elsewhere: Vec::new(),
+                missing: None,
+                candidates: Some(Vec::new()),
+                raw: None,
+            }],
+            language_requirement: None,
+        };
+        assert_eq!(
+            scope_progress(&snapshot, &report, Scope::Concentration, 5),
+            "5/5 cr"
+        );
+        let mut missing = report.clone();
+        missing.rules[0]
+            .counted
+            .as_mut()
+            .expect("counted")
+            .push("ABS-1000".to_string());
+        assert_eq!(
+            scope_progress(&snapshot, &missing, Scope::Concentration, 9),
+            "—/9 cr — crédits inconnus pour ABS-1000"
+        );
+
+        let group = scope_group(
+            &snapshot,
+            &plan(),
+            &report,
+            &[],
+            Scope::Concentration,
+            "Concentration — Eau".to_string(),
+            "c/",
+            Some(5),
+        );
+        assert_eq!(group.progress.as_deref(), Some("5/5 cr"));
+    }
+
+    #[test]
+    fn unavailable_scoped_progress_and_profile_mandatory_are_explicit() {
+        let snapshot = snapshot();
+        let plan = plan();
+        let group = uncounted_scope_group(
+            &snapshot,
+            &plan,
+            "Profil — Distinction".to_string(),
+            &[],
+            "f/",
+            Some(12),
+            &[],
+        );
+        assert_eq!(
+            group.progress.as_deref(),
+            Some("—/12 cr — progression indisponible")
+        );
+        let mandatory = ulaval_scheduler_core::MandatoryReport {
+            scope: Scope::Profile,
+            satisfied: Vec::new(),
+            missing: vec!["GAE-1000".to_string()],
+        };
+        assert_eq!(
+            scoped_mandatory_section(
+                &snapshot,
+                &plan,
+                Scope::Profile,
+                &mandatory,
+            )
+            .expect("one mandatory course")
+            .key,
+            "f/obligatoires"
+        );
     }
 
     #[test]
@@ -2391,6 +3022,14 @@ mod tests {
             model.rules[0].badge,
             Badge::Ok("✓ déjà faite".to_string())
         );
+        assert_eq!(
+            model
+                .preparatory
+                .as_ref()
+                .map(|section| section.title.as_str()),
+            Some("Scolarité préparatoire")
+        );
+        assert!(model.groups[0].sections.is_empty());
         plan.preparatory_done = false;
         let model = panel_model(&snapshot, &plan);
         assert_eq!(
@@ -2731,6 +3370,7 @@ mod tests {
                 title: "R".to_string(),
                 status: RuleStatus::Incomplete,
                 counted: None,
+                elsewhere: Vec::new(),
                 missing,
                 candidates: None,
                 raw: None,
@@ -2868,6 +3508,350 @@ mod tests {
     }
 
     #[test]
+    fn a_second_rule_of_the_same_scope_shows_its_codes_counted_elsewhere() {
+        // one catalogued course (GEX-1000), one absent from the catalogue
+        // (GHOST-1) and one hand-entered (ZZZ-9000, added below) — all
+        // three listed by both rules of the program scope
+        let courses = r#"{"courses":[
+          {"code":"GEX-1000","title":"Hydrologie","credits":3,"cycle":1,
+           "prerequisites":null,"equivalents":[],
+           "seasons":{"fall":{"last_offered":2026,"options":null}}}
+        ]}"#;
+        let program = r#"{"code":"B-GEX","slug":"gex","semester":"A26",
+          "title":"Baccalauréat en génie des eaux","cycle":1,
+          "credits_required":9,"mandatory":[],
+          "rules":[
+            {"title":"Règle 1",
+             "constraint":{"type":"course","min":3,"max":3},
+             "courses":["GEX-1000","GHOST-1","ZZZ-9000"]},
+            {"title":"Règle 2",
+             "constraint":{"type":"course","min":3,"max":3},
+             "courses":["GEX-1000","GHOST-1","ZZZ-9000"]}
+          ],
+          "concentrations":[],"profiles":[]}"#;
+        let mut snapshot = parse_data(
+            &RawData {
+                courses: courses.to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
+                programs: vec![(
+                    "B-GEX-A26.json".to_string(),
+                    program.to_string(),
+                )],
+            },
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let manual = crate::data::build_manual_course(
+            &crate::data::ManualDraft {
+                code: "ZZZ-9000".to_string(),
+                title: "Cours manuel".to_string(),
+                credits: "3".to_string(),
+                nrc: String::new(),
+                slots: Vec::new(),
+            },
+            Season::Fall,
+            2026,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        crate::data::add_manual_course(&mut snapshot, manual)
+            .unwrap_or_else(|e| panic!("{e}"));
+        let plan = Plan {
+            program: Some(ProgramChoice {
+                code: "B-GEX".to_string(),
+                semester: "A26".to_string(),
+                concentration: None,
+                profile: None,
+            }),
+            displayed_placement: std::collections::BTreeMap::from([
+                ("GEX-1000".to_string(), 1),
+                ("GHOST-1".to_string(), 1),
+                ("ZZZ-9000".to_string(), 1),
+            ]),
+            ..Plan::default()
+        };
+        let model = panel_model(&snapshot, &plan);
+
+        // Règle 1 claims all three: satisfied, shown placed normally
+        assert_eq!(model.rules[0].badge, Badge::Ok("✓".to_string()));
+        let rule1_gex = model.rules[0]
+            .rows
+            .iter()
+            .find(|row| row.code == "GEX-1000")
+            .expect("Règle 1 lists it");
+        assert_eq!(rule1_gex.state, RowState::Placed);
+
+        // Règle 2: every code already claimed, nothing left to count
+        assert_eq!(model.rules[1].badge, Badge::Missing("0/3".to_string()));
+
+        // (a) a catalogued, placed course keeps its placement text and
+        // gains where it counts instead, appended rather than replacing it
+        let gex = model.rules[1]
+            .rows
+            .iter()
+            .find(|row| row.code == "GEX-1000")
+            .expect("Règle 2 lists it too");
+        assert_eq!(gex.state, RowState::CountedElsewhere);
+        assert!(gex.sub.starts_with("placé en "), "{}", gex.sub);
+        assert!(
+            gex.sub.ends_with(" - compté dans la Règle 1"),
+            "{}",
+            gex.sub
+        );
+
+        // (b) a code absent from the catalogue stays Unknown — the guard
+        // never invents an owner for a row that was never actionable
+        let ghost = model.rules[1]
+            .rows
+            .iter()
+            .find(|row| row.code == "GHOST-1")
+            .expect("Règle 2 lists it too");
+        assert_eq!(ghost.state, RowState::Unknown);
+        assert_eq!(ghost.sub, "absent du catalogue");
+
+        // (c) a manual course keeps its flag alongside the new sub-text
+        let manual_row = model.rules[1]
+            .rows
+            .iter()
+            .find(|row| row.code == "ZZZ-9000")
+            .expect("Règle 2 lists it too");
+        assert_eq!(manual_row.state, RowState::CountedElsewhere);
+        assert!(manual_row.sub.contains(" - manuel"), "{}", manual_row.sub);
+        assert!(
+            manual_row.sub.ends_with(" - compté dans la Règle 1"),
+            "{}",
+            manual_row.sub
+        );
+    }
+
+    // core's own invariant guarantees `elsewhere` never names a code no
+    // rule of the same scope claimed — this exercises the defensive
+    // fallback directly, since a real report can never reach it
+    #[test]
+    fn an_elsewhere_code_with_no_owner_in_scope_is_left_untouched() {
+        let placed = Row {
+            code: "GEX-1000".to_string(),
+            title: "Hydrologie".to_string(),
+            credits: "3 cr".to_string(),
+            sub: "placé en A1-A26".to_string(),
+            state: RowState::Placed,
+            assumed: Vec::new(),
+        };
+        let report = ulaval_scheduler_core::RuleReport {
+            scope: Scope::Program,
+            title: "Règle 2".to_string(),
+            status: RuleStatus::Incomplete,
+            counted: Some(Vec::new()),
+            elsewhere: vec!["GEX-1000".to_string()],
+            missing: None,
+            candidates: None,
+            raw: None,
+        };
+        // no other report of this scope claims GEX-1000 in `counted`
+        let all = vec![report.clone()];
+        let rows = mark_counted_elsewhere(vec![placed.clone()], &report, &all);
+        assert_eq!(
+            rows,
+            vec![placed],
+            "left exactly as built, no text invented"
+        );
+    }
+
+    // an Acquired row must never be promoted to CountedElsewhere: the view
+    // grants Acquired no controls, and the entente strip a CountedElsewhere
+    // row keeps would be a control the row never had a right to
+    #[test]
+    fn an_acquired_row_is_left_untouched_even_when_listed_elsewhere() {
+        let acquired = Row {
+            code: "MAT-0130".to_string(),
+            title: "Mathématiques".to_string(),
+            credits: "3 cr".to_string(),
+            sub: "considéré comme déjà fait - décochez la case pour le \
+                  placer"
+                .to_string(),
+            state: RowState::Acquired,
+            assumed: Vec::new(),
+        };
+        let owner = ulaval_scheduler_core::RuleReport {
+            scope: Scope::Program,
+            title: "Règle 1".to_string(),
+            status: RuleStatus::Satisfied,
+            counted: Some(vec!["MAT-0130".to_string()]),
+            elsewhere: Vec::new(),
+            missing: None,
+            candidates: None,
+            raw: None,
+        };
+        let report = ulaval_scheduler_core::RuleReport {
+            scope: Scope::Program,
+            title: "Règle 2".to_string(),
+            status: RuleStatus::Incomplete,
+            counted: Some(Vec::new()),
+            elsewhere: vec!["MAT-0130".to_string()],
+            missing: None,
+            candidates: None,
+            raw: None,
+        };
+        let all = vec![owner, report.clone()];
+        let rows =
+            mark_counted_elsewhere(vec![acquired.clone()], &report, &all);
+        assert_eq!(rows, vec![acquired], "state and sub both untouched");
+    }
+
+    // GCI-4201 is listed both by the program's own "Règle 2" and by the
+    // concentration's "Règle 1"/"Règle 2" — `report.rules` is ordered
+    // programme → concentration → profil, so an owner search with no scope
+    // filter lands on the program's "Règle 2" (the first report in that
+    // order whose `counted` contains the code) instead of the
+    // concentration's own "Règle 1", which is the rule that actually
+    // claimed it within the concentration's scope (like B-GCI, whose
+    // program rules and concentration rules both carry GCI-4201-shaped
+    // overlaps independently).
+    #[test]
+    fn the_owner_search_stays_within_the_reporting_rules_own_scope() {
+        let courses = r#"{"courses":[
+          {"code":"GCI-4201","title":"Hydraulique urbaine","credits":3,
+           "cycle":1,"prerequisites":null,"equivalents":[],
+           "seasons":{"fall":{"last_offered":2026,"options":null}}},
+          {"code":"GMN-2901","title":"Non sélectionné","credits":3,
+           "cycle":1,"prerequisites":null,"equivalents":[],
+           "seasons":{"fall":{"last_offered":2026,"options":null}}}
+        ]}"#;
+        let program = r#"{"code":"B-GCI","slug":"gci","semester":"A26",
+          "title":"Baccalauréat en génie civil","cycle":1,
+          "credits_required":6,"mandatory":[],
+          "rules":[
+            {"title":"Règle 1",
+             "constraint":{"type":"course","min":1,"max":1},
+             "courses":["GMN-2901"]},
+            {"title":"Règle 2",
+             "constraint":{"type":"course","min":1,"max":1},
+             "courses":["GCI-4201"]}
+          ],
+          "concentrations":[{"title":"Eau et environnement",
+            "credits_required":null,"mandatory":[],
+            "rules":[
+              {"title":"Règle 1",
+               "constraint":{"type":"course","min":1,"max":2},
+               "courses":["GCI-4201","GMN-2901"]},
+              {"title":"Règle 2",
+               "constraint":{"type":"course","min":1,"max":1},
+               "courses":["GCI-4201"]}
+            ],"notes":[]}],
+          "profiles":[]}"#;
+        let snapshot = parse_data(
+            &RawData {
+                courses: courses.to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
+                programs: vec![(
+                    "B-GCI-A26.json".to_string(),
+                    program.to_string(),
+                )],
+            },
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let plan = Plan {
+            program: Some(ProgramChoice {
+                code: "B-GCI".to_string(),
+                semester: "A26".to_string(),
+                concentration: Some("Eau et environnement".to_string()),
+                profile: None,
+            }),
+            displayed_placement: std::collections::BTreeMap::from([(
+                "GCI-4201".to_string(),
+                1,
+            )]),
+            ..Plan::default()
+        };
+        let model = panel_model(&snapshot, &plan);
+
+        let concentration_rule_2 = model
+            .rules
+            .iter()
+            .find(|section| section.key == "c/Règle 2")
+            .expect("concentration Règle 2 renders");
+        let row = concentration_rule_2
+            .rows
+            .iter()
+            .find(|row| row.code == "GCI-4201")
+            .expect("Règle 2 lists it");
+        assert_eq!(row.state, RowState::CountedElsewhere);
+        assert!(
+            row.sub.contains("compté dans la Règle 1"),
+            "must name the concentration's own Règle 1, not the \
+             program's same-numbered rule: {}",
+            row.sub
+        );
+        assert!(
+            !row.sub.contains("Règle 2"),
+            "the program's Règle 2 also counts GCI-4201 in its own scope \
+             — an unscoped search would wrongly attribute it there: {}",
+            row.sub
+        );
+    }
+
+    // a crédité or entente course listed by two rules of the same scope
+    // must keep saying so once demoted to CountedElsewhere — the sub text
+    // is appended to, never replaced
+    #[test]
+    fn a_credited_course_keeps_its_credited_text_when_counted_elsewhere() {
+        let courses = r#"{"courses":[
+          {"code":"GEX-1000","title":"Hydrologie","credits":3,"cycle":1,
+           "prerequisites":null,"equivalents":[],
+           "seasons":{"fall":{"last_offered":2026,"options":null}}}
+        ]}"#;
+        let program = r#"{"code":"B-GEX","slug":"gex","semester":"A26",
+          "title":"Baccalauréat en génie des eaux","cycle":1,
+          "credits_required":6,"mandatory":[],
+          "rules":[
+            {"title":"Règle 1",
+             "constraint":{"type":"course","min":1,"max":1},
+             "courses":["GEX-1000"]},
+            {"title":"Règle 2",
+             "constraint":{"type":"course","min":1,"max":1},
+             "courses":["GEX-1000"]}
+          ],
+          "concentrations":[],"profiles":[]}"#;
+        let snapshot = parse_data(
+            &RawData {
+                courses: courses.to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
+                programs: vec![(
+                    "B-GEX-A26.json".to_string(),
+                    program.to_string(),
+                )],
+            },
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let plan = Plan {
+            program: Some(ProgramChoice {
+                code: "B-GEX".to_string(),
+                semester: "A26".to_string(),
+                concentration: None,
+                profile: None,
+            }),
+            credited: std::collections::BTreeSet::from([
+                "GEX-1000".to_string()
+            ]),
+            ..Plan::default()
+        };
+        let model = panel_model(&snapshot, &plan);
+
+        let row = model.rules[1]
+            .rows
+            .iter()
+            .find(|row| row.code == "GEX-1000")
+            .expect("Règle 2 lists it too");
+        assert_eq!(row.state, RowState::CountedElsewhere);
+        assert!(row.sub.contains("crédité"), "{}", row.sub);
+        assert!(row.sub.contains("compté dans la Règle 1"), "{}", row.sub);
+    }
+
+    #[test]
     fn a_chosen_elective_says_it_waits_for_the_solver() {
         let mut plan = plan();
         plan.electives.push("GAE-1000".to_string());
@@ -2991,6 +3975,75 @@ mod tests {
     }
 
     #[test]
+    fn a_grant_only_strips_the_rules_of_its_own_scope() {
+        // one course listed by a program rule, two concentration rules and a
+        // profile rule; a grant into one concentration rule must not touch
+        // the program's or the profile's own lists (ADR
+        // `2026-08-un-cours-compte-dans-une-seule-regle-par-portee`)
+        let program: Program = serde_json::from_str(
+            r#"{"code":"X","slug":"x","semester":"A26","title":"X",
+                "cycle":1,"credits_required":6,"mandatory":[],
+                "rules":[{"title":"Règle P",
+                          "constraint":{"type":"course","min":1,"max":1},
+                          "courses":["SHARED-1000"]}],
+                "concentrations":[{"title":"Concentration X",
+                  "credits_required":null,"mandatory":[],
+                  "rules":[
+                    {"title":"Règle C1",
+                     "constraint":{"type":"course","min":1,"max":1},
+                     "courses":["SHARED-1000"]},
+                    {"title":"Règle C2",
+                     "constraint":{"type":"course","min":1,"max":1},
+                     "courses":["SHARED-1000"]}
+                  ],"notes":[]}],
+                "profiles":[{"title":"Profil Y","credits_required":null,
+                  "mandatory":[],
+                  "rules":[{"title":"Règle F1",
+                            "constraint":{"type":"course","min":1,"max":1},
+                            "courses":["SHARED-1000"]}],
+                  "notes":[]}]}"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let grants = std::collections::BTreeMap::from([(
+            "SHARED-1000".to_string(),
+            "c/Règle C2".to_string(),
+        )]);
+        let (granted, warnings) = granted_program(
+            &program,
+            Some("Concentration X"),
+            Some("Profil Y"),
+            &grants,
+        );
+        assert!(warnings.is_empty(), "{warnings:?}");
+        let c1 = &granted.concentrations[0].rules[0];
+        assert_eq!(c1.title, "Règle C1");
+        assert!(
+            matches!(&c1.courses, RuleCourses::List { courses }
+                if !courses.contains(&"SHARED-1000".to_string())),
+            "the other rule of the same scope loses it: {:?}",
+            c1.courses
+        );
+        let c2 = &granted.concentrations[0].rules[1];
+        assert_eq!(c2.title, "Règle C2");
+        assert!(matches!(&c2.courses, RuleCourses::List { courses }
+            if courses.contains(&"SHARED-1000".to_string())));
+        let f1 = &granted.profiles[0].rules[0];
+        assert!(
+            matches!(&f1.courses, RuleCourses::List { courses }
+                if courses.contains(&"SHARED-1000".to_string())),
+            "the profile's own scope is untouched by a concentration grant: {:?}",
+            f1.courses
+        );
+        let p1 = &granted.rules[0];
+        assert!(
+            matches!(&p1.courses, RuleCourses::List { courses }
+                if courses.contains(&"SHARED-1000".to_string())),
+            "the programme's own scope is untouched by a concentration grant: {:?}",
+            p1.courses
+        );
+    }
+
+    #[test]
     fn an_inapplicable_grant_is_named_never_dropped() {
         let snapshot = snapshot();
         let program = &snapshot.programs[0];
@@ -3063,7 +4116,18 @@ mod tests {
             ],
             "« any » (Règle 3) is a target now; raw (Règle 4) stays out"
         );
-        assert_eq!(rules[4].1, "Règle P1");
+        assert_eq!(rules[0].1, "Programme — Règle 1");
+        assert_eq!(rules[3].1, "Concentration « Génie urbain » — Règle C1");
+        assert_eq!(rules[4].1, "Profil « Profil international » — Règle P1");
+        assert_eq!(
+            rules
+                .iter()
+                .map(|(_, label)| label)
+                .collect::<BTreeSet<_>>()
+                .len(),
+            rules.len(),
+            "every visible agreement option is unambiguous"
+        );
 
         // the préparatoire rule is never an entente target: attaching a
         // course there would make it « acquis » with the checkbox

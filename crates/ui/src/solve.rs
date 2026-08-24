@@ -339,7 +339,7 @@ pub fn validate_new_code(
             )),
             Ok(_) => None,
             Err(error) => Some(format!(
-                "{code} ajouté ; préalables illisibles : {error}."
+                "{code} ajouté; préalables illisibles : {error}."
             )),
         };
     // a summer explicitly closed is not a wall either — but adding into
@@ -1143,6 +1143,8 @@ pub struct PlacementReport {
     // `2026-08-escalade-etes-ouverts-dans-le-repli`)
     #[serde(default)]
     pub summers_forced: Vec<String>,
+    #[serde(default)]
+    pub credit_shortfalls: Vec<CreditShortfallAnswer>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
@@ -1163,6 +1165,50 @@ pub struct SolutionAnswer {
     // `2026-08-placement-au-mieux-en-repli`)
     #[serde(default)]
     pub left_out: BTreeSet<String>,
+    #[serde(default)]
+    pub credit_shortfalls: Vec<CreditShortfallAnswer>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+pub struct CreditShortfallAnswer {
+    pub code: String,
+    pub session: usize,
+    pub earned_before: u32,
+    pub required: u32,
+}
+
+pub fn credit_shortfall_message(
+    shortfall: &CreditShortfallAnswer,
+    plan: &Plan,
+) -> String {
+    let session = session_semester(plan, shortfall.session)
+        .map(|semester| semester.to_string())
+        .unwrap_or_else(|| format!("session {}", shortfall.session));
+    let missing = shortfall.required.saturating_sub(shortfall.earned_before);
+    format!(
+        "{} est placé en {} avec {} crédits acquis avant cette session; le \
+         minimum est {} crédits. Le solveur l'a placé au plus tard \
+         disponible. Répartissez {} crédits de plus avant {} ou déplacez \
+         le cours.",
+        shortfall.code,
+        session,
+        shortfall.earned_before,
+        shortfall.required,
+        missing,
+        session,
+    )
+}
+
+pub fn course_shortfall_messages(
+    code: &str,
+    shortfalls: &[CreditShortfallAnswer],
+    plan: &Plan,
+) -> Vec<String> {
+    shortfalls
+        .iter()
+        .filter(|shortfall| shortfall.code == code)
+        .map(|shortfall| credit_shortfall_message(shortfall, plan))
+        .collect()
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
@@ -1204,7 +1250,7 @@ pub fn completion_note(answer: &PlacementAnswer) -> Option<String> {
                 .to_string(),
         ),
         "solution-cap" => Some(
-            "D'autres agencements équivalents existent ; celui proposé \
+            "D'autres agencements équivalents existent; celui proposé \
              suit votre cheminement actuel du plus près."
                 .to_string(),
         ),
@@ -1757,6 +1803,37 @@ mod worker_tests {
         assert!(note.contains("plafond"), "{note}");
     }
 
+    #[test]
+    fn the_credit_shortfall_message_is_persistent_french_copy() {
+        let plan = Plan::default();
+        let shortfall = CreditShortfallAnswer {
+            code: "GCI-3333".to_string(),
+            session: 2,
+            earned_before: 54,
+            required: 60,
+        };
+        assert_eq!(
+            credit_shortfall_message(&shortfall, &plan),
+            "GCI-3333 est placé en H27 avec 54 crédits acquis avant cette \
+             session; le minimum est 60 crédits. Le solveur l'a placé au \
+             plus tard disponible. Répartissez 6 crédits de plus avant H27 \
+             ou déplacez le cours."
+        );
+        assert_eq!(
+            course_shortfall_messages("GCI-3333", &[shortfall], &plan).len(),
+            1
+        );
+        let outside = CreditShortfallAnswer {
+            code: "GCI-3333".to_string(),
+            session: 99,
+            earned_before: 60,
+            required: 60,
+        };
+        assert!(
+            credit_shortfall_message(&outside, &plan).contains("session 99")
+        );
+    }
+
     // The best-effort messages: one line per code, each with its own
     // cause, and the completion note silenced — it describes the *relaxed*
     // enumeration and would contradict the grid (ADR
@@ -1795,6 +1872,7 @@ mod worker_tests {
                 placement: BTreeMap::from([("GEX-1000".to_string(), 1)]),
                 assumed: BTreeSet::new(),
                 left_out: BTreeSet::from(["GEX-1002".to_string()]),
+                credit_shortfalls: Vec::new(),
             }],
             blocked: Vec::new(),
         };
@@ -1806,6 +1884,7 @@ mod worker_tests {
                 placement: BTreeMap::from([("GEX-1000".to_string(), 1)]),
                 assumed: BTreeSet::new(),
                 left_out: BTreeSet::new(),
+                credit_shortfalls: Vec::new(),
             }],
             ..filled.clone()
         };
@@ -1828,6 +1907,7 @@ mod worker_tests {
                     placement: BTreeMap::new(),
                     assumed: BTreeSet::new(),
                     left_out: BTreeSet::new(),
+                    credit_shortfalls: Vec::new(),
                 })
                 .collect(),
             blocked: Vec::new(),

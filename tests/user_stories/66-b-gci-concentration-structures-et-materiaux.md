@@ -5,7 +5,7 @@
 
 ## Préconditions
 
-Mêmes préconditions de déploiement qu'en US-63.
+Le millésime A26 du B-GCI est présent dans les instantanés livrés.
 
 ## Ce que la concentration ajoute
 
@@ -24,14 +24,20 @@ Mêmes préconditions de déploiement qu'en US-63.
 
 - La Règle 1 est comblée à 12 crédits avec quatre cours de trois crédits.
 - Les cours `GBO-` reçoivent une teinte distincte des `GCI-` : la couleur suit la matière, pas la règle.
-- L'en-tête de section plafonne à 15 crédits.
+- Les quatre cours placés réapparaissent dans la Règle 2, sélectionnés et non sélectionnables, sous-titrés « compté dans la Règle 1 ».
+- La Règle 2 affiche `0/3 cr` et l'en-tête de section affiche `12/15 cr`.
 
 ## Repères pour le test e2e
 
+Les sélecteurs `.course-line` sont ceux du DOM de l'application JS soeur (`grille-de-cheminement-interactive`).
+Le texte cité entre guillemets « compté dans la Règle 1 » est celui de l'UI Rust (`crates/ui/src/components/panel.rs`) ; l'application JS peut ne pas encore le porter mot pour mot.
+
 - La carte de la Règle 1 contient 12 `.course-line`.
+- La carte de la Règle 2 contient les 25 cours résolus de la Règle 1 du cheminement sans concentration.
+- Les quatre `.course-line` des cours placés apparaissent aussi dans la carte de la Règle 2, sans bande de choix, avec le sous-texte « compté dans la Règle 1 ».
 - Deux pastilles de matières différentes n'ont pas la même couleur de fond.
 
 ## Variantes et cas limites
 
-- Le même défaut de référence croisée qu'en US-64 s'applique.
-- Cette concentration recoupe fortement le « Profil développement durable » (`GBO-2040`, `GCI-4201`) : un cours placé une fois compte dans les deux règles si les deux sont affichées, ce que l'interface ne permet pas — un profil et une concentration ne peuvent pas être sélectionnés ensemble (US-68).
+- La progression déduplique les cours présents dans les deux règles et plafonne à `15/15 cr`.
+- Cette concentration recoupe fortement le « Profil développement durable » (`GBO-2040`, `GCI-4201`) : les portées concentration et profil sont indépendantes, si Josée sélectionne les deux à la fois (l'UI Rust offre un sélecteur de concentration et un sélecteur de profil séparés) un cours placé une seule fois — `GCI-4201` — compte dans la règle de la concentration et dans celle du profil (US-68).

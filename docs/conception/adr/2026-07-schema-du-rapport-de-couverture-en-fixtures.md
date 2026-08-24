@@ -22,7 +22,7 @@ Ses fixtures, écrites avant le code sur les données réelles des sept programm
       { "scope": "program", "title": "Règle 1", "status": "satisfied",
         "counted": ["MED-1100"], "candidates": ["GMN-2901", "GMN-2902"] },
       { "scope": "program", "title": "Règle 2", "status": "incomplete",
-        "counted": [], "missing": { "credits": 3 }, "candidates": [ … ] },
+        "counted": [], "elsewhere": ["MED-1100"], "missing": { "credits": 3 }, "candidates": [ … ] },
       { "scope": "program", "title": "Règle 5", "status": "reported", "raw": "…" }
     ],
     "language_requirement": { "status": "reported" }
@@ -34,13 +34,14 @@ Ses fixtures, écrites avant le code sur les données réelles des sept programm
 - `selection` : les codes choisis par l'étudiant ; `courses` : les `Course` complets des cours sélectionnés dont une règle à crédits doit compter les crédits.
 - Statuts par règle : `satisfied` (`Count` : nombre de choisis dans la liste ≥ n ; `Credits` : somme dans `[min, max]`) ; `incomplete` avec `missing: {"count": k}` ou `{"credits": k}` — forme miroir de `Constraint` ; `reported` pour tout `Keyword` (`any`, `negotiated`), tout `Raw` et toute règle `constraint: None` — remontés avec leur `raw`, jamais inventés (`2026-07-contrainte-de-regle-optionnelle`, `2026-07-regles-negociees-reconnues`).
 - Les listes de règles ont une sémantique d'**ensemble** : les doublons réels (règle 4 GEX : DDU-2000, ENT-1000, GGL-2601 chacun deux fois) dédoublonnent ; `counted` et `candidates` sont triés.
+- `elsewhere` : les codes que la règle liste mais qu'une règle précédente de la même portée compte déjà ; omis quand vide, trié comme `counted`, exclu de `counted` et de `candidates`.
 - `RuleCourses::Reference` est **résolue** vers la règle cible de la concentration nommée puis évaluée normalement ; une référence dont la cible est elle-même une référence est une erreur, pas une chasse.
 - `candidates` = liste de la règle moins la sélection, **non filtrée** par `weekly::is_feasible` : le filtrage documenté suppose un contexte « horaire ouvert de la session visée » dont la forme d'entrée n'existe pas encore — cette famille épingle la couche comptable, la composition avec A sera épinglée par le harnais Rust.
 - `language_requirement.status` : `satisfied` si le cours d'une des branches (francophone ou non) est dans la sélection, sinon `reported` — jamais « missing », car un score de test peut dispenser du cours et `core` ne le voit pas.
 
 Reports consignés, non fixturés :
 
-- double comptage d'un cours candidat à deux règles — la politique d'affectation (jalon 8, « ce qui manque pour diplômer ») est à trancher avec le directeur ;
+- double comptage d'un cours candidat à deux règles — tranché par `2026-08-un-cours-compte-dans-une-seule-regle-par-portee` : première règle de la portée qui liste le cours ;
 - somme > `max` sur `Credits{min,max}` : violation ou excédent non compté n'est pas documenté — les fixtures restent ≤ max ;
 - report des `credits_required` d'une concentration ou d'un profil sur le total (conception §7) — le rapport n'agrège pas de totaux.
 

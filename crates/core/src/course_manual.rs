@@ -170,6 +170,25 @@ mod tests {
     }
 
     #[test]
+    fn the_b_gci_a26_corrections_are_vintage_scoped() {
+        let manual: CourseManual = serde_json::from_str(include_str!(
+            "../../../data/cours.manuel.json"
+        ))
+        .expect("the committed manual catalogue parses");
+        let a26 = manual.overrides_for("A26");
+        assert!(a26["GCI-2003"].text.contains("GCI-1011"));
+        assert!(a26["GCI-2006"].text.contains("GCI-1011"));
+        assert!(a26["GCI-3333"].text.contains("GCI-3008"));
+        assert!(!a26["GCI-3333"].text.contains("GCI-3001"));
+        for vintage in ["H26", "A25"] {
+            let other = manual.overrides_for(vintage);
+            assert!(!other.contains_key("GCI-2003"), "{vintage}");
+            assert!(!other.contains_key("GCI-2006"), "{vintage}");
+            assert!(!other.contains_key("GCI-3333"), "{vintage}");
+        }
+    }
+
+    #[test]
     fn an_absent_file_is_an_empty_one() {
         let manual: CourseManual =
             serde_json::from_str("{}").expect("an empty object parses");

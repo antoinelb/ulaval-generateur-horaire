@@ -6,6 +6,10 @@ incomplete / reported per ADR
 `2026-07-schema-du-rapport-de-couverture-en-fixtures`. Rule lists have set
 semantics; references resolve to their target list; a credits sum or course
 count above max is a hard error (semantics undecided, fixtures stay within).
+Within a scope, a selected course is claimed by the first evaluated rule
+that lists it; later rules of the same scope report it as `elsewhere`
+instead of counting it again (ADR
+`2026-08-un-cours-compte-dans-une-seule-regle-par-portee`).
 
 Usage: python verify_rules.py fill|check [fixture-stems...]
 """
@@ -75,9 +79,11 @@ def solve(fixture):
             for scope, block in scopes
         ],
         "rules": [
-            rule_report(scope, rule, program, selection, credits)
+            entry
             for scope, block in scopes
-            for rule in block["rules"]
+            for entry in scope_reports(
+                scope, block, program, selection, credits
+            )
         ],
     }
     if program.get("language_requirement"):
@@ -96,7 +102,22 @@ def mandatory_report(scope, block, selection):
     }
 
 
-def rule_report(scope, rule, program, selection, credits):
+def scope_reports(scope, block, program, selection, credits):
+    # a scope's rules, in order, each attributed against what earlier rules
+    # of *this same scope* already claimed — the set starts empty per scope
+    # so a course counts once in the concentration and once in the profile
+    # (decision d'Antoine 2026-08-23)
+    claimed = set()
+    entries = []
+    for rule in block["rules"]:
+        entry = rule_report(scope, rule, program, selection, credits, claimed)
+        if rule.get("constraint") is not None:
+            claimed.update(entry.get("counted", []))
+        entries.append(entry)
+    return entries
+
+
+def rule_report(scope, rule, program, selection, credits, claimed):
     courses = rule.get("courses")
     constraint = rule.get("constraint")
     if isinstance(courses, dict):
@@ -109,11 +130,12 @@ def rule_report(scope, rule, program, selection, credits):
             entry["raw"] = rule["raw"]
         return entry
     listed = set(courses)
-    counted = sorted(listed & selection)
     if constraint is None:
         # a list naming no number (« Scolarité préparatoire ») : no verdict,
         # but the split is still shown (ADR
-        # `2026-08-regle-sans-contrainte-comptee-mais-reportee`)
+        # `2026-08-regle-sans-contrainte-comptee-mais-reportee`) — it neither
+        # claims a code nor reports `elsewhere`, so counting stays global
+        counted = sorted(listed & selection)
         entry = {
             "scope": scope,
             "title": rule["title"],
@@ -124,6 +146,12 @@ def rule_report(scope, rule, program, selection, credits):
         if "raw" in rule:
             entry["raw"] = rule["raw"]
         return entry
+    # a code an earlier rule of this scope already claimed no longer counts
+    # here — shown as `elsewhere` instead so the student sees it, but the
+    # verdict is computed on the reduced set (that is the whole point, ADR
+    # `2026-08-un-cours-compte-dans-une-seule-regle-par-portee`)
+    counted = sorted((listed & selection) - claimed)
+    elsewhere = sorted(listed & selection & claimed)
     status, missing = evaluate(constraint, counted, credits, rule)
     entry = {
         "scope": scope,
@@ -131,6 +159,8 @@ def rule_report(scope, rule, program, selection, credits):
         "status": status,
         "counted": counted,
     }
+    if elsewhere:
+        entry["elsewhere"] = elsewhere
     if missing is not None:
         entry["missing"] = missing
     entry["candidates"] = sorted(listed - selection)

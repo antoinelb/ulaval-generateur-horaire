@@ -2,8 +2,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use ulaval_scheduler_core::{
     coverage_report, horizon_sessions, place, placement_intake,
-    summer_indices, Course, CoverageReport, Placement, PlacementError,
-    PlacementIntake, PlacementRequest, Program, Season,
+    summer_indices, Course, CoverageReport, CreditShortfall, Placement,
+    PlacementError, PlacementIntake, PlacementRequest, Program, Season,
 };
 
 // Browser-sized budgets: the search runs on the JS thread, so the defaults
@@ -91,6 +91,8 @@ pub struct OrganigrammeReport {
     // setting (ADR `2026-08-escalade-etes-ouverts-dans-le-repli`)
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub summers_forced: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub credit_shortfalls: Vec<CreditShortfall>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub coverage: Option<CoverageReport>,
 }
@@ -107,12 +109,18 @@ pub fn generate(
     let placement = with_request(input, &intake, &sessions, place_escalating)?;
     let summers_forced =
         forced_summers(&placement, &intake, &sessions, input.summers_open);
+    let credit_shortfalls = placement
+        .solutions
+        .first()
+        .map(|solution| solution.credit_shortfalls.clone())
+        .unwrap_or_default();
     Ok(OrganigrammeReport {
         sessions,
         placement,
         set_aside: intake.set_aside,
         injected: intake.injected,
         summers_forced,
+        credit_shortfalls,
         coverage: None,
     })
 }
@@ -139,6 +147,14 @@ fn place_escalating(
     if !exact.solutions.is_empty() {
         return Ok(exact);
     }
+    let softened = place(&PlacementRequest {
+        allow_credit_shortfall: true,
+        ..*request
+    })
+    .expect("the strict pass already validated this request");
+    if !softened.solutions.is_empty() {
+        return Ok(softened);
+    }
     let all_summers = summer_indices(request.sessions);
     let escalated = if all_summers != *request.open_summers {
         place(&PlacementRequest {
@@ -152,8 +168,18 @@ fn place_escalating(
         if !opened.solutions.is_empty() {
             return Ok(opened);
         }
+        let softened_opened = place(&PlacementRequest {
+            allow_credit_shortfall: true,
+            open_summers: &all_summers,
+            ..*request
+        })
+        .expect("opening summers cannot invalidate a validated request");
+        if !softened_opened.solutions.is_empty() {
+            return Ok(softened_opened);
+        }
         place(&PlacementRequest {
             allow_unplaced: true,
+            allow_credit_shortfall: true,
             // the sentinel is tried last, so the first leaf is the greedy
             // filling and every later one is strictly worse
             max_solutions: 1,
@@ -225,6 +251,22 @@ pub fn verify(
     }
     let sessions = horizon_sessions(input.start, input.study_sessions);
     let placement = solve(input, &intake, &sessions)?;
+    let credit_shortfalls = if placement.solutions.is_empty() {
+        with_request(input, &intake, &sessions, |request| {
+            place(&PlacementRequest {
+                allow_credit_shortfall: true,
+                max_solutions: 1,
+                ..*request
+            })
+        })
+        .expect("the strict verification already built this request")
+        .solutions
+        .first()
+        .map(|solution| solution.credit_shortfalls.clone())
+        .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
     let coverage = input
         .program
         .as_ref()
@@ -245,6 +287,7 @@ pub fn verify(
         set_aside: intake.set_aside,
         injected: intake.injected,
         summers_forced: Vec::new(),
+        credit_shortfalls,
         coverage,
     })
 }
@@ -315,6 +358,7 @@ fn with_request<T>(
         // proving stays proving: only `generate` escalates, and it says so
         // by passing `place_escalating` as its `ask`
         allow_unplaced: false,
+        allow_credit_shortfall: false,
         sessions,
         credit_cap: input.credit_cap,
         concomitant: input.concomitant,
@@ -362,6 +406,26 @@ mod tests {
     fn courses() -> Vec<Course> {
         serde_json::from_str(COURSES)
             .unwrap_or_else(|e| panic!("courses literal: {e}"))
+    }
+
+    fn threshold_courses() -> Vec<Course> {
+        serde_json::from_str(
+            r#"[
+              {"code":"A-1000","title":"A","credits":3,"cycle":1,
+               "prerequisites":null,"equivalents":[],
+               "seasons":{"fall":{"last_offered":2026,"options":null}}},
+              {"code":"B-1000","title":"B","credits":3,"cycle":1,
+               "prerequisites":null,"equivalents":[],
+               "seasons":{"winter":{"last_offered":2026,"options":null}}},
+              {"code":"T-9000","title":"T","credits":3,"cycle":1,
+               "prerequisites":{"raw":"Crédits exigés : 6",
+                 "tree":{"program_credits":{"credits":6}}},
+               "equivalents":[],
+               "seasons":{"winter":{"last_offered":2026,"options":null},
+                          "summer":{"last_offered":2026,"options":null}}}
+            ]"#,
+        )
+        .unwrap_or_else(|e| panic!("threshold courses literal: {e}"))
     }
 
     fn input(fields: &str) -> OrganigrammeInput {
@@ -433,6 +497,52 @@ mod tests {
         );
         assert_eq!(report.placement.solutions[0].placement["GEX-1002"], 3);
         assert_eq!(report.summers_forced, ["GEX-1002"]);
+    }
+
+    #[test]
+    fn a_credit_shortfall_is_preferred_before_opening_an_ete() {
+        let report = generate(
+            &input(r#""electives":["A-1000","B-1000","T-9000"]"#),
+            &threshold_courses(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let solution = &report.placement.solutions[0];
+        assert_eq!(solution.placement["T-9000"], 2);
+        assert_eq!(report.credit_shortfalls.len(), 1);
+        assert_eq!(report.credit_shortfalls[0].earned_before, 3);
+        assert!(report.summers_forced.is_empty());
+    }
+
+    #[test]
+    fn strict_verification_stays_invalid_but_reports_the_soft_diagnostic() {
+        let report = verify(
+            &input(
+                r#""electives":["A-1000","B-1000","T-9000"],
+                    "pinned":{"A-1000":1,"B-1000":2,"T-9000":2}"#,
+            ),
+            &threshold_courses(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert!(report.placement.solutions.is_empty());
+        assert_eq!(report.credit_shortfalls.len(), 1);
+        assert_eq!(report.credit_shortfalls[0].code, "T-9000");
+    }
+
+    #[test]
+    fn a_soft_threshold_can_require_opening_an_ete() {
+        let courses: Vec<Course> = serde_json::from_str(
+            r#"[{"code":"T-9000","title":"T","credits":3,"cycle":1,
+                 "prerequisites":{"raw":"Crédits exigés : 60",
+                   "tree":{"program_credits":{"credits":60}}},
+                 "equivalents":[],"seasons":{"summer":{
+                   "last_offered":2026,"options":null}}}]"#,
+        )
+        .unwrap_or_else(|e| panic!("course literal: {e}"));
+        let report = generate(&input(r#""electives":["T-9000"]"#), &courses)
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(report.placement.solutions[0].placement["T-9000"], 3);
+        assert_eq!(report.credit_shortfalls.len(), 1);
+        assert_eq!(report.summers_forced, ["T-9000"]);
     }
 
     #[test]

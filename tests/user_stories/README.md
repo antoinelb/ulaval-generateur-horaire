@@ -96,7 +96,7 @@ L'application charge ses données par `fetch` de chemins relatifs : elle exige u
 ### Concentrations et profils
 
 Une histoire par concentration et par profil des programmes présents dans `../generateur_horaire/data/programmes/`.
-**B-ANT, B-GCI et M-GEX ne sont pas encore servis par ce dépôt** : leurs histoires portent en tête les fichiers à déposer pour les jouer.
+**B-ANT et M-GEX ne sont pas encore servis par ce dépôt** : leurs histoires portent en tête les fichiers à déposer pour les jouer.
 
 | # | Programme | Spécialisation |
 | --- | --- | --- |
@@ -148,10 +148,8 @@ Ces points sont documentés dans les histoires concernées et attendent une déc
 Écarts relevés en couvrant les concentrations et les profils :
 
 - **Une règle négociée avec contrainte est impossible à combler.** `courses: "negotiated"` n'est pas un tableau, donc la règle se charge sans aucun cours; le « Profil distinction » du B-GPH exige alors 12 crédits que rien ne peut satisfaire, et gonfle le total exigé du programme (US-88). Le « Passage intégré » du B-GMC, sans contrainte, tombe à 0 crédit et reste inoffensif (US-80).
-- **Une règle par référence croisée est vide.** Les trois concentrations spécialisées du B-GCI expriment leur Règle 2 par `{"concentration": …, "rule": …}` : la règle exige 3 crédits sans lister un seul cours (US-64, US-65, US-66).
 - **Les sigles d'échange manquent pour tous les programmes sauf le B-GEX.** `EHE-1ANT`, `EHE-1GCI`, `EHE-1GIN` et `EHE-1GPH` sont absents du catalogue **et** des fichiers hors catalogue de leur programme : titre vide, 0 crédit, avertissement de console (US-62, US-68, US-76, US-89).
 - **Les notes en prose ne sont affichées nulle part.** Le champ `notes` d'un programme ou d'une spécialisation, et le `raw` d'une règle négociée, ne sont lus par aucun module — contraire à l'invariant « ne jamais rien perdre en silence » (US-70, US-80, US-88, US-90).
-- **Une concentration et un profil ne peuvent pas être sélectionnés ensemble**, alors que le répertoire le permet : le menu est à choix unique (US-67, US-75, US-89).
 - **Des `credits_required` de section dépassent ce que leurs règles permettent** : 18 crédits déclarés pour 15 atteignables au B-GMC (US-77, US-78). À confronter aux pages du répertoire.
-- **B-ANT, B-GCI et M-GEX ne sont pas servis par ce dépôt** : leurs fichiers existent dans `../generateur_horaire/data/programmes/` mais ne sont ni dans `data/programmes/`, ni dans `index-programmes.csv`, ni pourvus d'un dossier de fichiers manuels (US-60, US-63, US-90).
+- **B-ANT et M-GEX ne sont pas servis par ce dépôt** : leurs fichiers existent dans `../generateur_horaire/data/programmes/` mais ne sont ni dans `data/programmes/`, ni dans `index-programmes.csv`, ni pourvus d'un dossier de fichiers manuels (US-60, US-90).
 - **Le champ `cycle` n'est lu par aucun module** : rien ne distingue une maîtrise d'un baccalauréat dans l'interface (US-90).

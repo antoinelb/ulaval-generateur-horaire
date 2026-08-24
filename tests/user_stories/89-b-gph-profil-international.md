@@ -1,7 +1,7 @@
 # US-89 — B-GPH, « Profil international »
 
-**Persona** : Adam, en génie physique, qui part une session à l'étranger.
-**Intention** : réserver sa session d'échange.
+**Persona** : Adam, en génie physique, qui part une session à l'étranger sans renoncer à sa concentration.
+**Intention** : réserver sa session d'échange, une concentration restant sélectionnée en même temps.
 
 ## Préconditions
 
@@ -14,23 +14,27 @@
 
 ## Scénario
 
-1. Adam choisit « Profil international », la dernière des neuf options.
+1. Adam choisit la concentration « Aéronautique et aérospatiale » dans le premier menu, puis le profil « Profil international » dans le second, la dernière des neuf options — les deux menus du panneau sont indépendants.
 2. Il cherche `EHE-1GPH` dans le panneau.
 3. Il cherche de quoi représenter les cours suivis à l'étranger.
 
 ## Résultats attendus
 
-- Le panneau n'affiche qu'une carte, « Cours obligatoires (Profil international) ».
-- Le bilan affiche une section `Profil international` sans total déclaré.
-- Choisir ce profil masque la concentration : Adam ne voit plus les 15 crédits de concentration qu'il doit faire aussi.
+- Le panneau affiche deux groupes : « Concentration — Aéronautique et aérospatiale », avec ses cartes habituelles, et « Profil — Profil international », qui n'affiche qu'une carte, « Cours obligatoires ».
+- Le bilan affiche une section `Profil international` sans total déclaré, juste sous la section de la concentration qui, elle, affiche sa propre progression.
+- Choisir ce profil ne masque plus la concentration : les deux groupes restent visibles et se combinent, aucun des deux ne fait disparaître l'autre.
 
 ## Repères pour le test e2e
 
+Les sélecteurs `#cheminement-select` et `.rule-card` sont ceux du DOM de l'application JS soeur (`grille-de-cheminement-interactive`).
+Les textes cités entre guillemets — « Concentration — … », « Profil — … » — sont ceux de l'UI Rust (`crates/ui/src/panel.rs`), qui offre deux menus `panel-knob` séparés plutôt qu'un menu combiné.
+
 - `#cheminement-select option` compte neuf entrées, « Profil international » en dernier.
-- Une seule `.rule-card` est affichée.
+- Le groupe « Profil — Profil international » n'affiche qu'une seule `.rule-card` ; le groupe « Concentration — Aéronautique et aérospatiale » affiche les siennes en plus, sans qu'aucune des deux listes ne change à cause de l'autre.
 
 ## Variantes et cas limites
 
 - **Écart connu** : `EHE-1GPH` est absent du catalogue **et** de `b-gph/cours/cours-hors-catalogue.csv`, qui ne déclare que `LAN-GUES`. Titre vide, `0` crédit, avertissement de console.
 - Le B-GPH n'a aucun pseudo-cours `OPT-ETR*` : Adam n'a rien à placer pour ses cours à l'étranger, contrairement au B-GEX, au B-GIN et au B-GMC.
-- Le cas cumulé concentration + profil international n'est représentable dans aucun programme : c'est la limite du menu à choix unique, à trancher si des étudiants font les deux.
+- Le cumul concentration + profil international est désormais représentable : les deux menus indépendants du panneau permettent de les sélectionner ensemble.
+  `EHE-1GPH` n'appartenant à aucune règle de concentration, rien ne se recoupe pour ce profil précis — contrairement au « Profil développement durable » du B-GCI (US-67), où un même cours crédite les deux portées à la fois.

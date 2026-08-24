@@ -27,12 +27,12 @@ pub fn present_data_error(error: &DataError) -> UiError {
     UiError {
         what,
         reaction: "L'application ne démarre pas tant que le catalogue \
-                   n'est pas chargé ; rien n'a été perdu."
+                   n'est pas chargé; rien n'a été perdu."
             .to_string(),
         affected: "Tout l'affichage — aucun cours ni programme n'est \
                    disponible."
             .to_string(),
-        action: "Vérifiez votre connexion puis rechargez la page ; si \
+        action: "Vérifiez votre connexion puis rechargez la page; si \
                  l'erreur persiste, signalez-la avec l'identifiant \
                  ci-dessous."
             .to_string(),
@@ -53,7 +53,7 @@ pub fn present_override_note(
     match note {
         OverrideNote::Unparsed { code, error } => format!(
             "Préalables de {code} : la correction n'a pas pu être lue \
-             ({error}) ; ceux du répertoire s'appliquent toujours."
+             ({error}); ceux du répertoire s'appliquent toujours."
         ),
         OverrideNote::UnknownCode { code } => format!(
             "Préalables de {code} : ce cours n'est pas au catalogue, la \

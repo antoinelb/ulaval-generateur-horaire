@@ -12,6 +12,7 @@ Aucun document ne le dit ; la référence Python s'arrêtait en erreur, les fixt
 ## Décision
 
 - Le vérificateur retourne une **erreur typée** (`CoverageError::CreditsOverMax` — règle, somme, max) plutôt qu'un statut : aucun verdict n'est inventé tant que le directeur n'a pas tranché.
+- Depuis `2026-08-erreur-de-comptage-nommee-par-portee`, la variante porte aussi la portée (`scope`) de la règle en défaut.
 - L'UI qui rencontre l'erreur affiche le dépassement tel quel ; c'est un état bloquant assumé, pas un oubli.
 - À l'arbitrage, l'erreur sera remplacée par la sémantique décidée (statut dédié ou excédent non compté) — le type force ce point de passage.
 

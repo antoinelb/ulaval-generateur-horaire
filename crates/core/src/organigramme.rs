@@ -46,6 +46,9 @@ pub struct PlacementRequest<'a> {
     // (ADR `2026-08-placement-au-mieux-en-repli`). `verify` and
     // `admissible_sessions` never set it: proving stays proving.
     pub allow_unplaced: bool,
+    // Internal proposal/diagnostic fallback. Course prerequisites remain
+    // strict; only a final `ProgramCredits` leaf may be recorded short.
+    pub allow_credit_shortfall: bool,
 }
 
 // the domain value meaning « this course is not placed » — sessions are
@@ -123,6 +126,17 @@ pub struct Solution {
     // « unplaced » because the UI's `unplaced_codes` already means
     // something else: the plan's floating courses, whoever left them so.
     pub left_out: BTreeSet<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub credit_shortfalls: Vec<CreditShortfall>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
+pub struct CreditShortfall {
+    pub code: String,
+    pub session: usize,
+    pub earned_before: u32,
+    pub required: u32,
 }
 
 // The static answer of `prerequisites_met` : met against what the student
@@ -372,6 +386,7 @@ pub fn admissible_sessions(
             // a relaxed probe would call every session admissible by
             // leaving all the others out — the chip must mean « it fits »
             allow_unplaced: false,
+            allow_credit_shortfall: false,
             ..*request
         };
         if !place(&probe)?.solutions.is_empty() {
@@ -466,10 +481,11 @@ fn build_candidates(
             let domain = value_ordered_domain(course, request)
                 .into_iter()
                 .filter(|&session| {
-                    tree_admits_ceiling(
-                        tree.as_ref(),
-                        held + prefix[session - 1],
-                    )
+                    request.allow_credit_shortfall
+                        || tree_admits_ceiling(
+                            tree.as_ref(),
+                            held + prefix[session - 1],
+                        )
                 })
                 .collect();
             Ok(Candidate {
@@ -740,15 +756,47 @@ fn value_ordered_domain(
         request.sessions[session - 1] == Season::Summer
             && !request.stages.contains(&course.code)
     };
-    match request.seed.get(&course.code) {
-        Some(&anchor) => domain.sort_by_key(|&session| {
-            (demoted(session), session.abs_diff(anchor), session)
-        }),
-        None => {
-            domain.sort_by_key(|&session| (demoted(session), session));
+    let has_credit_threshold =
+        course.prerequisites.as_ref().is_some_and(|prerequisites| {
+            match prerequisites {
+                Prerequisites::Parsed { tree, .. } => tree_has_credits(tree),
+                Prerequisites::Raw { .. } => false,
+            }
+        });
+    if request.allow_credit_shortfall
+        && has_credit_threshold
+        && !request.pinned.contains_key(&course.code)
+    {
+        domain.sort_by_key(|&session| {
+            (demoted(session), std::cmp::Reverse(session))
+        });
+    } else {
+        match request.seed.get(&course.code) {
+            Some(&anchor) => domain.sort_by_key(|&session| {
+                (demoted(session), session.abs_diff(anchor), session)
+            }),
+            None => {
+                domain.sort_by_key(|&session| (demoted(session), session));
+            }
         }
     }
     domain
+}
+
+fn tree_has_credits(tree: &PrereqTree) -> bool {
+    let mut pending = vec![tree];
+    for _ in 0..MAX_TREE_NODES {
+        let Some(node) = pending.pop() else {
+            break;
+        };
+        match node {
+            PrereqTree::ProgramCredits { .. } => return true,
+            PrereqTree::All { all } => pending.extend(all),
+            PrereqTree::Any { any } => pending.extend(any),
+            PrereqTree::Course(_) | PrereqTree::Raw { .. } => {}
+        }
+    }
+    false
 }
 
 // the summer rules for an unpinned course: a stage goes to the étés only;
@@ -881,7 +929,8 @@ fn ever_satisfiable(
                         && is_preuniversity(code))
             }
             FlatNode::Credits(threshold) => {
-                optimistic_credits >= u64::from(*threshold)
+                ctx.request.allow_credit_shortfall
+                    || optimistic_credits >= u64::from(*threshold)
             }
             FlatNode::All(children) => {
                 children.iter().all(|&child| verdicts[child])
@@ -1106,35 +1155,52 @@ fn weekly_admits(
 // (`program_credits` thresholds) and collects the operands the placement
 // had to presume.
 fn finalize(chosen: &[usize], ctx: &SearchCtx) -> Option<Solution> {
-    let assumed = ctx.candidates.iter().enumerate().try_fold(
-        BTreeSet::new(),
-        |mut assumed, (evaluated, candidate)| match &candidate.tree {
-            None => Some(assumed),
-            // left out: its own tree no longer applies (see
-            // `precedence_admits`), and it contributes no assumption
-            Some(_) if chosen[evaluated] == UNPLACED => Some(assumed),
-            // already proven Sat(∅) incrementally — see `needs_final_flags`
-            Some(_) if !ctx.needs_final[evaluated] => Some(assumed),
-            Some(tree) => {
-                let eval_ctx = EvalCtx {
-                    ctx,
-                    chosen,
-                    evaluated,
-                    complete: true,
-                };
-                match eval(tree, &eval_ctx) {
-                    Verdict::Sat(operands) => {
-                        assumed.extend(operands);
-                        Some(assumed)
+    let (assumed, credit_shortfalls) =
+        ctx.candidates.iter().enumerate().try_fold(
+            (BTreeSet::new(), BTreeSet::new()),
+            |(mut assumed, mut shortfalls), (evaluated, candidate)| {
+                match &candidate.tree {
+                    None => Some((assumed, shortfalls)),
+                    // left out: its own tree no longer applies (see
+                    // `precedence_admits`), and it contributes no assumption
+                    Some(_) if chosen[evaluated] == UNPLACED => {
+                        Some((assumed, shortfalls))
                     }
-                    // False: a credits threshold resolved short at the
-                    // leaf. Unknown cannot survive a complete assignment;
-                    // rejecting is the safe reading if it ever did.
-                    Verdict::False | Verdict::Unknown => None,
+                    // already proven Sat(∅) incrementally — see `needs_final_flags`
+                    Some(_) if !ctx.needs_final[evaluated] => {
+                        Some((assumed, shortfalls))
+                    }
+                    Some(tree) => {
+                        let eval_ctx = EvalCtx {
+                            ctx,
+                            chosen,
+                            evaluated,
+                            complete: true,
+                        };
+                        if ctx.request.allow_credit_shortfall {
+                            match final_eval(tree, &eval_ctx) {
+                                FinalVerdict::Sat(evidence) => {
+                                    assumed.extend(evidence.assumed);
+                                    shortfalls.extend(evidence.shortfalls);
+                                    return Some((assumed, shortfalls));
+                                }
+                                FinalVerdict::False => return None,
+                            }
+                        }
+                        match eval(tree, &eval_ctx) {
+                            Verdict::Sat(operands) => {
+                                assumed.extend(operands);
+                                Some((assumed, shortfalls))
+                            }
+                            // False: a credits threshold resolved short at the
+                            // leaf. Unknown cannot survive a complete assignment;
+                            // rejecting is the safe reading if it ever did.
+                            Verdict::False | Verdict::Unknown => None,
+                        }
+                    }
                 }
-            }
-        },
-    )?;
+            },
+        )?;
     let (placed, left_out) = chosen
         .iter()
         .enumerate()
@@ -1151,7 +1217,107 @@ fn finalize(chosen: &[usize], ctx: &SearchCtx) -> Option<Solution> {
             .into_iter()
             .map(|(i, _)| ctx.candidates[i].code.clone())
             .collect(),
+        credit_shortfalls: credit_shortfalls.into_iter().collect(),
     })
+}
+
+#[derive(Clone, Default)]
+struct FinalEvidence {
+    assumed: BTreeSet<String>,
+    shortfalls: BTreeSet<CreditShortfall>,
+}
+
+enum FinalVerdict {
+    Sat(FinalEvidence),
+    False,
+}
+
+fn final_eval(tree: &FlatTree, eval_ctx: &EvalCtx) -> FinalVerdict {
+    let mut verdicts: Vec<FinalVerdict> =
+        (0..tree.nodes.len()).map(|_| FinalVerdict::False).collect();
+    for index in (0..tree.nodes.len()).rev() {
+        verdicts[index] = match &tree.nodes[index] {
+            FlatNode::Course(code) => match course_leaf(code, eval_ctx) {
+                Verdict::Sat(assumed) => FinalVerdict::Sat(FinalEvidence {
+                    assumed,
+                    shortfalls: BTreeSet::new(),
+                }),
+                Verdict::False | Verdict::Unknown => FinalVerdict::False,
+            },
+            FlatNode::Raw(raw) => FinalVerdict::Sat(FinalEvidence {
+                assumed: BTreeSet::from([raw.clone()]),
+                shortfalls: BTreeSet::new(),
+            }),
+            FlatNode::Credits(required) => {
+                let earned_before = earned_before(eval_ctx);
+                let mut shortfalls = BTreeSet::new();
+                if earned_before < *required {
+                    shortfalls.insert(CreditShortfall {
+                        code: eval_ctx.ctx.candidates[eval_ctx.evaluated]
+                            .code
+                            .clone(),
+                        session: eval_ctx.chosen[eval_ctx.evaluated],
+                        earned_before,
+                        required: *required,
+                    });
+                }
+                FinalVerdict::Sat(FinalEvidence {
+                    assumed: BTreeSet::new(),
+                    shortfalls,
+                })
+            }
+            FlatNode::All(children) => combine_all(children, &verdicts),
+            FlatNode::Any(children) => combine_any(children, &verdicts),
+        };
+    }
+    verdicts.into_iter().next().unwrap_or(FinalVerdict::False)
+}
+
+fn combine_all(children: &[usize], verdicts: &[FinalVerdict]) -> FinalVerdict {
+    use FinalVerdict::{False, Sat};
+
+    let mut combined = FinalEvidence::default();
+    let mut all_satisfied = true;
+    for &child in children {
+        all_satisfied &= matches!(verdicts[child], Sat(_));
+        if let Sat(evidence) = &verdicts[child] {
+            combined.assumed.extend(evidence.assumed.iter().cloned());
+            combined
+                .shortfalls
+                .extend(evidence.shortfalls.iter().cloned());
+        }
+    }
+    all_satisfied.then_some(combined).map(Sat).unwrap_or(False)
+}
+
+fn combine_any(children: &[usize], verdicts: &[FinalVerdict]) -> FinalVerdict {
+    children
+        .iter()
+        .filter_map(|&child| match &verdicts[child] {
+            FinalVerdict::Sat(evidence) => Some(evidence),
+            FinalVerdict::False => None,
+        })
+        .min_by_key(|evidence| {
+            (evidence.shortfalls.len(), evidence.assumed.len())
+        })
+        .cloned()
+        .map(FinalVerdict::Sat)
+        .unwrap_or(FinalVerdict::False)
+}
+
+fn earned_before(eval_ctx: &EvalCtx) -> u32 {
+    let session = eval_ctx.chosen[eval_ctx.evaluated];
+    eval_ctx.ctx.passed_credits
+        + eval_ctx
+            .chosen
+            .iter()
+            .enumerate()
+            .filter(|&(_, &placed)| placed != UNPLACED && placed < session)
+            .filter(|&(index, _)| {
+                !is_preuniversity(&eval_ctx.ctx.candidates[index].code)
+            })
+            .map(|(index, _)| eval_ctx.ctx.candidates[index].credits)
+            .sum::<u32>()
 }
 
 // children always sit after their parent in the flat tree, so one reverse
@@ -1232,19 +1398,11 @@ fn course_leaf(code: &str, eval_ctx: &EvalCtx) -> Verdict {
 // concomitant or not
 fn credits_leaf(threshold: u32, eval_ctx: &EvalCtx) -> Verdict {
     let session = eval_ctx.chosen[eval_ctx.evaluated];
-    let before: u32 = eval_ctx.ctx.passed_credits
-        + eval_ctx
-            .chosen
-            .iter()
-            .enumerate()
-            .filter(|&(_, &placed)| placed != UNPLACED && placed < session)
-            .filter(|&(i, _)| {
-                !is_preuniversity(&eval_ctx.ctx.candidates[i].code)
-            })
-            .map(|(i, _)| eval_ctx.ctx.candidates[i].credits)
-            .sum::<u32>();
+    let before = earned_before(eval_ctx);
     if before >= threshold {
         Verdict::Sat(BTreeSet::new())
+    } else if eval_ctx.ctx.request.allow_credit_shortfall {
+        Verdict::Unknown
     } else if eval_ctx.complete {
         Verdict::False
     } else {
@@ -1416,6 +1574,7 @@ mod tests {
         max_nodes: u64,
         max_solutions: usize,
         allow_unplaced: bool,
+        allow_credit_shortfall: bool,
     }
 
     impl Inputs {
@@ -1433,6 +1592,7 @@ mod tests {
                 max_nodes: 100_000,
                 max_solutions: 10_000,
                 allow_unplaced: false,
+                allow_credit_shortfall: false,
             }
         }
 
@@ -1450,6 +1610,7 @@ mod tests {
                 max_nodes: self.max_nodes,
                 max_solutions: self.max_solutions,
                 allow_unplaced: self.allow_unplaced,
+                allow_credit_shortfall: self.allow_credit_shortfall,
             })
         }
 
@@ -1476,6 +1637,7 @@ mod tests {
                     max_solutions: self.max_solutions,
                     // the chip means « it fits », never « the rest is out »
                     allow_unplaced: false,
+                    allow_credit_shortfall: false,
                 },
                 code,
             )
@@ -2253,6 +2415,7 @@ mod tests {
             max_nodes: 0,
             max_solutions: 1,
             allow_unplaced: false,
+            allow_credit_shortfall: false,
         };
         let candidates =
             build_candidates(&request).unwrap_or_else(|e| panic!("{e}"));
@@ -2275,6 +2438,109 @@ mod tests {
         // of the 6 demanded: the leaf must refuse, never lie
         assert!(finalize(&[1, 2], &ctx).is_none());
         assert!(finalize(&[1, UNPLACED], &ctx).is_some());
+    }
+
+    #[test]
+    fn a_soft_threshold_is_placed_latest_and_records_the_gap() {
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![
+                anytime("A-1", "monday"),
+                with_prereq(
+                    "T-9",
+                    "tuesday",
+                    &parsed(r#"{"program_credits":{"credits":6}}"#),
+                ),
+            ],
+        );
+        assert!(inputs.solve().solutions.is_empty(), "strict stays strict");
+        inputs.allow_credit_shortfall = true;
+        inputs.max_solutions = 1;
+        let solution = inputs.solve().solutions.remove(0);
+        assert_eq!(solution.placement["T-9"], 2);
+        assert_eq!(
+            solution.credit_shortfalls,
+            [CreditShortfall {
+                code: "T-9".to_string(),
+                session: 2,
+                earned_before: 3,
+                required: 6,
+            }]
+        );
+    }
+
+    #[test]
+    fn a_satisfied_or_branch_wins_without_a_false_shortfall() {
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![
+                anytime("A-1", "monday"),
+                with_prereq(
+                    "T-9",
+                    "tuesday",
+                    &parsed(
+                        r#"{"any":["A-1",{"program_credits":{"credits":60}}]}"#,
+                    ),
+                ),
+            ],
+        );
+        inputs.allow_credit_shortfall = true;
+        inputs.max_solutions = 1;
+        let solution = inputs.solve().solutions.remove(0);
+        assert!(solution.credit_shortfalls.is_empty());
+        assert_eq!(solution.placement["A-1"], 1);
+        assert_eq!(solution.placement["T-9"], 2);
+    }
+
+    #[test]
+    fn the_soft_final_guard_rejects_a_hard_leaf_and_tree_scan_is_bounded() {
+        let oversized = PrereqTree::All {
+            all: (0..MAX_TREE_NODES)
+                .map(|_| PrereqTree::Course("A-1".to_string()))
+                .collect(),
+        };
+        assert!(!tree_has_credits(&oversized));
+
+        let courses = vec![with_prereq(
+            "T-9",
+            "tuesday",
+            &parsed(
+                r#"{"all":[{"program_credits":{"credits":6}},"ZZZ-9999"]}"#,
+            ),
+        )];
+        let sessions = FALL_WINTER.to_vec();
+        let empty_set = BTreeSet::new();
+        let empty_summers: BTreeSet<usize> = BTreeSet::new();
+        let empty_map = BTreeMap::new();
+        let request = PlacementRequest {
+            sessions: &sessions,
+            credit_cap: 30,
+            concomitant: false,
+            courses: &courses,
+            passed: &empty_set,
+            pinned: &empty_map,
+            stages: &empty_set,
+            open_summers: &empty_summers,
+            seed: &empty_map,
+            max_nodes: 0,
+            max_solutions: 1,
+            allow_unplaced: false,
+            allow_credit_shortfall: true,
+        };
+        let candidates =
+            build_candidates(&request).unwrap_or_else(|e| panic!("{e}"));
+        let index_of = BTreeMap::from([("T-9".to_string(), 0)]);
+        let ctx = SearchCtx {
+            request: &request,
+            candidates: &candidates,
+            needs_final: needs_final_flags(&candidates, &index_of, &request),
+            suffix_credits: suffix_credit_sums(&candidates),
+            index_of,
+            referenced_by: referencing_map(&candidates),
+            passed_credits: 0,
+            credit_watch: vec![0],
+        };
+        assert!(finalize(&[2], &ctx).is_none());
     }
 
     #[test]
@@ -3461,6 +3727,7 @@ mod tests {
                 placement: BTreeMap::from([("TST-1001".to_string(), 1)]),
                 assumed: BTreeSet::from(["FRN-1904".to_string()]),
                 left_out: BTreeSet::from(["TST-1002".to_string()]),
+                credit_shortfalls: Vec::new(),
             }],
             blocked: vec![
                 Blocked {

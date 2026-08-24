@@ -2,7 +2,9 @@ use dioxus::prelude::*;
 
 use super::{edit_plan, SelectedCourse};
 use crate::data::Snapshot;
-use crate::panel::{self, Badge, Fit, PanelModel, Row, RowState, Section};
+use crate::panel::{
+    self, Badge, Fit, PanelGroup, PanelModel, Row, RowState, Section,
+};
 use crate::solve;
 use crate::state::{self, History, Plan, ProgramChoice, View};
 
@@ -177,7 +179,7 @@ fn ProgramPicker() -> Element {
 // et le profil se changent ici, à tout moment — les sections en dessous et
 // le bilan recomposent, la grille placée ne bouge pas (parité avec la
 // version JS). Un menu sans choix réel n'est pas rendu (B-GEX n'a pas de
-// concentrations) ; un programme qui n'offre ni l'un ni l'autre n'a pas la
+// concentrations); un programme qui n'offre ni l'un ni l'autre n'a pas la
 // rangée (M-GEX).
 #[component]
 fn CheminementKnobs() -> Element {
@@ -343,7 +345,7 @@ fn set_scope(
             alerts,
             super::AlertBody::Note(format!(
                 "Cours de l'ancien bloc retirés : {} — rien sous le \
-                 nouveau choix ne les liste ; « Annuler » les restaure.",
+                 nouveau choix ne les liste; « Annuler » les restaure.",
                 orphans.join(", ")
             )),
             super::AlertCause::Document,
@@ -431,11 +433,11 @@ fn PanelBody(model: PanelModel) -> Element {
                     SearchResults {}
                 }
             } else if has_program {
-                if let Some(mandatory) = model.mandatory.clone() {
-                    SectionView { section: mandatory }
+                for group in model.groups.iter().cloned() {
+                    GroupView { key: "{group.title}", group }
                 }
-                for section in model.rules.iter().cloned() {
-                    SectionView { key: "{section.key}", section }
+                if let Some(preparatory) = model.preparatory.clone() {
+                    SectionView { section: preparatory }
                 }
                 if let Some(note) = model.language_note.as_ref() {
                     p { class: "panel-note", b { "{note}" } }
@@ -455,13 +457,31 @@ fn PanelBody(model: PanelModel) -> Element {
 // say « complet » while a red badge sits right under it
 fn missing_rules(model: &PanelModel) -> usize {
     model
-        .mandatory
+        .groups
         .iter()
-        .chain(model.rules.iter())
+        .flat_map(|group| group.sections.iter())
+        .chain(model.preparatory.iter())
         .filter(|section| {
             matches!(section.badge, Badge::Missing(_) | Badge::Partial(_))
         })
         .count()
+}
+
+#[component]
+fn GroupView(group: PanelGroup) -> Element {
+    rsx! {
+        section { class: "panel-group",
+            div { class: "panel-group-head",
+                h2 { class: "panel-group-title", "{group.title}" }
+                if let Some(progress) = group.progress.as_ref() {
+                    span { class: "panel-group-progress", "{progress}" }
+                }
+            }
+            for section in group.sections.iter().cloned() {
+                SectionView { key: "{section.key}", section }
+            }
+        }
+    }
 }
 
 #[component]
@@ -477,6 +497,13 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
     let concomitant = plan.read().concomitant;
     let left_out = solver.read().left_out.clone();
     let verification = solver.read().verification.clone();
+    let credit_shortfalls = solver.read().credit_shortfalls.clone();
+    let shortfall_messages: Vec<String> = credit_shortfalls
+        .iter()
+        .map(|shortfall| {
+            crate::solve::credit_shortfall_message(shortfall, &plan.read())
+        })
+        .collect();
     let nothing_placed = {
         let plan_read = plan.read();
         plan_read.displayed_placement.is_empty()
@@ -648,6 +675,11 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                     "⚠ Plafond de crédits dépassé en {overloaded}."
                 }
             }
+            for message in shortfall_messages.iter() {
+                p { class: "panel-verdict panel-verdict--bad",
+                    "⚠ {message}"
+                }
+            }
             match readiness {
                 Some(Err(why)) => rsx! {
                     p { class: "warning",
@@ -698,7 +730,7 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
             }
             if let Some(verification) = verification {
                 if !verification.solutions.is_empty() {
-                    if rules_missing == 0 {
+                    if rules_missing == 0 && credit_shortfalls.is_empty() {
                         p { class: "panel-verdict panel-verdict--ok",
                             "Cheminement vérifié ✓ — préalables, plafond, \
                              horaires et règles comptées : tout y est."
@@ -1129,6 +1161,7 @@ fn ResultRows(
 #[component]
 fn RowView(row: Row, grant_key: Option<String>) -> Element {
     let plan = use_context::<Signal<Plan>>();
+    let solver = use_context::<Signal<super::SolverState>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     // the advisory fit marker, swap semantics — the probe comes from the
     // shared memo, each row costs one mask overlap
@@ -1166,18 +1199,32 @@ fn RowView(row: Row, grant_key: Option<String>) -> Element {
                     RowState::Acquired
                         | RowState::Credited
                         | RowState::Unknown
+                        // no choice strip for a row already counted by an
+                        // earlier rule of its scope — the sub-text carries
+                        // the state (« compté dans la Règle N »), the
+                        // border only echoes it (AIR INP-3)
+                        | RowState::CountedElsewhere
                 )
             })
             .map(|snapshot| {
                 panel::choice_strip(snapshot, &plan.read(), &row.code)
             })
     };
-    let chosen = strip
-        .as_ref()
-        .is_some_and(|strip| strip.choice != panel::Choice::Not);
+    // CountedElsewhere has no strip to read a choice from, but it is still
+    // shown retained (panel-course--chosen) since a rule elsewhere already
+    // counts it
+    let chosen = row.state == RowState::CountedElsewhere
+        || strip
+            .as_ref()
+            .is_some_and(|strip| strip.choice != panel::Choice::Not);
     let dimmed =
         matches!(row.state, RowState::PrereqUnmet | RowState::Unknown);
     let assumed = row.assumed.join(", ");
+    let shortfall_messages = crate::solve::course_shortfall_messages(
+        &row.code,
+        &solver.read().credit_shortfalls,
+        &plan.read(),
+    );
     rsx! {
         div {
             class: "panel-course",
@@ -1191,6 +1238,11 @@ fn RowView(row: Row, grant_key: Option<String>) -> Element {
                 if !assumed.is_empty() {
                     div { class: "panel-course-sub",
                         "présumé acquis : {assumed}"
+                    }
+                }
+                for message in shortfall_messages.iter() {
+                    div { class: "panel-course-sub panel-course-sub--error",
+                        "⚠ {message}"
                     }
                 }
                 if !matches!(row.state, RowState::Unknown) {
@@ -1472,6 +1524,8 @@ fn RuleAttach(code: String) -> Element {
         return rsx! {};
     }
     let current = plan.read().rule_grants.get(&code).cloned();
+    let labels: std::collections::BTreeMap<String, String> =
+        rules.iter().cloned().collect();
     rsx! {
         select {
             class: "panel-attach",
@@ -1479,6 +1533,7 @@ fn RuleAttach(code: String) -> Element {
             title: "Entente : compter {code} dans une règle",
             onchange: {
                 let code = code.clone();
+                let labels = labels.clone();
                 move |event: Event<FormData>| {
                     let value = event.value();
                     let code = code.clone();
@@ -1493,9 +1548,9 @@ fn RuleAttach(code: String) -> Element {
                         );
                         return;
                     }
-                    let title = value
-                        .split_once('/')
-                        .map(|(_, title)| title.to_string())
+                    let title = labels
+                        .get(&value)
+                        .cloned()
                         .unwrap_or_else(|| value.clone());
                     edit_plan(
                         plan,

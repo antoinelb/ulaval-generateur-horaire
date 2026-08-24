@@ -118,6 +118,9 @@ pub struct SolverState {
     // (`retire_stale_left_out`, ADR
     // `2026-08-peremption-des-toasts-par-cause`)
     pub left_out: std::collections::BTreeSet<String>,
+    // Derived from the latest proposal or verification report. Never
+    // persisted; a document swap clears it with the other solver facts.
+    pub credit_shortfalls: Vec<crate::solve::CreditShortfallAnswer>,
     next_id: u64,
 }
 
@@ -256,8 +259,9 @@ fn handle_worker_answer(
                     apply_proposal(&report, state, plan, alerts);
                 }
                 QueryKind::Verify => {
-                    state.write().verification =
-                        Some(report.placement.clone());
+                    let mut state = state.write();
+                    state.verification = Some(report.placement.clone());
+                    state.credit_shortfalls = report.credit_shortfalls;
                 }
             }
         }
@@ -275,6 +279,7 @@ fn apply_proposal(
     plan: Signal<Plan>,
     alerts: Signal<Vec<Alert>>,
 ) {
+    state.write().credit_shortfalls = report.credit_shortfalls.clone();
     if let Some(note) = crate::solve::completion_note(&report.placement) {
         push_caused_alert(alerts, AlertBody::Note(note), AlertCause::Document);
     }
@@ -687,6 +692,7 @@ pub fn swap_document(
     let mut solver_state = solver_state;
     let mut state = solver_state.write();
     state.left_out.clear();
+    state.credit_shortfalls.clear();
     state.proposed = None;
     drop(state);
     // the document's own announcements and verdicts leave with it — only
