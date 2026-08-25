@@ -123,6 +123,25 @@ pub fn now_epoch_ms() -> u64 {
         .unwrap_or(0)
 }
 
+pub fn now_secs() -> u64 {
+    now_epoch_ms() / 1_000
+}
+
+// the browser's own clock, dated with `core`'s civil calendar arithmetic —
+// no date logic lives here, only the wiring (plan item 7)
+pub fn now_iso() -> String {
+    let secs = now_secs();
+    let (year, month, day) =
+        ulaval_scheduler_core::civil_from_days(secs / 86_400);
+    let time_of_day = secs % 86_400;
+    let hour = time_of_day / 3_600;
+    let minute = (time_of_day % 3_600) / 60;
+    let second = time_of_day % 60;
+    format!(
+        "{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z"
+    )
+}
+
 // --- URL sharing -----------------------------------------------------------
 
 // the `#…` payload of the current address, if any — the fragment never
@@ -221,6 +240,70 @@ pub fn register_service_worker() {
     if let Some(window) = web_sys::window() {
         let _ = window.navigator().service_worker().register(SW_URL);
     }
+}
+
+// --- import d'un programme (proxy CORS) -------------------------------------
+
+// The real counterpart of `Solver::terminate` (a genuine Annuler, LAT-4):
+// dropping this struct does not cancel the fetch, only calling `abort` does.
+pub struct ImportFetch {
+    controller: web_sys::AbortController,
+}
+
+impl ImportFetch {
+    pub fn abort(&self) {
+        self.controller.abort();
+    }
+}
+
+pub fn start_import_fetch() -> Result<ImportFetch, crate::import::ImportError>
+{
+    web_sys::AbortController::new()
+        .map(|controller| ImportFetch { controller })
+        .map_err(|error| crate::import::ImportError::BrowserApi {
+            detail: format!("{error:?}"),
+        })
+}
+
+// All judging (status, content type, which `ImportError` variant) happens in
+// `crate::import::classify_response` — this function only performs the fetch
+// and reports what the browser told it.
+pub async fn fetch_program_html(
+    url: &str,
+    fetch: &ImportFetch,
+) -> Result<String, crate::import::ImportError> {
+    let signal = fetch.controller.signal();
+    let response =
+        gloo_net::http::Request::get(&crate::import::proxy_url(url))
+            .abort_signal(Some(&signal))
+            .send()
+            .await
+            .map_err(|error| {
+                if signal.aborted() {
+                    crate::import::ImportError::Cancelled
+                } else {
+                    crate::import::ImportError::Proxy {
+                        detail: error.to_string(),
+                    }
+                }
+            })?;
+    let content_type = response.headers().get("content-type");
+    crate::import::classify_response(
+        response.status(),
+        content_type.as_deref(),
+    )?;
+    response.text().await.map_err(|error| {
+        // an Annuler that lands mid-body must read as a cancel, not as the
+        // proxy's own ERR-1 — the same check `send()` makes above, needed
+        // again here since the abort can land after the headers are in
+        if signal.aborted() {
+            crate::import::ImportError::Cancelled
+        } else {
+            crate::import::ImportError::Proxy {
+                detail: error.to_string(),
+            }
+        }
+    })
 }
 
 // --- the solver worker (AIR LAT-3: solver B never blocks this thread) -----

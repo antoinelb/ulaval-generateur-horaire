@@ -7,6 +7,8 @@ pub mod course_manual;
 pub mod feasibility;
 pub mod intake;
 pub mod organigramme;
+#[cfg(feature = "parser")]
+pub mod parser;
 pub mod preparatory;
 pub mod prereq_override;
 pub mod prereq_parse;
@@ -23,6 +25,8 @@ pub use course_manual::*;
 pub use feasibility::*;
 pub use intake::*;
 pub use organigramme::*;
+#[cfg(feature = "parser")]
+pub use parser::ParseError;
 pub use preparatory::*;
 pub use prereq_override::*;
 pub use prereq_parse::*;

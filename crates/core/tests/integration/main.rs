@@ -5,6 +5,9 @@
 mod catalogue;
 mod course;
 mod organigramme;
+mod parser_catalogue;
+mod parser_course;
+mod parser_program;
 mod program;
 mod rules;
 mod schedule;

@@ -1,6 +1,6 @@
 use std::fs;
 
-use ulaval_scheduler_scraper::parser;
+use ulaval_scheduler_core::parser;
 
 const FIXTURE_DIR: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),

@@ -7,8 +7,8 @@ use crate::course::{self, CourseError, Snapshot};
 use crate::program::{self, ProgramError};
 use crate::{catalogue, fetch::Fetcher, parser::ParseError, print};
 use ulaval_scheduler_core::{
-    preparatory_rule, Catalogue, CatalogueEntry, Course, Program, Season,
-    Semester,
+    civil_from_days, preparatory_rule, semester_after, Catalogue,
+    CatalogueEntry, Course, Program, Semester,
 };
 
 // ~10 requests/second, the politeness budget the whole scraper shares
@@ -124,9 +124,8 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
             base_url,
             urls,
         } => {
-            let semester = semester.unwrap_or_else(|| {
-                semester_after(std::time::SystemTime::now())
-            });
+            let semester =
+                semester.unwrap_or_else(|| semester_after(now_secs()));
             // the courses feed the « Scolarité préparatoire » rule: read
             // before anything is fetched, so a missing snapshot fails the
             // run immediately (ADR `2026-08-regle-scolarite-preparatoire`)
@@ -141,6 +140,16 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
             write_programs(programs, anomalies, &output_dir)
         }
     }
+}
+
+// seconds since the epoch for the running clock; a pre-1970 clock is a
+// broken host, floored to 0 rather than propagating an error nobody can act
+// on (the bogus vintage it yields stays visible in the file name)
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|since| since.as_secs())
+        .unwrap_or(0)
 }
 
 async fn get_catalogue(
@@ -463,56 +472,6 @@ fn program_slugs(
             Ok(program.slug)
         })
         .collect()
-}
-
-// The vintage a scrape captures: the session that follows the run, since a
-// run prepares the coming session's version — and a program is only ever
-// defined for automne or hiver, never été, so September–December prepares
-// the coming hiver, which belongs to the next civil year, and every other
-// month prepares the current year's automne
-// (ADR `2026-08-millesime-automne-ou-hiver-jamais-ete`).
-fn semester_after(now: std::time::SystemTime) -> Semester {
-    // a pre-1970 clock is a broken host; flooring it to day zero keeps the
-    // rule total and the bogus vintage visible in the file name
-    let days = now
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|since| since.as_secs() / 86_400)
-        .unwrap_or(0);
-    let (year, month, _) = civil_from_days(days);
-    match month {
-        9..=12 => Semester {
-            season: Season::Winter,
-            year: year + 1,
-        },
-        _ => Semester {
-            season: Season::Fall,
-            year,
-        },
-    }
-}
-
-// days since 1970-01-01 → (civil year, month, day), by Howard Hinnant's
-// `civil_from_days` (branchless era arithmetic, exact for any day ≥ 0)
-fn civil_from_days(days: u64) -> (u16, u64, u64) {
-    let z = days + 719_468;
-    let era = z / 146_097;
-    let day_of_era = z % 146_097;
-    let year_of_era = (day_of_era - day_of_era / 1_460 + day_of_era / 36_524
-        - day_of_era / 146_096)
-        / 365;
-    let day_of_year =
-        day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
-    let shifted_month = (5 * day_of_year + 2) / 153;
-    let day = day_of_year - (153 * shifted_month + 2) / 5 + 1;
-    // the algorithm's year starts in March; January and February belong to
-    // the next civil year
-    let month = if shifted_month < 10 {
-        shifted_month + 3
-    } else {
-        shifted_month - 9
-    };
-    let year = year_of_era + era * 400 + u64::from(month <= 2);
-    (year as u16, month, day)
 }
 
 async fn get_programs(
@@ -1204,34 +1163,6 @@ mod tests {
     }
 
     #[test]
-    fn the_semester_after_the_scrape_flips_twice_a_year() {
-        // a run prepares the coming session, and a program is only defined
-        // for automne or hiver: September–December → the next civil year's
-        // hiver, every other month → the current year's automne — both
-        // boundaries of each band are pinned
-        for (date, secs, expected) in [
-            ("2026-01-01", 1_767_225_600_u64, "A26"),
-            ("2026-08-31", 1_788_134_400, "A26"),
-            ("2026-09-01", 1_788_220_800, "H27"),
-            ("2026-12-31", 1_798_675_200, "H27"),
-        ] {
-            let now =
-                std::time::UNIX_EPOCH + std::time::Duration::from_secs(secs);
-            assert_eq!(semester_after(now).to_string(), expected, "on {date}");
-        }
-    }
-
-    #[test]
-    fn a_pre_epoch_clock_floors_to_day_zero_instead_of_panicking() {
-        let now = std::time::UNIX_EPOCH - std::time::Duration::from_secs(1);
-        assert_eq!(
-            semester_after(now).to_string(),
-            "A70",
-            "January 1970 → its coming automne"
-        );
-    }
-
-    #[test]
     fn the_snapshot_meta_stamps_an_utc_instant_and_the_count() {
         // 2026-09-01T00:00:00Z (pinned above) plus 01:02:03 into the day
         let now = std::time::UNIX_EPOCH
@@ -1281,7 +1212,7 @@ mod tests {
         .unwrap_or_else(|e| panic!("scrape two programs: {e}"));
 
         let programmes = dir.join("programmes");
-        let semester = semester_after(std::time::SystemTime::now());
+        let semester = semester_after(now_secs());
         // the file carries the official code, the slug lives inside it
         let civil = std::fs::read_to_string(
             programmes.join(format!("B-GCI-{semester}.json")),
@@ -1422,7 +1353,7 @@ mod tests {
         .await
         .unwrap_or_else(|e| panic!("a 404 must not fail the run: {e}"));
 
-        let semester = semester_after(std::time::SystemTime::now());
+        let semester = semester_after(now_secs());
         assert!(
             dir.join("programmes")
                 .join(format!("B-GCI-{semester}.json"))
@@ -1518,7 +1449,7 @@ mod tests {
         let dir = test_dir("programs-blocked-file");
         plant_snapshot(&dir, &[]);
         // a directory at the target path makes the rename fail
-        let semester = semester_after(std::time::SystemTime::now());
+        let semester = semester_after(now_secs());
         std::fs::create_dir_all(
             dir.join("programmes")
                 .join(format!("B-GCI-{semester}.json")),
@@ -1623,7 +1554,7 @@ mod tests {
         .await
         .unwrap_or_else(|e| panic!("scrape the program: {e}"));
 
-        let semester = semester_after(std::time::SystemTime::now());
+        let semester = semester_after(now_secs());
         let written = std::fs::read_to_string(
             dir.join("programmes")
                 .join(format!("B-GEX-{semester}.json")),
@@ -1758,8 +1689,13 @@ mod tests {
     );
 
     fn test_dir(name: &str) -> PathBuf {
-        let dir =
-            std::env::temp_dir().join(format!("ulaval-scraper-cli-{name}"));
+        // llvm-cov compiles this file into both the unit-test binary and an
+        // integration binary (ADR 2026-07-couverture-par-instanciation), and
+        // the two run concurrently as separate processes: the pid keeps
+        // same-named tests in each binary from racing on one directory.
+        let pid = std::process::id();
+        let dir = std::env::temp_dir()
+            .join(format!("ulaval-scraper-cli-{pid}-{name}"));
         // leftovers from an earlier failed run
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir)

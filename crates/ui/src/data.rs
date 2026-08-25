@@ -5,6 +5,7 @@ use ulaval_scheduler_core::{
     PrereqOverride, Prerequisites, Program,
 };
 
+use crate::import::LocalProgram;
 use crate::state::Plan;
 use ulaval_scheduler_wasm::merge::merge_manual;
 
@@ -54,6 +55,11 @@ pub struct Snapshot {
     // anything the load had to tolerate — surfaced, never silent
     pub warnings: Vec<String>,
     pub provenance: Provenance,
+    // programs imported by URL and actually merged in — a local program
+    // beaten by a shipped one of the same (code, semester) is not here,
+    // only named in `warnings`; read by the panel for the card's badge and
+    // provenance (plan item 6)
+    pub local_programs: Vec<LocalProgram>,
 }
 
 // TRU-2/BLD-4: what the footer and every diagnostic block say about the
@@ -88,6 +94,7 @@ struct Meta {
 pub fn parse_data(
     raw: &RawData,
     manual: Vec<Course>,
+    local: Vec<LocalProgram>,
 ) -> Result<Snapshot, DataError> {
     let file: CoursesFile = parse(&raw.courses, "cours.json")?;
     let mut warnings = Vec::new();
@@ -134,6 +141,42 @@ pub fn parse_data(
     // them (code, then millésime), deterministically
     let mut programs: Vec<Program> =
         kept.into_iter().map(|(_, program)| program).collect();
+    // programs imported by URL (plan item 5) join last: a shipped program
+    // of the same (code, semester) always wins — the local one is not
+    // silently dropped, it is named as replaced (plan item 6). `shipped_len`
+    // freezes the line between "shipped" and "already-inserted local" so a
+    // corrupted persisted list (duplicate locals — `add_local_program` is
+    // the sole writer and already guards against that, but the restored
+    // list is not re-validated) is named accurately rather than blamed on
+    // the shipped catalogue.
+    let shipped_len = programs.len();
+    let mut local_programs = Vec::new();
+    for entry in local {
+        let beaten_by_shipped = programs[..shipped_len].iter().any(|program| {
+            program.code == entry.program.code
+                && program.semester == entry.program.semester
+        });
+        let beaten_by_local = programs[shipped_len..].iter().any(|program| {
+            program.code == entry.program.code
+                && program.semester == entry.program.semester
+        });
+        if beaten_by_shipped {
+            warnings.push(format!(
+                "{} {} importé localement remplacé par la version livrée \
+                 avec l'application.",
+                entry.program.code, entry.program.semester
+            ));
+        } else if beaten_by_local {
+            warnings.push(format!(
+                "{} {} importé localement ignoré : un autre programme \
+                 importé localement porte déjà ce code et ce millésime.",
+                entry.program.code, entry.program.semester
+            ));
+        } else {
+            programs.push(entry.program.clone());
+            local_programs.push(entry);
+        }
+    }
     programs.sort_by_key(|program| {
         (program.code.clone(), program.semester.to_string())
     });
@@ -171,6 +214,7 @@ pub fn parse_data(
         warnings,
         courses: merged.courses,
         programs,
+        local_programs,
     })
 }
 
@@ -384,8 +428,8 @@ mod tests {
                  "equivalents":[],"seasons":{}}]}"#
                 .to_string(),
         );
-        let snapshot =
-            parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        let snapshot = parse_data(&raw, Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
         assert!(snapshot.by_code.contains_key("OPT-ETR1"));
         assert!(
             !snapshot.manual_codes.contains("OPT-ETR1"),
@@ -403,7 +447,7 @@ mod tests {
                  "equivalents":[],"seasons":{}}]}"#
                 .to_string(),
         );
-        let snapshot = parse_data(&raw, vec![manual("OPT-ETR1")])
+        let snapshot = parse_data(&raw, vec![manual("OPT-ETR1")], Vec::new())
             .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(snapshot.collisions, ["OPT-ETR1"]);
         assert!(!snapshot.manual_codes.contains("OPT-ETR1"));
@@ -416,8 +460,8 @@ mod tests {
             r#"{"vintages":{"A24":{"prerequisites":{"GEX-1000":""}}}}"#
                 .to_string(),
         );
-        let snapshot =
-            parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        let snapshot = parse_data(&raw, Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
         assert!(snapshot.manual.vintages.contains_key("A24"));
         assert!(
             snapshot.warnings.is_empty(),
@@ -434,8 +478,8 @@ mod tests {
         ] {
             let mut raw = raw();
             raw.manual = manual;
-            let snapshot =
-                parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+            let snapshot = parse_data(&raw, Vec::new(), Vec::new())
+                .unwrap_or_else(|e| panic!("{e}"));
             assert!(
                 snapshot.warnings.iter().any(|w| w.contains(expected)),
                 "expected {expected:?}, got {:?}",
@@ -453,8 +497,8 @@ mod tests {
         let mut raw = raw();
         raw.manual =
             Some(r#"{"vintages":{"2024":{"prerequisites":{}}}}"#.to_string());
-        let snapshot =
-            parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        let snapshot = parse_data(&raw, Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
         assert!(
             snapshot.warnings.iter().any(|w| w.contains("« 2024 »")),
             "{:?}",
@@ -483,7 +527,8 @@ mod tests {
                  {"GEX-1000":"GCI-1000 ET MAT-1902"}}}}"#
                 .to_string(),
         );
-        parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"))
+        parse_data(&raw, Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"))
     }
 
     #[test]
@@ -529,8 +574,8 @@ mod tests {
                    {"GEX-1000":"GCI-1000 ET MAT-1902"}}}}"#
                 .to_string(),
         );
-        let snapshot =
-            parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        let snapshot = parse_data(&raw, Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
 
         let bare = effective_overrides(&snapshot, &Plan::default());
         assert_eq!(bare["GEX-1000"].text, "GCI-1000");
@@ -614,8 +659,8 @@ mod tests {
              "equivalents":[],"seasons":{}}
         ]}"#
         .to_string();
-        let snapshot =
-            parse_data(&raw, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        let snapshot = parse_data(&raw, Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(
             snapshot.prerequisites_draft("GEX-1000"),
             ("Autorisation de la direction".to_string(), false)
@@ -656,8 +701,8 @@ mod tests {
 
     #[test]
     fn a_full_load_indexes_and_stamps_the_catalogue() {
-        let snapshot =
-            parse_data(&raw(), Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        let snapshot = parse_data(&raw(), Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(snapshot.courses.len(), 1);
         assert_eq!(snapshot.by_code["GEX-1000"], 0);
         assert_eq!(snapshot.programs[0].code, "B-GEX");
@@ -672,9 +717,12 @@ mod tests {
 
     #[test]
     fn manual_courses_join_and_collisions_surface() {
-        let snapshot =
-            parse_data(&raw(), vec![manual("ANL-2020"), manual("GEX-1000")])
-                .unwrap_or_else(|e| panic!("{e}"));
+        let snapshot = parse_data(
+            &raw(),
+            vec![manual("ANL-2020"), manual("GEX-1000")],
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(snapshot.by_code["ANL-2020"], 0, "sorted before GEX");
         assert_eq!(snapshot.collisions, ["GEX-1000"]);
         assert_eq!(snapshot.provenance.course_count, 2);
@@ -684,15 +732,15 @@ mod tests {
     fn an_absent_or_unreadable_meta_degrades_with_a_visible_warning() {
         let mut absent = raw();
         absent.meta = None;
-        let snapshot =
-            parse_data(&absent, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        let snapshot = parse_data(&absent, Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
         assert!(snapshot.provenance.scraped_at.is_none());
         assert!(snapshot.warnings[0].contains("indisponible"));
 
         let mut corrupt = raw();
         corrupt.meta = Some("pas du json".to_string());
-        let snapshot =
-            parse_data(&corrupt, Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        let snapshot = parse_data(&corrupt, Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
         assert!(snapshot.provenance.scraped_at.is_none());
         assert!(snapshot.warnings[0].contains("illisible"));
     }
@@ -702,7 +750,7 @@ mod tests {
         let mut bad_courses = raw();
         bad_courses.courses = "{".to_string();
         assert!(matches!(
-            parse_data(&bad_courses, Vec::new()),
+            parse_data(&bad_courses, Vec::new(), Vec::new()),
             Err(DataError::Parse { file, .. }) if file == "cours.json"
         ));
 
@@ -710,7 +758,7 @@ mod tests {
         bad_program.programs =
             vec![("B-GEX-A26.json".to_string(), "{".to_string())];
         assert!(matches!(
-            parse_data(&bad_program, Vec::new()),
+            parse_data(&bad_program, Vec::new(), Vec::new()),
             Err(DataError::Parse { file, .. }) if file == "B-GEX-A26.json"
         ));
     }
@@ -724,7 +772,7 @@ mod tests {
             ("B-GEX-A24.json".to_string(), PROGRAM.to_string()),
             ("B-GEX-A26.json".to_string(), PROGRAM.to_string()),
         ];
-        let snapshot = parse_data(&duplicated, Vec::new())
+        let snapshot = parse_data(&duplicated, Vec::new(), Vec::new())
             .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(snapshot.programs.len(), 1, "one picker entry");
         let warning = &snapshot.warnings[0];
@@ -737,7 +785,7 @@ mod tests {
             ("B-GEX-A26.json".to_string(), PROGRAM.to_string()),
             ("B-GEX-A24.json".to_string(), PROGRAM.to_string()),
         ];
-        let snapshot = parse_data(&agreeing_first, Vec::new())
+        let snapshot = parse_data(&agreeing_first, Vec::new(), Vec::new())
             .unwrap_or_else(|e| panic!("{e}"));
         assert!(
             snapshot.warnings[0].starts_with("B-GEX-A24.json ignoré"),
@@ -758,7 +806,7 @@ mod tests {
             ("B-GEX-A26.json".to_string(), PROGRAM.to_string()),
             ("B-GEX-A24.json".to_string(), a24),
         ];
-        let snapshot = parse_data(&vintages, Vec::new())
+        let snapshot = parse_data(&vintages, Vec::new(), Vec::new())
             .unwrap_or_else(|e| panic!("{e}"));
         assert!(snapshot.warnings.is_empty(), "{:?}", snapshot.warnings);
         let listed: Vec<(String, String)> = snapshot
@@ -776,6 +824,153 @@ mod tests {
             ],
             "sorted, both kept"
         );
+    }
+
+    // --- programs imported by URL (plan item 6) ---------------------------
+
+    fn local_program(code: &str, semester: &str) -> LocalProgram {
+        let program: Program = serde_json::from_str(&format!(
+            r#"{{"code":"{code}","slug":"slug","semester":"{semester}",
+                 "title":"T","cycle":1,"credits_required":6,
+                 "mandatory":[],"rules":[],"concentrations":[],
+                 "profiles":[]}}"#
+        ))
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        LocalProgram {
+            program,
+            source_url: "https://www.ulaval.ca/etudes/programmes/slug"
+                .to_string(),
+            imported_at: "2026-08-24T12:00:00Z".to_string(),
+            proxy: "corsproxy.io".to_string(),
+            anomalies: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_local_program_absent_from_the_catalogue_joins_the_sorted_list() {
+        let snapshot = parse_data(
+            &raw(),
+            Vec::new(),
+            vec![local_program("B-GLO", "A26")],
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert!(snapshot.warnings.is_empty(), "{:?}", snapshot.warnings);
+        let codes: Vec<&str> =
+            snapshot.programs.iter().map(|p| p.code.as_str()).collect();
+        assert_eq!(
+            codes,
+            ["B-GEX", "B-GLO"],
+            "sorted alongside the shipped ones"
+        );
+        assert_eq!(snapshot.local_programs.len(), 1);
+        assert_eq!(snapshot.local_programs[0].program.code, "B-GLO");
+    }
+
+    #[test]
+    fn a_local_program_duplicating_a_shipped_one_is_replaced_and_named() {
+        let snapshot = parse_data(
+            &raw(),
+            Vec::new(),
+            vec![local_program("B-GEX", "A26")],
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(
+            snapshot.programs.len(),
+            1,
+            "the shipped one, not two entries"
+        );
+        assert!(snapshot.local_programs.is_empty(), "beaten, not merged");
+        assert!(
+            snapshot
+                .warnings
+                .iter()
+                .any(|w| w.contains("B-GEX") && w.contains("remplacé")),
+            "{:?}",
+            snapshot.warnings
+        );
+    }
+
+    #[test]
+    fn two_locals_sharing_code_and_semester_name_the_local_collision_not_the_shipped_one()
+     {
+        // `add_local_program` is the sole writer of the persisted list and
+        // already guards against this, but the restored list is not
+        // re-validated: a hand-edited or corrupted `local` argument can
+        // still carry two entries with the same (code, semester).
+        let snapshot = parse_data(
+            &raw(),
+            Vec::new(),
+            vec![local_program("B-GLO", "A26"), local_program("B-GLO", "A26")],
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(snapshot.local_programs.len(), 1, "first one kept");
+        assert!(
+            snapshot.warnings.iter().any(|w| w.contains("B-GLO")
+                && w.contains("importé localement")
+                && !w.contains("livrée")),
+            "names the local collision, not the shipped catalogue: {:?}",
+            snapshot.warnings
+        );
+    }
+
+    #[test]
+    fn add_local_program_refuses_a_duplicate_and_keeps_the_sort() {
+        let mut snapshot = parse_data(&raw(), Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
+        add_local_program(&mut snapshot, local_program("B-GLO", "A26"))
+            .unwrap_or_else(|e| panic!("{e}"));
+        let codes: Vec<&str> =
+            snapshot.programs.iter().map(|p| p.code.as_str()).collect();
+        assert_eq!(codes, ["B-GEX", "B-GLO"]);
+        assert_eq!(snapshot.local_programs.len(), 1);
+
+        let error =
+            add_local_program(&mut snapshot, local_program("B-GEX", "A26"))
+                .expect_err("the shipped program wins");
+        assert!(error.contains("livré"), "{error}");
+        assert_eq!(
+            snapshot.programs.len(),
+            2,
+            "the refused duplicate did not join"
+        );
+    }
+
+    #[test]
+    fn add_local_program_refuses_a_repeated_local_import_naming_the_local_one()
+     {
+        let mut snapshot = parse_data(&raw(), Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
+        add_local_program(&mut snapshot, local_program("B-GLO", "A26"))
+            .unwrap_or_else(|e| panic!("{e}"));
+
+        let error =
+            add_local_program(&mut snapshot, local_program("B-GLO", "A26"))
+                .expect_err("the already-imported local program wins");
+        assert!(
+            error.contains("importé localement") && !error.contains("livré"),
+            "names the local collision, not the shipped catalogue: {error}"
+        );
+        assert_eq!(
+            snapshot.local_programs.len(),
+            1,
+            "the refused duplicate did not join"
+        );
+    }
+
+    #[test]
+    fn remove_local_program_removes_from_both_lists_and_returns_it() {
+        let mut snapshot = parse_data(
+            &raw(),
+            Vec::new(),
+            vec![local_program("B-GLO", "A26")],
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let removed = remove_local_program(&mut snapshot, "B-GLO", "A26")
+            .expect("present");
+        assert_eq!(removed.program.code, "B-GLO");
+        assert!(snapshot.local_programs.is_empty());
+        assert!(snapshot.programs.iter().all(|p| p.code != "B-GLO"));
+        assert!(remove_local_program(&mut snapshot, "XXX", "A26").is_none());
     }
 
     #[test]
@@ -865,8 +1060,8 @@ mod tests {
 
     #[test]
     fn adding_a_manual_course_keeps_the_snapshot_invariants() {
-        let mut snapshot =
-            parse_data(&raw(), Vec::new()).unwrap_or_else(|e| panic!("{e}"));
+        let mut snapshot = parse_data(&raw(), Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
         let course = build_manual_course(
             &ManualDraft {
                 code: "AAA-1000".to_string(),
@@ -1043,4 +1238,63 @@ pub fn add_manual_course(
         .collect();
     snapshot.provenance.course_count = snapshot.courses.len();
     Ok(())
+}
+
+// insert a program imported by URL into the loaded snapshot, keeping its
+// invariants (sorted by code then semester); a shipped program of the same
+// (code, semester) always wins, the same rule `parse_data` applies at load
+// (plan item 6) — but a collision can also be with a program already
+// imported locally (a repeated import click), which is not the shipped
+// catalogue, so the two cases are named differently
+pub fn add_local_program(
+    snapshot: &mut Snapshot,
+    local: LocalProgram,
+) -> Result<(), String> {
+    let beaten_by_local = snapshot.local_programs.iter().any(|entry| {
+        entry.program.code == local.program.code
+            && entry.program.semester == local.program.semester
+    });
+    if beaten_by_local {
+        return Err(format!(
+            "{} {} existe déjà dans le catalogue — un autre programme \
+             importé localement porte déjà ce code et ce millésime.",
+            local.program.code, local.program.semester
+        ));
+    }
+    let beaten_by_shipped = snapshot.programs.iter().any(|program| {
+        program.code == local.program.code
+            && program.semester == local.program.semester
+    });
+    if beaten_by_shipped {
+        return Err(format!(
+            "{} {} existe déjà dans le catalogue — le programme livré \
+             prime.",
+            local.program.code, local.program.semester
+        ));
+    }
+    snapshot.programs.push(local.program.clone());
+    snapshot.programs.sort_by_key(|program| {
+        (program.code.clone(), program.semester.to_string())
+    });
+    snapshot.local_programs.push(local);
+    Ok(())
+}
+
+// remove a program imported by URL from the loaded snapshot, from both
+// lists — returns the removed `LocalProgram` so the caller can offer an
+// undo (ACT-2/plan item 9); `None` when nothing matches
+pub fn remove_local_program(
+    snapshot: &mut Snapshot,
+    code: &str,
+    semester: &str,
+) -> Option<LocalProgram> {
+    let position = snapshot.local_programs.iter().position(|local| {
+        local.program.code == code
+            && local.program.semester.to_string() == semester
+    })?;
+    let local = snapshot.local_programs.remove(position);
+    snapshot.programs.retain(|program| {
+        !(program.code == code && program.semester.to_string() == semester)
+    });
+    Some(local)
 }

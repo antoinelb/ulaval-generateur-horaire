@@ -2,12 +2,14 @@ use std::collections::BTreeMap;
 
 use ulaval_scheduler_core::Course;
 
+use crate::import::LocalProgram;
 use crate::state::{Plan, View};
 
 pub const PLAN_KEY: &str = "gh.v1.plan";
 pub const VIEW_KEY: &str = "gh.v1.view";
 pub const LOG_KEY: &str = "gh.v1.log";
 pub const MANUAL_KEY: &str = "gh.v1.cours-manuels";
+pub const LOCAL_PROGRAMS_KEY: &str = "gh.v1.programmes-locaux";
 pub const LOG_CAP: usize = 200;
 const VERSION: u32 = 1;
 
@@ -54,6 +56,20 @@ pub fn encode_manual(manual: &Vec<Course>) -> String {
 
 pub fn restore_manual(stored: Option<&str>) -> Restored<Vec<Course>> {
     restore(stored, "des cours manuels")
+}
+
+// the student's programs imported by URL (plan item 5) — same envelope,
+// same loud tolerance. The stored value is a JSON array, not an object, so
+// `unknown_keys` never finds anything to name here — the tolerance plays out
+// at the whole-value level instead, exactly as for the manual course list.
+pub fn encode_local_programs(programs: &Vec<LocalProgram>) -> String {
+    encode(programs)
+}
+
+pub fn restore_local_programs(
+    stored: Option<&str>,
+) -> Restored<Vec<LocalProgram>> {
+    restore(stored, "des programmes locaux")
 }
 
 fn encode<T: serde::Serialize>(state: &T) -> String {
@@ -694,6 +710,39 @@ mod tests {
         assert!(damaged.state.is_empty());
         assert_eq!(damaged.backup.as_deref(), Some("pas du json"));
         let fresh = restore_manual(None);
+        assert!(fresh.state.is_empty());
+        assert!(fresh.backup.is_none());
+    }
+
+    #[test]
+    fn the_local_program_list_round_trips_and_survives_damage() {
+        let program: ulaval_scheduler_core::Program = serde_json::from_str(
+            r#"{"code":"B-GLO","slug":"genie-logiciel","semester":"A26",
+                "title":"Génie logiciel","cycle":1,"credits_required":120,
+                "mandatory":[],"rules":[],"concentrations":[],"profiles":[]}"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let local = LocalProgram {
+            program,
+            source_url:
+                "https://www.ulaval.ca/etudes/programmes/genie-logiciel"
+                    .to_string(),
+            imported_at: "2026-08-24T12:00:00Z".to_string(),
+            proxy: "corsproxy.io".to_string(),
+            anomalies: vec!["règle non reconnue".to_string()],
+        };
+        let programs = vec![local];
+        let restored =
+            restore_local_programs(Some(&encode_local_programs(&programs)));
+        assert_eq!(restored.state, programs);
+        assert!(restored.notes.is_empty());
+        assert!(restored.backup.is_none());
+
+        let damaged = restore_local_programs(Some("pas du json"));
+        assert!(damaged.state.is_empty());
+        assert_eq!(damaged.notes.len(), 1);
+        assert_eq!(damaged.backup.as_deref(), Some("pas du json"));
+        let fresh = restore_local_programs(None);
         assert!(fresh.state.is_empty());
         assert!(fresh.backup.is_none());
     }

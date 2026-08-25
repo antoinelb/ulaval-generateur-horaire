@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+use crate::CatalogueEntry;
 use scraper::{ElementRef, Html, Selector};
-use ulaval_scheduler_core::CatalogueEntry;
 
 use crate::parser::ParseError;
 

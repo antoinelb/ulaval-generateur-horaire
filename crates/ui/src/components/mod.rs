@@ -70,6 +70,11 @@ pub enum AlertBody {
     // carries the difference, not the colour alone)
     Success(String),
     Error(UiError),
+    // a destructive act with no confirmation dialog, undoable from the
+    // toast itself (pattern ACT, plan item 9) — not a `Success`: it must
+    // outlive the 5 s auto-clear or the undo would vanish with it, so it
+    // carries the removed program instead of already-worded text
+    LocalProgramRemoved(crate::import::LocalProgram),
 }
 
 // the course whose alternatives (ghosts) the grid currently shows —
@@ -93,6 +98,11 @@ pub struct DropHover(pub Signal<Option<usize>>);
 // the student's hand-entered Courses, persisted apart from the plan
 #[derive(Clone, Copy, PartialEq)]
 pub struct ManualCourses(pub Signal<Vec<ulaval_scheduler_core::Course>>);
+
+// the student's programs imported by URL, persisted apart from the plan
+// (plan item 5/6)
+#[derive(Clone, Copy, PartialEq)]
+pub struct LocalPrograms(pub Signal<Vec<crate::import::LocalProgram>>);
 
 // --- solver B, off the main thread ----------------------------------------
 
@@ -484,7 +494,9 @@ pub fn App() -> Element {
     let load_state = use_signal(|| LoadState::Downloading);
     let solver_state = use_signal(SolverState::default);
     let manual = use_signal(|| restored.manual.clone());
+    let local_programs = use_signal(|| restored.local_programs.clone());
     use_context_provider(|| ManualCourses(manual));
+    use_context_provider(|| LocalPrograms(local_programs));
     use_context_provider(|| plan);
     use_context_provider(|| view);
     use_context_provider(|| history);
@@ -503,7 +515,9 @@ pub fn App() -> Element {
         handle
     });
     use_context_provider(|| handle.clone());
-    use_future(move || load(snapshot, load_state, alerts, manual));
+    use_future(move || {
+        load(snapshot, load_state, alerts, manual, local_programs)
+    });
     save_on_change(plan, view);
     // the debounce's last ~300 ms: flush when the page goes away, so a
     // reload right after an edit never loses it (rapport 2026-08-14)
@@ -553,6 +567,7 @@ struct RestoredState {
     plan: Plan,
     view: View,
     manual: Vec<ulaval_scheduler_core::Course>,
+    local_programs: Vec<crate::import::LocalProgram>,
     notes: Vec<String>,
 }
 
@@ -566,20 +581,30 @@ fn restore_state() -> RestoredState {
     let manual = persist::restore_manual(
         crate::browser::local_get(persist::MANUAL_KEY).as_deref(),
     );
+    let local_programs = persist::restore_local_programs(
+        crate::browser::local_get(persist::LOCAL_PROGRAMS_KEY).as_deref(),
+    );
     // stash what would otherwise be overwritten by the next save
-    for backup in [&plan.backup, &view.backup, &manual.backup]
-        .into_iter()
-        .flatten()
+    for backup in [
+        &plan.backup,
+        &view.backup,
+        &manual.backup,
+        &local_programs.backup,
+    ]
+    .into_iter()
+    .flatten()
     {
         crate::browser::stash_backup(backup);
     }
     let mut notes = plan.notes;
     notes.extend(view.notes);
     notes.extend(manual.notes);
+    notes.extend(local_programs.notes);
     RestoredState {
         plan: plan.state,
         view: view.state,
         manual: manual.state,
+        local_programs: local_programs.state,
         notes,
     }
 }
@@ -707,6 +732,105 @@ pub fn swap_document(
             .write()
             .retain(|alert| alert.cause == AlertCause::Sticky);
     }
+}
+
+// Suppression d'un programme importé par URL (plan item 9, pattern ACT) :
+// no confirmation dialog, but fully undoable from the toast it pushes.
+// Local programs live outside the `Plan`, so this does not go through
+// `edit_plan`/`History` — `Ctrl+Z` cannot reach them — except for the one
+// case where the removed program was the active document: that leaves the
+// document exactly like « changer » does (`swap_document`/
+// `persist::leave_document`), never a bare `edit_plan(|plan| plan.program =
+// None)`, or every guarantee the swap provides is skipped — the shelf
+// write that lets the toast's Annuler-then-Choisir round-trip find the
+// placements again, the placements themselves wiped, solver state and
+// Document alerts purged, and History cleared so `Ctrl+Z` cannot land a
+// step naming a program no longer in `snapshot.programs` (ADR
+// `2026-08-historique-par-document-vide-a-la-bascule`).
+#[allow(clippy::too_many_arguments)]
+pub fn remove_local_program(
+    mut snapshot: Signal<Option<Snapshot>>,
+    mut local_programs: Signal<Vec<crate::import::LocalProgram>>,
+    plan: Signal<Plan>,
+    view: Signal<View>,
+    history: Signal<History>,
+    alerts: Signal<Vec<Alert>>,
+    solver_state: Signal<SolverState>,
+    handle: &SolverHandle,
+    manual: Signal<Vec<ulaval_scheduler_core::Course>>,
+    code: &str,
+    semester: &str,
+) {
+    let removed = {
+        let mut write = snapshot.write();
+        let Some(snapshot_mut) = write.as_mut() else {
+            return;
+        };
+        crate::data::remove_local_program(snapshot_mut, code, semester)
+    };
+    let Some(removed) = removed else {
+        return;
+    };
+    local_programs.write().retain(|local| {
+        !(local.program.code == code
+            && local.program.semester.to_string() == semester)
+    });
+    crate::browser::local_set(
+        persist::LOCAL_PROGRAMS_KEY,
+        &persist::encode_local_programs(&local_programs.read()),
+    );
+    let was_active = plan.peek().program.as_ref().is_some_and(|choice| {
+        choice.code == code && choice.semester == semester
+    });
+    if was_active {
+        let swap = persist::leave_document(&plan.peek());
+        swap_document(
+            plan,
+            view,
+            history,
+            alerts,
+            solver_state,
+            handle,
+            manual,
+            snapshot,
+            swap,
+        );
+    }
+    push_alert(alerts, AlertBody::LocalProgramRemoved(removed));
+}
+
+// The exact inverse of `remove_local_program`, driven by the toast's
+// « Annuler » — restores the program to both the snapshot and the
+// persisted list, but never the plan's program choice: `state::undo`
+// remains the tool for the plan, and the toast text already says what it
+// restores.
+pub fn restore_local_program(
+    mut snapshot: Signal<Option<Snapshot>>,
+    mut local_programs: Signal<Vec<crate::import::LocalProgram>>,
+    alerts: Signal<Vec<Alert>>,
+    local: crate::import::LocalProgram,
+) {
+    let added = {
+        let mut write = snapshot.write();
+        let Some(snapshot_mut) = write.as_mut() else {
+            return;
+        };
+        crate::data::add_local_program(snapshot_mut, local.clone())
+    };
+    if let Err(detail) = added {
+        push_alert(
+            alerts,
+            AlertBody::Error(crate::present::present_local_program_conflict(
+                &detail,
+            )),
+        );
+        return;
+    }
+    local_programs.write().push(local);
+    crate::browser::local_set(
+        persist::LOCAL_PROGRAMS_KEY,
+        &persist::encode_local_programs(&local_programs.read()),
+    );
 }
 
 // A `#…` address imports a whole shared organigramme (note 9): the plan
@@ -1133,6 +1257,7 @@ async fn load(
     mut state: Signal<LoadState>,
     alerts: Signal<Vec<Alert>>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
+    local_programs: Signal<Vec<crate::import::LocalProgram>>,
 ) {
     match crate::browser::fetch_raw_data().await {
         Err(error) => state.set(LoadState::Failed(present_data_error(&error))),
@@ -1140,7 +1265,11 @@ async fn load(
             state.set(LoadState::Parsing);
             // paint the phase line before the parse blocks the thread
             crate::browser::next_frame().await;
-            match crate::data::parse_data(&raw, manual.read().clone()) {
+            match crate::data::parse_data(
+                &raw,
+                manual.read().clone(),
+                local_programs.read().clone(),
+            ) {
                 Ok(parsed) => {
                     // what the load had to tolerate is shown, not logged
                     for warning in &parsed.warnings {

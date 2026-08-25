@@ -305,6 +305,50 @@ mod season_letters {
     }
 }
 
+// The vintage a scrape captures: the session that follows the run, since a
+// run prepares the coming session's version — and a program is only ever
+// defined for automne or hiver, never été, so September–December prepares
+// the coming hiver, which belongs to the next civil year, and every other
+// month prepares the current year's automne
+// (ADR `2026-08-millesime-automne-ou-hiver-jamais-ete`).
+pub fn semester_after(secs_since_epoch: u64) -> Semester {
+    let (year, month, _) = civil_from_days(secs_since_epoch / 86_400);
+    match month {
+        9..=12 => Semester {
+            season: Season::Winter,
+            year: year + 1,
+        },
+        _ => Semester {
+            season: Season::Fall,
+            year,
+        },
+    }
+}
+
+// days since 1970-01-01 → (civil year, month, day), by Howard Hinnant's
+// `civil_from_days` (branchless era arithmetic, exact for any day ≥ 0)
+pub fn civil_from_days(days: u64) -> (u16, u64, u64) {
+    let z = days + 719_468;
+    let era = z / 146_097;
+    let day_of_era = z % 146_097;
+    let year_of_era = (day_of_era - day_of_era / 1_460 + day_of_era / 36_524
+        - day_of_era / 146_096)
+        / 365;
+    let day_of_year =
+        day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    let shifted_month = (5 * day_of_year + 2) / 153;
+    let day = day_of_year - (153 * shifted_month + 2) / 5 + 1;
+    // the algorithm's year starts in March; January and February belong to
+    // the next civil year
+    let month = if shifted_month < 10 {
+        shifted_month + 3
+    } else {
+        shifted_month - 9
+    };
+    let year = year_of_era + era * 400 + u64::from(month <= 2);
+    (year as u16, month, day)
+}
+
 // A = automne (fall), H = hiver (winter), E = été (summer) — the letters the
 // session naming (`a2026`) already uses, uppercased for vintages
 fn season_letter(season: Season) -> char {
@@ -668,6 +712,37 @@ mod tests {
         assert!(
             serde_json::from_str::<Program>(json).is_err(),
             "a bare string is not a season list"
+        );
+    }
+
+    // --- semester_after / civil_from_days: the client-side vintage rule ---
+
+    #[test]
+    fn the_semester_after_the_scrape_flips_twice_a_year() {
+        // a run prepares the coming session, and a program is only defined
+        // for automne or hiver: September–December → the next civil year's
+        // hiver, every other month → the current year's automne — both
+        // boundaries of each band are pinned
+        for (date, secs, expected) in [
+            ("2026-01-01", 1_767_225_600_u64, "A26"),
+            ("2026-08-31", 1_788_134_400, "A26"),
+            ("2026-09-01", 1_788_220_800, "H27"),
+            ("2026-12-31", 1_798_675_200, "H27"),
+        ] {
+            assert_eq!(
+                semester_after(secs).to_string(),
+                expected,
+                "on {date}"
+            );
+        }
+    }
+
+    #[test]
+    fn zero_seconds_since_the_epoch_is_day_zero() {
+        assert_eq!(
+            semester_after(0).to_string(),
+            "A70",
+            "1970-01-01 → its coming automne"
         );
     }
 }

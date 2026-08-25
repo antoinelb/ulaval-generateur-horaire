@@ -5,6 +5,7 @@
 // same split as `wasm/src/boundary.rs`. `main.rs` only launches.
 
 pub mod data;
+pub mod import;
 pub mod panel;
 pub mod persist;
 pub mod present;

@@ -884,6 +884,30 @@ pub struct ProgramVintages {
     pub credits_required: i64,
     // « A26 », « H26 », … newest first; the first one is the preselection
     pub vintages: Vec<String>,
+    // Some only when the *preselected* vintage (`vintages[0]`) is itself a
+    // program imported by URL — the card talks about the millésime the
+    // `select` currently shows, never a local vintage buried further down
+    // (plan item 8)
+    pub local: Option<LocalMark>,
+    // a local vintage that is *not* the preselection (e.g. a shipped
+    // program later ships a newer vintage of the same code than one
+    // already imported) gets no card, but must still get a way out: each
+    // one names its own semester here so the picker can offer its own
+    // Supprimer, or the only escape from an unwanted import would be
+    // clearing localStorage
+    pub other_local: Vec<LocalMark>,
+}
+
+// What the picker card says about a program imported by URL instead of
+// shipped with the app — everything pre-worded here so `rsx!` only prints
+// fields (AP-5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LocalMark {
+    pub badge: String, // « Ajouté localement »
+    pub semester: String, // the local millésime this mark is about
+    pub source_url: String,
+    pub provenance: String, // « Importé le … via corsproxy.io. »
+    pub anomalies: Vec<String>,
 }
 
 // Codes in the snapshot's order (already sorted by `parse_data`), vintages
@@ -920,10 +944,26 @@ pub fn program_vintages(snapshot: &Snapshot) -> Vec<ProgramVintages> {
             group.sort_by_key(|program| {
                 std::cmp::Reverse(state::semester_rank(program.semester))
             });
+            let semester = newest.semester.to_string();
+            // `group[0]` is `newest` itself once sorted (its rank is the
+            // group's maximum) — every other member is a sibling vintage,
+            // checked for its own local entry so none is stranded
+            let other_local = group[1..]
+                .iter()
+                .filter_map(|program| {
+                    local_mark(
+                        snapshot,
+                        &program.code,
+                        &program.semester.to_string(),
+                    )
+                })
+                .collect();
             ProgramVintages {
                 code: newest.code.clone(),
                 title: newest.title.clone(),
                 credits_required: newest.credits_required,
+                local: local_mark(snapshot, &newest.code, &semester),
+                other_local,
                 vintages: group
                     .iter()
                     .map(|program| program.semester.to_string())
@@ -931,6 +971,64 @@ pub fn program_vintages(snapshot: &Snapshot) -> Vec<ProgramVintages> {
             }
         })
         .collect()
+}
+
+// The preselected vintage's local-import entry, if any — never one of its
+// older siblings, so the card never talks about a millésime the `select`
+// isn't showing.
+fn local_mark(
+    snapshot: &Snapshot,
+    code: &str,
+    semester: &str,
+) -> Option<LocalMark> {
+    let entry = snapshot.local_programs.iter().find(|entry| {
+        entry.program.code == code
+            && entry.program.semester.to_string() == semester
+    })?;
+    Some(LocalMark {
+        badge: "Ajouté localement".to_string(),
+        semester: semester.to_string(),
+        source_url: entry.source_url.clone(),
+        provenance: format!(
+            "Importé le {} via {}.",
+            human_date(&entry.imported_at),
+            entry.proxy
+        ),
+        anomalies: entry.anomalies.clone(),
+    })
+}
+
+// `imported_at` is a UTC instant (`AAAA-MM-JJThh:mm:ssZ`) straight from the
+// browser clock; the card must show an absolute date (TRU: never « il y a 3
+// jours ») the reader can trust, so the ISO year-month-day order and an
+// explicit « UTC » stay in the output — a Québec evening must not read as
+// tomorrow with nothing saying why, and DD-MM-YYYY is ambiguous with
+// MM-DD-YYYY where a plain hyphenated triple gives no clue which is which.
+// Any shape this doesn't recognise falls back to the raw string — never an
+// invented date.
+fn human_date(iso: &str) -> String {
+    let Some((date, rest)) = iso.split_once('T') else {
+        return iso.to_string();
+    };
+    let Some(time) = rest.strip_suffix('Z') else {
+        return iso.to_string();
+    };
+    let date_parts: Vec<&str> = date.split('-').collect();
+    let time_parts: Vec<&str> = time.split(':').collect();
+    if date_parts.len() != 3 || time_parts.len() != 3 {
+        return iso.to_string();
+    }
+    let (year, month, day) = (date_parts[0], date_parts[1], date_parts[2]);
+    let (hour, minute) = (time_parts[0], time_parts[1]);
+    let well_formed = year.len() == 4
+        && [month, day, hour, minute].iter().all(|part| part.len() == 2)
+        && [year, month, day, hour, minute].iter().all(|part| {
+            !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit())
+        });
+    if !well_formed {
+        return iso.to_string();
+    }
+    format!("{year}-{month}-{day} {hour}:{minute} UTC")
 }
 
 pub fn chosen_program<'a>(
@@ -2216,6 +2314,7 @@ mod tests {
                 )],
             },
             Vec::new(),
+            Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"))
     }
@@ -3088,6 +3187,7 @@ mod tests {
                 )],
             },
             Vec::new(),
+            Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
         let mut plan = plan();
@@ -3190,6 +3290,7 @@ mod tests {
                     preparatory_program.to_string(),
                 )],
             },
+            Vec::new(),
             Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
@@ -3699,6 +3800,7 @@ mod tests {
                 programs: Vec::new(),
             },
             Vec::new(),
+            Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
         let results = search_courses(
@@ -3769,6 +3871,7 @@ mod tests {
                     program.to_string(),
                 )],
             },
+            Vec::new(),
             Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
@@ -3980,6 +4083,7 @@ mod tests {
                 )],
             },
             Vec::new(),
+            Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
         let plan = Plan {
@@ -4054,6 +4158,7 @@ mod tests {
                     program.to_string(),
                 )],
             },
+            Vec::new(),
             Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
@@ -4522,6 +4627,7 @@ mod tests {
                 programs,
             },
             Vec::new(),
+            Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"))
     }
@@ -4577,5 +4683,149 @@ mod tests {
         let codes: Vec<&str> =
             rows.iter().map(|row| row.code.as_str()).collect();
         assert_eq!(codes, vec!["B-ANT", "B-GMC", "M-GEX"]);
+    }
+
+    // --- the local-import card (plan item 8) ------------------------------
+
+    fn local_program(code: &str, semester: &str) -> crate::import::LocalProgram {
+        let program: Program = serde_json::from_str(&format!(
+            r#"{{"code":"{code}","slug":"slug","semester":"{semester}",
+                 "title":"T","cycle":1,"credits_required":6,
+                 "mandatory":[],"rules":[],"concentrations":[],
+                 "profiles":[]}}"#
+        ))
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        crate::import::LocalProgram {
+            program,
+            source_url: "https://www.ulaval.ca/etudes/programmes/slug"
+                .to_string(),
+            imported_at: "2026-08-24T12:00:00Z".to_string(),
+            proxy: "corsproxy.io".to_string(),
+            anomalies: vec!["texte non reconnu : « … »".to_string()],
+        }
+    }
+
+    fn snapshot_of_with_local(
+        programs: Vec<(String, String)>,
+        local: Vec<crate::import::LocalProgram>,
+    ) -> Snapshot {
+        parse_data(
+            &RawData {
+                courses: COURSES.to_string(),
+                meta: None,
+                manual: None,
+                programs,
+            },
+            Vec::new(),
+            local,
+        )
+        .unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    #[test]
+    fn a_program_shipped_with_the_app_carries_no_local_mark() {
+        let rows = program_vintages(&snapshot());
+        assert_eq!(rows[0].local, None);
+    }
+
+    #[test]
+    fn a_local_program_marks_only_its_own_row() {
+        let rows = program_vintages(&snapshot_of_with_local(
+            vec![bare_program("B-GEX", "A26", "Génie des eaux", 120)],
+            vec![local_program("B-GLO", "A26")],
+        ));
+        let shipped = rows
+            .iter()
+            .find(|row| row.code == "B-GEX")
+            .unwrap_or_else(|| panic!("B-GEX row missing"));
+        assert_eq!(shipped.local, None, "the shipped row carries no mark");
+        let imported = rows
+            .iter()
+            .find(|row| row.code == "B-GLO")
+            .unwrap_or_else(|| panic!("B-GLO row missing"));
+        let mark = imported
+            .local
+            .as_ref()
+            .unwrap_or_else(|| panic!("B-GLO should carry a mark"));
+        assert_eq!(mark.badge, "Ajouté localement");
+        assert_eq!(mark.semester, "A26");
+        assert_eq!(
+            mark.source_url,
+            "https://www.ulaval.ca/etudes/programmes/slug"
+        );
+        assert_eq!(
+            mark.provenance,
+            "Importé le 2026-08-24 12:00 UTC via corsproxy.io."
+        );
+        assert_eq!(
+            mark.anomalies,
+            vec!["texte non reconnu : « … »".to_string()],
+            "anomalies are copied verbatim, never summarised away"
+        );
+    }
+
+    #[test]
+    fn a_local_program_older_than_its_shipped_sibling_marks_neither_row_but_stays_removable(
+    ) {
+        // same code, two vintages: the shipped one (A26) is newer than the
+        // locally-imported one (H26). A regression that matched `local_mark`
+        // on `code` alone (dropping the `semester` equality) would still
+        // find this local entry and wrongly mark the shipped, preselected
+        // row — the comment on `local_mark` promises it never talks about
+        // an older sibling. But the older import must not become a dead
+        // end either: it surfaces through `other_local` so the picker can
+        // still offer a Supprimer for it.
+        let rows = program_vintages(&snapshot_of_with_local(
+            vec![bare_program("B-GEX", "A26", "Génie des eaux", 120)],
+            vec![local_program("B-GEX", "H26")],
+        ));
+        assert_eq!(rows.len(), 1, "one code, one row");
+        let row = &rows[0];
+        assert_eq!(row.vintages, vec!["A26", "H26"]);
+        assert_eq!(
+            row.local, None,
+            "the preselected (shipped) vintage carries no mark, even \
+             though an older local vintage shares its code"
+        );
+        assert_eq!(
+            row.other_local.len(),
+            1,
+            "the older local vintage still gets an exit"
+        );
+        assert_eq!(row.other_local[0].semester, "H26");
+    }
+
+    #[test]
+    fn human_date_of_a_valid_iso_instant_is_absolute_and_marked_utc() {
+        assert_eq!(
+            human_date("2026-08-24T12:05:30Z"),
+            "2026-08-24 12:05 UTC"
+        );
+    }
+
+    #[test]
+    fn human_date_of_an_unrecognised_shape_falls_back_to_the_raw_string() {
+        // no `T` at all
+        assert_eq!(human_date("il y a 3 jours"), "il y a 3 jours");
+        assert_eq!(human_date("2026-08-24"), "2026-08-24");
+        // a `T` but no trailing `Z` (not UTC, or truncated)
+        assert_eq!(
+            human_date("2026-08-24T12:05:30"),
+            "2026-08-24T12:05:30"
+        );
+        // wrong part counts on either side of `T`
+        assert_eq!(
+            human_date("2026-08T12:05:30Z"),
+            "2026-08T12:05:30Z"
+        );
+        assert_eq!(
+            human_date("2026-08-24T12:05Z"),
+            "2026-08-24T12:05Z"
+        );
+        // right shape, non-numeric content
+        assert_eq!(
+            human_date("2026-08-XXT12:05:30Z"),
+            "2026-08-XXT12:05:30Z"
+        );
     }
 }

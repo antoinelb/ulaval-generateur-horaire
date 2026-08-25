@@ -416,6 +416,7 @@ mod tests {
                 programs: Vec::new(),
             },
             Vec::new(),
+            Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"))
     }
@@ -713,6 +714,7 @@ mod tests {
                 programs: Vec::new(),
             },
             Vec::new(),
+            Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
         // session 2 is hiver: ETE-2000 offers automne and été only
@@ -753,6 +755,7 @@ mod tests {
                 manual: None,
                 programs: Vec::new(),
             },
+            Vec::new(),
             Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
@@ -834,6 +837,7 @@ mod tests {
                 manual: None,
                 programs: Vec::new(),
             },
+            Vec::new(),
             Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
@@ -1484,6 +1488,7 @@ mod worker_tests {
                 programs: Vec::new(),
             },
             Vec::new(),
+            Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"))
     }
@@ -1512,6 +1517,7 @@ mod worker_tests {
                     program.to_string(),
                 )],
             },
+            Vec::new(),
             Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"))

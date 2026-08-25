@@ -1,4 +1,5 @@
 use crate::data::{fnv1a_64, DataError};
+use crate::import::ImportError;
 
 // ERR-1: every user-facing error states five things, in French — what
 // happened, what the app did about it, what is affected, what to do now,
@@ -38,6 +39,110 @@ pub fn present_data_error(error: &DataError) -> UiError {
             .to_string(),
         id: error_id(&error.to_string()),
         detail: error.to_string(),
+    }
+}
+
+// The import is a non-critical path (BLD-1): whatever goes wrong, the rest
+// of the app — and any program already imported, sitting in localStorage —
+// keeps working. `Proxy` and `NotHtml` name corsproxy.io explicitly, since
+// a third party sits in that request (TRU).
+pub fn present_import_error(error: &ImportError) -> UiError {
+    let (what, action) = match error {
+        ImportError::InvalidUrl { .. } => (
+            "L'adresse collée n'est pas une page de programme de \
+             ulaval.ca."
+                .to_string(),
+            "Copiez l'adresse complète d'une page de programme (par \
+             exemple https://www.ulaval.ca/etudes/programmes/…) puis \
+             réessayez."
+                .to_string(),
+        ),
+        ImportError::Proxy { .. } => (
+            "Le service intermédiaire corsproxy.io, utilisé pour \
+             récupérer la page, n'a pas répondu correctement."
+                .to_string(),
+            "Réessayez dans quelques minutes; si l'erreur persiste, \
+             signalez-la avec l'identifiant ci-dessous."
+                .to_string(),
+        ),
+        ImportError::NotFound { .. } => (
+            "Cette page de programme n'existe pas sur ulaval.ca.".to_string(),
+            "Vérifiez l'adresse collée, ou retrouvez le programme sur \
+             ulaval.ca et recollez son adresse."
+                .to_string(),
+        ),
+        ImportError::NotHtml { .. } => (
+            "Le service intermédiaire corsproxy.io a renvoyé un \
+             contenu qui n'est pas une page web."
+                .to_string(),
+            "Réessayez; si l'erreur persiste, signalez-la avec \
+             l'identifiant ci-dessous."
+                .to_string(),
+        ),
+        ImportError::Parse { .. } => (
+            "La page de programme n'a pas pu être analysée.".to_string(),
+            "Signalez l'erreur avec l'identifiant ci-dessous; le \
+             programme n'a pas été ajouté."
+                .to_string(),
+        ),
+        ImportError::Preparatory { .. } => (
+            "Le calcul de la scolarité préparatoire de ce programme a \
+             échoué."
+                .to_string(),
+            "Signalez l'erreur avec l'identifiant ci-dessous; le \
+             programme n'a pas été ajouté."
+                .to_string(),
+        ),
+        ImportError::Cancelled => (
+            "L'import a été annulé.".to_string(),
+            "Recollez l'adresse pour réessayer quand vous le \
+             souhaitez."
+                .to_string(),
+        ),
+        ImportError::BrowserApi { .. } => (
+            "Le navigateur n'a pas pu préparer cette requête.".to_string(),
+            "Réessayez; si l'erreur persiste, un réglage du navigateur \
+             (mode privé restrictif, extension bloquant les requêtes) \
+             peut en être la cause."
+                .to_string(),
+        ),
+        ImportError::CatalogueUnavailable => (
+            "Le catalogue des cours n'est pas encore chargé.".to_string(),
+            "Attendez que le catalogue termine de charger puis \
+             réessayez."
+                .to_string(),
+        ),
+    };
+    UiError {
+        what,
+        reaction: "Rien n'a été perdu; le reste de l'application \
+                   continue de fonctionner normalement."
+            .to_string(),
+        affected: "L'import de ce programme seulement.".to_string(),
+        action,
+        id: error_id(&error.to_string()),
+        detail: error.to_string(),
+    }
+}
+
+// A program imported by URL that collides with an entry already in the
+// catalogue — either shipped with the app, or already imported locally
+// (a repeated import click): `data::add_local_program` refuses it either
+// way (plan item 6) and the click must not be lost in silence — the
+// student is told plainly and pointed at the entry that already covers it
+// (ERR-1).
+pub fn present_local_program_conflict(detail: &str) -> UiError {
+    UiError {
+        what: detail.to_string(),
+        reaction: "Rien n'a été perdu; le reste de l'application continue \
+                   de fonctionner normalement."
+            .to_string(),
+        affected: "L'import de ce programme seulement.".to_string(),
+        action: "Choisissez directement ce programme dans la liste \
+                 ci-dessus."
+            .to_string(),
+        id: error_id(detail),
+        detail: detail.to_string(),
     }
 }
 
@@ -757,6 +862,89 @@ mod tests {
         assert_eq!(error_id("x").len(), "GH-".len() + 8);
     }
 
+    #[test]
+    fn every_import_error_variant_presents_its_five_parts_in_french() {
+        let variants = [
+            ImportError::InvalidUrl {
+                detail: "empty url".to_string(),
+            },
+            ImportError::Proxy {
+                detail: "HTTP 500".to_string(),
+            },
+            ImportError::NotFound { status: 404 },
+            ImportError::NotHtml {
+                content_type: "application/json".to_string(),
+            },
+            ImportError::Parse {
+                detail: "unexpected tag".to_string(),
+            },
+            ImportError::Preparatory {
+                detail: "the prerequisite graph exceeds 10000 nodes"
+                    .to_string(),
+            },
+            ImportError::Cancelled,
+            ImportError::BrowserApi {
+                detail: "AbortController unavailable".to_string(),
+            },
+            ImportError::CatalogueUnavailable,
+        ];
+        for error in &variants {
+            let presented = present_import_error(error);
+            assert!(!presented.what.is_empty(), "{error}");
+            assert!(!presented.reaction.is_empty(), "{error}");
+            assert_eq!(
+                presented.affected,
+                "L'import de ce programme seulement."
+            );
+            assert!(!presented.action.is_empty(), "{error}");
+            assert!(presented.id.starts_with("GH-"), "{error}");
+            assert_eq!(presented.detail, error.to_string());
+        }
+        for error in [&variants[1], &variants[3]] {
+            let presented = present_import_error(error);
+            assert!(
+                presented.what.contains("corsproxy.io"),
+                "the student must know a third party is in the loop: {}",
+                presented.what
+            );
+        }
+    }
+
+    #[test]
+    fn two_different_import_errors_carry_two_different_ids() {
+        let a = present_import_error(&ImportError::NotFound { status: 404 });
+        let b = present_import_error(&ImportError::NotFound { status: 410 });
+        assert_ne!(a.id, b.id);
+        let repeat =
+            present_import_error(&ImportError::NotFound { status: 404 });
+        assert_eq!(a.id, repeat.id, "the same failure keeps the same id");
+    }
+
+    // --- present_local_program_conflict ---
+
+    #[test]
+    fn a_local_program_conflict_states_the_five_parts() {
+        let detail = "B-GEX A26 existe déjà dans le catalogue — le \
+                       programme livré prime.";
+        let presented = present_local_program_conflict(detail);
+        assert_eq!(presented.what, detail);
+        assert!(!presented.reaction.is_empty());
+        assert_eq!(
+            presented.affected,
+            "L'import de ce programme seulement."
+        );
+        assert!(!presented.action.is_empty());
+        assert!(presented.id.starts_with("GH-"));
+        assert_eq!(presented.detail, detail);
+    }
+
+    #[test]
+    fn two_different_local_program_conflicts_carry_two_different_ids() {
+        let a = present_local_program_conflict("B-GEX A26 existe déjà.");
+        let b = present_local_program_conflict("B-GLO A26 existe déjà.");
+        assert_ne!(a.id, b.id);
+    }
+
     // --- grid geometry ---
 
     use ulaval_scheduler_core::{Alternative, CourseReport, ScheduleReport};
@@ -776,6 +964,7 @@ mod tests {
                 manual: None,
                 programs: Vec::new(),
             },
+            Vec::new(),
             Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"))
@@ -1134,6 +1323,7 @@ mod tests {
                 programs: Vec::new(),
             },
             Vec::new(),
+            Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
         let plan = Plan {
@@ -1192,6 +1382,7 @@ mod tests {
                 manual: None,
                 programs: Vec::new(),
             },
+            Vec::new(),
             Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));

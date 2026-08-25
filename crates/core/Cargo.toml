@@ -10,6 +10,7 @@ workspace = true
 [dependencies]
 thiserror = { workspace = true }
 serde = { workspace = true }
+scraper = { version = "0.27.0", optional = true }
 # enabled by the wasm crate's browser build alone: the derives only emit
 # TypeScript declarations, never code the native build runs (ADR
 # `2026-08-types-typescript-tsify-declaratif`)
@@ -17,6 +18,8 @@ tsify = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 
 [features]
+default = ["parser"]
+parser = ["dep:scraper"]
 tsify = ["dep:tsify", "dep:wasm-bindgen"]
 
 [dev-dependencies]

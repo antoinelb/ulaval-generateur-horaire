@@ -28,7 +28,11 @@ boundary = [
 ]
 
 [dependencies]
-ulaval-scheduler-core = { workspace = true }
+# path, not `workspace = true`: the workspace declaration has no
+# default-features of its own, so `workspace = true` plus
+# `default-features = false` here is silently ignored by cargo (warns
+# "could become a hard error") instead of disabling `parser`
+ulaval-scheduler-core = { path = "../core", default-features = false }
 serde = { workspace = true }
 # the worker protocol speaks JSON strings both ways
 serde_json = { workspace = true }

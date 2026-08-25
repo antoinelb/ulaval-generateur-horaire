@@ -27,6 +27,8 @@ gloo-timers = { version = "0.3", features = ["futures"] }
 js-sys = "0.3"
 wasm-bindgen = { workspace = true }
 web-sys = { version = "0.3", features = [
+    "AbortController",
+    "AbortSignal",
     "Clipboard",
     "History",
     "Location",

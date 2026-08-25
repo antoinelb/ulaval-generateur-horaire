@@ -62,6 +62,8 @@ fn ProgramPicker() -> Element {
     let solver = use_context::<Signal<super::SolverState>>();
     let handle = use_context::<super::SolverHandle>();
     let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
+    let super::LocalPrograms(local_programs) =
+        use_context::<super::LocalPrograms>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     // the Signal itself, kept from the shadowing below: the choose click
     // reads the snapshot again to pick the default concentration
@@ -84,6 +86,59 @@ fn ProgramPicker() -> Element {
             for row in panel::program_vintages(snapshot) {
                 div { class: "panel-picker-item", key: "{row.code}",
                     div { class: "panel-picker-title", "{row.title}" }
+                    if let Some(mark) = &row.local {
+                        span { class: "panel-picker-badge", "{mark.badge}" }
+                        div { class: "panel-picker-provenance",
+                            "{mark.provenance} "
+                            a {
+                                href: "{mark.source_url}",
+                                target: "_blank",
+                                rel: "noopener noreferrer",
+                                "{mark.source_url}"
+                            }
+                        }
+                        if !mark.anomalies.is_empty() {
+                            details { class: "panel-picker-anomalies",
+                                summary {
+                                    "{mark.anomalies.len()} anomalie(s) de lecture"
+                                }
+                                ul {
+                                    for anomaly in mark.anomalies.iter() {
+                                        li { "{anomaly}" }
+                                    }
+                                }
+                            }
+                        }
+                        // no confirmation dialog (pattern ACT, plan item
+                        // 9) — the toast pushed by `remove_local_program`
+                        // is what makes this undoable
+                        button {
+                            class: "panel-picker-remove",
+                            r#type: "button",
+                            aria_label: "Supprimer le programme importé {row.code}",
+                            onclick: {
+                                let code = row.code.clone();
+                                let semester = mark.semester.clone();
+                                let handle = handle.clone();
+                                move |_| {
+                                    super::remove_local_program(
+                                        snapshot_signal,
+                                        local_programs,
+                                        plan,
+                                        view,
+                                        history,
+                                        alerts,
+                                        solver,
+                                        &handle,
+                                        manual,
+                                        &code,
+                                        &semester,
+                                    );
+                                }
+                            },
+                            "Supprimer"
+                        }
+                    }
                     div { class: "panel-picker-row",
                         span { class: "panel-picker-sub",
                             "{row.code} - {row.credits_required} cr"
@@ -168,6 +223,334 @@ fn ProgramPicker() -> Element {
                             },
                             "Choisir"
                         }
+                    }
+                    // a local vintage the `select` above is not currently
+                    // showing (plan item 8's card only ever talks about the
+                    // preselection) still needs a way out, named by its own
+                    // semester so it never claims to be about the row's
+                    // preselected vintage
+                    for mark in row.other_local.iter() {
+                        div {
+                            class: "panel-picker-other-local",
+                            key: "{mark.semester}",
+                            span {
+                                "{mark.badge} ({mark.semester}) — "
+                                a {
+                                    href: "{mark.source_url}",
+                                    target: "_blank",
+                                    rel: "noopener noreferrer",
+                                    "{mark.source_url}"
+                                }
+                            }
+                            button {
+                                class: "panel-picker-remove",
+                                r#type: "button",
+                                aria_label: "Supprimer le programme importé {row.code} ({mark.semester})",
+                                onclick: {
+                                    let code = row.code.clone();
+                                    let semester = mark.semester.clone();
+                                    let handle = handle.clone();
+                                    move |_| {
+                                        super::remove_local_program(
+                                            snapshot_signal,
+                                            local_programs,
+                                            plan,
+                                            view,
+                                            history,
+                                            alerts,
+                                            solver,
+                                            &handle,
+                                            manual,
+                                            &code,
+                                            &semester,
+                                        );
+                                    }
+                                },
+                                "Supprimer"
+                            }
+                        }
+                    }
+                }
+            }
+            ImportDrawer {}
+        }
+    }
+}
+
+// The « Votre programme n'est pas là ? » drawer (plan item 7): collapsed
+// at rest, forced open and locked while an import runs, never closed on
+// error (INP-7/ERR-6). Every label, phase and error comes from
+// `crate::import`/`crate::present` (already tested natively) — this
+// component only wires signals and clicks (AP-5); it carries none of its
+// own coverage since `components/` is wasm32-only.
+#[component]
+fn ImportDrawer() -> Element {
+    let mut snapshot = use_context::<Signal<Option<Snapshot>>>();
+    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let super::LocalPrograms(mut local_programs) =
+        use_context::<super::LocalPrograms>();
+
+    let mut open = use_signal(|| false);
+    let mut draft = use_signal(String::new);
+    let mut phase = use_signal(|| None::<crate::import::ImportPhase>);
+    let mut elapsed = use_signal(|| 0u32);
+    let mut error = use_signal(|| None::<crate::present::UiError>);
+    let mut fetch =
+        use_signal(|| None::<std::rc::Rc<crate::browser::ImportFetch>>);
+    // bumped at every commit, checked once the fetch settles: a result
+    // that outlives its own click — an Annuler, then a fresh Importer
+    // before the aborted fetch resolved — belongs to a cycle nobody is
+    // showing any more (same discipline as `SolverState.next_id`)
+    let mut generation = use_signal(|| 0u64);
+
+    // LAT-4/5: `use_future` spawns its closure once at mount and never
+    // restarts it when a signal read inside changes (unlike `use_resource`)
+    // — gating start/stop on `phase` would freeze after the first import.
+    // Instead this single ticker runs for the drawer's whole lifetime
+    // (mirrors `SolverStatus`, components/header.rs:18-25) and rechecks
+    // `phase` on every tick, incrementing `elapsed` only while a phase is
+    // running; `commit` resets it to 0 at the start of each import.
+    use_future(move || async move {
+        for _ in 0..86_400u32 {
+            crate::browser::sleep_ms(1_000).await;
+            if phase().is_some() {
+                *elapsed.write() += 1;
+            }
+        }
+    });
+
+    let importing = phase().is_some();
+    let expanded = open() || importing;
+    // the state → glyph mapping is a closed, static table, decided once
+    // here rather than inside `rsx!` (AP-5) — same shape as `SectionView`'s
+    // badge match just above
+    let phase_rows: Vec<(String, &'static str, bool)> =
+        crate::import::phase_rows(phase())
+            .into_iter()
+            .map(|row| {
+                let glyph = match row.state {
+                    crate::import::PhaseState::Done => "✓",
+                    crate::import::PhaseState::Running => "…",
+                    crate::import::PhaseState::Pending => "·",
+                };
+                let running = row.state == crate::import::PhaseState::Running;
+                (row.label, glyph, running)
+            })
+            .collect();
+
+    let mut commit = move || {
+        let my_generation = {
+            let mut guard = generation.write();
+            *guard += 1;
+            *guard
+        };
+        spawn(async move {
+            let raw = draft.peek().clone();
+            let url = match crate::import::validate_program_url(&raw) {
+                Ok(url) => url,
+                Err(why) => {
+                    error
+                        .set(Some(crate::present::present_import_error(&why)));
+                    return;
+                }
+            };
+            phase.set(Some(crate::import::ImportPhase::Download));
+            elapsed.set(0);
+            error.set(None);
+            let started = match crate::browser::start_import_fetch() {
+                Ok(started) => std::rc::Rc::new(started),
+                Err(why) => {
+                    phase.set(None);
+                    error
+                        .set(Some(crate::present::present_import_error(&why)));
+                    return;
+                }
+            };
+            fetch.set(Some(started.clone()));
+            let fetched =
+                crate::browser::fetch_program_html(&url, &started).await;
+            if *generation.peek() != my_generation {
+                return;
+            }
+            let html = match fetched {
+                Ok(html) => html,
+                Err(crate::import::ImportError::Cancelled) => {
+                    phase.set(None);
+                    return;
+                }
+                Err(why) => {
+                    phase.set(None);
+                    error.set(Some(crate::present::present_import_error(
+                        &why,
+                    )));
+                    return;
+                }
+            };
+            phase.set(Some(crate::import::ImportPhase::Parse));
+            // paint the phase line before the parse (HTML parse +
+            // preparatory-rule BFS over the whole catalogue) blocks the
+            // thread — same discipline as `load`'s own comment above, which
+            // this path had dropped while still claiming LAT-4/5 phase
+            // feedback
+            crate::browser::next_frame().await;
+            let iso = crate::browser::now_iso();
+            let secs = crate::browser::now_secs();
+            let local = {
+                let read = snapshot.peek();
+                let courses = read
+                    .as_ref()
+                    .map(|snapshot| snapshot.courses.as_slice())
+                    .unwrap_or_default();
+                crate::import::build_local_program(
+                    &html, &url, iso, secs, courses,
+                )
+            };
+            let local = match local {
+                Ok(local) => local,
+                Err(why) => {
+                    phase.set(None);
+                    error.set(Some(crate::present::present_import_error(
+                        &why,
+                    )));
+                    return;
+                }
+            };
+            phase.set(Some(crate::import::ImportPhase::Save));
+            let saved = {
+                let mut write = snapshot.write();
+                write.as_mut().map(|snapshot_mut| {
+                    crate::data::add_local_program(
+                        snapshot_mut,
+                        local.clone(),
+                    )
+                })
+            };
+            match saved {
+                None => {
+                    phase.set(None);
+                    error.set(Some(crate::present::present_import_error(
+                        &crate::import::ImportError::CatalogueUnavailable,
+                    )));
+                    return;
+                }
+                Some(Err(detail)) => {
+                    phase.set(None);
+                    error.set(Some(
+                        crate::present::present_local_program_conflict(
+                            &detail,
+                        ),
+                    ));
+                    return;
+                }
+                Some(Ok(())) => {}
+            }
+            let title = local.program.title.clone();
+            local_programs.write().push(local);
+            crate::browser::local_set(
+                crate::persist::LOCAL_PROGRAMS_KEY,
+                &crate::persist::encode_local_programs(
+                    &local_programs.read(),
+                ),
+            );
+            phase.set(None);
+            draft.set(String::new());
+            open.set(false);
+            super::push_alert(
+                alerts,
+                super::AlertBody::Success(format!("{title} importé.")),
+            );
+        });
+    };
+
+    let cancel = move |_| {
+        // bumped first: the in-flight task's only guard is `*generation.peek()
+        // != my_generation` (line 326), so a fetch already resolved and
+        // sitting in the task queue at click time must still see itself as
+        // stale, or Annuler would not stop the import it just told the
+        // student it stopped
+        *generation.write() += 1;
+        if let Some(started) = fetch.peek().as_ref() {
+            started.abort();
+        }
+        phase.set(None);
+    };
+
+    rsx! {
+        div { class: "panel-import",
+            button {
+                class: "panel-import-toggle",
+                r#type: "button",
+                aria_expanded: expanded,
+                disabled: importing,
+                onclick: move |_| open.set(!open()),
+                "Votre programme n'est pas là ?"
+            }
+            if expanded {
+                div { class: "panel-import-form",
+                    label {
+                        class: "panel-import-label",
+                        r#for: "panel-import-url",
+                        "Adresse de la page programme"
+                    }
+                    input {
+                        id: "panel-import-url",
+                        class: "panel-import-input",
+                        r#type: "url",
+                        placeholder: "https://www.ulaval.ca/etudes/programmes/…",
+                        disabled: importing,
+                        value: "{draft}",
+                        oninput: move |event| draft.set(event.value()),
+                        onkeydown: move |event| {
+                            if event.key() == Key::Enter {
+                                commit();
+                            }
+                        },
+                    }
+                    button {
+                        class: "panel-import-submit",
+                        r#type: "button",
+                        disabled: importing,
+                        onclick: move |_| commit(),
+                        "Importer"
+                    }
+                }
+                if importing {
+                    ol { class: "panel-import-phases",
+                        for (label, glyph, running) in phase_rows.iter() {
+                            li {
+                                key: "{label}",
+                                class: "panel-import-phase",
+                                span { class: "panel-import-phase-glyph", "{glyph}" }
+                                span { class: "panel-import-phase-label", "{label}" }
+                                if *running {
+                                    span { class: "panel-import-phase-elapsed",
+                                        "{elapsed} s écoulées"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    button {
+                        class: "panel-import-cancel",
+                        r#type: "button",
+                        onclick: cancel,
+                        "Annuler"
+                    }
+                }
+            }
+            if let Some(error) = error() {
+                div { class: "panel-import-error", role: "alert",
+                    p { class: "panel-import-error-what", "{error.what}" }
+                    p { "{error.reaction}" }
+                    p { "{error.affected}" }
+                    p { class: "panel-import-error-action", "{error.action}" }
+                    p { class: "panel-import-error-id",
+                        "Identifiant : "
+                        code { "{error.id}" }
+                    }
+                    details {
+                        summary { "Détail technique" }
+                        pre { "{error.detail}" }
                     }
                 }
             }

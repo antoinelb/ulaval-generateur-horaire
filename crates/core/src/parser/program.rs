@@ -1,11 +1,11 @@
 use std::sync::LazyLock;
 
-use scraper::{ElementRef, Html, Selector};
-use ulaval_scheduler_core::{
+use crate::{
     Concentration, Constraint, Cycle, Keyword, LanguageQualification,
     LanguageRequirement, PlacementTest, Profile, Program, Rule, RuleCourses,
     RuleReference, Season, Semester, STAGES_RULE_TITLE,
 };
+use scraper::{ElementRef, Html, Selector};
 
 use crate::parser::ParseError;
 

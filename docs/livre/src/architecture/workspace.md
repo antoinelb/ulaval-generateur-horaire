@@ -4,8 +4,8 @@ Un seul workspace Cargo, tout en Rust, quatre crates :
 
 | Crate | Type | Rôle |
 |---|---|---|
-| `core` | bibliothèque | toute la logique du domaine, zéro IO, zéro async ; compile en natif et en WASM |
-| `scraper` | binaire natif async | télécharge et parse les pages ULaval en snapshots JSON |
+| `core` | bibliothèque | toute la logique du domaine, zéro IO, zéro async ; compile en natif et en WASM ; porte aussi le parseur des pages ULaval, derrière la feature `parser` (activée par défaut, désactivée pour `wasm`) |
+| `scraper` | binaire natif async | télécharge les pages ULaval et les parse via `core`, en snapshots JSON |
 | `wasm` | `cdylib` + rlib | le crate de frontière : `core` exposé au JavaScript nu **et** au worker de l'app Dioxus, plus les fonctions pures que celle-ci appelle nativement — voir [La frontière WASM](frontiere-wasm.md) |
 | `ui` | binaire WASM | l'interface Dioxus |
 

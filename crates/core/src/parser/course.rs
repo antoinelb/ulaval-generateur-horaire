@@ -2,11 +2,11 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::LazyLock;
 
 use crate::parser::ParseError;
-use scraper::{ElementRef, Html, Selector};
-use ulaval_scheduler_core::{
+use crate::{
     is_course_code, parse_prereq_tree, Course, CourseCycle, Credits, Day,
     Mode, Prerequisites, Season, SeasonOffering, Section, Slot, Time,
 };
+use scraper::{ElementRef, Html, Selector};
 
 const CODE_CSS: &str = "span.fe--titre-type";
 static CODE: LazyLock<Selector> = LazyLock::new(|| sel(CODE_CSS));
@@ -781,7 +781,7 @@ fn sel(selector: &str) -> Selector {
 #[cfg_attr(coverage_nightly, coverage(off))]
 #[cfg(test)]
 mod tests {
-    use ulaval_scheduler_core::PrereqTree;
+    use crate::PrereqTree;
 
     use super::*;
 
@@ -930,6 +930,27 @@ mod tests {
                 "a page missing {missing} was accepted"
             );
         }
+    }
+
+    #[test]
+    fn a_page_above_the_second_cycle_is_recognized_then_dropped_whole() {
+        // `parse_cycle` returning `None` is unit-tested on its own
+        // (`a_course_above_the_second_cycle_is_out_of_scope_not_an_error`);
+        // this one drives the *whole page* through it, the way MDD-5101 and
+        // PSY-7851 do, so the early `Ok(None)` in `parse` itself — not just
+        // in the helper it calls — is exercised without a fixture.
+        let html = format!(
+            "<html><body>{}{}{}{}</body></html>",
+            r#"<span class="fe--titre-type">MDD-5101</span>"#,
+            r#"<span class="fe--titre-nom">Résidence postdoctorale</span>"#,
+            credits_card("0"),
+            cycle_card(&["Études post-MDD"]),
+        );
+
+        assert!(
+            parse(&html).expect("a well-formed page above scope").is_none(),
+            "a post-MDD course must be out of scope"
+        );
     }
 
     #[test]

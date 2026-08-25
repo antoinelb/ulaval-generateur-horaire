@@ -1,7 +1,7 @@
 use std::fs;
 
+use ulaval_scheduler_core::parser;
 use ulaval_scheduler_core::{Credits, Season};
-use ulaval_scheduler_scraper::parser;
 
 const FIXTURE_DIR: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -27,7 +27,7 @@ const FIXTURES: &[&str] = &[
 // `2026-07-fixture-attendue-derivee-avant-le-parseur`: the parser already
 // reads these pages, so the expected output is derived by it, hand-reviewed
 // against the page, then frozen — never written by hand). Run with
-// `UPDATE_FIXTURES=1 cargo test -p ulaval-scheduler-scraper`; a plain run
+// `UPDATE_FIXTURES=1 cargo test -p ulaval-scheduler-core`; a plain run
 // leaves the files untouched.
 #[test]
 fn update_fixtures() {

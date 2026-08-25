@@ -14,6 +14,9 @@ data/programmes_errors.log
 data/cours_errors.log
 *.profraw
 
+# rustc incremental-compilation crash dumps — not a code artifact
+rustc-ice-*.txt
+
 # Bytecode of the solver-B reference scripts (tests/reference/)
 __pycache__/
 

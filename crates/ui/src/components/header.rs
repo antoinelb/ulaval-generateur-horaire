@@ -304,6 +304,9 @@ const SUCCESS_TOAST_MS: u32 = 5_000;
 #[component]
 pub fn Toasts() -> Element {
     let mut alerts = use_context::<Signal<Vec<Alert>>>();
+    let snapshot = use_context::<Signal<Option<Snapshot>>>();
+    let super::LocalPrograms(local_programs) =
+        use_context::<super::LocalPrograms>();
     let mut expanded = use_signal(|| false);
     // chaque ✓ n'arme qu'une seule minuterie (peek : l'effet ne dépend
     // que de la liste, jamais de sa propre comptabilité)
@@ -355,7 +358,11 @@ pub fn Toasts() -> Element {
                 div {
                     key: "{alert.key}",
                     class: "toast",
-                    class: if matches!(alert.body, AlertBody::Success(_)) {
+                    class: if matches!(
+                        alert.body,
+                        AlertBody::Success(_)
+                            | AlertBody::LocalProgramRemoved(_)
+                    ) {
                         "toast--success"
                     },
                     // note 12: the whole message is its own dismiss —
@@ -379,6 +386,35 @@ pub fn Toasts() -> Element {
                                 code { "{error.id}" }
                             }
                         },
+                        AlertBody::LocalProgramRemoved(local) => {
+                            let local = local.clone();
+                            let key = alert.key;
+                            rsx! {
+                                span { class: "status-alert-ok",
+                                    "✓ Programme supprimé — "
+                                }
+                                button {
+                                    class: "toast-undo",
+                                    onclick: move |event: Event<MouseData>| {
+                                        // the toast is its own dismiss
+                                        // (note 12) — undo must not also
+                                        // trigger it before it has had a
+                                        // chance to read `local`
+                                        event.stop_propagation();
+                                        super::restore_local_program(
+                                            snapshot,
+                                            local_programs,
+                                            alerts,
+                                            local.clone(),
+                                        );
+                                        alerts
+                                            .write()
+                                            .retain(|kept| kept.key != key);
+                                    },
+                                    "↶ Annuler"
+                                }
+                            }
+                        }
                     }
                     button {
                         class: "status-dismiss",

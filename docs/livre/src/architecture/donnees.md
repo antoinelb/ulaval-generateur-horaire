@@ -24,6 +24,15 @@ Le contenu est un `Program` : crédits exigés, sessions d'admission (`possible_
 
 À côté, `data/programmes/{code}.manuel.json` (sans millésime) porte le `cheminement_type` encodé à la main — l'organigramme A1→H8 de référence, qui n'existe sous aucune forme lisible par machine.
 
+## Programmes importés par URL
+
+Un programme absent des snapshots livrés peut être importé directement dans le navigateur, sans passer par le scraper ni par un nouveau commit.
+L'étudiant colle l'URL d'une page programme de ulaval.ca dans le tiroir « Votre programme n'est pas là ? » du sélecteur de programme.
+L'UI récupère le HTML via le proxy CORS `corsproxy.io`, puisque `www.ulaval.ca` n'envoie aucun en-tête autorisant une lecture cross-origin directe, puis le parse avec le même parseur que le scraper, désormais logé dans `core`.
+Le programme obtenu est conservé en `localStorage`, sous la clé `gh.v1.programmes-locaux`, avec sa provenance (URL source, date d'import, mention du proxy) et ses éventuelles anomalies de parsing — jamais tues.
+Sur la carte du sélecteur, il porte un badge « Ajouté localement » et un bouton Supprimer.
+En cas de doublon `(code, semestre)` avec un programme livré, le programme livré gagne toujours ; le local battu est signalé, jamais ignoré en silence.
+
 ## Cycle de rafraîchissement
 
 1. Un cron quotidien (`scrape.yml`) vérifie si la date du jour figure dans `data/dates_scraping.txt` ; sinon il s'arrête.

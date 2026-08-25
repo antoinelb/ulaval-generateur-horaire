@@ -7,6 +7,6 @@ pub mod catalogue;
 pub mod cli;
 pub mod course;
 pub mod fetch;
-pub mod parser;
+pub use ulaval_scheduler_core::parser;
 mod print;
 pub mod program;
