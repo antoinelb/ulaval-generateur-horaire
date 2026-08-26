@@ -339,6 +339,15 @@ pub fn overlay_pins(
 // in). Automatic seats past the new edge fall back to « automatique » and
 // the next propose re-seats them inside.
 pub fn horizon_floor(plan: &Plan) -> usize {
+    study_sessions_for_slot(plan.start.season, binding_slot(plan))
+}
+
+// Pins, hand-added sessions and the relevé's completed count are 1-based
+// indices into the *expanded* horizon — core inserts an été after each
+// hiver — while `study_sessions` counts only the A/H alternation. Reading
+// a slot index as a session count is what kept an organigramme at 7
+// sessions when 5 held its last pin (retour d'Antoine 2026-08-26).
+fn binding_slot(plan: &Plan) -> usize {
     let pinned = plan.pinned_sessions.values().copied().max().unwrap_or(0);
     let manual = plan
         .manual
@@ -350,10 +359,24 @@ pub fn horizon_floor(plan: &Plan) -> usize {
     pinned
         .max(manual)
         .max(plan.completed_sessions.saturating_add(1))
-        // capped at MAX so a corrupt save cannot yield a floor above the
-        // ceiling and make `set_horizon`'s clamp panic — the stray seats
-        // get evicted instead
-        .clamp(2, MAX_STUDY_SESSIONS)
+}
+
+// The smallest alternation count whose expanded horizon reaches `slot`:
+// `horizon_sessions` grows monotonically with the count, so the first hit
+// is the smallest — the bounded walk of `core::transcript::grow_horizon`,
+// never a `while`. Falls back to MAX so a corrupt save cannot yield a
+// floor above the ceiling and make `set_horizon`'s clamp panic; the stray
+// seats get evicted instead.
+fn study_sessions_for_slot(start: Season, slot: usize) -> usize {
+    (2..=MAX_STUDY_SESSIONS)
+        .find(|&count| slots(start, count) >= slot)
+        .unwrap_or(MAX_STUDY_SESSIONS)
+}
+
+// how many session columns a horizon of `count` study sessions holds —
+// the inserted étés included
+fn slots(start: Season, count: usize) -> usize {
+    ulaval_scheduler_core::horizon_sessions(start, count).len()
 }
 
 // The one entry point for changing `study_sessions`: clamps to
@@ -365,8 +388,10 @@ pub fn horizon_floor(plan: &Plan) -> usize {
 pub fn set_horizon(plan: &mut Plan, requested: usize) -> usize {
     let horizon = requested.clamp(horizon_floor(plan), MAX_STUDY_SESSIONS);
     plan.study_sessions = horizon;
+    // the seats speak slots, not study sessions
+    let held = slots(plan.start.season, horizon);
     plan.displayed_placement
-        .retain(|_, &mut session| session <= horizon);
+        .retain(|_, &mut session| session <= held);
     horizon
 }
 
@@ -376,17 +401,20 @@ pub fn set_horizon(plan: &mut Plan, requested: usize) -> usize {
 // m'empêche de réduire le nombre de sessions »).
 pub fn horizon_floor_note(plan: &Plan) -> String {
     let floor = horizon_floor(plan);
+    // the session that binds is a slot; the horizon that results is a
+    // count of study sessions — the note names both, in their own units
+    let slot = binding_slot(plan);
     let seasons = ulaval_scheduler_core::horizon_sessions(
         plan.start.season,
         plan.study_sessions,
     );
     let semesters =
         ulaval_scheduler_core::session_semesters(plan.start, &seasons);
-    let label = session_label(&semesters, floor.wrapping_sub(1));
+    let label = session_label(&semesters, slot.wrapping_sub(1));
     let pinned_at_floor: Vec<&str> = plan
         .pinned_sessions
         .iter()
-        .filter(|(_, &session)| session == floor)
+        .filter(|(_, &session)| session == slot)
         .map(|(code, _)| code.as_str())
         .collect();
     if !pinned_at_floor.is_empty() {
@@ -402,7 +430,7 @@ pub fn horizon_floor_note(plan: &Plan) -> String {
     }
     if plan
         .manual
-        .get(&floor)
+        .get(&slot)
         .is_some_and(|codes| !codes.is_empty())
     {
         return format!(
@@ -410,7 +438,11 @@ pub fn horizon_floor_note(plan: &Plan) -> String {
              occupent {label} — retirez-les pour réduire davantage."
         );
     }
-    if plan.completed_sessions.saturating_add(1) == floor {
+    // `> 0`: an empty plan's binding slot is the single open session, no
+    // relevé behind it — that is the bare minimum, not a closed past
+    if plan.completed_sessions > 0
+        && plan.completed_sessions.saturating_add(1) == slot
+    {
         return format!(
             "L'horizon reste à {floor} sessions : votre relevé occupe les \
              {} premières, et une session reste ouverte pour la suite.",
@@ -549,11 +581,13 @@ mod tests {
         plan.completed_sessions = 3;
         assert_eq!(
             horizon_floor(&plan),
-            7,
+            5,
             "the highest of pins, non-empty manual sessions and the \
-             completed past — an emptied manual session holds nothing"
+             completed past — an emptied manual session holds nothing — \
+             read back in study sessions: slot 7 of an automne start is \
+             A1-H1-É1-A2-H2-É2-A3, five study sessions"
         );
-        plan.pinned_sessions.insert("GEX-2000".to_string(), 40);
+        plan.pinned_sessions.insert("GEX-2000".to_string(), 99);
         assert_eq!(
             horizon_floor(&plan),
             MAX_STUDY_SESSIONS,
@@ -568,7 +602,7 @@ mod tests {
             pinned_sessions: BTreeMap::from([("GEX-1000".to_string(), 2)]),
             displayed_placement: BTreeMap::from([
                 ("GEX-1000".to_string(), 2),
-                ("GEX-2001".to_string(), 11),
+                ("GEX-2001".to_string(), 17),
             ]),
             ..Plan::default()
         };
@@ -577,8 +611,9 @@ mod tests {
         assert_eq!(
             plan.displayed_placement,
             BTreeMap::from([("GEX-1000".to_string(), 2)]),
-            "the automatic seat at 11 falls back to « automatique », \
-             the pinned one keeps its seat"
+            "the automatic seat at 17 — past the 13 slots nine study \
+             sessions hold — falls back to « automatique », the pinned \
+             one keeps its seat"
         );
         assert_eq!(
             set_horizon(&mut plan, 1),
@@ -601,7 +636,7 @@ mod tests {
         };
         plan.pinned_sessions.insert("GEX-3333".to_string(), 7);
         let note = horizon_floor_note(&plan);
-        assert!(note.contains("7 sessions"), "{note}");
+        assert!(note.contains("5 sessions"), "{note}");
         assert!(note.contains("GEX-3333 est épinglé"), "{note}");
         assert!(note.contains("dépinglez"), "{note}");
         // several pins there: plural, all named
@@ -631,6 +666,36 @@ mod tests {
         // nothing explicit: the bare minimum speaks for itself
         let note = horizon_floor_note(&Plan::default());
         assert!(note.contains("au moins 2 sessions"), "{note}");
+    }
+
+    // The organigramme Antoine could not shrink below 7 (2026-08-26): its
+    // last pins sit in slot 7 and its last seats in slot 8, both of which
+    // five study sessions already hold — the floor used to read the slot
+    // index as a session count.
+    #[test]
+    fn the_floor_and_the_eviction_speak_slots_not_study_sessions() {
+        let mut plan = Plan {
+            study_sessions: 7,
+            pinned_sessions: BTreeMap::from([("GEX-3333".to_string(), 7)]),
+            displayed_placement: BTreeMap::from([
+                ("GEX-3333".to_string(), 7),
+                ("GEX-2001".to_string(), 8),
+            ]),
+            ..Plan::default()
+        };
+        assert_eq!(horizon_floor(&plan), 5, "slot 7 needs five sessions");
+        assert_eq!(set_horizon(&mut plan, 5), 5);
+        assert_eq!(
+            plan.displayed_placement.len(),
+            1,
+            "seven slots hold the pin at 7; the seat at 8 is evicted"
+        );
+        assert_eq!(set_horizon(&mut plan, 6), 6);
+        assert_eq!(
+            slots(plan.start.season, 6),
+            9,
+            "six study sessions hold nine slots"
+        );
     }
 
     #[test]

@@ -714,10 +714,11 @@ mod tests {
     #[test]
     fn a_restored_plan_heals_a_seat_beyond_its_horizon() {
         // a save from before the horizon rule: GEX-2001 seated at 11 by an
-        // old proposal, horizon since shrunk to 9 — verify used to refuse
-        // the whole plan for it
+        // old proposal, horizon since shrunk to six study sessions — nine
+        // slots, étés included — and verify used to refuse the whole plan
+        // for it (« GEX-2001 is pinned to session 11, outside 1..=9 »)
         let stale = Plan {
-            study_sessions: 9,
+            study_sessions: 6,
             displayed_placement: BTreeMap::from([
                 ("GEX-2001".to_string(), 11),
                 ("GEX-1000".to_string(), 2),
@@ -734,7 +735,7 @@ mod tests {
             restored.state.displayed_placement["GEX-1000"], 2,
             "the pinned seat survives"
         );
-        assert_eq!(restored.state.study_sessions, 9);
+        assert_eq!(restored.state.study_sessions, 6);
     }
 
     #[test]
