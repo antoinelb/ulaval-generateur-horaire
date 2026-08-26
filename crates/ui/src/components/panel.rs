@@ -7,6 +7,7 @@ use crate::panel::{
 };
 use crate::solve;
 use crate::state::{self, History, Plan, ProgramChoice, View};
+use ulaval_scheduler_core::MAX_STUDY_SESSIONS;
 
 // The single left panel (notes 2026-08-13 : plus d'onglets) : the
 // program's rules and organigramme controls, the catalogue search, the
@@ -90,11 +91,13 @@ fn ProgramPicker() -> Element {
                         span { class: "panel-picker-badge", "{mark.badge}" }
                         div { class: "panel-picker-provenance",
                             "{mark.provenance} "
-                            a {
-                                href: "{mark.source_url}",
-                                target: "_blank",
-                                rel: "noopener noreferrer",
-                                "{mark.source_url}"
+                            if let Some(link) = &mark.link {
+                                a {
+                                    href: "{link}",
+                                    target: "_blank",
+                                    rel: "noopener noreferrer",
+                                    "{link}"
+                                }
                             }
                         }
                         if !mark.anomalies.is_empty() {
@@ -186,13 +189,26 @@ fn ProgramPicker() -> Element {
                                     // jamais de profil imposé — l'instantané
                                     // de l'étagère, s'il existe, garde son
                                     // propre choix
-                                    let concentration = {
+                                    let (concentration, study_sessions) = {
                                         let read = snapshot_signal.read();
-                                        read.as_ref().and_then(|snapshot| {
-                                            panel::default_concentration(
-                                                snapshot, &code, &semester,
-                                            )
-                                        })
+                                        let snapshot = read.as_ref();
+                                        let concentration =
+                                            snapshot.and_then(|snapshot| {
+                                                panel::default_concentration(
+                                                    snapshot, &code, &semester,
+                                                )
+                                            });
+                                        let study_sessions = snapshot
+                                            .and_then(|snapshot| {
+                                                panel::program_credits_required(
+                                                    snapshot, &code, &semester,
+                                                )
+                                            })
+                                            .map(state::default_study_sessions)
+                                            .unwrap_or(
+                                                state::DEFAULT_STUDY_SESSIONS,
+                                            );
+                                        (concentration, study_sessions)
                                     };
                                     let choice = ProgramChoice {
                                         code,
@@ -207,6 +223,7 @@ fn ProgramPicker() -> Element {
                                         &plan.peek(),
                                         choice,
                                         stored.as_deref(),
+                                        study_sessions,
                                     );
                                     super::swap_document(
                                         plan,
@@ -235,11 +252,13 @@ fn ProgramPicker() -> Element {
                             key: "{mark.semester}",
                             span {
                                 "{mark.badge} ({mark.semester}) — "
-                                a {
-                                    href: "{mark.source_url}",
-                                    target: "_blank",
-                                    rel: "noopener noreferrer",
-                                    "{mark.source_url}"
+                                if let Some(link) = &mark.link {
+                                    a {
+                                        href: "{link}",
+                                        target: "_blank",
+                                        rel: "noopener noreferrer",
+                                        "{link}"
+                                    }
                                 }
                             }
                             button {
@@ -303,6 +322,12 @@ fn ImportDrawer() -> Element {
     // showing any more (same discipline as `SolverState.next_id`)
     let mut generation = use_signal(|| 0u64);
 
+    // the file-picker sibling of the URL import above (plan item 6): the
+    // chosen `{code}-{semestre}.json`, read by `browser::read_file_text`
+    // only once « Charger » is clicked — picking a file is not itself an
+    // act worth undoing
+    let mut json_program_file = use_signal(|| None::<dioxus::html::FileData>);
+    let mut json_loading = use_signal(|| false);
     // LAT-4/5: `use_future` spawns its closure once at mount and never
     // restarts it when a signal read inside changes (unlike `use_resource`)
     // — gating start/stop on `phase` would freeze after the first import.
@@ -320,7 +345,11 @@ fn ImportDrawer() -> Element {
     });
 
     let importing = phase().is_some();
-    let expanded = open() || importing;
+    // one drawer, one import at a time: a JSON load in flight disables the
+    // URL form and vice versa, so the two paths never race writing the same
+    // `snapshot`/`local_programs`
+    let busy = importing || json_loading();
+    let expanded = open() || busy;
     // the state → glyph mapping is a closed, static table, decided once
     // here rather than inside `rsx!` (AP-5) — same shape as `SectionView`'s
     // badge match just above
@@ -380,9 +409,8 @@ fn ImportDrawer() -> Element {
                 }
                 Err(why) => {
                     phase.set(None);
-                    error.set(Some(crate::present::present_import_error(
-                        &why,
-                    )));
+                    error
+                        .set(Some(crate::present::present_import_error(&why)));
                     return;
                 }
             };
@@ -409,9 +437,8 @@ fn ImportDrawer() -> Element {
                 Ok(local) => local,
                 Err(why) => {
                     phase.set(None);
-                    error.set(Some(crate::present::present_import_error(
-                        &why,
-                    )));
+                    error
+                        .set(Some(crate::present::present_import_error(&why)));
                     return;
                 }
             };
@@ -419,10 +446,7 @@ fn ImportDrawer() -> Element {
             let saved = {
                 let mut write = snapshot.write();
                 write.as_mut().map(|snapshot_mut| {
-                    crate::data::add_local_program(
-                        snapshot_mut,
-                        local.clone(),
-                    )
+                    crate::data::add_local_program(snapshot_mut, local.clone())
                 })
             };
             match saved {
@@ -448,9 +472,7 @@ fn ImportDrawer() -> Element {
             local_programs.write().push(local);
             crate::browser::local_set(
                 crate::persist::LOCAL_PROGRAMS_KEY,
-                &crate::persist::encode_local_programs(
-                    &local_programs.read(),
-                ),
+                &crate::persist::encode_local_programs(&local_programs.read()),
             );
             phase.set(None);
             draft.set(String::new());
@@ -475,13 +497,115 @@ fn ImportDrawer() -> Element {
         phase.set(None);
     };
 
+    // The JSON sibling of `commit` above: no phases (a local file read has
+    // nothing worth naming in stages), same discipline otherwise — every
+    // step must succeed before anything is written, any failure lands in
+    // the shared `error` signal, never a partially added program.
+    let mut json_commit = move || {
+        let program_file = json_program_file.peek().clone();
+        let Some(program_file) = program_file else {
+            return;
+        };
+        json_loading.set(true);
+        error.set(None);
+        spawn(async move {
+            let program_text =
+                match crate::browser::read_file_text(&program_file).await {
+                    Ok(text) => text,
+                    Err(why) => {
+                        json_loading.set(false);
+                        error.set(Some(crate::present::present_import_error(
+                            &why,
+                        )));
+                        return;
+                    }
+                };
+            let file_name = program_file.name();
+            let iso = crate::browser::now_iso();
+            let local = crate::import::build_local_program_from_json(
+                &program_text,
+                &file_name,
+                iso,
+            );
+            let local = match local {
+                Ok(local) => local,
+                Err(why) => {
+                    json_loading.set(false);
+                    error
+                        .set(Some(crate::present::present_import_error(&why)));
+                    return;
+                }
+            };
+            let saved = {
+                let mut write = snapshot.write();
+                write.as_mut().map(|snapshot_mut| {
+                    crate::data::add_local_program(snapshot_mut, local.clone())
+                })
+            };
+            match saved {
+                None => {
+                    json_loading.set(false);
+                    error.set(Some(crate::present::present_import_error(
+                        &crate::import::ImportError::CatalogueUnavailable,
+                    )));
+                    return;
+                }
+                Some(Err(detail)) => {
+                    json_loading.set(false);
+                    error.set(Some(
+                        crate::present::present_local_program_conflict(
+                            &detail,
+                        ),
+                    ));
+                    return;
+                }
+                Some(Ok(())) => {}
+            }
+            let title = local.program.title.clone();
+            local_programs.write().push(local);
+            crate::browser::local_set(
+                crate::persist::LOCAL_PROGRAMS_KEY,
+                &crate::persist::encode_local_programs(&local_programs.read()),
+            );
+            json_loading.set(false);
+            // `open.set(false)` unmounts the whole form below, file input
+            // included — that remount, not any bookkeeping here, is what
+            // clears the browser's own memory of the chosen file
+            json_program_file.set(None);
+            open.set(false);
+            super::push_alert(
+                alerts,
+                super::AlertBody::Success(format!("{title} importé.")),
+            );
+        });
+    };
+
+    // pre-computed for the button below (AP-5): the stated reason it is
+    // disabled, or what the click will do
+    let json_ready = json_program_file.read().is_some();
+    let json_disabled = busy || !json_ready;
+    let json_load_title = if json_loading() {
+        "Chargement en cours…"
+    } else if !json_ready {
+        "Choisissez d'abord un fichier programme (.json)"
+    } else {
+        "Charger le programme depuis le fichier choisi"
+    };
+    // the native file control is hidden under the styled row below, so the
+    // chosen name has to be rendered by us — never an unlabelled state
+    let json_file_label = json_program_file
+        .read()
+        .as_ref()
+        .map(|file| file.name())
+        .unwrap_or_else(|| "Aucun fichier choisi".to_string());
+
     rsx! {
         div { class: "panel-import",
             button {
                 class: "panel-import-toggle",
                 r#type: "button",
                 aria_expanded: expanded,
-                disabled: importing,
+                disabled: busy,
                 onclick: move |_| open.set(!open()),
                 "Votre programme n'est pas là ?"
             }
@@ -497,7 +621,7 @@ fn ImportDrawer() -> Element {
                         class: "panel-import-input",
                         r#type: "url",
                         placeholder: "https://www.ulaval.ca/etudes/programmes/…",
-                        disabled: importing,
+                        disabled: busy,
                         value: "{draft}",
                         oninput: move |event| draft.set(event.value()),
                         onkeydown: move |event| {
@@ -509,9 +633,52 @@ fn ImportDrawer() -> Element {
                     button {
                         class: "panel-import-submit",
                         r#type: "button",
-                        disabled: importing,
+                        disabled: busy,
                         onclick: move |_| commit(),
                         "Importer"
+                    }
+                }
+                // the file-picker sibling, à côté de l'import par URL (plan
+                // item 6): the native `<input type="file">` renders in the
+                // browser's own chrome, foreign to the rest of the panel —
+                // it stays for the click target and the keyboard focus, but
+                // sits invisible over a row styled like every other control
+                // (opacity 0, full-size), and the chosen name is printed by
+                // the row itself. A fixed shape either way (LAY-1).
+                div { class: "panel-import-json",
+                    label {
+                        class: "panel-import-label",
+                        r#for: "panel-import-json-program",
+                        "Fichier programme ({{code}}-{{semestre}}.json)"
+                    }
+                    div { class: "panel-import-file",
+                        input {
+                            id: "panel-import-json-program",
+                            class: "panel-import-file-input",
+                            r#type: "file",
+                            accept: ".json,application/json",
+                            aria_label: "Fichier programme JSON",
+                            disabled: busy,
+                            onchange: move |event: Event<FormData>| {
+                                json_program_file
+                                    .set(event.files().into_iter().next());
+                            },
+                        }
+                        span { class: "panel-import-file-button",
+                            "Choisir un fichier…"
+                        }
+                        span { class: "panel-import-file-name",
+                            "{json_file_label}"
+                        }
+                    }
+                    button {
+                        class: "panel-import-submit",
+                        r#type: "button",
+                        aria_label: "Charger le programme depuis un fichier JSON",
+                        title: "{json_load_title}",
+                        disabled: json_disabled,
+                        onclick: move |_| json_commit(),
+                        "Charger"
                     }
                 }
                 if importing {
@@ -539,18 +706,13 @@ fn ImportDrawer() -> Element {
                 }
             }
             if let Some(error) = error() {
+                // demande d'Antoine (2026-08-26) : le bloc en cinq parties
+                // (ERR-1) est réduit ici au titre et au détail technique —
+                // ce qui a été refusé, et pourquoi, sans le reste
                 div { class: "panel-import-error", role: "alert",
                     p { class: "panel-import-error-what", "{error.what}" }
-                    p { "{error.reaction}" }
-                    p { "{error.affected}" }
-                    p { class: "panel-import-error-action", "{error.action}" }
-                    p { class: "panel-import-error-id",
-                        "Identifiant : "
-                        code { "{error.id}" }
-                    }
-                    details {
-                        summary { "Détail technique" }
-                        pre { "{error.detail}" }
+                    pre { class: "panel-import-error-detail",
+                        "{error.detail}"
                     }
                 }
             }
@@ -873,8 +1035,20 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
     let history = use_context::<Signal<History>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     let solver = use_context::<Signal<super::SolverState>>();
+    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let mut horizon_epoch = use_signal(|| 0usize);
     let start = plan.read().start.to_string();
+    // a relevé Capsule import (`capsule::apply_to_plan`) can anchor `start`
+    // well outside this fixed A24-A31 window — routine for a 4th/5th-year
+    // student, guaranteed for one with ULaval credits from before it — so
+    // the option list always widens to include the actual year, never just
+    // the default span (else `selected` matches nothing and the select
+    // silently shows the wrong session)
+    let start_year = plan.read().start.year % 100;
+    let year_lo = start_year.min(24);
+    let year_hi = start_year.max(31);
     let study_sessions = plan.read().study_sessions;
+    let horizon_floor = state::horizon_floor(&plan.read());
     let credit_cap = plan.read().credit_cap;
     let summers_open = plan.read().summers_open;
     let concomitant = plan.read().concomitant;
@@ -955,7 +1129,7 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                                 );
                             }
                         },
-                        for year in 24..=31u16 {
+                        for year in year_lo..=year_hi {
                             option {
                                 value: "A{year}",
                                 selected: start == format!("A{year}"),
@@ -972,19 +1146,44 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                 label { class: "panel-knob",
                     "Sessions"
                     input {
+                        // remounted whenever a typed value was clamped, so
+                        // the field snaps back to the horizon actually set
+                        // instead of displaying a number the plan refused
+                        key: "sessions-{horizon_epoch}",
                         r#type: "number",
-                        min: "2",
-                        max: "16",
+                        min: "{horizon_floor}",
+                        max: "{MAX_STUDY_SESSIONS}",
                         value: "{study_sessions}",
                         onchange: move |event| {
                             if let Ok(count) = event.value().parse::<usize>()
                             {
-                                let clamped = count.clamp(2, 16);
+                                // the floor holds the pinned, manual and
+                                // completed sessions; the label names the
+                                // horizon actually set, not the one typed
+                                let clamped = count.clamp(
+                                    state::horizon_floor(&plan.peek()),
+                                    MAX_STUDY_SESSIONS,
+                                );
+                                if clamped != count {
+                                    // a clamped knob explains itself —
+                                    // never a silent refusal
+                                    super::push_alert(
+                                        alerts,
+                                        super::AlertBody::Note(
+                                            state::horizon_floor_note(
+                                                &plan.peek(),
+                                            ),
+                                        ),
+                                    );
+                                    horizon_epoch += 1;
+                                }
                                 edit_plan(
                                     plan,
                                     history,
                                     &format!("Horizon à {clamped} sessions"),
-                                    |plan| plan.study_sessions = clamped,
+                                    |plan| {
+                                        state::set_horizon(plan, clamped);
+                                    },
                                 );
                             }
                         },
@@ -1011,6 +1210,7 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                     }
                 }
             }
+            CapsuleDrawer {}
             label { class: "panel-fit",
                 input {
                     r#type: "checkbox",
@@ -1140,6 +1340,191 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                 for blocked in verification.blocked.iter() {
                     p { class: "warning",
                         "⚠ {crate::solve::blocked_note(blocked)}"
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Le tiroir « Charger depuis Capsule » (plan item 5) : replié au repos,
+// comme `ImportDrawer` — jamais de modal (ADR
+// `2026-08-collage-capsule-en-tiroir-non-bloquant`). Toute la logique
+// (parseur, application au plan, bilan) vit dans `crate::capsule`, déjà
+// testée nativement; ce composant ne fait que coller le texte, appeler
+// `capsule::load`/`apply_to_plan` et afficher ce qu'ils renvoient (AP-5).
+#[component]
+fn CapsuleDrawer() -> Element {
+    let plan = use_context::<Signal<Plan>>();
+    let history = use_context::<Signal<History>>();
+    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let snapshot = use_context::<Signal<Option<Snapshot>>>();
+
+    let mut open = use_signal(|| false);
+    let mut draft = use_signal(String::new);
+    let mut error = use_signal(|| None::<crate::present::UiError>);
+    let mut summary = use_signal(|| None::<crate::capsule::CapsuleSummary>);
+
+    // `commit` below wraps the import in one undoable `edit_plan` act
+    // (ACT-2), but `summary` is a signal local to this drawer that no undo
+    // touches on its own — left alone, ctrl-z reverts the plan while the
+    // drawer keeps claiming the old bilan (« 18 cours placés… ») for a plan
+    // that no longer holds them. As long as this import's act still sits
+    // on top of the undo stack, the bilan describes the current plan; the
+    // moment it doesn't — undone, or buried under a later edit — the bilan
+    // is stale and clears itself.
+    use_effect(move || {
+        let current_top = history.read().undo_label().map(str::to_string);
+        if current_top.as_deref() != Some("Import Capsule") {
+            summary.set(None);
+        }
+    });
+
+    let empty = draft.read().trim().is_empty();
+    let load_title = if empty {
+        "Collez d'abord le texte du relevé"
+    } else {
+        "Charger le relevé collé"
+    };
+
+    let mut commit = move || {
+        let text = draft.peek().clone();
+        let minimum = plan.peek().study_sessions;
+        // the catalogue gate: `load` refuses any sigle the snapshot does
+        // not carry, so the plan the import writes is one every solver
+        // request can resolve (ADR
+        // `2026-08-sigles-inconnus-du-releve-ignores`)
+        let known = snapshot.peek().as_ref().map(|snapshot| {
+            snapshot
+                .by_code
+                .keys()
+                .cloned()
+                .collect::<std::collections::BTreeSet<String>>()
+        });
+        let Some(known) = known else {
+            summary.set(None);
+            error.set(Some(crate::present::present_capsule_error(
+                &crate::capsule::CapsuleError::CatalogueUnavailable,
+            )));
+            return;
+        };
+        match crate::capsule::load(&text, minimum, &known) {
+            Err(why) => {
+                summary.set(None);
+                error.set(Some(crate::present::present_capsule_error(&why)));
+            }
+            Ok(loaded) => {
+                error.set(None);
+                // one labelled, reversible act (ACT-2): a single ctrl-z
+                // undoes the whole import
+                edit_plan(plan, history, "Import Capsule", |plan| {
+                    crate::capsule::apply_to_plan(plan, &loaded.application);
+                });
+                // document-scoped: leaves with the document at a swap
+                super::push_caused_alert(
+                    alerts,
+                    super::AlertBody::Success(loaded.summary.headline.clone()),
+                    super::AlertCause::Document,
+                );
+                summary.set(Some(loaded.summary));
+                draft.set(String::new());
+                // relevé chargé : le formulaire a fini son travail — le
+                // tiroir se replie comme `ImportDrawer`, le bilan reste
+                open.set(false);
+            }
+        }
+    };
+
+    rsx! {
+        div { class: "panel-capsule",
+            button {
+                class: "panel-import-toggle",
+                r#type: "button",
+                aria_expanded: open(),
+                onclick: move |_| open.set(!open()),
+                "Charger depuis Capsule"
+            }
+            if open() {
+                div { class: "panel-capsule-form",
+                    p { class: "panel-capsule-instructions",
+                        "Ouvrez votre relevé de notes dans Capsule, faites "
+                        code { "ctrl-u" }
+                        " pour afficher la source de la page, puis "
+                        code { "ctrl-a" }
+                        " et "
+                        code { "ctrl-c" }
+                        " pour tout copier, et collez le résultat ci-dessous."
+                    }
+                    label {
+                        class: "panel-import-label",
+                        r#for: "panel-capsule-textarea",
+                        "Source de la page du relevé"
+                    }
+                    textarea {
+                        id: "panel-capsule-textarea",
+                        class: "panel-capsule-textarea",
+                        placeholder: "Collez ici la source de la page…",
+                        value: "{draft}",
+                        oninput: move |event| draft.set(event.value()),
+                    }
+                    button {
+                        class: "panel-import-submit",
+                        r#type: "button",
+                        title: "{load_title}",
+                        disabled: empty,
+                        onclick: move |_| commit(),
+                        "Charger"
+                    }
+                    if let Some(error) = error() {
+                        div { class: "panel-import-error", role: "alert",
+                            p { class: "panel-import-error-what", "{error.what}" }
+                            p { "{error.reaction}" }
+                            p { "{error.affected}" }
+                            p { class: "panel-import-error-action", "{error.action}" }
+                            p { class: "panel-import-error-id",
+                                "Identifiant : "
+                                code { "{error.id}" }
+                            }
+                            details {
+                                summary { "Détail technique" }
+                                pre { "{error.detail}" }
+                            }
+                        }
+                    }
+                }
+            }
+            // hors du formulaire : le tiroir se replie au chargement, mais
+            // le bilan — dont les lignes ignorées ou non reconnues, jamais
+            // tues silencieusement — doit rester visible sans le rouvrir
+            // the headline and the problems only: the grid already shows
+            // the placed courses, and an ignored row must be in plain
+            // sight, never folded away (demande d'Antoine, 2026-08-26)
+            if let Some(summary) = summary() {
+                div { class: "panel-capsule-summary",
+                    p { class: "panel-capsule-headline", "{summary.headline}" }
+                    if !summary.ignored.is_empty() {
+                        div { class: "panel-capsule-bucket",
+                            p { class: "panel-capsule-bucket-title",
+                                "Cours ignorés ({summary.ignored.len()})"
+                            }
+                            ul {
+                                for item in summary.ignored.iter() {
+                                    li { key: "{item}", "{item}" }
+                                }
+                            }
+                        }
+                    }
+                    if !summary.unrecognized.is_empty() {
+                        div { class: "panel-capsule-bucket",
+                            p { class: "panel-capsule-bucket-title",
+                                "Lignes non reconnues ({summary.unrecognized.len()})"
+                            }
+                            ul {
+                                for item in summary.unrecognized.iter() {
+                                    li { key: "{item}", "{item}" }
+                                }
+                            }
+                        }
                     }
                 }
             }

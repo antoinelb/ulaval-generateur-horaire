@@ -79,7 +79,10 @@ pub fn preparatory_rule(
                 }
             }
             Node::Tree(tree) => match tree {
-                PrereqTree::Course(code) => pending.push(Node::Code(code)),
+                PrereqTree::Course(code)
+                | PrereqTree::Concomitant { concomitant: code } => {
+                    pending.push(Node::Code(code))
+                }
                 // cégep sigles (« BIO-NYA ») and prose are not course
                 // codes; a credit threshold names no course either
                 PrereqTree::Raw { .. } | PrereqTree::ProgramCredits { .. } => {
@@ -170,6 +173,22 @@ mod tests {
         assert_eq!(rule.constraint, None);
         assert_eq!(listed(&rule), ["PHY-0150", "PHY-0250"]);
         assert!(!rule.credits_in_addition);
+    }
+
+    #[test]
+    fn a_starred_preuniversity_leaf_enters_the_rule_like_a_plain_one() {
+        // « MAT-0150* » names the same scolarité as « MAT-0150 »: the star
+        // says when it may be taken, not whether it is needed
+        let courses = vec![course(
+            "GEX-1000",
+            parsed(PrereqTree::Concomitant {
+                concomitant: "MAT-0150".to_string(),
+            }),
+        )];
+        let rule = preparatory_rule(&["GEX-1000".to_string()], &courses)
+            .expect("within budget")
+            .expect("préuniversitaire courses found");
+        assert_eq!(listed(&rule), ["MAT-0150"]);
     }
 
     #[test]

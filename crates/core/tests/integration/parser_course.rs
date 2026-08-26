@@ -1,7 +1,7 @@
 use std::fs;
 
 use ulaval_scheduler_core::parser;
-use ulaval_scheduler_core::{Credits, Season};
+use ulaval_scheduler_core::{Credits, PrereqTree, Prerequisites, Season};
 
 const FIXTURE_DIR: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -16,11 +16,13 @@ const FIXTURE_DIR: &str = concat!(
 //   drt-7104  a stray `<b>` on the page, which HTML5 turns into a re-parent
 //   bio-1003  two distinct préuniversitaire messages, one behind
 //             « REMARQUE : », comma lists and cégep sigles kept Raw
+//   gex-3001  « GCI-2010* », the répertoire's mark for a préalable that
+//             « peut être suivi simultanément »
 const FIXTURES: &[&str] = &[
     "act-4114", "bio-1003", "chm-0150", "cso-6702", "drt-7104", "ecn-4901",
     "esp-1000", "frn-1112", "gae-3008", "gci-1007", "gci-1011", "gci-2010",
-    "gci-2510", "gex-3100", "gex-3333", "gex-4008", "gex-7002", "gmc-1590",
-    "gmc-7000", "gml-1001", "ift-1004", "med-1911", "phi-7750",
+    "gci-2510", "gex-3001", "gex-3100", "gex-3333", "gex-4008", "gex-7002",
+    "gmc-1590", "gmc-7000", "gml-1001", "ift-1004", "med-1911", "phi-7750",
 ];
 
 // Regenerates every expected fixture from its frozen HTML (ADR
@@ -93,6 +95,32 @@ fn a_seminar_without_a_credits_card_is_worth_zero() {
         .expect("GCI-2510 is in scope");
 
     assert_eq!(page.course.credits, Credits::Fixed(0));
+}
+
+// The star the répertoire puts after a sigle — « GCI-2010* », glossed on
+// the page as « un préalable qui peut être suivi simultanément » — is the
+// only thing GEX-3001's fixture is here for: it must reach the tree as a
+// concomitant leaf, not be swallowed the way the grammar used to
+// (ADR `2026-08-etoile-de-concomitance-au-parsing`).
+#[test]
+fn a_starred_prerequisite_reaches_the_tree_as_a_concomitant_leaf() {
+    let html_path = format!("{FIXTURE_DIR}/gex-3001.html");
+    let html = fs::read_to_string(&html_path)
+        .unwrap_or_else(|e| panic!("read {html_path}: {e}"));
+
+    let page = parser::course::parse(&html)
+        .unwrap_or_else(|e| panic!("parse: {e}"))
+        .expect("GEX-3001 is in scope");
+
+    assert_eq!(
+        page.course.prerequisites,
+        Some(Prerequisites::Parsed {
+            raw: "GCI-2010*".to_string(),
+            tree: PrereqTree::Concomitant {
+                concomitant: "GCI-2010".to_string()
+            },
+        })
+    );
 }
 
 // A page can be perfectly well-formed and still describe an activity the

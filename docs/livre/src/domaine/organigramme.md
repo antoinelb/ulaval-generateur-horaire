@@ -8,7 +8,7 @@ Le **cheminement type** (A1→H8) est l'organigramme de référence publié par 
 Chaque solution retournée respecte :
 
 1. **l'offre** : un cours n'est placé qu'à une saison où il est offert ;
-2. **les préalables** : satisfaits avant la session du cours (ou à la même session si `concomitant`) ;
+2. **les préalables** : satisfaits avant la session du cours — la même session suffit pour une feuille `concomitant` (l'étoile du répertoire), et `concomitant: true` étend cette tolérance à toutes les feuilles ;
 3. **le plafond de crédits** (`credit_cap`) par session, les fourchettes comptant leur borne basse ;
 4. **les étés fermés** : sans `summers_open`, un été n'accueille que stages et cours épinglés ;
 5. **les stages en été** : un stage non épinglé ne se place qu'en été — l'épingler ailleurs est un geste explicite qui lève la règle ;

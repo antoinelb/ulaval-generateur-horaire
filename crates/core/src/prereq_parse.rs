@@ -111,10 +111,10 @@ pub fn parse_prereq_tree(raw: &str) -> Result<PrereqTree, PrereqParseError> {
 
 // Only `(`, `)`, `ET` and `OU` carry structure; everything between two of
 // them is one operand, read whole rather than word by word. The parenthesis
-// is padded first because the source glues it to the sigle, and the `*` some
-// sigles carry means nothing to the grammar.
+// is padded first because the source glues it to the sigle; the `*` stays
+// glued, it is the operand's own mark of concomitance.
 fn tokenize_prereq_raw(raw: &str) -> Vec<PrereqToken> {
-    let padded = raw.replace('(', " ( ").replace(')', " ) ").replace("*", "");
+    let padded = raw.replace('(', " ( ").replace(')', " ) ");
     let mut tokens: Vec<PrereqToken> = Vec::new();
     let mut operand: Vec<&str> = Vec::new();
 
@@ -186,9 +186,21 @@ fn checkable_operand(words: &[&str]) -> Option<PrereqTree> {
         // « Crédits exigés : N » with no programme named: the requirement
         // bears on the student's own (GEX-3333)
         ["Crédits", "exigés", ":", count] => program_credits(None, count),
-        [code] if is_course_code(code) => {
-            Some(PrereqTree::Course(code.to_string()))
-        }
+        // « GCI-2010* » : the répertoire's mark for « peut être suivi en
+        // concomitance ». A star anywhere else — on an operand no shape
+        // reads, « IFT 10426* » (MAT-2910) — is not stripped either: the
+        // operand keeps it verbatim in its raw text.
+        [code] => match code.strip_suffix('*') {
+            Some(sigle) if is_course_code(sigle) => {
+                Some(PrereqTree::Concomitant {
+                    concomitant: sigle.to_string(),
+                })
+            }
+            None if is_course_code(code) => {
+                Some(PrereqTree::Course(code.to_string()))
+            }
+            _ => None,
+        },
         _ => None,
     }
 }
@@ -359,6 +371,38 @@ mod tests {
                 course("GCI-2009"),
             ])
         );
+    }
+
+    #[test]
+    fn a_starred_sigle_is_a_concomitant_leaf() {
+        // « * Indique un préalable qui peut être suivi simultanément »
+        // (GEX-3001, ACT-1002) : the star belongs to its own operand, and
+        // an operand without one keeps meaning « strictement avant »
+        assert_eq!(
+            parse_prereq_tree("GCI-2010*")
+                .unwrap_or_else(|e| panic!("parse: {e}")),
+            PrereqTree::Concomitant {
+                concomitant: "GCI-2010".to_string()
+            }
+        );
+        assert_eq!(
+            parse_prereq_tree("(ACT-1003* OU MAT-1110)")
+                .unwrap_or_else(|e| panic!("parse: {e}")),
+            any(vec![
+                PrereqTree::Concomitant {
+                    concomitant: "ACT-1003".to_string()
+                },
+                course("MAT-1110"),
+            ])
+        );
+    }
+
+    #[test]
+    fn a_star_on_an_operand_no_shape_reads_stays_in_its_text() {
+        // MAT-2910 lists « IFT 10426* », a sigle the source mistyped and
+        // starred: nothing is stripped on a guess, the operand keeps the
+        // star the student has to judge
+        assert_kept_as_text("IFT 10426*");
     }
 
     #[test]

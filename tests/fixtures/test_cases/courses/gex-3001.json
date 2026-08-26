@@ -1,0 +1,34 @@
+{
+  "code": "GEX-3001",
+  "title": "Génie côtier",
+  "credits": 3,
+  "cycle": 1,
+  "prerequisites": {
+    "raw": "GCI-2010*",
+    "tree": {
+      "concomitant": "GCI-2010"
+    }
+  },
+  "equivalents": [],
+  "seasons": {
+    "winter": {
+      "last_offered": 2026,
+      "options": [
+        [
+          {
+            "nrc": "14851",
+            "section": "A",
+            "mode": "in-person",
+            "slots": [
+              {
+                "day": "tuesday",
+                "start": "13:30",
+                "end": "16:20"
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

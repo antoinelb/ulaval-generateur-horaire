@@ -137,9 +137,7 @@ pub fn now_iso() -> String {
     let hour = time_of_day / 3_600;
     let minute = (time_of_day % 3_600) / 60;
     let second = time_of_day % 60;
-    format!(
-        "{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z"
-    )
+    format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z")
 }
 
 // --- URL sharing -----------------------------------------------------------
@@ -302,6 +300,21 @@ pub async fn fetch_program_html(
             crate::import::ImportError::Proxy {
                 detail: error.to_string(),
             }
+        }
+    })
+}
+
+// --- import d'un programme depuis un fichier choisi (plan item 6) ----------
+
+// One picked `<input type="file">` file, read to text. The only failure the
+// browser can hand back — an unreadable or vanished file — becomes
+// `BrowserApi` rather than a silent empty string (ERR-1: never swallowed).
+pub async fn read_file_text(
+    file: &dioxus::html::FileData,
+) -> Result<String, crate::import::ImportError> {
+    file.read_string().await.map_err(|error| {
+        crate::import::ImportError::BrowserApi {
+            detail: error.to_string(),
         }
     })
 }

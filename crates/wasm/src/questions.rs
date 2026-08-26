@@ -21,6 +21,11 @@ pub struct PrerequisitesInput {
     pub course: Course,
     // passed and placed-before codes — never a hypothetical future placement
     pub satisfied: Vec<String>,
+    // what sits in the very session being judged: it satisfies a leaf the
+    // répertoire starred (« GCI-2010* », concomitance permise) and nothing
+    // else. Absent = strict precedence, the reading before the star existed.
+    #[serde(default)]
+    pub same_session: Vec<String>,
     // the credits accumulated before the course's session
     pub credits: u32,
 }
@@ -44,9 +49,14 @@ pub fn prerequisites(
         .map_err(|e| e.to_string())?
         .into_iter()
         .collect();
+    let same_session: BTreeSet<String> = normalize_codes(&input.same_session)
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .collect();
     let status = ulaval_scheduler_core::prerequisites_met(
         &input.course,
         &satisfied,
+        &same_session,
         input.credits,
     )
     .map_err(|e| e.to_string())?;
@@ -181,6 +191,37 @@ mod tests {
         let error = prerequisites(&input)
             .expect_err("an over-budget tree is refused, never guessed");
         assert!(error.contains("GEX-1001"), "{error}");
+    }
+
+    #[test]
+    fn prerequisites_read_the_same_session_only_for_a_starred_leaf() {
+        use ulaval_scheduler_core::{PrereqTree, Prerequisites};
+        let mut input = prerequisites_input(
+            r#""satisfied":[],"same_session":["gex-1000"],"credits":0"#,
+        );
+        input.course.prerequisites = Some(Prerequisites::Parsed {
+            raw: "GEX-1000*".to_string(),
+            tree: PrereqTree::Concomitant {
+                concomitant: "GEX-1000".to_string(),
+            },
+        });
+        assert!(prerequisites(&input).unwrap_or_else(|e| panic!("{e}")).met);
+        // the same code, unstarred, still demands a session before
+        input.course.prerequisites = Some(Prerequisites::Parsed {
+            raw: "GEX-1000".to_string(),
+            tree: PrereqTree::Course("GEX-1000".to_string()),
+        });
+        assert!(!prerequisites(&input).unwrap_or_else(|e| panic!("{e}")).met);
+    }
+
+    #[test]
+    fn prerequisites_surface_a_duplicated_same_session_code() {
+        let error = prerequisites(&prerequisites_input(
+            r#""satisfied":[],"same_session":["GEX-1000","gex-1000"],
+               "credits":0"#,
+        ))
+        .expect_err("a duplicated code is a typo to surface");
+        assert!(error.contains("GEX-1000"), "{error}");
     }
 
     #[test]

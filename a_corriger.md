@@ -1,0 +1,3 @@
+- Lorsqu'un programme a 90 crédits, le défaut est 6 sessions et lorsque c'est 120, c'est 8 sessions.
+- Il faudrait un bouton pour charger un programme millésime à partir d'un json (si le directeur veut le rendre disponible après l'avoir modifié par exemple)
+- Il faudrait un bouton pour charger un organigramme partiel à partir de capsule comme dans ../grille-de-cheminement-interactive puis le compléter automatiquement comme si c'est l'élève qui avait placé les cours dans des sessions particulières. La session de début devra s'ajuster automatiquement à partir de ceci

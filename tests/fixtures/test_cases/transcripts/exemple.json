@@ -1,0 +1,172 @@
+{
+  "sessions": [
+    {
+      "section": "recognized",
+      "semester": "H13",
+      "institution": "Université de Montréal",
+      "courses": [
+        {
+          "code": "MAT-1910",
+          "cycle": 1,
+          "title": "Mathématiques de l'ingénieur 2",
+          "grade": "V",
+          "credits": 3
+        }
+      ]
+    },
+    {
+      "section": "laval",
+      "semester": "A24",
+      "institution": null,
+      "courses": [
+        {
+          "code": "BIO-1904",
+          "cycle": 1,
+          "title": "Organisation et physiologie des plantes",
+          "grade": "B",
+          "credits": 3
+        },
+        {
+          "code": "CHM-1903",
+          "cycle": 1,
+          "title": "Chimie des eaux",
+          "grade": "A+",
+          "credits": 3
+        },
+        {
+          "code": "GCI-1000",
+          "cycle": 1,
+          "title": "Matériaux de construction",
+          "grade": "A",
+          "credits": 3
+        },
+        {
+          "code": "GCI-1003",
+          "cycle": 1,
+          "title": "Eaux vives",
+          "grade": "A+",
+          "credits": 3
+        },
+        {
+          "code": "GEX-1002",
+          "cycle": 1,
+          "title": "Profession : ingénieur des eaux",
+          "grade": "A+",
+          "credits": 1
+        },
+        {
+          "code": "GSC-1000",
+          "cycle": 1,
+          "title": "Méthodologie de design en ingénierie",
+          "grade": "A+",
+          "credits": 3
+        },
+        {
+          "code": "MAT-1900",
+          "cycle": 1,
+          "title": "Mathématiques de l'ingénieur I",
+          "grade": "A",
+          "credits": 3
+        },
+        {
+          "code": "STT-1900",
+          "cycle": 1,
+          "title": "Méthodes statistiques pour ingénieurs",
+          "grade": "A+",
+          "credits": 3
+        }
+      ]
+    },
+    {
+      "section": "laval",
+      "semester": "E25",
+      "institution": null,
+      "courses": [
+        {
+          "code": "GEX-1580",
+          "cycle": 1,
+          "title": "Stage en génie des eaux I",
+          "grade": "P",
+          "credits": 9
+        },
+        {
+          "code": "GGR-2305",
+          "cycle": 1,
+          "title": "Climatologie",
+          "grade": "A+",
+          "credits": 3
+        }
+      ]
+    },
+    {
+      "section": "in_progress",
+      "semester": "E26",
+      "institution": null,
+      "courses": [
+        {
+          "code": "GEX-2590",
+          "cycle": 1,
+          "title": "Stage en génie des eaux II",
+          "grade": null,
+          "credits": 9
+        },
+        {
+          "code": "PHI-3900",
+          "cycle": 1,
+          "title": "Éthique et professionnalisme",
+          "grade": null,
+          "credits": 3
+        }
+      ]
+    },
+    {
+      "section": "in_progress",
+      "semester": "A26",
+      "institution": null,
+      "courses": [
+        {
+          "code": "ESG-1020",
+          "cycle": 1,
+          "title": "Español elemental II",
+          "grade": null,
+          "credits": 3
+        },
+        {
+          "code": "GAE-3008",
+          "cycle": 1,
+          "title": "Aménagement des cours d'eau et conservation des sols",
+          "grade": null,
+          "credits": 3
+        },
+        {
+          "code": "GCI-2012",
+          "cycle": 1,
+          "title": "Hydraulique urbaine",
+          "grade": null,
+          "credits": 3
+        },
+        {
+          "code": "GCI-4301",
+          "cycle": 1,
+          "title": "Aménagement hydraulique",
+          "grade": null,
+          "credits": 3
+        },
+        {
+          "code": "GEX-2003",
+          "cycle": 1,
+          "title": "Production d'eau potable",
+          "grade": null,
+          "credits": 3
+        },
+        {
+          "code": "GEX-3333",
+          "cycle": 1,
+          "title": "Projet intégrateur en génie des eaux I",
+          "grade": null,
+          "credits": 3
+        }
+      ]
+    }
+  ]
+}

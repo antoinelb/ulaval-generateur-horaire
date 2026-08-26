@@ -1,6 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use ulaval_scheduler_core::{PrereqOverride, Season, Semester};
+use ulaval_scheduler_core::{
+    PrereqOverride, Season, Semester, MAX_STUDY_SESSIONS,
+};
 
 pub const HISTORY_CAP: usize = 100;
 // 17 gives every bac headroom out of the box: the B-GMC packs ~117 cr of
@@ -24,6 +26,10 @@ pub struct Plan {
     // the A1 identity — « A26 » = automne 2026
     pub start: Semester,
     pub study_sessions: usize,
+    // sessions 1..=n déjà complétées (import Capsule) : fermées au solveur
+    // pour tout cours non épinglé (ADR
+    // `2026-08-sessions-completees-fermees-au-solveur`); 0 = aucune
+    pub completed_sessions: usize,
     pub summers_open: bool,
     pub credit_cap: u32,
     pub concomitant: bool,
@@ -71,6 +77,7 @@ impl Default for Plan {
                 year: 2026,
             },
             study_sessions: DEFAULT_STUDY_SESSIONS,
+            completed_sessions: 0,
             summers_open: false,
             credit_cap: DEFAULT_CREDIT_CAP,
             concomitant: false,
@@ -101,14 +108,38 @@ pub struct ProgramChoice {
     pub profile: Option<String>,
 }
 
+// The credit-based default horizon (ADR
+// `2026-08-sessions-par-defaut-derivees-des-credits`) : 15 credits is a
+// full-time session's load, so ceil(credits_required / 15) is how many
+// study sessions the program's own weight suggests — clamped to the range
+// the « Sessions » number input already enforces (components/panel.rs). A
+// non-positive `credits_required` (the field is `i64`, the file could carry
+// anything) falls back to `DEFAULT_STUDY_SESSIONS` before any cast, so no
+// negative value ever wraps through `usize`.
+pub fn default_study_sessions(credits_required: i64) -> usize {
+    if credits_required <= 0 {
+        return DEFAULT_STUDY_SESSIONS;
+    }
+    let sessions = (credits_required + 14) / 15;
+    (sessions as usize).clamp(2, 16)
+}
+
 // The seed of a new document: everything at its default, only the
-// student's calendar identity (`start`) carried over — the cap, the
-// sessions and the étés are facts of the program being opened (ADR
-// `2026-08-reglages-transversaux-dans-linstantane`).
-pub fn fresh_plan(start: Semester, choice: ProgramChoice) -> Plan {
+// student's calendar identity (`start`) and study-sessions horizon carried
+// over — the cap and the étés are facts of the program being opened (ADR
+// `2026-08-reglages-transversaux-dans-linstantane`); `study_sessions`
+// starts from the program's own credit weight instead (ADR
+// `2026-08-sessions-par-defaut-derivees-des-credits`), still a
+// student-editable knob afterwards.
+pub fn fresh_plan(
+    start: Semester,
+    choice: ProgramChoice,
+    study_sessions: usize,
+) -> Plan {
     Plan {
         program: Some(choice),
         start,
+        study_sessions,
         ..Plan::default()
     }
 }
@@ -287,6 +318,108 @@ pub fn remove_course(plan: &mut Plan, code: &str) {
     plan.rule_grants.remove(&code);
 }
 
+// `displayed_placement` is « pins plus the last accepted proposal » : a
+// proposal computed before the latest pins (a solve in flight while a
+// relevé Capsule import landed) must not evict them from the shown grid —
+// the pin keeps its seat unless the proposal itself seats the code.
+pub fn overlay_pins(
+    plan: &Plan,
+    placement: &mut std::collections::BTreeMap<String, usize>,
+) {
+    for (code, &session) in &plan.pinned_sessions {
+        placement.entry(code.clone()).or_insert(session);
+    }
+}
+
+// Shrinking the horizon must leave nothing seated beyond it, or the next
+// verify — which pins everything displayed — refuses the plan (« GEX-2001
+// is pinned to session 11, outside 1..=9 », 2026-08-26). Explicit acts are
+// sovereign and floor the shrink instead of being evicted: pins, manual
+// courses, and the sessions a relevé closed (plus one still open to study
+// in). Automatic seats past the new edge fall back to « automatique » and
+// the next propose re-seats them inside.
+pub fn horizon_floor(plan: &Plan) -> usize {
+    let pinned = plan.pinned_sessions.values().copied().max().unwrap_or(0);
+    let manual = plan
+        .manual
+        .iter()
+        .filter(|(_, codes)| !codes.is_empty())
+        .map(|(&session, _)| session)
+        .max()
+        .unwrap_or(0);
+    pinned
+        .max(manual)
+        .max(plan.completed_sessions.saturating_add(1))
+        // capped at MAX so a corrupt save cannot yield a floor above the
+        // ceiling and make `set_horizon`'s clamp panic — the stray seats
+        // get evicted instead
+        .clamp(2, MAX_STUDY_SESSIONS)
+}
+
+// The one entry point for changing `study_sessions`: clamps to
+// [floor, MAX] and evicts the automatic seats the new horizon can no
+// longer hold — pins all sit at or below the floor, so `displayed ⊇
+// pinned` survives the eviction. Returns the horizon actually set, for
+// the caller's undo label. Also the self-heal for saves from before this
+// rule: re-asserting the current value repairs any stray seat.
+pub fn set_horizon(plan: &mut Plan, requested: usize) -> usize {
+    let horizon = requested.clamp(horizon_floor(plan), MAX_STUDY_SESSIONS);
+    plan.study_sessions = horizon;
+    plan.displayed_placement
+        .retain(|_, &mut session| session <= horizon);
+    horizon
+}
+
+// Why the horizon refuses to shrink below its floor, the binding fact
+// named with the gesture that frees it — a knob that clamps in silence is
+// the refusal AIR forbids (retour d'Antoine 2026-08-26 : « un bogue qui
+// m'empêche de réduire le nombre de sessions »).
+pub fn horizon_floor_note(plan: &Plan) -> String {
+    let floor = horizon_floor(plan);
+    let seasons = ulaval_scheduler_core::horizon_sessions(
+        plan.start.season,
+        plan.study_sessions,
+    );
+    let semesters =
+        ulaval_scheduler_core::session_semesters(plan.start, &seasons);
+    let label = session_label(&semesters, floor.wrapping_sub(1));
+    let pinned_at_floor: Vec<&str> = plan
+        .pinned_sessions
+        .iter()
+        .filter(|(_, &session)| session == floor)
+        .map(|(code, _)| code.as_str())
+        .collect();
+    if !pinned_at_floor.is_empty() {
+        return format!(
+            "L'horizon reste à {floor} sessions : {} en {label} — \
+             dépinglez pour réduire davantage.",
+            if pinned_at_floor.len() > 1 {
+                format!("{} sont épinglés", pinned_at_floor.join(", "))
+            } else {
+                format!("{} est épinglé", pinned_at_floor[0])
+            }
+        );
+    }
+    if plan
+        .manual
+        .get(&floor)
+        .is_some_and(|codes| !codes.is_empty())
+    {
+        return format!(
+            "L'horizon reste à {floor} sessions : des cours manuels \
+             occupent {label} — retirez-les pour réduire davantage."
+        );
+    }
+    if plan.completed_sessions.saturating_add(1) == floor {
+        return format!(
+            "L'horizon reste à {floor} sessions : votre relevé occupe les \
+             {} premières, et une session reste ouverte pour la suite.",
+            plan.completed_sessions
+        );
+    }
+    format!("L'horizon garde au moins {floor} sessions.")
+}
+
 // Strip the given codes from every placement structure — the derived
 // correction behind « scolarité préparatoire faite » and « crédité » : a
 // code acquired by hypothesis must not occupy any session, wherever it
@@ -388,7 +521,120 @@ mod tests {
     ];
 
     #[test]
-    fn a_fresh_plan_carries_only_the_start_and_the_choice() {
+    fn overlay_pins_restores_a_pin_a_stale_proposal_dropped() {
+        let mut plan = Plan::default();
+        plan.pinned_sessions.insert("GEX-1000".to_string(), 2);
+        plan.pinned_sessions.insert("GEX-2000".to_string(), 3);
+        let mut placement = std::collections::BTreeMap::from([
+            ("GEX-1000".to_string(), 5),
+            ("GLO-1000".to_string(), 1),
+        ]);
+        overlay_pins(&plan, &mut placement);
+        assert_eq!(
+            placement["GEX-1000"], 5,
+            "a seat the proposal itself gives wins — the next solve \
+             re-honours the pin"
+        );
+        assert_eq!(placement["GEX-2000"], 3, "the dropped pin is restored");
+        assert_eq!(placement["GLO-1000"], 1, "untouched");
+    }
+
+    #[test]
+    fn the_horizon_floor_holds_every_explicit_act() {
+        let mut plan = Plan::default();
+        assert_eq!(horizon_floor(&plan), 2, "an empty plan floors at 2");
+        plan.pinned_sessions.insert("GEX-1000".to_string(), 5);
+        plan.manual.insert(7, vec!["MAN-1000".to_string()]);
+        plan.manual.insert(9, Vec::new());
+        plan.completed_sessions = 3;
+        assert_eq!(
+            horizon_floor(&plan),
+            7,
+            "the highest of pins, non-empty manual sessions and the \
+             completed past — an emptied manual session holds nothing"
+        );
+        plan.pinned_sessions.insert("GEX-2000".to_string(), 40);
+        assert_eq!(
+            horizon_floor(&plan),
+            MAX_STUDY_SESSIONS,
+            "a corrupt floor caps at MAX instead of panicking clamp"
+        );
+    }
+
+    #[test]
+    fn shrinking_the_horizon_evicts_automatic_seats_never_a_pin() {
+        let mut plan = Plan {
+            study_sessions: 12,
+            pinned_sessions: BTreeMap::from([("GEX-1000".to_string(), 2)]),
+            displayed_placement: BTreeMap::from([
+                ("GEX-1000".to_string(), 2),
+                ("GEX-2001".to_string(), 11),
+            ]),
+            ..Plan::default()
+        };
+        assert_eq!(set_horizon(&mut plan, 9), 9);
+        assert_eq!(plan.study_sessions, 9);
+        assert_eq!(
+            plan.displayed_placement,
+            BTreeMap::from([("GEX-1000".to_string(), 2)]),
+            "the automatic seat at 11 falls back to « automatique », \
+             the pinned one keeps its seat"
+        );
+        assert_eq!(
+            set_horizon(&mut plan, 1),
+            2,
+            "the shrink stops at the floor"
+        );
+        assert_eq!(
+            set_horizon(&mut plan, 99),
+            MAX_STUDY_SESSIONS,
+            "the growth stops at MAX"
+        );
+    }
+
+    #[test]
+    fn the_floor_note_names_the_binding_fact_and_the_gesture() {
+        // a pin at the floor: named, with its session label
+        let mut plan = Plan {
+            study_sessions: 8,
+            ..Plan::default()
+        };
+        plan.pinned_sessions.insert("GEX-3333".to_string(), 7);
+        let note = horizon_floor_note(&plan);
+        assert!(note.contains("7 sessions"), "{note}");
+        assert!(note.contains("GEX-3333 est épinglé"), "{note}");
+        assert!(note.contains("dépinglez"), "{note}");
+        // several pins there: plural, all named
+        plan.pinned_sessions.insert("GEX-2003".to_string(), 7);
+        let note = horizon_floor_note(&plan);
+        assert!(note.contains("GEX-2003, GEX-3333 sont épinglés"), "{note}");
+
+        // manual courses hold the floor
+        let mut plan = Plan {
+            study_sessions: 8,
+            ..Plan::default()
+        };
+        plan.manual.insert(5, vec!["MAN-1000".to_string()]);
+        let note = horizon_floor_note(&plan);
+        assert!(note.contains("cours manuels"), "{note}");
+        assert!(note.contains("retirez-les"), "{note}");
+
+        // the relevé's completed sessions hold it
+        let plan = Plan {
+            study_sessions: 8,
+            completed_sessions: 5,
+            ..Plan::default()
+        };
+        let note = horizon_floor_note(&plan);
+        assert!(note.contains("relevé occupe les 5 premières"), "{note}");
+
+        // nothing explicit: the bare minimum speaks for itself
+        let note = horizon_floor_note(&Plan::default());
+        assert!(note.contains("au moins 2 sessions"), "{note}");
+    }
+
+    #[test]
+    fn a_fresh_plan_carries_the_start_the_choice_and_the_sessions() {
         let start = semester("H27");
         let choice = ProgramChoice {
             code: "B-GIN".to_string(),
@@ -396,19 +642,41 @@ mod tests {
             concentration: Some("Approche généraliste".to_string()),
             profile: None,
         };
-        let fresh = fresh_plan(start, choice.clone());
+        let fresh = fresh_plan(start, choice.clone(), 6);
         assert_eq!(fresh.program, Some(choice));
         assert_eq!(fresh.start, start);
+        assert_eq!(fresh.study_sessions, 6, "the passed count lands");
         // everything else is the default — field by field, so a new Plan
         // field forgetting this contract fails here
         assert_eq!(
             Plan {
                 program: None,
                 start: Plan::default().start,
+                study_sessions: Plan::default().study_sessions,
                 ..fresh
             },
             Plan::default()
         );
+    }
+
+    #[test]
+    fn default_study_sessions_follows_credits_ceiling_and_clamps() {
+        for (credits, expected) in [
+            (90, 6),
+            (120, 8),
+            (89, 6),
+            (91, 7),
+            (0, DEFAULT_STUDY_SESSIONS),
+            (-30, DEFAULT_STUDY_SESSIONS),
+            (400, 16),
+            (15, 2),
+        ] {
+            assert_eq!(
+                default_study_sessions(credits),
+                expected,
+                "{credits} credits"
+            );
+        }
     }
 
     #[test]

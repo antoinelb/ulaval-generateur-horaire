@@ -95,6 +95,7 @@ fn reproduces_every_frozen_solution_set() {
             pinned: &fixture.pinned,
             stages: &fixture.stages,
             open_summers: &fixture.open_summers,
+            completed_sessions: 0,
             seed: &BTreeMap::new(),
             max_nodes: 10_000_000,
             // relaxed, only the first leaf is interesting: the sentinel is

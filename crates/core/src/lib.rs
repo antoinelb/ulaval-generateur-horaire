@@ -15,6 +15,7 @@ pub mod prereq_parse;
 pub mod program;
 pub mod program_manual;
 pub mod rules;
+pub mod transcript;
 pub mod week;
 pub mod weekly;
 
@@ -33,5 +34,6 @@ pub use prereq_parse::*;
 pub use program::*;
 pub use program_manual::*;
 pub use rules::*;
+pub use transcript::*;
 pub use week::*;
 pub use weekly::*;

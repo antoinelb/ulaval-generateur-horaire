@@ -191,7 +191,7 @@ pub fn boot_solver(
         &manual_json,
         &overrides_json,
         move |text| {
-            handle_worker_answer(&text, state, plan, alerts);
+            handle_worker_answer(&text, state, plan, alerts, snapshot);
         },
     );
     if solver.is_none() {
@@ -215,6 +215,7 @@ fn handle_worker_answer(
     mut state: Signal<SolverState>,
     plan: Signal<Plan>,
     alerts: Signal<Vec<Alert>>,
+    snapshot: Signal<Option<Snapshot>>,
 ) {
     match crate::solve::parse_worker_answer(text) {
         Err(message) => push_alert(alerts, AlertBody::Note(message)),
@@ -266,7 +267,7 @@ fn handle_worker_answer(
             }
             match running.kind {
                 QueryKind::Propose => {
-                    apply_proposal(&report, state, plan, alerts);
+                    apply_proposal(&report, state, plan, alerts, snapshot);
                 }
                 QueryKind::Verify => {
                     let mut state = state.write();
@@ -288,6 +289,7 @@ fn apply_proposal(
     mut state: Signal<SolverState>,
     plan: Signal<Plan>,
     alerts: Signal<Vec<Alert>>,
+    snapshot: Signal<Option<Snapshot>>,
 ) {
     state.write().credit_shortfalls = report.credit_shortfalls.clone();
     if let Some(note) = crate::solve::completion_note(&report.placement) {
@@ -307,6 +309,7 @@ fn apply_proposal(
                 );
             } else {
                 let plan_read = plan.peek();
+                let snapshot_read = snapshot.peek();
                 for code in &solution.left_out {
                     let blocked = report
                         .placement
@@ -316,7 +319,10 @@ fn apply_proposal(
                     push_caused_alert(
                         alerts,
                         AlertBody::Note(crate::solve::left_out_line(
-                            code, blocked, &plan_read,
+                            code,
+                            blocked,
+                            &plan_read,
+                            snapshot_read.as_ref(),
                         )),
                         AlertCause::LeftOut(code.clone()),
                     );
@@ -393,7 +399,10 @@ fn apply_proposal(
             AlertCause::Document,
         );
     }
-    let placement = solution.placement.clone();
+    let mut placement = solution.placement.clone();
+    // a stale answer (solved before the latest pins) must not evict them
+    // from the grid — `displayed ⊇ pinned`, always
+    crate::state::overlay_pins(&plan.peek(), &mut placement);
     let injected = report.injected.clone();
     // a no-op answer (best-effort that moved nothing, or the re-solve of
     // an already-applied proposal) must not write: the write is what

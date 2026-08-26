@@ -9,7 +9,10 @@
 // `persist.rs`, `data.rs`, `panel.rs` and `browser.rs` (plan items 3, 4, 6,
 // 7) all need the one type and step to build against; splitting it into a
 // separate module would only add an import with no isolation benefit, since
-// none of those callers can build without it.
+// none of those callers can build without it. `build_local_program_from_json`
+// (plan items 6, 7) builds the very same `LocalProgram` from a chosen file
+// instead of a fetched page — same shape, same callers, so it lives beside
+// its URL sibling rather than in a module of its own.
 
 use std::fmt::Write as _;
 
@@ -33,6 +36,8 @@ pub enum ImportError {
     BrowserApi { detail: String },
     #[error("catalogue not loaded yet")]
     CatalogueUnavailable,
+    #[error("invalid program json : {detail}")]
+    InvalidProgramJson { detail: String },
 }
 
 // INP-7: only the commit validates. Accepts a real ulaval.ca program page —
@@ -83,7 +88,30 @@ pub fn validate_program_url(raw: &str) -> Result<String, ImportError> {
 
 // --- the stored shape (plan item 5) -----------------------------------------
 
-// One program imported by URL, persisted under `gh.v1.programmes-locaux`
+// Where a `LocalProgram` came from — a fetched ulaval.ca page, or a file the
+// student picked (plan item 6). Kept as one field on the one existing type
+// rather than two provenance variants: a file import still has a
+// `source_url` (the chosen file's name) and a `proxy` (always empty), so
+// every other field and every existing reader survives unchanged — see ADR
+// `2026-08-import-de-programme-par-fichier-json`.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Default,
+    serde::Serialize,
+    serde::Deserialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum ProgramOrigin {
+    #[default]
+    Url,
+    File,
+}
+
+// One program imported locally, persisted under `gh.v1.programmes-locaux`
 // (`persist.rs`). Anomalies ride as already-worded `Vec<String>` rather than
 // `ParseError` — `ParseError` implements neither `Serialize` nor
 // `Deserialize` and is not a thread type — the same convention as
@@ -91,14 +119,21 @@ pub fn validate_program_url(raw: &str) -> Result<String, ImportError> {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct LocalProgram {
     pub program: ulaval_scheduler_core::Program,
-    // provenance shown on the card (TRU)
+    // provenance shown on the card (TRU) — a URL for `Url`, the chosen
+    // file's name for `File`
     pub source_url: String,
     // an ISO instant the browser provides; pure code never invents time
     // (same discipline as `LogEntry.at`)
     pub imported_at: String,
+    // always `corsproxy.io` for `Url`, always empty for `File`
     pub proxy: String,
     // parser anomalies, already worded — surfaced on the card, never tacit
     pub anomalies: Vec<String>,
+    // defaults to `Url` so an envelope already in `localStorage`, written
+    // before this field existed, still restores (INP-7-style tolerance,
+    // same discipline as `persist::restore`'s unknown-field handling)
+    #[serde(default)]
+    pub origin: ProgramOrigin,
 }
 
 pub const PROXY_HOST: &str = "corsproxy.io";
@@ -172,11 +207,10 @@ pub fn build_local_program(
     let semester = ulaval_scheduler_core::semester_after(now_secs);
     let page = ulaval_scheduler_core::parser::program::parse(html, semester)
         .map_err(|error| ImportError::Parse {
-            detail: error.to_string(),
-        })?;
+        detail: error.to_string(),
+    })?;
     let mut program = page.program;
-    let anomalies =
-        page.anomalies.iter().map(ToString::to_string).collect();
+    let anomalies = page.anomalies.iter().map(ToString::to_string).collect();
 
     match ulaval_scheduler_core::preparatory_rule(&program.mandatory, courses)
     {
@@ -196,6 +230,40 @@ pub fn build_local_program(
         imported_at,
         proxy: PROXY_HOST.to_string(),
         anomalies,
+        origin: ProgramOrigin::Url,
+    })
+}
+
+// --- building a `LocalProgram` from a chosen file (plan items 6, 7) --------
+
+// The director wants to publish a corrected vintage without waiting for the
+// next scrape: a `{code}-{semestre}.json` snapshot picked straight from
+// disk. Every step must succeed before anything is built — a half-loaded
+// program is worse than none (BLD-1) — so this returns the typed error the
+// first failing step raises and touches nothing else in the app.
+//
+// Unlike `build_local_program`, this does NOT append the « Scolarité
+// préparatoire » rule: a `{code}-{semestre}.json` snapshot is written by the
+// scraper with that rule already in it (`cli.rs::add_preparatory_rules`), so
+// re-appending it here would duplicate it.
+pub fn build_local_program_from_json(
+    program_json: &str,
+    file_name: &str,
+    imported_at: String,
+) -> Result<LocalProgram, ImportError> {
+    let program: ulaval_scheduler_core::Program =
+        serde_json::from_str(program_json).map_err(|error| {
+            ImportError::InvalidProgramJson {
+                detail: error.to_string(),
+            }
+        })?;
+    Ok(LocalProgram {
+        program,
+        source_url: file_name.to_string(),
+        imported_at,
+        proxy: String::new(),
+        anomalies: Vec::new(),
+        origin: ProgramOrigin::File,
     })
 }
 
@@ -699,6 +767,7 @@ mod tests {
         assert_eq!(local.source_url, source_url);
         assert_eq!(local.imported_at, imported_at);
         assert_eq!(local.proxy, PROXY_HOST);
+        assert_eq!(local.origin, ProgramOrigin::Url);
     }
 
     #[test]
@@ -729,5 +798,77 @@ mod tests {
         )
         .expect_err("a graph over the node budget must error");
         assert!(matches!(error, ImportError::Preparatory { .. }));
+    }
+
+    // --- build_local_program_from_json (plan items 6, 7) -------------------
+
+    const PROGRAM_JSON: &str = r#"{"code":"B-GLO","slug":"genie-logiciel",
+        "semester":"A26","title":"Génie logiciel","cycle":1,
+        "credits_required":120,"mandatory":["GLO-1000"],"rules":[],
+        "concentrations":[],"profiles":[]}"#;
+
+    #[test]
+    fn a_valid_program_json_builds_a_file_local_program() {
+        let local = build_local_program_from_json(
+            PROGRAM_JSON,
+            "B-GLO-A26.json",
+            "2026-08-25T00:00:00Z".to_string(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(local.origin, ProgramOrigin::File);
+        assert_eq!(local.source_url, "B-GLO-A26.json");
+        assert_eq!(local.proxy, "");
+        assert!(local.anomalies.is_empty());
+        assert_eq!(local.program.code, "B-GLO");
+    }
+
+    #[test]
+    fn truncated_json_is_a_typed_program_error() {
+        let error = build_local_program_from_json(
+            "{ \"code\": ",
+            "b.json",
+            "2026-08-25T00:00:00Z".to_string(),
+        )
+        .expect_err("truncated json must be refused");
+        assert!(matches!(error, ImportError::InvalidProgramJson { .. }));
+    }
+
+    #[test]
+    fn a_syntactically_valid_object_missing_a_required_field_is_refused() {
+        // well-formed JSON, but no `Program` it can deserialize into: not
+        // even the required `code` is present
+        let error = build_local_program_from_json(
+            r#"{"title":"Sans code"}"#,
+            "b.json",
+            "2026-08-25T00:00:00Z".to_string(),
+        )
+        .expect_err("a Program missing required fields must be refused");
+        assert!(matches!(error, ImportError::InvalidProgramJson { .. }));
+    }
+
+    #[test]
+    fn the_preparatory_rule_already_in_a_snapshot_is_not_duplicated() {
+        // `data/programmes/B-GEX-A26.json` is written by the scraper, whose
+        // `cli.rs::add_preparatory_rules` already appended « Scolarité
+        // préparatoire » — this must not append it a second time
+        let snapshot = include_str!("../../../data/programmes/B-GEX-A26.json");
+        let local = build_local_program_from_json(
+            snapshot,
+            "B-GEX-A26.json",
+            "2026-08-25T00:00:00Z".to_string(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let matching: Vec<_> = local
+            .program
+            .rules
+            .iter()
+            .filter(|rule| rule.title == "Scolarité préparatoire")
+            .collect();
+        assert_eq!(
+            matching.len(),
+            1,
+            "the rule already in the file must not be duplicated, got {:?}",
+            local.program.rules
+        );
     }
 }

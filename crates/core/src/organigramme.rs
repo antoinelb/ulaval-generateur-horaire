@@ -34,6 +34,12 @@ pub struct PlacementRequest<'a> {
     // regular courses; an été absent from the set accepts only stages and
     // pinned courses (ADR `2026-08-stage-place-en-ete-sauf-epinglage`)
     pub open_summers: &'a BTreeSet<usize>,
+    // sessions 1..=completed_sessions are déjà complétées (a relevé
+    // Capsule import anchors the plan in the past): the search never
+    // seats an unpinned course there — only a pin, the student's or the
+    // relevé's own explicit act, can occupy a finished session (ADR
+    // `2026-08-sessions-completees-fermees-au-solveur`). 0 = none.
+    pub completed_sessions: usize,
     pub seed: &'a BTreeMap<String, usize>,
     // the double bound (ADR `2026-07-budget-de-b-en-double-borne`): work
     // (expanded partial assignments) and memory (returned solutions)
@@ -76,6 +82,13 @@ pub struct Placement {
 pub struct Blocked {
     pub code: String,
     pub reason: BlockedReason,
+    // `UnsatisfiablePrerequisites` names its proof: each entry is one
+    // requirement no assignment can meet, its interchangeable alternatives
+    // listed together ([["ECN-2901","ECN-4901"]] reads « ECN-2901 ou
+    // ECN-4901 »). Empty for the other reasons — and for a tree sunk by a
+    // credits threshold alone, which has no course to name.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub missing: Vec<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
@@ -202,7 +215,10 @@ struct FlatTree {
 }
 
 enum FlatNode {
-    Course(String),
+    // `concomitant` = the répertoire's `*` on this leaf: the same session
+    // counts as « before » for it alone (ADR
+    // `2026-08-etoile-de-concomitance-au-parsing`)
+    Course { code: String, concomitant: bool },
     Raw(String),
     Credits(u32),
     All(Vec<usize>),
@@ -316,10 +332,14 @@ pub fn place(request: &PlacementRequest) -> Result<Placement, PlacementError> {
 // so far — never against a hypothetical future placement. Leaf semantics
 // mirror the search's: a code neither held nor préuniversitaire blocks
 // (ADR `2026-07-presomption-limitee-au-preuniversitaire`); a raw operand
-// or a presumed préuniversitaire code lands in `assumed`.
+// or a presumed préuniversitaire code lands in `assumed`. `same_session`
+// is what the student has seated in the very session being judged: it
+// satisfies a starred leaf and nothing else, so the caller passes it always
+// and folds it into `satisfied` only to grant the global dérogation.
 pub fn prerequisites_met(
     course: &Course,
     satisfied: &BTreeSet<String>,
+    same_session: &BTreeSet<String>,
     credits: u32,
 ) -> Result<PrereqStatus, PlacementError> {
     let Some(tree) = flat_tree(course)? else {
@@ -327,10 +347,48 @@ pub fn prerequisites_met(
             assumed: BTreeSet::new(),
         });
     };
+    let verdicts = static_verdicts(&tree, satisfied, same_session, credits);
+    match verdicts.into_iter().next().unwrap_or(Verdict::Unknown) {
+        Verdict::Sat(assumed) => Ok(PrereqStatus::Met { assumed }),
+        // static leaves never yield Unknown; rejecting is the safe reading
+        // if one ever did
+        Verdict::False | Verdict::Unknown => Ok(PrereqStatus::Unmet),
+    }
+}
+
+// Why `prerequisites_met` answers Unmet, named for the message: the same
+// static evaluation, its false nodes handed to the blame walk. Empty means
+// met — or a tree sunk by a credits threshold alone, which has no course
+// to name.
+pub fn unmet_prerequisites(
+    course: &Course,
+    satisfied: &BTreeSet<String>,
+    same_session: &BTreeSet<String>,
+    credits: u32,
+) -> Result<Vec<Vec<String>>, PlacementError> {
+    let Some(tree) = flat_tree(course)? else {
+        return Ok(Vec::new());
+    };
+    let verdicts = static_verdicts(&tree, satisfied, same_session, credits);
+    let falsy: Vec<bool> = verdicts
+        .iter()
+        .map(|verdict| matches!(verdict, Verdict::Sat(_)))
+        .collect();
+    Ok(blame_false_leaves(&tree.nodes, &falsy))
+}
+
+fn static_verdicts(
+    tree: &FlatTree,
+    satisfied: &BTreeSet<String>,
+    same_session: &BTreeSet<String>,
+    credits: u32,
+) -> Vec<Verdict> {
     let mut verdicts = vec![Verdict::Unknown; tree.nodes.len()];
     for i in (0..tree.nodes.len()).rev() {
         let verdict = match &tree.nodes[i] {
-            FlatNode::Course(code) => static_course_leaf(code, satisfied),
+            FlatNode::Course { code, concomitant } => {
+                static_course_leaf(code, satisfied, *concomitant, same_session)
+            }
             FlatNode::Raw(raw) => {
                 Verdict::Sat(std::iter::once(raw.clone()).collect())
             }
@@ -343,18 +401,22 @@ pub fn prerequisites_met(
         };
         verdicts[i] = verdict;
     }
-    match verdicts.into_iter().next().unwrap_or(Verdict::Unknown) {
-        Verdict::Sat(assumed) => Ok(PrereqStatus::Met { assumed }),
-        // static leaves never yield Unknown; rejecting is the safe reading
-        // if one ever did
-        Verdict::False | Verdict::Unknown => Ok(PrereqStatus::Unmet),
-    }
+    verdicts
 }
 
 // no candidate list here: a code is either held, presumed (préuniversitaire
-// only), or a real university course still to take — which blocks
-fn static_course_leaf(code: &str, satisfied: &BTreeSet<String>) -> Verdict {
-    if satisfied.contains(code) {
+// only), or a real university course still to take — which blocks. A
+// starred leaf also accepts a code seated in the very session being judged
+// (`same_session`), which strict `satisfied` deliberately excludes.
+fn static_course_leaf(
+    code: &str,
+    satisfied: &BTreeSet<String>,
+    concomitant: bool,
+    same_session: &BTreeSet<String>,
+) -> Verdict {
+    if satisfied.contains(code)
+        || (concomitant && same_session.contains(code))
+    {
         Verdict::Sat(BTreeSet::new())
     } else if is_preuniversity(code) {
         Verdict::Sat(std::iter::once(code.to_string()).collect())
@@ -530,7 +592,7 @@ fn tree_admits_ceiling(tree: Option<&FlatTree>, ceiling: u64) -> bool {
     for i in (0..tree.nodes.len()).rev() {
         verdicts[i] = match &tree.nodes[i] {
             FlatNode::Credits(threshold) => ceiling >= u64::from(*threshold),
-            FlatNode::Course(_) | FlatNode::Raw(_) => true,
+            FlatNode::Course { .. } | FlatNode::Raw(_) => true,
             FlatNode::All(children) => {
                 children.iter().all(|&child| verdicts[child])
             }
@@ -623,7 +685,9 @@ fn order_prerequisites_first(candidates: &mut [Candidate]) {
                 .iter()
                 .flat_map(|tree| tree.nodes.iter())
                 .filter_map(|node| match node {
-                    FlatNode::Course(code) => index_of.get(code.as_str()),
+                    FlatNode::Course { code, .. } => {
+                        index_of.get(code.as_str())
+                    }
                     _ => None,
                 })
                 .copied()
@@ -697,7 +761,14 @@ fn flatten(code: &str, tree: &PrereqTree) -> Result<FlatTree, PlacementError> {
         }
         let node = pending[cursor];
         let flat = match node {
-            PrereqTree::Course(course) => FlatNode::Course(course.clone()),
+            PrereqTree::Course(course) => FlatNode::Course {
+                code: course.clone(),
+                concomitant: false,
+            },
+            PrereqTree::Concomitant { concomitant } => FlatNode::Course {
+                code: concomitant.clone(),
+                concomitant: true,
+            },
             PrereqTree::Raw { raw } => FlatNode::Raw(raw.clone()),
             PrereqTree::ProgramCredits { program_credits } => {
                 FlatNode::Credits(program_credits.credits)
@@ -751,6 +822,12 @@ fn value_ordered_domain(
             request.pinned.contains_key(&course.code)
                 || summer_admits(&course.code, session, request)
         })
+        // a finished session takes no new course — pins only (checked
+        // above: a pinned domain is already the singleton)
+        .filter(|&session| {
+            request.pinned.contains_key(&course.code)
+                || session > request.completed_sessions
+        })
         .collect();
     let demoted = |session: usize| {
         request.sessions[session - 1] == Season::Summer
@@ -793,7 +870,9 @@ fn tree_has_credits(tree: &PrereqTree) -> bool {
             PrereqTree::ProgramCredits { .. } => return true,
             PrereqTree::All { all } => pending.extend(all),
             PrereqTree::Any { any } => pending.extend(any),
-            PrereqTree::Course(_) | PrereqTree::Raw { .. } => {}
+            PrereqTree::Course(_)
+            | PrereqTree::Concomitant { .. }
+            | PrereqTree::Raw { .. } => {}
         }
     }
     false
@@ -846,7 +925,7 @@ fn needs_final_flags(
                     FlatNode::Credits(_) => true,
                     // contributes an assumed operand to the solution
                     FlatNode::Raw(_) => true,
-                    FlatNode::Course(code) => {
+                    FlatNode::Course { code, .. } => {
                         !request.passed.contains(code)
                             && !index_of.contains_key(code)
                             && is_preuniversity(code)
@@ -872,15 +951,15 @@ fn blocked_candidates(ctx: &SearchCtx) -> Vec<Blocked> {
             // a threshold no assignment can reach also empties the domain
             // (`tree_admits_ceiling` filters it), and « aucune session »
             // would send the student adjusting sessions for nothing
-            if candidate
-                .tree
-                .as_ref()
-                .is_some_and(|tree| !ever_satisfiable(tree, candidate, ctx))
-            {
-                return Some(Blocked {
-                    code: candidate.code.clone(),
-                    reason: BlockedReason::UnsatisfiablePrerequisites,
-                });
+            if let Some(tree) = candidate.tree.as_ref() {
+                let verdicts = optimistic_verdicts(tree, candidate, ctx);
+                if !verdicts.first().copied().unwrap_or(true) {
+                    return Some(Blocked {
+                        code: candidate.code.clone(),
+                        reason: BlockedReason::UnsatisfiablePrerequisites,
+                        missing: blame_false_leaves(&tree.nodes, &verdicts),
+                    });
+                }
             }
             if candidate.domain.is_empty() {
                 // an unpinned stage names the summer restriction as the
@@ -895,6 +974,7 @@ fn blocked_candidates(ctx: &SearchCtx) -> Vec<Blocked> {
                     } else {
                         BlockedReason::EmptyDomain
                     },
+                    missing: Vec::new(),
                 });
             }
             None
@@ -909,11 +989,11 @@ fn blocked_candidates(ctx: &SearchCtx) -> Vec<Blocked> {
 // `2026-07-presomption-limitee-au-preuniversitaire`), the course as its
 // own prerequisite, and a credits threshold above passed plus every other
 // candidate. Same child-after-parent reverse scan as `eval`.
-fn ever_satisfiable(
+fn optimistic_verdicts(
     tree: &FlatTree,
     candidate: &Candidate,
     ctx: &SearchCtx,
-) -> bool {
+) -> Vec<bool> {
     let optimistic_credits = u64::from(ctx.passed_credits)
         + ctx.suffix_credits[0]
         - u64::from(candidate.credits);
@@ -921,7 +1001,7 @@ fn ever_satisfiable(
     for i in (0..tree.nodes.len()).rev() {
         verdicts[i] = match &tree.nodes[i] {
             FlatNode::Raw(_) => true,
-            FlatNode::Course(code) => {
+            FlatNode::Course { code, .. } => {
                 ctx.request.passed.contains(code)
                     || (code != &candidate.code
                         && ctx.index_of.contains_key(code))
@@ -940,7 +1020,77 @@ fn ever_satisfiable(
             }
         };
     }
-    verdicts.first().copied().unwrap_or(true)
+    verdicts
+}
+
+// The false leaves behind a false root, named for the student: walk only
+// the false nodes from the root — a false `all` child is necessary, a
+// false `any` is one requirement whose false `Course` leaves are its
+// interchangeable ways out. Explicit stack, each node pushed at most once
+// (children always sit after their parent), the walk bounded by the tree.
+// ponytail: a false any's alternatives flatten to the course leaves of its
+// subtree — exact per-branch remedies if grammars ever nest all-under-any
+// deeply enough to care.
+fn blame_false_leaves(
+    nodes: &[FlatNode],
+    verdicts: &[bool],
+) -> Vec<Vec<String>> {
+    let mut missing: Vec<Vec<String>> = Vec::new();
+    let mut pending: Vec<usize> = match verdicts.first() {
+        Some(false) => vec![0],
+        _ => Vec::new(),
+    };
+    for _ in 0..nodes.len() {
+        let Some(index) = pending.pop() else {
+            break;
+        };
+        match &nodes[index] {
+            FlatNode::Course { code, .. } => missing.push(vec![code.clone()]),
+            FlatNode::All(children) => pending
+                .extend(children.iter().filter(|&&child| !verdicts[child])),
+            FlatNode::Any(children) => {
+                let alternatives =
+                    subtree_course_leaves(nodes, children, verdicts);
+                if !alternatives.is_empty() {
+                    missing.push(alternatives);
+                }
+            }
+            // a threshold or a raw operand has no course to name
+            FlatNode::Credits(_) | FlatNode::Raw(_) => {}
+        }
+    }
+    missing.sort();
+    missing.dedup();
+    missing
+}
+
+// the false `Course` leaves under the given roots — the interchangeable
+// ways out of a false `any`; same bounded explicit-stack walk
+fn subtree_course_leaves(
+    nodes: &[FlatNode],
+    roots: &[usize],
+    verdicts: &[bool],
+) -> Vec<String> {
+    let mut leaves: Vec<String> = Vec::new();
+    let mut pending: Vec<usize> = roots.to_vec();
+    for _ in 0..nodes.len() {
+        let Some(index) = pending.pop() else {
+            break;
+        };
+        if verdicts[index] {
+            continue;
+        }
+        match &nodes[index] {
+            FlatNode::Course { code, .. } => leaves.push(code.clone()),
+            FlatNode::All(children) | FlatNode::Any(children) => {
+                pending.extend(children.iter().copied());
+            }
+            FlatNode::Credits(_) | FlatNode::Raw(_) => {}
+        }
+    }
+    leaves.sort();
+    leaves.dedup();
+    leaves
 }
 
 // Depth-first over an explicit stack, inside a fold bounded by the node
@@ -1237,7 +1387,11 @@ fn final_eval(tree: &FlatTree, eval_ctx: &EvalCtx) -> FinalVerdict {
         (0..tree.nodes.len()).map(|_| FinalVerdict::False).collect();
     for index in (0..tree.nodes.len()).rev() {
         verdicts[index] = match &tree.nodes[index] {
-            FlatNode::Course(code) => match course_leaf(code, eval_ctx) {
+            FlatNode::Course { code, concomitant } => match course_leaf(
+                code,
+                *concomitant,
+                eval_ctx,
+            ) {
                 Verdict::Sat(assumed) => FinalVerdict::Sat(FinalEvidence {
                     assumed,
                     shortfalls: BTreeSet::new(),
@@ -1337,7 +1491,9 @@ fn node_verdict(
     eval_ctx: &EvalCtx,
 ) -> Verdict {
     match node {
-        FlatNode::Course(code) => course_leaf(code, eval_ctx),
+        FlatNode::Course { code, concomitant } => {
+            course_leaf(code, *concomitant, eval_ctx)
+        }
         // an operand no rule can check — an examination, a range of course
         // numbers: presumed satisfied and surfaced, never imposed
         FlatNode::Raw(raw) => {
@@ -1349,7 +1505,11 @@ fn node_verdict(
     }
 }
 
-fn course_leaf(code: &str, eval_ctx: &EvalCtx) -> Verdict {
+fn course_leaf(
+    code: &str,
+    concomitant: bool,
+    eval_ctx: &EvalCtx,
+) -> Verdict {
     if eval_ctx.ctx.request.passed.contains(code) {
         return Verdict::Sat(BTreeSet::new());
     }
@@ -1378,10 +1538,12 @@ fn course_leaf(code: &str, eval_ctx: &EvalCtx) -> Verdict {
     }
     let session = eval_ctx.chosen[eval_ctx.evaluated];
     let self_code = &eval_ctx.ctx.candidates[eval_ctx.evaluated].code;
-    // « strictly before », relaxed to « before or same » under the global
-    // concomitant option — a course never being its own concomitant
+    // « strictly before », relaxed to « before or same » for a leaf the
+    // répertoire starred, and — as a blanket dérogation the student takes
+    // on himself — for every leaf under the global concomitant option. A
+    // course is never its own concomitant.
     let before = placed < session
-        || (eval_ctx.ctx.request.concomitant
+        || ((concomitant || eval_ctx.ctx.request.concomitant)
             && placed == session
             && code != self_code);
     if before {
@@ -1494,7 +1656,7 @@ fn referencing_map(candidates: &[Candidate]) -> BTreeMap<String, Vec<usize>> {
                 .iter()
                 .flat_map(|tree| &tree.nodes)
                 .filter_map(|node| match node {
-                    FlatNode::Course(code) => Some(code.clone()),
+                    FlatNode::Course { code, .. } => Some(code.clone()),
                     _ => None,
                 });
             // a tree naming the same code twice re-checks twice: harmless,
@@ -1568,6 +1730,7 @@ mod tests {
         pinned: BTreeMap<String, usize>,
         stages: BTreeSet<String>,
         open_summers: BTreeSet<usize>,
+        completed_sessions: usize,
         seed: BTreeMap<String, usize>,
         credit_cap: u32,
         concomitant: bool,
@@ -1586,6 +1749,7 @@ mod tests {
                 pinned: BTreeMap::new(),
                 stages: BTreeSet::new(),
                 open_summers: BTreeSet::new(),
+                completed_sessions: 0,
                 seed: BTreeMap::new(),
                 credit_cap: 30,
                 concomitant: false,
@@ -1606,6 +1770,7 @@ mod tests {
                 pinned: &self.pinned,
                 stages: &self.stages,
                 open_summers: &self.open_summers,
+                completed_sessions: self.completed_sessions,
                 seed: &self.seed,
                 max_nodes: self.max_nodes,
                 max_solutions: self.max_solutions,
@@ -1632,6 +1797,7 @@ mod tests {
                     pinned: &self.pinned,
                     stages: &self.stages,
                     open_summers: &self.open_summers,
+                    completed_sessions: self.completed_sessions,
                     seed: &self.seed,
                     max_nodes: self.max_nodes,
                     max_solutions: self.max_solutions,
@@ -1669,6 +1835,28 @@ mod tests {
             .iter()
             .map(|(code, session)| (code.to_string(), *session))
             .collect()
+    }
+
+    // --- sessions déjà complétées (ADR
+    // `2026-08-sessions-completees-fermees-au-solveur`)
+
+    #[test]
+    fn a_completed_session_seats_pins_only() {
+        // both courses could sit in either session; with session 1 déjà
+        // complétée the unpinned one has only session 2 left, while the
+        // pinned one keeps its finished seat — the relevé's explicit act
+        let mut inputs = Inputs::new(
+            &FALL_WINTER,
+            vec![anytime("GEX-1000", "monday"), anytime("GEX-1001", "monday")],
+        );
+        inputs.completed_sessions = 1;
+        inputs.pinned.insert("GEX-1000".to_string(), 1);
+        let placement = inputs.solve();
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("GEX-1000", 1), ("GEX-1001", 2)])],
+            "the only arrangement leaves session 1 to its pin"
+        );
     }
 
     // --- « remplir au mieux » (ADR `2026-08-placement-au-mieux-en-repli`)
@@ -2003,6 +2191,7 @@ mod tests {
             vec![Blocked {
                 code: "A-1".to_string(),
                 reason: BlockedReason::EmptyDomain,
+                missing: Vec::new(),
             }]
         );
     }
@@ -2051,6 +2240,7 @@ mod tests {
             vec![Blocked {
                 code: "S-1580".to_string(),
                 reason: BlockedReason::StageWithoutSummer,
+                missing: Vec::new(),
             }]
         );
     }
@@ -2203,6 +2393,8 @@ mod tests {
             vec![Blocked {
                 code: "T-9".to_string(),
                 reason: BlockedReason::UnsatisfiablePrerequisites,
+                // a threshold has no course to name
+                missing: Vec::new(),
             }],
             "the threshold-emptied domain names the true culprit"
         );
@@ -2411,6 +2603,7 @@ mod tests {
             pinned: &empty_map,
             stages: &empty_set,
             open_summers: &BTreeSet::new(),
+            completed_sessions: 0,
             seed: &empty_map,
             max_nodes: 0,
             max_solutions: 1,
@@ -2521,6 +2714,7 @@ mod tests {
             pinned: &empty_map,
             stages: &empty_set,
             open_summers: &empty_summers,
+            completed_sessions: 0,
             seed: &empty_map,
             max_nodes: 0,
             max_solutions: 1,
@@ -2716,6 +2910,7 @@ mod tests {
             vec![Blocked {
                 code: "A-1".to_string(),
                 reason: BlockedReason::EmptyDomain,
+                missing: Vec::new(),
             }]
         );
     }
@@ -2806,6 +3001,35 @@ mod tests {
     }
 
     #[test]
+    fn a_starred_leaf_accepts_the_same_session_with_no_derogation() {
+        // « A-1* » on the page: the concomitance is the répertoire's own,
+        // so the default reading already grants it — where the very same
+        // shape unstarred still demands a session strictly before
+        let starred = vec![
+            anytime("A-1", "monday"),
+            with_prereq("B-2", "tuesday", &parsed(r#"{"concomitant":"A-1"}"#)),
+        ];
+        let placement = Inputs::new(&[Season::Fall], starred).solve();
+        assert_eq!(
+            sorted_placements(&placement),
+            vec![pairs(&[("A-1", 1), ("B-2", 1)])]
+        );
+        let strict = vec![
+            anytime("A-1", "monday"),
+            with_prereq("B-2", "tuesday", &parsed("\"A-1\"")),
+        ];
+        assert!(Inputs::new(&[Season::Fall], strict).solve().solutions.is_empty());
+    }
+
+    #[test]
+    fn a_starred_leaf_is_no_more_its_own_prerequisite_than_a_plain_one() {
+        let courses =
+            vec![with_prereq("B-2", "tuesday", &parsed(r#"{"concomitant":"B-2"}"#))];
+        let placement = Inputs::new(&[Season::Fall], courses).solve();
+        assert!(placement.solutions.is_empty());
+    }
+
+    #[test]
     fn a_course_is_never_its_own_concomitant_prerequisite() {
         // a degenerate self-referencing tree must not satisfy itself at
         // the same session under the concomitant relaxation
@@ -2819,6 +3043,7 @@ mod tests {
             vec![Blocked {
                 code: "B-2".to_string(),
                 reason: BlockedReason::UnsatisfiablePrerequisites,
+                missing: vec![vec!["B-2".to_string()]],
             }]
         );
     }
@@ -2926,6 +3151,7 @@ mod tests {
             vec![Blocked {
                 code: "B-2".to_string(),
                 reason: BlockedReason::UnsatisfiablePrerequisites,
+                missing: vec![vec!["CEG-1101".to_string()]],
             }]
         );
     }
@@ -2951,6 +3177,8 @@ mod tests {
             vec![Blocked {
                 code: "B-2".to_string(),
                 reason: BlockedReason::UnsatisfiablePrerequisites,
+                // a threshold has no course to name
+                missing: Vec::new(),
             }]
         );
     }
@@ -3169,7 +3397,7 @@ mod tests {
     #[test]
     fn a_course_without_prerequisites_is_statically_met() {
         assert_eq!(
-            prerequisites_met(&anytime("A-1", "monday"), &passed(&[]), 0),
+            prerequisites_met(&anytime("A-1", "monday"), &passed(&[]), &BTreeSet::new(), 0),
             met_with(&[])
         );
     }
@@ -3178,12 +3406,38 @@ mod tests {
     fn a_held_course_leaf_meets_and_a_missing_one_blocks() {
         let course = with_prereq("B-2", "tuesday", &parsed("\"A-1\""));
         assert_eq!(
-            prerequisites_met(&course, &passed(&["A-1"]), 0),
+            prerequisites_met(&course, &passed(&["A-1"]), &BTreeSet::new(), 0),
             met_with(&[])
         );
         assert_eq!(
-            prerequisites_met(&course, &passed(&[]), 0),
+            prerequisites_met(&course, &passed(&[]), &BTreeSet::new(), 0),
             Ok(PrereqStatus::Unmet)
+        );
+    }
+
+    #[test]
+    fn only_a_starred_leaf_reads_the_same_session_as_acquired() {
+        // what shares the session is handed apart from what precedes it:
+        // the star is what turns it into a satisfied leaf
+        let starred =
+            with_prereq("B-2", "tuesday", &parsed(r#"{"concomitant":"A-1"}"#));
+        let plain = with_prereq("B-2", "tuesday", &parsed("\"A-1\""));
+        let same = passed(&["A-1"]);
+        assert_eq!(
+            prerequisites_met(&starred, &passed(&[]), &same, 0),
+            met_with(&[])
+        );
+        assert_eq!(
+            prerequisites_met(&plain, &passed(&[]), &same, 0),
+            Ok(PrereqStatus::Unmet)
+        );
+        assert_eq!(
+            unmet_prerequisites(&plain, &passed(&[]), &same, 0),
+            Ok(vec![vec!["A-1".to_string()]])
+        );
+        assert_eq!(
+            unmet_prerequisites(&starred, &passed(&[]), &same, 0),
+            Ok(Vec::new())
         );
     }
 
@@ -3192,13 +3446,13 @@ mod tests {
         let preuniversity =
             with_prereq("B-2", "tuesday", &parsed("{\"all\":[\"MAT-0130\"]}"));
         assert_eq!(
-            prerequisites_met(&preuniversity, &passed(&[]), 0),
+            prerequisites_met(&preuniversity, &passed(&[]), &BTreeSet::new(), 0),
             met_with(&["MAT-0130"])
         );
         // a whole prerequisite outside the grammar: one presumed operand
         let raw = with_prereq("B-2", "tuesday", "{\"raw\":\"un examen\"}");
         assert_eq!(
-            prerequisites_met(&raw, &passed(&[]), 0),
+            prerequisites_met(&raw, &passed(&[]), &BTreeSet::new(), 0),
             met_with(&["un examen"])
         );
     }
@@ -3211,12 +3465,138 @@ mod tests {
             &parsed("{\"program_credits\":{\"program\":null,\"credits\":24}}"),
         );
         assert_eq!(
-            prerequisites_met(&course, &passed(&[]), 24),
+            prerequisites_met(&course, &passed(&[]), &BTreeSet::new(), 24),
             met_with(&[])
         );
         assert_eq!(
-            prerequisites_met(&course, &passed(&[]), 23),
+            prerequisites_met(&course, &passed(&[]), &BTreeSet::new(), 23),
             Ok(PrereqStatus::Unmet)
+        );
+    }
+
+    #[test]
+    fn unmet_prerequisites_names_the_missing_leaves() {
+        // (A-1 ou B-1) et C-1, nothing held: the any is one requirement
+        // with two ways out, C-1 another on its own
+        let course = with_prereq(
+            "D-2",
+            "tuesday",
+            &parsed(r#"{"all":[{"any":["A-1","B-1"]},"C-1"]}"#),
+        );
+        assert_eq!(
+            unmet_prerequisites(&course, &passed(&[]), &BTreeSet::new(), 0),
+            Ok(vec![
+                vec!["A-1".to_string(), "B-1".to_string()],
+                vec!["C-1".to_string()],
+            ])
+        );
+        // the any satisfied, only C-1 remains blamed
+        assert_eq!(
+            unmet_prerequisites(&course, &passed(&["B-1"]), &BTreeSet::new(), 0),
+            Ok(vec![vec!["C-1".to_string()]])
+        );
+        // everything held — met, nothing to name
+        assert_eq!(
+            unmet_prerequisites(&course, &passed(&["B-1", "C-1"]), &BTreeSet::new(), 0),
+            Ok(Vec::new())
+        );
+        // no tree at all — met, nothing to name
+        assert_eq!(
+            unmet_prerequisites(&anytime("A-1", "monday"), &passed(&[]), &BTreeSet::new(), 0),
+            Ok(Vec::new())
+        );
+        // sunk by a credits threshold alone: unmet, but no course to name
+        let threshold = with_prereq(
+            "B-2",
+            "tuesday",
+            &parsed("{\"program_credits\":{\"program\":null,\"credits\":24}}"),
+        );
+        assert_eq!(
+            unmet_prerequisites(&threshold, &passed(&[]), &BTreeSet::new(), 0),
+            Ok(Vec::new())
+        );
+        // a nested any: the held A-1 leaves the alternatives, the false
+        // course leaves of both branches stand in — and a credits leaf
+        // inside the any has no course to name
+        let nested = with_prereq(
+            "D-2",
+            "tuesday",
+            &parsed(
+                r#"{"any":[{"all":["A-1","B-1"]},"C-1",
+                           {"program_credits":{"program":null,
+                                               "credits":24}}]}"#,
+            ),
+        );
+        assert_eq!(
+            unmet_prerequisites(&nested, &passed(&["A-1"]), &BTreeSet::new(), 0),
+            Ok(vec![vec!["B-1".to_string(), "C-1".to_string()]])
+        );
+        // an any of anys flattens to the same interchangeable ways out
+        let any_of_anys = with_prereq(
+            "D-2",
+            "tuesday",
+            &parsed(r#"{"any":[{"any":["A-1","B-1"]},"C-1"]}"#),
+        );
+        assert_eq!(
+            unmet_prerequisites(&any_of_anys, &passed(&[]), &BTreeSet::new(), 0),
+            Ok(vec![vec![
+                "A-1".to_string(),
+                "B-1".to_string(),
+                "C-1".to_string(),
+            ]])
+        );
+        // an any sunk by a credits leaf alone: a requirement with no
+        // course to name is not listed
+        let credits_any = with_prereq(
+            "B-2",
+            "tuesday",
+            &parsed(
+                r#"{"any":[{"program_credits":{"program":null,
+                                               "credits":24}}]}"#,
+            ),
+        );
+        assert_eq!(
+            unmet_prerequisites(&credits_any, &passed(&[]), &BTreeSet::new(), 0),
+            Ok(Vec::new())
+        );
+        // the same oversized tree that errors the placement errors here
+        let tree = (0..MAX_TREE_NODES)
+            .fold(PrereqTree::Course("X-1".to_string()), |child, _| {
+                PrereqTree::All { all: vec![child] }
+            });
+        let mut deep = anytime("B-2", "tuesday");
+        deep.prerequisites = Some(Prerequisites::Parsed {
+            raw: "deep".to_string(),
+            tree,
+        });
+        assert_eq!(
+            unmet_prerequisites(&deep, &passed(&[]), &BTreeSet::new(), 0),
+            Err(PlacementError::PrerequisiteTreeTooLarge {
+                code: "B-2".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn a_blocked_any_names_its_alternatives_together() {
+        // both branches unknown university codes: the screen blocks and
+        // the proof lists them as one requirement with two ways out
+        let courses = vec![with_prereq(
+            "B-2",
+            "tuesday",
+            &parsed(r#"{"any":["CEG-1101","CEG-1102"]}"#),
+        )];
+        let placement = Inputs::new(&[Season::Fall], courses).solve();
+        assert_eq!(
+            placement.blocked,
+            vec![Blocked {
+                code: "B-2".to_string(),
+                reason: BlockedReason::UnsatisfiablePrerequisites,
+                missing: vec![vec![
+                    "CEG-1101".to_string(),
+                    "CEG-1102".to_string(),
+                ]],
+            }]
         );
     }
 
@@ -3229,12 +3609,12 @@ mod tests {
         );
         // the clean branch beats the presumed préuniversitaire one
         assert_eq!(
-            prerequisites_met(&course, &passed(&["A-1"]), 0),
+            prerequisites_met(&course, &passed(&["A-1"]), &BTreeSet::new(), 0),
             met_with(&[])
         );
         // without it, the presumed branch carries its operand
         assert_eq!(
-            prerequisites_met(&course, &passed(&[]), 0),
+            prerequisites_met(&course, &passed(&[]), &BTreeSet::new(), 0),
             met_with(&["MAT-0130"])
         );
     }
@@ -3251,7 +3631,7 @@ mod tests {
             tree,
         });
         assert_eq!(
-            prerequisites_met(&course, &passed(&[]), 0),
+            prerequisites_met(&course, &passed(&[]), &BTreeSet::new(), 0),
             Err(PlacementError::PrerequisiteTreeTooLarge {
                 code: "B-2".to_string()
             })
@@ -3733,14 +4113,17 @@ mod tests {
                 Blocked {
                     code: "A-1".to_string(),
                     reason: BlockedReason::EmptyDomain,
+                    missing: Vec::new(),
                 },
                 Blocked {
                     code: "B-2".to_string(),
                     reason: BlockedReason::UnsatisfiablePrerequisites,
+                    missing: vec![vec!["X-1".to_string(), "X-2".to_string()]],
                 },
                 Blocked {
                     code: "C-3".to_string(),
                     reason: BlockedReason::StageWithoutSummer,
+                    missing: Vec::new(),
                 },
             ],
         };
@@ -3758,7 +4141,8 @@ mod tests {
                 "blocked": [
                     {"code": "A-1", "reason": "empty-domain"},
                     {"code": "B-2",
-                     "reason": "unsatisfiable-prerequisites"},
+                     "reason": "unsatisfiable-prerequisites",
+                     "missing": [["X-1", "X-2"]]},
                     {"code": "C-3", "reason": "stage-without-summer"},
                 ],
             })

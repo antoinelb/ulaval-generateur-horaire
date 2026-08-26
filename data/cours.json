@@ -106,7 +106,9 @@
           "all": [
             {
               "any": [
-                "ACT-1003",
+                {
+                  "concomitant": "ACT-1003"
+                },
                 "MAT-1110"
               ]
             },
@@ -3123,7 +3125,9 @@
         "raw": "CTB-3002* ET CTB-3103",
         "tree": {
           "all": [
-            "CTB-3002",
+            {
+              "concomitant": "CTB-3002"
+            },
             "CTB-3103"
           ]
         }
@@ -6206,7 +6210,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "AGC-1010*",
-        "tree": "AGC-1010"
+        "tree": {
+          "concomitant": "AGC-1010"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -6980,7 +6986,9 @@
         "tree": {
           "all": [
             "AGC-2003",
-            "AGC-3001"
+            {
+              "concomitant": "AGC-3001"
+            }
           ]
         }
       },
@@ -7016,8 +7024,12 @@
         "raw": "AGC-3001* OU ECN-2020*",
         "tree": {
           "any": [
-            "AGC-3001",
-            "ECN-2020"
+            {
+              "concomitant": "AGC-3001"
+            },
+            {
+              "concomitant": "ECN-2020"
+            }
           ]
         }
       },
@@ -9599,7 +9611,9 @@
             {
               "all": [
                 "AGC-2504",
-                "AGC-3502"
+                {
+                  "concomitant": "AGC-3502"
+                }
               ]
             }
           ]
@@ -9673,12 +9687,24 @@
         "raw": "AGC-3503* OU AGN-3500* OU AGN-3520* OU AGN-3950* OU GAE-3003* OU STA-2510*",
         "tree": {
           "any": [
-            "AGC-3503",
-            "AGN-3500",
-            "AGN-3520",
-            "AGN-3950",
-            "GAE-3003",
-            "STA-2510"
+            {
+              "concomitant": "AGC-3503"
+            },
+            {
+              "concomitant": "AGN-3500"
+            },
+            {
+              "concomitant": "AGN-3520"
+            },
+            {
+              "concomitant": "AGN-3950"
+            },
+            {
+              "concomitant": "GAE-3003"
+            },
+            {
+              "concomitant": "STA-2510"
+            }
           ]
         }
       },
@@ -10736,7 +10762,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DDU-2050*",
-        "tree": "DDU-2050"
+        "tree": {
+          "concomitant": "DDU-2050"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -13694,8 +13722,12 @@
         "raw": "ANG-1002* OU LNG-1000*",
         "tree": {
           "any": [
-            "ANG-1002",
-            "LNG-1000"
+            {
+              "concomitant": "ANG-1002"
+            },
+            {
+              "concomitant": "LNG-1000"
+            }
           ]
         }
       },
@@ -13998,8 +14030,12 @@
             "ANG-2029",
             {
               "any": [
-                "DID-2932",
-                "DID-2933"
+                {
+                  "concomitant": "DID-2932"
+                },
+                {
+                  "concomitant": "DID-2933"
+                }
               ]
             }
           ]
@@ -21424,8 +21460,12 @@
         "raw": "ERG-1500* OU PHT-1000*",
         "tree": {
           "any": [
-            "ERG-1500",
-            "PHT-1000"
+            {
+              "concomitant": "ERG-1500"
+            },
+            {
+              "concomitant": "PHT-1000"
+            }
           ]
         }
       },
@@ -21466,8 +21506,12 @@
             "ANM-1004",
             {
               "any": [
-                "ERG-1003",
-                "PHT-1003"
+                {
+                  "concomitant": "ERG-1003"
+                },
+                {
+                  "concomitant": "PHT-1003"
+                }
               ]
             }
           ]
@@ -21510,8 +21554,12 @@
             "ANM-1008",
             {
               "any": [
-                "ERG-1003",
-                "PHT-1003"
+                {
+                  "concomitant": "ERG-1003"
+                },
+                {
+                  "concomitant": "PHT-1003"
+                }
               ]
             }
           ]
@@ -21567,8 +21615,12 @@
         "raw": "ERG-1500* OU PHT-1000*",
         "tree": {
           "any": [
-            "ERG-1500",
-            "PHT-1000"
+            {
+              "concomitant": "ERG-1500"
+            },
+            {
+              "concomitant": "PHT-1000"
+            }
           ]
         }
       },
@@ -21672,7 +21724,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "ERG-1502*",
-        "tree": "ERG-1502"
+        "tree": {
+          "concomitant": "ERG-1502"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -28204,7 +28258,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "ARC-7043*",
-        "tree": "ARC-7043"
+        "tree": {
+          "concomitant": "ARC-7043"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -28246,7 +28302,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "ARC-7044*",
-        "tree": "ARC-7044"
+        "tree": {
+          "concomitant": "ARC-7044"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -28303,7 +28361,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "ARC-7045*",
-        "tree": "ARC-7045"
+        "tree": {
+          "concomitant": "ARC-7045"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -28345,7 +28405,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "ARC-7033*",
-        "tree": "ARC-7033"
+        "tree": {
+          "concomitant": "ARC-7033"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -28387,7 +28449,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "ARC-7046*",
-        "tree": "ARC-7046"
+        "tree": {
+          "concomitant": "ARC-7046"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -28429,7 +28493,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "ARC-7047*",
-        "tree": "ARC-7047"
+        "tree": {
+          "concomitant": "ARC-7047"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -33685,7 +33751,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "ARL-1444*",
-        "tree": "ARL-1444"
+        "tree": {
+          "concomitant": "ARL-1444"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -33807,8 +33875,12 @@
         "raw": "ARL-1444* ET ARL-2444*",
         "tree": {
           "all": [
-            "ARL-1444",
-            "ARL-2444"
+            {
+              "concomitant": "ARL-1444"
+            },
+            {
+              "concomitant": "ARL-2444"
+            }
           ]
         }
       },
@@ -38086,7 +38158,9 @@
           "all": [
             "ARV-6001",
             "ARV-6003",
-            "ARV-6004"
+            {
+              "concomitant": "ARV-6004"
+            }
           ]
         }
       },
@@ -38582,9 +38656,15 @@
         "raw": "GSF-1000* OU GSF-1100* OU GSF-1500*",
         "tree": {
           "any": [
-            "GSF-1000",
-            "GSF-1100",
-            "GSF-1500"
+            {
+              "concomitant": "GSF-1000"
+            },
+            {
+              "concomitant": "GSF-1100"
+            },
+            {
+              "concomitant": "GSF-1500"
+            }
           ]
         }
       },
@@ -38636,7 +38716,9 @@
         "tree": {
           "any": [
             "ASR-2106",
-            "ASR-2109"
+            {
+              "concomitant": "ASR-2109"
+            }
           ]
         }
       },
@@ -38666,7 +38748,9 @@
         "raw": "ASR-2109* OU ASR-2106",
         "tree": {
           "any": [
-            "ASR-2109",
+            {
+              "concomitant": "ASR-2109"
+            },
             "ASR-2106"
           ]
         }
@@ -38756,8 +38840,12 @@
         "raw": "ASR-2105* ET ASR-2108* ET ASR-2109",
         "tree": {
           "all": [
-            "ASR-2105",
-            "ASR-2108",
+            {
+              "concomitant": "ASR-2105"
+            },
+            {
+              "concomitant": "ASR-2108"
+            },
             "ASR-2109"
           ]
         }
@@ -38844,7 +38932,9 @@
                 "GSF-6037"
               ]
             },
-            "CTB-6101"
+            {
+              "concomitant": "CTB-6101"
+            }
           ]
         }
       },
@@ -40028,11 +40118,17 @@
         "raw": "(BCM-1001* OU (BCM-1903* ET STA-1001*))",
         "tree": {
           "any": [
-            "BCM-1001",
+            {
+              "concomitant": "BCM-1001"
+            },
             {
               "all": [
-                "BCM-1903",
-                "STA-1001"
+                {
+                  "concomitant": "BCM-1903"
+                },
+                {
+                  "concomitant": "STA-1001"
+                }
               ]
             }
           ]
@@ -42417,11 +42513,17 @@
           "all": [
             {
               "any": [
-                "BIF-1001",
-                "BIF-1901"
+                {
+                  "concomitant": "BIF-1001"
+                },
+                {
+                  "concomitant": "BIF-1901"
+                }
               ]
             },
-            "CHM-1000"
+            {
+              "concomitant": "CHM-1000"
+            }
           ]
         }
       },
@@ -42500,16 +42602,28 @@
           "all": [
             {
               "any": [
-                "BIF-1001",
-                "BIF-1901"
+                {
+                  "concomitant": "BIF-1001"
+                },
+                {
+                  "concomitant": "BIF-1901"
+                }
               ]
             },
             {
               "any": [
-                "BIO-1006",
-                "STT-1000",
-                "STT-1900",
-                "STT-1920"
+                {
+                  "concomitant": "BIO-1006"
+                },
+                {
+                  "concomitant": "STT-1000"
+                },
+                {
+                  "concomitant": "STT-1900"
+                },
+                {
+                  "concomitant": "STT-1920"
+                }
               ]
             }
           ]
@@ -42653,7 +42767,9 @@
         "raw": "BIO-2007* ET (STT-1000 OU BIO-1006 OU STT-1920)",
         "tree": {
           "all": [
-            "BIO-2007",
+            {
+              "concomitant": "BIO-2007"
+            },
             {
               "any": [
                 "STT-1000",
@@ -44483,7 +44599,9 @@
         "raw": "BIO-2003* OU SBM-1004",
         "tree": {
           "any": [
-            "BIO-2003",
+            {
+              "concomitant": "BIO-2003"
+            },
             "SBM-1004"
           ]
         }
@@ -45615,7 +45733,9 @@
             "BIO-1006",
             "BIO-1007",
             "BIO-2001",
-            "BIO-2007"
+            {
+              "concomitant": "BIO-2007"
+            }
           ]
         }
       },
@@ -45983,7 +46103,9 @@
         "tree": {
           "all": [
             "BIO-1011",
-            "BIO-3253"
+            {
+              "concomitant": "BIO-3253"
+            }
           ]
         }
       },
@@ -55250,7 +55372,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "CIN-1000*",
-        "tree": "CIN-1000"
+        "tree": {
+          "concomitant": "CIN-1000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -56667,8 +56791,12 @@
         "raw": "CNS-1000* OU CNS-1010*",
         "tree": {
           "any": [
-            "CNS-1000",
-            "CNS-1010"
+            {
+              "concomitant": "CNS-1000"
+            },
+            {
+              "concomitant": "CNS-1010"
+            }
           ]
         }
       },
@@ -56698,8 +56826,12 @@
         "raw": "CNS-1000* OU CNS-1010*",
         "tree": {
           "any": [
-            "CNS-1000",
-            "CNS-1010"
+            {
+              "concomitant": "CNS-1000"
+            },
+            {
+              "concomitant": "CNS-1010"
+            }
           ]
         }
       },
@@ -56761,8 +56893,12 @@
         "raw": "CNS-1000* OU CNS-1010*",
         "tree": {
           "any": [
-            "CNS-1000",
-            "CNS-1010"
+            {
+              "concomitant": "CNS-1000"
+            },
+            {
+              "concomitant": "CNS-1010"
+            }
           ]
         }
       },
@@ -56965,7 +57101,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "CNS-1000*",
-        "tree": "CNS-1000"
+        "tree": {
+          "concomitant": "CNS-1000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -57243,8 +57381,12 @@
         "raw": "CNS-1000* OU CNS-1010*",
         "tree": {
           "any": [
-            "CNS-1000",
-            "CNS-1010"
+            {
+              "concomitant": "CNS-1000"
+            },
+            {
+              "concomitant": "CNS-1010"
+            }
           ]
         }
       },
@@ -60292,7 +60434,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "COM-4002*",
-        "tree": "COM-4002"
+        "tree": {
+          "concomitant": "COM-4002"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -63014,7 +63158,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "CRI-1001*",
-        "tree": "CRI-1001"
+        "tree": {
+          "concomitant": "CRI-1001"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -63046,7 +63192,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "CRI-1001*",
-        "tree": "CRI-1001"
+        "tree": {
+          "concomitant": "CRI-1001"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -65131,12 +65279,20 @@
         "raw": "CRL-1000* ET (CRL-2002* OU CRL-2003* OU CRL-2005*)",
         "tree": {
           "all": [
-            "CRL-1000",
+            {
+              "concomitant": "CRL-1000"
+            },
             {
               "any": [
-                "CRL-2002",
-                "CRL-2003",
-                "CRL-2005"
+                {
+                  "concomitant": "CRL-2002"
+                },
+                {
+                  "concomitant": "CRL-2003"
+                },
+                {
+                  "concomitant": "CRL-2005"
+                }
               ]
             }
           ]
@@ -68500,8 +68656,12 @@
             "CSO-7022",
             {
               "any": [
-                "CSO-6502",
-                "CSO-6702"
+                {
+                  "concomitant": "CSO-6502"
+                },
+                {
+                  "concomitant": "CSO-6702"
+                }
               ]
             }
           ]
@@ -69048,7 +69208,9 @@
         "raw": "CTB-1000* OU CTB-1003 OU ECN-2901 OU ECN-4901",
         "tree": {
           "any": [
-            "CTB-1000",
+            {
+              "concomitant": "CTB-1000"
+            },
             "CTB-1003",
             "ECN-2901",
             "ECN-4901"
@@ -69165,8 +69327,12 @@
         "raw": "CTB-1000* OU CTB-1106* OU ECN-2901 OU ECN-4901",
         "tree": {
           "any": [
-            "CTB-1000",
-            "CTB-1106",
+            {
+              "concomitant": "CTB-1000"
+            },
+            {
+              "concomitant": "CTB-1106"
+            },
             "ECN-2901",
             "ECN-4901"
           ]
@@ -69479,9 +69645,13 @@
         "raw": "CTB-2101* ET CTB-2102 ET CTB-2108*",
         "tree": {
           "all": [
-            "CTB-2101",
+            {
+              "concomitant": "CTB-2101"
+            },
             "CTB-2102",
-            "CTB-2108"
+            {
+              "concomitant": "CTB-2108"
+            }
           ]
         }
       },
@@ -69553,8 +69723,12 @@
         "raw": "CTB-1000* OU CTB-1003*",
         "tree": {
           "any": [
-            "CTB-1000",
-            "CTB-1003"
+            {
+              "concomitant": "CTB-1000"
+            },
+            {
+              "concomitant": "CTB-1003"
+            }
           ]
         }
       },
@@ -70483,7 +70657,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "CTB-3103*",
-        "tree": "CTB-3103"
+        "tree": {
+          "concomitant": "CTB-3103"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -70891,7 +71067,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "CTB-3101*",
-        "tree": "CTB-3101"
+        "tree": {
+          "concomitant": "CTB-3101"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -71268,7 +71446,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "CTB-6119*",
-        "tree": "CTB-6119"
+        "tree": {
+          "concomitant": "CTB-6119"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -71485,8 +71665,12 @@
         "raw": "CTB-6007* OU CTB-6008*",
         "tree": {
           "any": [
-            "CTB-6007",
-            "CTB-6008"
+            {
+              "concomitant": "CTB-6007"
+            },
+            {
+              "concomitant": "CTB-6008"
+            }
           ]
         }
       },
@@ -71783,8 +71967,12 @@
         "raw": "CTB-6110* ET CTB-6111*",
         "tree": {
           "all": [
-            "CTB-6110",
-            "CTB-6111"
+            {
+              "concomitant": "CTB-6110"
+            },
+            {
+              "concomitant": "CTB-6111"
+            }
           ]
         }
       },
@@ -72411,8 +72599,12 @@
         "raw": "CTB-6007* OU CTB-6008*",
         "tree": {
           "any": [
-            "CTB-6007",
-            "CTB-6008"
+            {
+              "concomitant": "CTB-6007"
+            },
+            {
+              "concomitant": "CTB-6008"
+            }
           ]
         }
       },
@@ -73202,7 +73394,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DDU-2200*",
-        "tree": "DDU-2200"
+        "tree": {
+          "concomitant": "DDU-2200"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -73340,7 +73534,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DDU-3000*",
-        "tree": "DDU-3000"
+        "tree": {
+          "concomitant": "DDU-3000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -73444,7 +73640,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DDU-3010*",
-        "tree": "DDU-3010"
+        "tree": {
+          "concomitant": "DDU-3010"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -75408,7 +75606,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DES-1008*",
-        "tree": "DES-1008"
+        "tree": {
+          "concomitant": "DES-1008"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -77504,8 +77704,12 @@
         "raw": "ART-6100* ET DES-6101*",
         "tree": {
           "all": [
-            "ART-6100",
-            "DES-6101"
+            {
+              "concomitant": "ART-6100"
+            },
+            {
+              "concomitant": "DES-6101"
+            }
           ]
         }
       },
@@ -77570,8 +77774,12 @@
         "raw": "ART-6101* ET DES-6103*",
         "tree": {
           "all": [
-            "ART-6101",
-            "DES-6103"
+            {
+              "concomitant": "ART-6101"
+            },
+            {
+              "concomitant": "DES-6103"
+            }
           ]
         }
       },
@@ -80269,7 +80477,9 @@
         "tree": {
           "all": [
             "DID-1013",
-            "DID-2019",
+            {
+              "concomitant": "DID-2019"
+            },
             "FRN-1910",
             "FRN-1912"
           ]
@@ -80308,7 +80518,9 @@
         "tree": {
           "all": [
             "ENS-1500",
-            "PPG-1902"
+            {
+              "concomitant": "PPG-1902"
+            }
           ]
         }
       },
@@ -80374,7 +80586,9 @@
         "tree": {
           "all": [
             "ENS-1500",
-            "PPG-1902"
+            {
+              "concomitant": "PPG-1902"
+            }
           ]
         }
       },
@@ -81741,7 +81955,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DID-1960*",
-        "tree": "DID-1960"
+        "tree": {
+          "concomitant": "DID-1960"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -81802,7 +82018,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DID-1960*",
-        "tree": "DID-1960"
+        "tree": {
+          "concomitant": "DID-1960"
+        }
       },
       "equivalents": [
         "DID-2980"
@@ -81836,7 +82054,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DID-1960*",
-        "tree": "DID-1960"
+        "tree": {
+          "concomitant": "DID-1960"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -81878,7 +82098,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DID-1960*",
-        "tree": "DID-1960"
+        "tree": {
+          "concomitant": "DID-1960"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -81912,8 +82134,12 @@
         "raw": "DID-1005* ET DID-1960*",
         "tree": {
           "all": [
-            "DID-1005",
-            "DID-1960"
+            {
+              "concomitant": "DID-1005"
+            },
+            {
+              "concomitant": "DID-1960"
+            }
           ]
         }
       },
@@ -81949,8 +82175,12 @@
         "raw": "DID-1960* ET DID-1961*",
         "tree": {
           "all": [
-            "DID-1960",
-            "DID-1961"
+            {
+              "concomitant": "DID-1960"
+            },
+            {
+              "concomitant": "DID-1961"
+            }
           ]
         }
       },
@@ -82758,8 +82988,12 @@
         "raw": "DID-3930* OU DID-3931*",
         "tree": {
           "any": [
-            "DID-3930",
-            "DID-3931"
+            {
+              "concomitant": "DID-3930"
+            },
+            {
+              "concomitant": "DID-3931"
+            }
           ]
         }
       },
@@ -82901,7 +83135,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DID-1960*",
-        "tree": "DID-1960"
+        "tree": {
+          "concomitant": "DID-1960"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -82933,7 +83169,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DID-1960*",
-        "tree": "DID-1960"
+        "tree": {
+          "concomitant": "DID-1960"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -82965,7 +83203,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DID-1960*",
-        "tree": "DID-1960"
+        "tree": {
+          "concomitant": "DID-1960"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -82999,12 +83239,20 @@
         "raw": "DID-1960* ET (DID-2962* OU DID-2980* OU DID-2934*)",
         "tree": {
           "all": [
-            "DID-1960",
+            {
+              "concomitant": "DID-1960"
+            },
             {
               "any": [
-                "DID-2962",
-                "DID-2980",
-                "DID-2934"
+                {
+                  "concomitant": "DID-2962"
+                },
+                {
+                  "concomitant": "DID-2980"
+                },
+                {
+                  "concomitant": "DID-2934"
+                }
               ]
             }
           ]
@@ -83083,9 +83331,15 @@
           "all": [
             {
               "any": [
-                "DID-3113",
-                "DID-3114",
-                "DID-3115"
+                {
+                  "concomitant": "DID-3113"
+                },
+                {
+                  "concomitant": "DID-3114"
+                },
+                {
+                  "concomitant": "DID-3115"
+                }
               ]
             },
             {
@@ -83444,28 +83698,44 @@
               "any": [
                 {
                   "all": [
-                    "ADS-6022",
-                    "PPG-6003"
+                    {
+                      "concomitant": "ADS-6022"
+                    },
+                    {
+                      "concomitant": "PPG-6003"
+                    }
                   ]
                 },
                 {
                   "all": [
-                    "ADS-6022",
-                    "PPG-6013"
+                    {
+                      "concomitant": "ADS-6022"
+                    },
+                    {
+                      "concomitant": "PPG-6013"
+                    }
                   ]
                 },
                 {
                   "all": [
-                    "PPG-6003",
-                    "PPG-6013"
+                    {
+                      "concomitant": "PPG-6003"
+                    },
+                    {
+                      "concomitant": "PPG-6013"
+                    }
                   ]
                 }
               ]
             },
             {
               "any": [
-                "DID-6006",
-                "DID-6013"
+                {
+                  "concomitant": "DID-6006"
+                },
+                {
+                  "concomitant": "DID-6013"
+                }
               ]
             }
           ]
@@ -83719,10 +83989,18 @@
             "DID-6009",
             {
               "any": [
-                "DID-6001",
-                "DID-6007",
-                "DID-6014",
-                "DID-6901"
+                {
+                  "concomitant": "DID-6001"
+                },
+                {
+                  "concomitant": "DID-6007"
+                },
+                {
+                  "concomitant": "DID-6014"
+                },
+                {
+                  "concomitant": "DID-6901"
+                }
               ]
             }
           ]
@@ -90376,7 +90654,9 @@
           "all": [
             "DRT-1012",
             "DRT-1014",
-            "DRT-2400",
+            {
+              "concomitant": "DRT-2400"
+            },
             {
               "program_credits": {
                 "program": "DRT",
@@ -93010,7 +93290,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "DRT-2900*",
-        "tree": "DRT-2900"
+        "tree": {
+          "concomitant": "DRT-2900"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -100407,9 +100689,13 @@
                 "ACT-1003",
                 "AGC-2003",
                 "GPL-1003",
-                "MAT-1110",
+                {
+                  "concomitant": "MAT-1110"
+                },
                 "MAT-1900",
-                "MQT-1900"
+                {
+                  "concomitant": "MQT-1900"
+                }
               ]
             }
           ]
@@ -100678,9 +100964,15 @@
             "ECN-1010",
             {
               "any": [
-                "GPL-1008",
-                "STT-1000",
-                "STT-1500"
+                {
+                  "concomitant": "GPL-1008"
+                },
+                {
+                  "concomitant": "STT-1000"
+                },
+                {
+                  "concomitant": "STT-1500"
+                }
               ]
             }
           ]
@@ -104721,7 +105013,9 @@
             "EGN-7001",
             "EGN-7002",
             "EGN-7003",
-            "EGN-7004",
+            {
+              "concomitant": "EGN-7004"
+            },
             "EGN-7005",
             "RLT-7020"
           ]
@@ -104826,7 +105120,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "EGN-6513*",
-        "tree": "EGN-6513"
+        "tree": {
+          "concomitant": "EGN-6513"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -104887,7 +105183,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "EGN-7001*",
-        "tree": "EGN-7001"
+        "tree": {
+          "concomitant": "EGN-7001"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -104919,7 +105217,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "EGN-7001*",
-        "tree": "EGN-7001"
+        "tree": {
+          "concomitant": "EGN-7001"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -105868,8 +106168,12 @@
             "ENP-1000",
             {
               "any": [
-                "ENP-1503",
-                "ENP-1525"
+                {
+                  "concomitant": "ENP-1503"
+                },
+                {
+                  "concomitant": "ENP-1525"
+                }
               ]
             }
           ]
@@ -106096,8 +106400,12 @@
             },
             {
               "any": [
-                "ENP-1005",
-                "ENP-3010"
+                {
+                  "concomitant": "ENP-1005"
+                },
+                {
+                  "concomitant": "ENP-3010"
+                }
               ]
             }
           ]
@@ -106175,8 +106483,12 @@
             },
             {
               "any": [
-                "ENP-1005",
-                "ENP-3010"
+                {
+                  "concomitant": "ENP-1005"
+                },
+                {
+                  "concomitant": "ENP-3010"
+                }
               ]
             }
           ]
@@ -106678,8 +106990,12 @@
         "raw": "ENP-1003* OU ENP-1515*",
         "tree": {
           "any": [
-            "ENP-1003",
-            "ENP-1515"
+            {
+              "concomitant": "ENP-1003"
+            },
+            {
+              "concomitant": "ENP-1515"
+            }
           ]
         }
       },
@@ -106785,8 +107101,12 @@
         "raw": "ENP-2500* OU ENP-2505*",
         "tree": {
           "any": [
-            "ENP-2500",
-            "ENP-2505"
+            {
+              "concomitant": "ENP-2500"
+            },
+            {
+              "concomitant": "ENP-2505"
+            }
           ]
         }
       },
@@ -106865,8 +107185,12 @@
         "raw": "ENP-2500* OU ENP-2505*",
         "tree": {
           "any": [
-            "ENP-2500",
-            "ENP-2505"
+            {
+              "concomitant": "ENP-2500"
+            },
+            {
+              "concomitant": "ENP-2505"
+            }
           ]
         }
       },
@@ -107820,7 +108144,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "ENP-6020*",
-        "tree": "ENP-6020"
+        "tree": {
+          "concomitant": "ENP-6020"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -108976,7 +109302,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PPG-6102*",
-        "tree": "PPG-6102"
+        "tree": {
+          "concomitant": "PPG-6102"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -109173,7 +109501,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "ENS-6107*",
-        "tree": "ENS-6107"
+        "tree": {
+          "concomitant": "ENS-6107"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -110478,7 +110808,9 @@
         "tree": {
           "all": [
             "ENT-6132",
-            "MNG-6010",
+            {
+              "concomitant": "MNG-6010"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -110541,7 +110873,9 @@
         "tree": {
           "all": [
             "ENT-6132",
-            "MNG-6010",
+            {
+              "concomitant": "MNG-6010"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -110604,7 +110938,9 @@
         "tree": {
           "all": [
             "ENT-6132",
-            "MNG-6010",
+            {
+              "concomitant": "MNG-6010"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -115732,7 +116068,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "ANM-1004*",
-        "tree": "ANM-1004"
+        "tree": {
+          "concomitant": "ANM-1004"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -115927,8 +116265,12 @@
         "tree": {
           "all": [
             "ERG-2101",
-            "MED-1907",
-            "PSA-2901"
+            {
+              "concomitant": "MED-1907"
+            },
+            {
+              "concomitant": "PSA-2901"
+            }
           ]
         }
       },
@@ -116083,8 +116425,12 @@
         "tree": {
           "all": [
             "ERG-2600",
-            "ERG-3000",
-            "ERG-3506"
+            {
+              "concomitant": "ERG-3000"
+            },
+            {
+              "concomitant": "ERG-3506"
+            }
           ]
         }
       },
@@ -116115,9 +116461,13 @@
         "tree": {
           "all": [
             "ERG-2101",
-            "MED-1907",
+            {
+              "concomitant": "MED-1907"
+            },
             "PHS-1507",
-            "PSA-2901"
+            {
+              "concomitant": "PSA-2901"
+            }
           ]
         }
       },
@@ -116421,9 +116771,13 @@
           "all": [
             "ERG-2006",
             "ERG-2104",
-            "ERG-2504",
+            {
+              "concomitant": "ERG-2504"
+            },
             "ERG-3000",
-            "ERG-3005",
+            {
+              "concomitant": "ERG-3005"
+            },
             "ERG-3506",
             "ERG-3507"
           ]
@@ -120014,7 +120368,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "ESP-1000*",
-        "tree": "ESP-1000"
+        "tree": {
+          "concomitant": "ESP-1000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -120048,7 +120404,9 @@
         "raw": "ESP-1001* ET ESP-1003",
         "tree": {
           "all": [
-            "ESP-1001",
+            {
+              "concomitant": "ESP-1001"
+            },
             "ESP-1003"
           ]
         }
@@ -125375,7 +125733,9 @@
         "tree": {
           "any": [
             "FIS-4001",
-            "FIS-4101"
+            {
+              "concomitant": "FIS-4101"
+            }
           ]
         }
       },
@@ -125876,7 +126236,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-1023*",
-        "tree": "FLS-1023"
+        "tree": {
+          "concomitant": "FLS-1023"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -125927,7 +126289,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-1023*",
-        "tree": "FLS-1023"
+        "tree": {
+          "concomitant": "FLS-1023"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -125978,7 +126342,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-1023*",
-        "tree": "FLS-1023"
+        "tree": {
+          "concomitant": "FLS-1023"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -126471,7 +126837,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-1023*",
-        "tree": "FLS-1023"
+        "tree": {
+          "concomitant": "FLS-1023"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -127460,7 +127828,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-1114*",
-        "tree": "FLS-1114"
+        "tree": {
+          "concomitant": "FLS-1114"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -127590,7 +127960,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-1114*",
-        "tree": "FLS-1114"
+        "tree": {
+          "concomitant": "FLS-1114"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -128052,7 +128424,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-1114*",
-        "tree": "FLS-1114"
+        "tree": {
+          "concomitant": "FLS-1114"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -128105,8 +128479,12 @@
         "raw": "FLS-1114* OU FLS-1215*",
         "tree": {
           "any": [
-            "FLS-1114",
-            "FLS-1215"
+            {
+              "concomitant": "FLS-1114"
+            },
+            {
+              "concomitant": "FLS-1215"
+            }
           ]
         }
       },
@@ -128159,7 +128537,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-1215*",
-        "tree": "FLS-1215"
+        "tree": {
+          "concomitant": "FLS-1215"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -128880,7 +129260,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-1215*",
-        "tree": "FLS-1215"
+        "tree": {
+          "concomitant": "FLS-1215"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -129342,7 +129724,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-1215*",
-        "tree": "FLS-1215"
+        "tree": {
+          "concomitant": "FLS-1215"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -129393,7 +129777,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-1215*",
-        "tree": "FLS-1215"
+        "tree": {
+          "concomitant": "FLS-1215"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -129480,7 +129866,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-2015*",
-        "tree": "FLS-2015"
+        "tree": {
+          "concomitant": "FLS-2015"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -129610,7 +129998,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-2015*",
-        "tree": "FLS-2015"
+        "tree": {
+          "concomitant": "FLS-2015"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -129642,7 +130032,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-2015*",
-        "tree": "FLS-2015"
+        "tree": {
+          "concomitant": "FLS-2015"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -129846,7 +130238,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-2015*",
-        "tree": "FLS-2015"
+        "tree": {
+          "concomitant": "FLS-2015"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -130637,7 +131031,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-2015*",
-        "tree": "FLS-2015"
+        "tree": {
+          "concomitant": "FLS-2015"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -130669,7 +131065,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FLS-2015*",
-        "tree": "FLS-2015"
+        "tree": {
+          "concomitant": "FLS-2015"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -133477,10 +133875,18 @@
         "raw": "FOR-2017* OU ECN-1000* OU ECN-2901* OU ECN-4901*",
         "tree": {
           "any": [
-            "FOR-2017",
-            "ECN-1000",
-            "ECN-2901",
-            "ECN-4901"
+            {
+              "concomitant": "FOR-2017"
+            },
+            {
+              "concomitant": "ECN-1000"
+            },
+            {
+              "concomitant": "ECN-2901"
+            },
+            {
+              "concomitant": "ECN-4901"
+            }
           ]
         }
       },
@@ -133813,7 +134219,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "FOR-4035*",
-        "tree": "FOR-4035"
+        "tree": {
+          "concomitant": "FOR-4035"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -134122,7 +134530,9 @@
         "raw": "FOR-1201* ET FOR-2500",
         "tree": {
           "all": [
-            "FOR-1201",
+            {
+              "concomitant": "FOR-1201"
+            },
             "FOR-2500"
           ]
         }
@@ -136704,9 +137114,15 @@
         "raw": "FPT-1001* ET FPT-1004* ET MEV-1902*",
         "tree": {
           "all": [
-            "FPT-1001",
-            "FPT-1004",
-            "MEV-1902"
+            {
+              "concomitant": "FPT-1001"
+            },
+            {
+              "concomitant": "FPT-1004"
+            },
+            {
+              "concomitant": "MEV-1902"
+            }
           ]
         }
       },
@@ -143888,7 +144304,9 @@
                 "MAT-1920"
               ]
             },
-            "MAT-1910",
+            {
+              "concomitant": "MAT-1910"
+            },
             {
               "any": [
                 "GCH-1000",
@@ -146339,7 +146757,9 @@
         "raw": "(MAT-1900*) ET (MAT-0150 ET MAT-0260 ET PHY-0150)",
         "tree": {
           "all": [
-            "MAT-1900",
+            {
+              "concomitant": "MAT-1900"
+            },
             {
               "all": [
                 "MAT-0150",
@@ -149599,8 +150019,12 @@
           "all": [
             {
               "any": [
-                "MAT-1900",
-                "PHY-1002"
+                {
+                  "concomitant": "MAT-1900"
+                },
+                {
+                  "concomitant": "PHY-1002"
+                }
               ]
             },
             {
@@ -149740,8 +150164,12 @@
           "all": [
             {
               "all": [
-                "GEL-1000",
-                "GEL-4799"
+                {
+                  "concomitant": "GEL-1000"
+                },
+                {
+                  "concomitant": "GEL-4799"
+                }
               ]
             },
             {
@@ -149912,7 +150340,9 @@
         "raw": "GEL-1000* ET MAT-1910",
         "tree": {
           "all": [
-            "GEL-1000",
+            {
+              "concomitant": "GEL-1000"
+            },
             "MAT-1910"
           ]
         }
@@ -150017,7 +150447,9 @@
                 "GPH-2006"
               ]
             },
-            "GEL-4799"
+            {
+              "concomitant": "GEL-4799"
+            }
           ]
         }
       },
@@ -150132,7 +150564,9 @@
                 "GMC-3003"
               ]
             },
-            "GEL-4799"
+            {
+              "concomitant": "GEL-4799"
+            }
           ]
         }
       },
@@ -150537,7 +150971,9 @@
         "tree": {
           "all": [
             "GEL-2003",
-            "GEL-4799"
+            {
+              "concomitant": "GEL-4799"
+            }
           ]
         }
       },
@@ -150653,7 +151089,9 @@
         "tree": {
           "all": [
             "GEL-2000",
-            "GEL-2001"
+            {
+              "concomitant": "GEL-2001"
+            }
           ]
         }
       },
@@ -150737,7 +151175,9 @@
         "tree": {
           "all": [
             "GEL-2001",
-            "STT-2920"
+            {
+              "concomitant": "STT-2920"
+            }
           ]
         }
       },
@@ -150914,9 +151354,15 @@
         "raw": "GEL-2000* OU GEL-2900* OU GEL-2910*",
         "tree": {
           "any": [
-            "GEL-2000",
-            "GEL-2900",
-            "GEL-2910"
+            {
+              "concomitant": "GEL-2000"
+            },
+            {
+              "concomitant": "GEL-2900"
+            },
+            {
+              "concomitant": "GEL-2910"
+            }
           ]
         }
       },
@@ -151000,7 +151446,9 @@
                 "GIF-3002"
               ]
             },
-            "GEL-4799"
+            {
+              "concomitant": "GEL-4799"
+            }
           ]
         }
       },
@@ -151041,7 +151489,9 @@
         "raw": "GEL-4799* ET GEL-3014 ET  Crédits exigés : 71",
         "tree": {
           "all": [
-            "GEL-4799",
+            {
+              "concomitant": "GEL-4799"
+            },
             "GEL-3014",
             {
               "program_credits": {
@@ -151091,7 +151541,9 @@
         "raw": "GEL-4799* ET GEL-3020 ET  Crédits exigés : 86",
         "tree": {
           "all": [
-            "GEL-4799",
+            {
+              "concomitant": "GEL-4799"
+            },
             "GEL-3020",
             {
               "program_credits": {
@@ -151139,7 +151591,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "GEL-4150*",
-        "tree": "GEL-4150"
+        "tree": {
+          "concomitant": "GEL-4150"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -151705,7 +152159,9 @@
             {
               "all": [
                 "GEL-2005",
-                "GEL-3003"
+                {
+                  "concomitant": "GEL-3003"
+                }
               ]
             },
             "GCH-3000",
@@ -151788,7 +152244,9 @@
           "all": [
             "GEL-2002",
             "GEL-2003",
-            "GEL-4799"
+            {
+              "concomitant": "GEL-4799"
+            }
           ]
         }
       },
@@ -151890,7 +152348,9 @@
         "tree": {
           "all": [
             "GEL-2003",
-            "GEL-4799"
+            {
+              "concomitant": "GEL-4799"
+            }
           ]
         }
       },
@@ -151941,7 +152401,9 @@
         "tree": {
           "all": [
             "GEL-3001",
-            "GEL-4799"
+            {
+              "concomitant": "GEL-4799"
+            }
           ]
         }
       },
@@ -152217,7 +152679,9 @@
         "tree": {
           "all": [
             "GEL-2005",
-            "GEL-3003"
+            {
+              "concomitant": "GEL-3003"
+            }
           ]
         }
       },
@@ -152292,7 +152756,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "GSO-6082*",
-        "tree": "GSO-6082"
+        "tree": {
+          "concomitant": "GSO-6082"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -152620,7 +153086,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "GEL-7799*",
-        "tree": "GEL-7799"
+        "tree": {
+          "concomitant": "GEL-7799"
+        }
       },
       "equivalents": [
         "GEL-4152"
@@ -152734,7 +153202,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "GEL-7799*",
-        "tree": "GEL-7799"
+        "tree": {
+          "concomitant": "GEL-7799"
+        }
       },
       "equivalents": [
         "GEL-4102"
@@ -152951,7 +153421,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "GEL-7799*",
-        "tree": "GEL-7799"
+        "tree": {
+          "concomitant": "GEL-7799"
+        }
       },
       "equivalents": [
         "GEL-4151"
@@ -153134,7 +153606,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "GEL-7799*",
-        "tree": "GEL-7799"
+        "tree": {
+          "concomitant": "GEL-7799"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -154158,7 +154632,9 @@
         "raw": "GGL-2600* ET (GCI-2009 OU GGL-2609) ET (GEX-1000 OU GCI-1005)",
         "tree": {
           "all": [
-            "GGL-2600",
+            {
+              "concomitant": "GGL-2600"
+            },
             {
               "any": [
                 "GCI-2009",
@@ -154418,7 +154894,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "GCI-2010*",
-        "tree": "GCI-2010"
+        "tree": {
+          "concomitant": "GCI-2010"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -155568,7 +156046,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "STT-1900*",
-        "tree": "STT-1900"
+        "tree": {
+          "concomitant": "STT-1900"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -155684,7 +156164,9 @@
         "tree": {
           "all": [
             "GGL-1006",
-            "GGL-2601",
+            {
+              "concomitant": "GGL-2601"
+            },
             "GLG-1005"
           ]
         }
@@ -157228,7 +157710,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "GGR-2301*",
-        "tree": "GGR-2301"
+        "tree": {
+          "concomitant": "GGR-2301"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -160756,7 +161240,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "GIE-2105*",
-        "tree": "GIE-2105"
+        "tree": {
+          "concomitant": "GIE-2105"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -162177,7 +162663,9 @@
             "GIE-6031",
             "GIE-6039",
             "GIE-6041",
-            "MNG-6083",
+            {
+              "concomitant": "MNG-6083"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -162245,7 +162733,9 @@
             "GIE-6031",
             "GIE-6039",
             "GIE-6041",
-            "MNG-6083",
+            {
+              "concomitant": "MNG-6083"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -162373,7 +162863,9 @@
             "GIE-6031",
             "GIE-6039",
             "GIE-6041",
-            "MNG-6083",
+            {
+              "concomitant": "MNG-6083"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -162593,8 +163085,12 @@
         "raw": "IFT-1004* OU GLO-1901*",
         "tree": {
           "any": [
-            "IFT-1004",
-            "GLO-1901"
+            {
+              "concomitant": "IFT-1004"
+            },
+            {
+              "concomitant": "GLO-1901"
+            }
           ]
         }
       },
@@ -163095,7 +163591,9 @@
                 "GIF-1002"
               ]
             },
-            "GEL-4799"
+            {
+              "concomitant": "GEL-4799"
+            }
           ]
         }
       },
@@ -164697,7 +165195,9 @@
         "tree": {
           "all": [
             "MAT-1900",
-            "GLO-1901"
+            {
+              "concomitant": "GLO-1901"
+            }
           ]
         }
       },
@@ -164753,7 +165253,9 @@
             "GIN-3020",
             "GMC-1000",
             "GSC-1000",
-            "GSO-2100"
+            {
+              "concomitant": "GSO-2100"
+            }
           ]
         }
       },
@@ -165278,7 +165780,9 @@
         "tree": {
           "all": [
             "GIN-3000",
-            "GIN-3110",
+            {
+              "concomitant": "GIN-3110"
+            },
             "GIN-3200"
           ]
         }
@@ -166173,7 +166677,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "GLG-1000*",
-        "tree": "GLG-1000"
+        "tree": {
+          "concomitant": "GLG-1000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -166278,7 +166784,9 @@
         "raw": "(GLG-1000*) ET (CHM-0150 ET CHM-0160)",
         "tree": {
           "all": [
-            "GLG-1000",
+            {
+              "concomitant": "GLG-1000"
+            },
             {
               "all": [
                 "CHM-0150",
@@ -166320,7 +166828,9 @@
         "raw": "GLG-1000* OU GLG-1003",
         "tree": {
           "any": [
-            "GLG-1000",
+            {
+              "concomitant": "GLG-1000"
+            },
             "GLG-1003"
           ]
         }
@@ -166569,7 +167079,9 @@
           "all": [
             "GLG-2000",
             "GLG-2001",
-            "GLG-2002"
+            {
+              "concomitant": "GLG-2002"
+            }
           ]
         }
       },
@@ -168199,8 +168711,12 @@
         "raw": "GLO-2004* OU IFT-2007*",
         "tree": {
           "any": [
-            "GLO-2004",
-            "IFT-2007"
+            {
+              "concomitant": "GLO-2004"
+            },
+            {
+              "concomitant": "IFT-2007"
+            }
           ]
         }
       },
@@ -168584,7 +169100,9 @@
           "all": [
             "GLO-3013",
             "GLO-3101",
-            "GLO-4000",
+            {
+              "concomitant": "GLO-4000"
+            },
             "GLO-4002"
           ]
         }
@@ -168680,7 +169198,9 @@
         "tree": {
           "all": [
             "GEL-1001",
-            "GEL-4799",
+            {
+              "concomitant": "GEL-4799"
+            },
             "GLO-4002"
           ]
         }
@@ -168813,8 +169333,12 @@
         "raw": "GLO-2004* OU IFT-2007*",
         "tree": {
           "any": [
-            "GLO-2004",
-            "IFT-2007"
+            {
+              "concomitant": "GLO-2004"
+            },
+            {
+              "concomitant": "IFT-2007"
+            }
           ]
         }
       },
@@ -169326,8 +169850,12 @@
           "all": [
             {
               "any": [
-                "GLO-4002",
-                "IFT-4006"
+                {
+                  "concomitant": "GLO-4002"
+                },
+                {
+                  "concomitant": "IFT-4006"
+                }
               ]
             },
             {
@@ -169536,9 +170064,15 @@
             },
             {
               "any": [
-                "ACT-4114",
-                "GIF-4101",
-                "IFT-4102"
+                {
+                  "concomitant": "ACT-4114"
+                },
+                {
+                  "concomitant": "GIF-4101"
+                },
+                {
+                  "concomitant": "IFT-4102"
+                }
               ]
             }
           ]
@@ -170295,8 +170829,12 @@
         "raw": "MAT-1900* OU PHY-1002*",
         "tree": {
           "any": [
-            "MAT-1900",
-            "PHY-1002"
+            {
+              "concomitant": "MAT-1900"
+            },
+            {
+              "concomitant": "PHY-1002"
+            }
           ]
         }
       },
@@ -170337,8 +170875,12 @@
         "raw": "MAT-1910* OU PHY-1001*",
         "tree": {
           "any": [
-            "MAT-1910",
-            "PHY-1001"
+            {
+              "concomitant": "MAT-1910"
+            },
+            {
+              "concomitant": "PHY-1001"
+            }
           ]
         }
       },
@@ -170575,9 +171117,15 @@
         "raw": "GAE-2010* OU GLO-1901* OU IFT-1004*",
         "tree": {
           "any": [
-            "GAE-2010",
-            "GLO-1901",
-            "IFT-1004"
+            {
+              "concomitant": "GAE-2010"
+            },
+            {
+              "concomitant": "GLO-1901"
+            },
+            {
+              "concomitant": "IFT-1004"
+            }
           ]
         }
       },
@@ -170877,7 +171425,9 @@
         "tree": {
           "all": [
             "GMC-1001",
-            "MAT-1910"
+            {
+              "concomitant": "MAT-1910"
+            }
           ]
         }
       },
@@ -170966,7 +171516,9 @@
         "tree": {
           "all": [
             "MAT-1910",
-            "MAT-2910"
+            {
+              "concomitant": "MAT-2910"
+            }
           ]
         }
       },
@@ -171208,7 +171760,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "GMC-2024*",
-        "tree": "GMC-2024"
+        "tree": {
+          "concomitant": "GMC-2024"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -171414,9 +171968,15 @@
             "GLO-1901",
             "GMC-2001",
             "MAT-1910",
-            "MAT-2910",
-            "GMC-3000",
-            "GMC-2005"
+            {
+              "concomitant": "MAT-2910"
+            },
+            {
+              "concomitant": "GMC-3000"
+            },
+            {
+              "concomitant": "GMC-2005"
+            }
           ]
         }
       },
@@ -171847,9 +172407,15 @@
         "tree": {
           "all": [
             "GMC-2001",
-            "GMC-2005",
-            "GMC-2006",
-            "GMC-3000"
+            {
+              "concomitant": "GMC-2005"
+            },
+            {
+              "concomitant": "GMC-2006"
+            },
+            {
+              "concomitant": "GMC-3000"
+            }
           ]
         }
       },
@@ -172034,14 +172600,20 @@
           "all": [
             {
               "any": [
-                "ECN-2901",
-                "ECN-4901"
+                {
+                  "concomitant": "ECN-2901"
+                },
+                {
+                  "concomitant": "ECN-4901"
+                }
               ]
             },
             "GMC-3001",
             "GMC-3002",
             "GMC-3009",
-            "PHI-3900",
+            {
+              "concomitant": "PHI-3900"
+            },
             {
               "any": [
                 "GMC-2002",
@@ -172083,7 +172655,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "GMC-3005*",
-        "tree": "GMC-3005"
+        "tree": {
+          "concomitant": "GMC-3005"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -172187,7 +172761,9 @@
             "GMC-3005",
             "GMC-3006",
             "GMC-3009",
-            "GMC-3010",
+            {
+              "concomitant": "GMC-3010"
+            },
             "PHI-3900",
             {
               "program_credits": {
@@ -172456,7 +173032,9 @@
         "raw": "GMC-2024* ET GML-1001",
         "tree": {
           "all": [
-            "GMC-2024",
+            {
+              "concomitant": "GMC-2024"
+            },
             "GML-1001"
           ]
         }
@@ -172508,9 +173086,15 @@
         "raw": "GMC-2025* ET GMC-3003* ET GMC-3024*",
         "tree": {
           "all": [
-            "GMC-2025",
-            "GMC-3003",
-            "GMC-3024"
+            {
+              "concomitant": "GMC-2025"
+            },
+            {
+              "concomitant": "GMC-3003"
+            },
+            {
+              "concomitant": "GMC-3024"
+            }
           ]
         }
       },
@@ -172577,8 +173161,12 @@
           "all": [
             {
               "any": [
-                "ECN-2901",
-                "ECN-4901"
+                {
+                  "concomitant": "ECN-2901"
+                },
+                {
+                  "concomitant": "ECN-4901"
+                }
               ]
             },
             "GMC-2007",
@@ -172660,8 +173248,12 @@
         "raw": "GMC-3034* ET PHI-3900*",
         "tree": {
           "all": [
-            "GMC-3034",
-            "PHI-3900"
+            {
+              "concomitant": "GMC-3034"
+            },
+            {
+              "concomitant": "PHI-3900"
+            }
           ]
         }
       },
@@ -172868,7 +173460,9 @@
         "raw": "GMC-3550* ET  Crédits exigés : 70",
         "tree": {
           "all": [
-            "GMC-3550",
+            {
+              "concomitant": "GMC-3550"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -173356,7 +173950,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "GMC-2007*",
-        "tree": "GMC-2007"
+        "tree": {
+          "concomitant": "GMC-2007"
+        }
       },
       "equivalents": [
         "GIN-7010"
@@ -175140,8 +175736,12 @@
         "raw": "GML-1001* ET MAT-1900*",
         "tree": {
           "all": [
-            "GML-1001",
-            "MAT-1900"
+            {
+              "concomitant": "GML-1001"
+            },
+            {
+              "concomitant": "MAT-1900"
+            }
           ]
         }
       },
@@ -176184,8 +176784,12 @@
             },
             {
               "any": [
-                "GML-3102",
-                "GML-4102"
+                {
+                  "concomitant": "GML-3102"
+                },
+                {
+                  "concomitant": "GML-4102"
+                }
               ]
             },
             {
@@ -176281,7 +176885,9 @@
         "tree": {
           "all": [
             "GML-1001",
-            "GML-4250"
+            {
+              "concomitant": "GML-4250"
+            }
           ]
         }
       },
@@ -176394,7 +177000,9 @@
         "tree": {
           "all": [
             "GML-1001",
-            "GML-4000"
+            {
+              "concomitant": "GML-4000"
+            }
           ]
         }
       },
@@ -177522,7 +178130,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "GMN-1000*",
-        "tree": "GMN-1000"
+        "tree": {
+          "concomitant": "GMN-1000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -177558,8 +178168,12 @@
           "all": [
             {
               "any": [
-                "ECN-2901",
-                "ECN-4901"
+                {
+                  "concomitant": "ECN-2901"
+                },
+                {
+                  "concomitant": "ECN-4901"
+                }
               ]
             },
             "GMN-1000",
@@ -178235,7 +178849,9 @@
                 "GMN-4004"
               ]
             },
-            "GMN-4001"
+            {
+              "concomitant": "GMN-4001"
+            }
           ]
         }
       },
@@ -178528,8 +179144,12 @@
             },
             "GMN-1002",
             "GMN-2000",
-            "GMN-2001",
-            "GMN-2002"
+            {
+              "concomitant": "GMN-2001"
+            },
+            {
+              "concomitant": "GMN-2002"
+            }
           ]
         }
       },
@@ -179812,7 +180432,9 @@
         "tree": {
           "all": [
             "GMT-2050",
-            "GMT-4015"
+            {
+              "concomitant": "GMT-4015"
+            }
           ]
         }
       },
@@ -179854,7 +180476,9 @@
         "tree": {
           "all": [
             "IFT-1901",
-            "MAT-1900",
+            {
+              "concomitant": "MAT-1900"
+            },
             "MAT-1901"
           ]
         }
@@ -180323,7 +180947,9 @@
               "all": [
                 "GMC-3009",
                 "GMT-2003",
-                "MED-1100"
+                {
+                  "concomitant": "MED-1100"
+                }
               ]
             },
             {
@@ -180562,8 +181188,12 @@
         "raw": "GMT-3000* ET GMT-3002* ET GMT-3100",
         "tree": {
           "all": [
-            "GMT-3000",
-            "GMT-3002",
+            {
+              "concomitant": "GMT-3000"
+            },
+            {
+              "concomitant": "GMT-3002"
+            },
             "GMT-3100"
           ]
         }
@@ -180776,8 +181406,12 @@
         "raw": "DRT-1904* ET GMT-2004*",
         "tree": {
           "all": [
-            "DRT-1904",
-            "GMT-2004"
+            {
+              "concomitant": "DRT-1904"
+            },
+            {
+              "concomitant": "GMT-2004"
+            }
           ]
         }
       },
@@ -182054,7 +182688,9 @@
         "raw": "GMT-7015* OU GMT-7025",
         "tree": {
           "any": [
-            "GMT-7015",
+            {
+              "concomitant": "GMT-7015"
+            },
             "GMT-7025"
           ]
         }
@@ -182607,7 +183243,9 @@
         "raw": "GMT-7015* OU GMT-7025",
         "tree": {
           "any": [
-            "GMT-7015",
+            {
+              "concomitant": "GMT-7015"
+            },
             "GMT-7025"
           ]
         }
@@ -183268,7 +183906,9 @@
         "tree": {
           "all": [
             "GPH-1799",
-            "GPH-2005"
+            {
+              "concomitant": "GPH-2005"
+            }
           ]
         }
       },
@@ -183371,7 +184011,9 @@
                 "MAT-1900"
               ]
             },
-            "PHY-1007"
+            {
+              "concomitant": "PHY-1007"
+            }
           ]
         }
       },
@@ -183439,11 +184081,17 @@
             },
             {
               "any": [
-                "GEL-1799",
-                "GEL-4799"
+                {
+                  "concomitant": "GEL-1799"
+                },
+                {
+                  "concomitant": "GEL-4799"
+                }
               ]
             },
-            "GEL-2005",
+            {
+              "concomitant": "GEL-2005"
+            },
             "GLO-1901"
           ]
         }
@@ -188764,8 +189412,12 @@
                 "MQT-1100",
                 "MQT-1102",
                 "GPL-1008",
-                "STT-1500",
-                "ACT-1002"
+                {
+                  "concomitant": "STT-1500"
+                },
+                {
+                  "concomitant": "ACT-1002"
+                }
               ]
             }
           ]
@@ -189398,8 +190050,12 @@
                 "IFT-1006"
               ]
             },
-            "GSF-3101",
-            "MAT-2400",
+            {
+              "concomitant": "GSF-3101"
+            },
+            {
+              "concomitant": "MAT-2400"
+            },
             {
               "any": [
                 "GLO-1901",
@@ -191947,12 +192603,22 @@
             {
               "any": [
                 "ECN-1150",
-                "ECN-2901",
-                "ECN-4901",
+                {
+                  "concomitant": "ECN-2901"
+                },
+                {
+                  "concomitant": "ECN-4901"
+                },
                 "FOR-2017",
-                "FOR-3006",
-                "GIN-2010",
-                "GSO-1000"
+                {
+                  "concomitant": "FOR-3006"
+                },
+                {
+                  "concomitant": "GIN-2010"
+                },
+                {
+                  "concomitant": "GSO-1000"
+                }
               ]
             },
             {
@@ -192014,7 +192680,9 @@
           "all": [
             {
               "any": [
-                "GMC-2010",
+                {
+                  "concomitant": "GMC-2010"
+                },
                 "GSO-1000"
               ]
             },
@@ -192128,10 +192796,16 @@
         "raw": "GSO-1000* OU GSO-1001 OU GSO-1100* OU GIN-2010*",
         "tree": {
           "any": [
-            "GSO-1000",
+            {
+              "concomitant": "GSO-1000"
+            },
             "GSO-1001",
-            "GSO-1100",
-            "GIN-2010"
+            {
+              "concomitant": "GSO-1100"
+            },
+            {
+              "concomitant": "GIN-2010"
+            }
           ]
         }
       },
@@ -192307,8 +192981,12 @@
           "all": [
             {
               "any": [
-                "GSO-1000",
-                "GSO-1100"
+                {
+                  "concomitant": "GSO-1000"
+                },
+                {
+                  "concomitant": "GSO-1100"
+                }
               ]
             },
             {
@@ -192356,7 +193034,9 @@
               "any": [
                 "GSO-1000",
                 "GSO-1100",
-                "GIN-2010"
+                {
+                  "concomitant": "GIN-2010"
+                }
               ]
             },
             {
@@ -202126,8 +202806,12 @@
         "raw": "GLO-2004* OU IFT-2007*",
         "tree": {
           "any": [
-            "GLO-2004",
-            "IFT-2007"
+            {
+              "concomitant": "GLO-2004"
+            },
+            {
+              "concomitant": "IFT-2007"
+            }
           ]
         }
       },
@@ -203298,8 +203982,12 @@
             },
             {
               "any": [
-                "IFT-4102",
-                "GIF-4101"
+                {
+                  "concomitant": "IFT-4102"
+                },
+                {
+                  "concomitant": "GIF-4101"
+                }
               ]
             }
           ]
@@ -206953,7 +207641,9 @@
         "tree": {
           "all": [
             "KIN-2006",
-            "KIN-3007"
+            {
+              "concomitant": "KIN-3007"
+            }
           ]
         }
       },
@@ -207542,8 +208232,12 @@
           "all": [
             {
               "any": [
-                "KIN-3103",
-                "KIN-3105"
+                {
+                  "concomitant": "KIN-3103"
+                },
+                {
+                  "concomitant": "KIN-3105"
+                }
               ]
             },
             {
@@ -207875,8 +208569,12 @@
           "all": [
             {
               "any": [
-                "KIN-2303",
-                "KIN-3305"
+                {
+                  "concomitant": "KIN-2303"
+                },
+                {
+                  "concomitant": "KIN-3305"
+                }
               ]
             },
             {
@@ -216032,7 +216730,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "LNG-1000*",
-        "tree": "LNG-1000"
+        "tree": {
+          "concomitant": "LNG-1000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -216122,7 +216822,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "LNG-1000*",
-        "tree": "LNG-1000"
+        "tree": {
+          "concomitant": "LNG-1000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -220309,7 +221011,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "GMT-1001*",
-        "tree": "GMT-1001"
+        "tree": {
+          "concomitant": "GMT-1001"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -220600,7 +221304,9 @@
         "tree": {
           "any": [
             "MAT-1900",
-            "MAT-1920"
+            {
+              "concomitant": "MAT-1920"
+            }
           ]
         }
       },
@@ -221273,8 +221979,12 @@
         "raw": "MAT-2100* ET MAT-2400*",
         "tree": {
           "all": [
-            "MAT-2100",
-            "MAT-2400"
+            {
+              "concomitant": "MAT-2100"
+            },
+            {
+              "concomitant": "MAT-2400"
+            }
           ]
         }
       },
@@ -221316,7 +222026,9 @@
         "tree": {
           "all": [
             "MAT-2110",
-            "MAT-2400"
+            {
+              "concomitant": "MAT-2400"
+            }
           ]
         }
       },
@@ -221933,16 +222645,28 @@
             },
             {
               "any": [
-                "IFT-1001",
-                "IFT-1903",
-                "GLO-1900",
-                "GLO-1901",
                 {
-                  "raw": "IFT 10426"
+                  "concomitant": "IFT-1001"
+                },
+                {
+                  "concomitant": "IFT-1903"
+                },
+                {
+                  "concomitant": "GLO-1900"
+                },
+                {
+                  "concomitant": "GLO-1901"
+                },
+                {
+                  "raw": "IFT 10426*"
                 },
                 "IFT-1904",
-                "IFT-1004",
-                "IFT-1901",
+                {
+                  "concomitant": "IFT-1004"
+                },
+                {
+                  "concomitant": "IFT-1901"
+                },
                 "GAE-2010"
               ]
             }
@@ -222240,7 +222964,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MAT-2100*",
-        "tree": "MAT-2100"
+        "tree": {
+          "concomitant": "MAT-2100"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -222280,7 +223006,9 @@
         "tree": {
           "all": [
             "MAT-1200",
-            "MAT-2100",
+            {
+              "concomitant": "MAT-2100"
+            },
             {
               "any": [
                 "MAT-1910",
@@ -225106,7 +225834,9 @@
             {
               "any": [
                 "BIO-2003",
-                "BIO-2007"
+                {
+                  "concomitant": "BIO-2007"
+                }
               ]
             }
           ]
@@ -238173,7 +238903,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "MDD-6232*",
-        "tree": "MDD-6232"
+        "tree": {
+          "concomitant": "MDD-6232"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -238199,7 +238931,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "MDD-6233*",
-        "tree": "MDD-6233"
+        "tree": {
+          "concomitant": "MDD-6233"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -242223,8 +242957,12 @@
         "raw": "MED-2293* OU MED-2393*",
         "tree": {
           "any": [
-            "MED-2293",
-            "MED-2393"
+            {
+              "concomitant": "MED-2293"
+            },
+            {
+              "concomitant": "MED-2393"
+            }
           ]
         }
       },
@@ -242466,7 +243204,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MED-1206*",
-        "tree": "MED-1206"
+        "tree": {
+          "concomitant": "MED-1206"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -243881,8 +244621,12 @@
             "MED-1220",
             {
               "any": [
-                "MED-2293",
-                "MED-2393"
+                {
+                  "concomitant": "MED-2293"
+                },
+                {
+                  "concomitant": "MED-2393"
+                }
               ]
             },
             {
@@ -244234,7 +244978,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MED-2750*",
-        "tree": "MED-2750"
+        "tree": {
+          "concomitant": "MED-2750"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -244738,9 +245484,15 @@
             "MED-1921",
             {
               "any": [
-                "SIN-2326",
-                "SIN-2328",
-                "SIN-2313"
+                {
+                  "concomitant": "SIN-2326"
+                },
+                {
+                  "concomitant": "SIN-2328"
+                },
+                {
+                  "concomitant": "SIN-2313"
+                }
               ]
             }
           ]
@@ -257034,7 +257786,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MED-2760*",
-        "tree": "MED-2760"
+        "tree": {
+          "concomitant": "MED-2760"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -257060,7 +257814,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MED-2760*",
-        "tree": "MED-2760"
+        "tree": {
+          "concomitant": "MED-2760"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -257401,7 +258157,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MED-3750*",
-        "tree": "MED-3750"
+        "tree": {
+          "concomitant": "MED-3750"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -257427,7 +258185,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MED-3751*",
-        "tree": "MED-3751"
+        "tree": {
+          "concomitant": "MED-3751"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -261817,8 +262577,12 @@
         "raw": "ART-6101* ET DES-6103*",
         "tree": {
           "all": [
-            "ART-6101",
-            "DES-6103"
+            {
+              "concomitant": "ART-6101"
+            },
+            {
+              "concomitant": "DES-6103"
+            }
           ]
         }
       },
@@ -262134,7 +262898,9 @@
         "raw": "CSO-1014* OU MAT-1904",
         "tree": {
           "any": [
-            "CSO-1014",
+            {
+              "concomitant": "CSO-1014"
+            },
             "MAT-1904"
           ]
         }
@@ -263856,7 +264622,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "MMO-7027*",
-        "tree": "MMO-7027"
+        "tree": {
+          "concomitant": "MMO-7027"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -263908,7 +264676,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "MMO-7027*",
-        "tree": "MMO-7027"
+        "tree": {
+          "concomitant": "MMO-7027"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -266565,8 +267335,12 @@
         "raw": "MNG-2003* OU MNG-2007*",
         "tree": {
           "any": [
-            "MNG-2003",
-            "MNG-2007"
+            {
+              "concomitant": "MNG-2003"
+            },
+            {
+              "concomitant": "MNG-2007"
+            }
           ]
         }
       },
@@ -266598,10 +267372,18 @@
         "raw": "GSO-2100* OU MNG-2003* OU MNG-2007* OU SIO-2107*",
         "tree": {
           "any": [
-            "GSO-2100",
-            "MNG-2003",
-            "MNG-2007",
-            "SIO-2107"
+            {
+              "concomitant": "GSO-2100"
+            },
+            {
+              "concomitant": "MNG-2003"
+            },
+            {
+              "concomitant": "MNG-2007"
+            },
+            {
+              "concomitant": "SIO-2107"
+            }
           ]
         }
       },
@@ -268936,7 +269718,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "MNG-6070*",
-        "tree": "MNG-6070"
+        "tree": {
+          "concomitant": "MNG-6070"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -270432,7 +271216,9 @@
           "all": [
             "MNG-6029",
             "MNG-6162",
-            "MNG-6163",
+            {
+              "concomitant": "MNG-6163"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -270573,7 +271359,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "MNG-6162*",
-        "tree": "MNG-6162"
+        "tree": {
+          "concomitant": "MNG-6162"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -270819,8 +271607,12 @@
         "raw": "ANT-6900* ET MNG-6175* ET  6000 à 6999 Crédits exigés : 27",
         "tree": {
           "all": [
-            "ANT-6900",
-            "MNG-6175",
+            {
+              "concomitant": "ANT-6900"
+            },
+            {
+              "concomitant": "MNG-6175"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -271067,7 +271859,9 @@
         "raw": "MNG-6010* ET  Crédits exigés : 21",
         "tree": {
           "all": [
-            "MNG-6010",
+            {
+              "concomitant": "MNG-6010"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -271577,7 +272371,9 @@
         "tree": {
           "all": [
             "MNG-6004",
-            "MNG-6010",
+            {
+              "concomitant": "MNG-6010"
+            },
             "MNG-6021",
             {
               "program_credits": {
@@ -271703,7 +272499,9 @@
         "raw": "MNG-6083* ET  Crédits exigés : 21",
         "tree": {
           "all": [
-            "MNG-6083",
+            {
+              "concomitant": "MNG-6083"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -271765,7 +272563,9 @@
         "raw": "MNG-6083* ET  Crédits exigés : 21",
         "tree": {
           "all": [
-            "MNG-6083",
+            {
+              "concomitant": "MNG-6083"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -271827,7 +272627,9 @@
         "raw": "MNG-6059* ET  6000 à 7999 Crédits exigés : 21",
         "tree": {
           "all": [
-            "MNG-6059",
+            {
+              "concomitant": "MNG-6059"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -272069,7 +272871,9 @@
         "raw": "MNG-6083* ET  Crédits exigés : 21",
         "tree": {
           "all": [
-            "MNG-6083",
+            {
+              "concomitant": "MNG-6083"
+            },
             {
               "program_credits": {
                 "program": null,
@@ -272845,8 +273649,12 @@
         "raw": "MQT-1100* OU MQT-1102* OU MAT-1915 OU STT-1900",
         "tree": {
           "any": [
-            "MQT-1100",
-            "MQT-1102",
+            {
+              "concomitant": "MQT-1100"
+            },
+            {
+              "concomitant": "MQT-1102"
+            },
             "MAT-1915",
             "STT-1900"
           ]
@@ -273983,12 +274791,20 @@
         "raw": "(MRK-1000* OU MRK-1101* OU (MRK-1001* ET MRK-2002*))",
         "tree": {
           "any": [
-            "MRK-1000",
-            "MRK-1101",
+            {
+              "concomitant": "MRK-1000"
+            },
+            {
+              "concomitant": "MRK-1101"
+            },
             {
               "all": [
-                "MRK-1001",
-                "MRK-2002"
+                {
+                  "concomitant": "MRK-1001"
+                },
+                {
+                  "concomitant": "MRK-2002"
+                }
               ]
             }
           ]
@@ -274018,7 +274834,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MRK-1001*",
-        "tree": "MRK-1001"
+        "tree": {
+          "concomitant": "MRK-1001"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -274130,12 +274948,20 @@
         "raw": "(MRK-1000* OU MRK-1101* OU (MRK-1001* ET MRK-2002*))",
         "tree": {
           "any": [
-            "MRK-1000",
-            "MRK-1101",
+            {
+              "concomitant": "MRK-1000"
+            },
+            {
+              "concomitant": "MRK-1101"
+            },
             {
               "all": [
-                "MRK-1001",
-                "MRK-2002"
+                {
+                  "concomitant": "MRK-1001"
+                },
+                {
+                  "concomitant": "MRK-2002"
+                }
               ]
             }
           ]
@@ -274605,12 +275431,20 @@
         "raw": "(MRK-1000* OU MRK-1101* OU (MRK-1001* ET MRK-2002*))",
         "tree": {
           "any": [
-            "MRK-1000",
-            "MRK-1101",
+            {
+              "concomitant": "MRK-1000"
+            },
+            {
+              "concomitant": "MRK-1101"
+            },
             {
               "all": [
-                "MRK-1001",
-                "MRK-2002"
+                {
+                  "concomitant": "MRK-1001"
+                },
+                {
+                  "concomitant": "MRK-2002"
+                }
               ]
             }
           ]
@@ -274707,12 +275541,20 @@
         "raw": "(MRK-1000* OU MRK-1101* OU (MRK-1001* ET MRK-2002*))",
         "tree": {
           "any": [
-            "MRK-1000",
-            "MRK-1101",
+            {
+              "concomitant": "MRK-1000"
+            },
+            {
+              "concomitant": "MRK-1101"
+            },
             {
               "all": [
-                "MRK-1001",
-                "MRK-2002"
+                {
+                  "concomitant": "MRK-1001"
+                },
+                {
+                  "concomitant": "MRK-2002"
+                }
               ]
             }
           ]
@@ -275141,8 +275983,12 @@
         "raw": "MRK-3101* OU MRK-3102*",
         "tree": {
           "any": [
-            "MRK-3101",
-            "MRK-3102"
+            {
+              "concomitant": "MRK-3101"
+            },
+            {
+              "concomitant": "MRK-3102"
+            }
           ]
         }
       },
@@ -275209,7 +276055,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MRK-3105*",
-        "tree": "MRK-3105"
+        "tree": {
+          "concomitant": "MRK-3105"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -275793,8 +276641,12 @@
         "raw": "MRK-6022* OU MRK-6088*",
         "tree": {
           "any": [
-            "MRK-6022",
-            "MRK-6088"
+            {
+              "concomitant": "MRK-6022"
+            },
+            {
+              "concomitant": "MRK-6088"
+            }
           ]
         }
       },
@@ -277643,7 +278495,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MUS-1080*",
-        "tree": "MUS-1080"
+        "tree": {
+          "concomitant": "MUS-1080"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -278532,7 +279386,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MUS-1102*",
-        "tree": "MUS-1102"
+        "tree": {
+          "concomitant": "MUS-1102"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -278604,10 +279460,14 @@
         "raw": "MUS-1280* OU MUS-2202 OU MUS-2250 OU MUS-1102*",
         "tree": {
           "any": [
-            "MUS-1280",
+            {
+              "concomitant": "MUS-1280"
+            },
             "MUS-2202",
             "MUS-2250",
-            "MUS-1102"
+            {
+              "concomitant": "MUS-1102"
+            }
           ]
         }
       },
@@ -278985,7 +279845,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MUS-1514*",
-        "tree": "MUS-1514"
+        "tree": {
+          "concomitant": "MUS-1514"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -279019,8 +279881,12 @@
         "raw": "MUS-1514* ET MUS-1515*",
         "tree": {
           "all": [
-            "MUS-1514",
-            "MUS-1515"
+            {
+              "concomitant": "MUS-1514"
+            },
+            {
+              "concomitant": "MUS-1515"
+            }
           ]
         }
       },
@@ -279210,7 +280076,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MUS-2402*",
-        "tree": "MUS-2402"
+        "tree": {
+          "concomitant": "MUS-2402"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -279261,7 +280129,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MUS-2402*",
-        "tree": "MUS-2402"
+        "tree": {
+          "concomitant": "MUS-2402"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -279959,7 +280829,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MUS-1081*",
-        "tree": "MUS-1081"
+        "tree": {
+          "concomitant": "MUS-1081"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -281516,7 +282388,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MUS-1514*",
-        "tree": "MUS-1514"
+        "tree": {
+          "concomitant": "MUS-1514"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -281548,7 +282422,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "MUS-2504*",
-        "tree": "MUS-2504"
+        "tree": {
+          "concomitant": "MUS-2504"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -282262,8 +283138,12 @@
         "raw": "MUS-2081* ET MUS-3200* ET MUS, Crédits exigés : 80",
         "tree": {
           "all": [
-            "MUS-2081",
-            "MUS-3200",
+            {
+              "concomitant": "MUS-2081"
+            },
+            {
+              "concomitant": "MUS-3200"
+            },
             {
               "program_credits": {
                 "program": "MUS",
@@ -282607,8 +283487,12 @@
             },
             {
               "all": [
-                "MUS-1515",
-                "MUS-2281"
+                {
+                  "concomitant": "MUS-1515"
+                },
+                {
+                  "concomitant": "MUS-2281"
+                }
               ]
             }
           ]
@@ -283967,7 +284851,9 @@
             },
             "MUS-3610",
             "MUS-3611",
-            "MUS-3612"
+            {
+              "concomitant": "MUS-3612"
+            }
           ]
         }
       },
@@ -284056,7 +284942,9 @@
             },
             "MUS-3610",
             "MUS-3611",
-            "MUS-3612"
+            {
+              "concomitant": "MUS-3612"
+            }
           ]
         }
       },
@@ -293290,7 +294178,9 @@
             "NUT-3400",
             "NUT-3540",
             "NUT-3550",
-            "NUT-3600"
+            {
+              "concomitant": "NUT-3600"
+            }
           ]
         }
       },
@@ -293498,8 +294388,12 @@
             },
             {
               "any": [
-                "NUT-3710",
-                "NUT-3730"
+                {
+                  "concomitant": "NUT-3710"
+                },
+                {
+                  "concomitant": "NUT-3730"
+                }
               ]
             }
           ]
@@ -293536,7 +294430,9 @@
             "NUT-3400",
             "NUT-3540",
             "NUT-3550",
-            "NUT-3600"
+            {
+              "concomitant": "NUT-3600"
+            }
           ]
         }
       },
@@ -293600,7 +294496,9 @@
             "NUT-3400",
             "NUT-3540",
             "NUT-3550",
-            "NUT-3600"
+            {
+              "concomitant": "NUT-3600"
+            }
           ]
         }
       },
@@ -293680,7 +294578,9 @@
             "NUT-3400",
             "NUT-3540",
             "NUT-3550",
-            "NUT-3600"
+            {
+              "concomitant": "NUT-3600"
+            }
           ]
         }
       },
@@ -296398,9 +297298,15 @@
         "raw": "ASR-2102* ET PFP-3100* ET PFP-3110*",
         "tree": {
           "all": [
-            "ASR-2102",
-            "PFP-3100",
-            "PFP-3110"
+            {
+              "concomitant": "ASR-2102"
+            },
+            {
+              "concomitant": "PFP-3100"
+            },
+            {
+              "concomitant": "PFP-3110"
+            }
           ]
         }
       },
@@ -296499,7 +297405,9 @@
         "tree": {
           "all": [
             "CTB-2050",
-            "CTB-3110"
+            {
+              "concomitant": "CTB-3110"
+            }
           ]
         }
       },
@@ -296548,7 +297456,9 @@
                 "GSF-6037"
               ]
             },
-            "CTB-6101"
+            {
+              "concomitant": "CTB-6101"
+            }
           ]
         }
       },
@@ -296603,7 +297513,9 @@
                 "GSF-6037"
               ]
             },
-            "CTB-6101"
+            {
+              "concomitant": "CTB-6101"
+            }
           ]
         }
       },
@@ -297373,9 +298285,15 @@
         "tree": {
           "all": [
             "PHA-1016",
-            "PHA-1022",
-            "PHA-1023",
-            "PHA-1024",
+            {
+              "concomitant": "PHA-1022"
+            },
+            {
+              "concomitant": "PHA-1023"
+            },
+            {
+              "concomitant": "PHA-1024"
+            },
             "PHA-1117"
           ]
         }
@@ -297567,9 +298485,13 @@
         "tree": {
           "all": [
             "PHA-1016",
-            "PHA-1025",
+            {
+              "concomitant": "PHA-1025"
+            },
             "PHA-1117",
-            "PHA-1121"
+            {
+              "concomitant": "PHA-1121"
+            }
           ]
         }
       },
@@ -297730,7 +298652,9 @@
         "tree": {
           "all": [
             "PHA-1016",
-            "PHA-1025"
+            {
+              "concomitant": "PHA-1025"
+            }
           ]
         }
       },
@@ -297920,8 +298844,12 @@
         "raw": "PHA-1026* ET PHA-1032*",
         "tree": {
           "all": [
-            "PHA-1026",
-            "PHA-1032"
+            {
+              "concomitant": "PHA-1026"
+            },
+            {
+              "concomitant": "PHA-1032"
+            }
           ]
         }
       },
@@ -297975,9 +298903,15 @@
         "raw": "PHA-1026* ET PHA-1032* ET PHA-1033*",
         "tree": {
           "all": [
-            "PHA-1026",
-            "PHA-1032",
-            "PHA-1033"
+            {
+              "concomitant": "PHA-1026"
+            },
+            {
+              "concomitant": "PHA-1032"
+            },
+            {
+              "concomitant": "PHA-1033"
+            }
           ]
         }
       },
@@ -298777,7 +299711,9 @@
         "tree": {
           "all": [
             "PHA-1214",
-            "PHA-2048"
+            {
+              "concomitant": "PHA-2048"
+            }
           ]
         }
       },
@@ -298907,25 +299843,37 @@
             {
               "any": [
                 "PHA-2055",
-                "PHA-2155"
+                {
+                  "concomitant": "PHA-2155"
+                }
               ]
             },
             {
               "any": [
                 "PHA-2056",
-                "PHA-2156"
+                {
+                  "concomitant": "PHA-2156"
+                }
               ]
             },
             {
               "any": [
-                "PHA-2064",
-                "PHA-2164"
+                {
+                  "concomitant": "PHA-2064"
+                },
+                {
+                  "concomitant": "PHA-2164"
+                }
               ]
             },
             {
               "any": [
-                "PHA-2065",
-                "PHA-2165"
+                {
+                  "concomitant": "PHA-2065"
+                },
+                {
+                  "concomitant": "PHA-2165"
+                }
               ]
             }
           ]
@@ -298988,16 +299936,28 @@
         "raw": "PHA-2076* ET PHA-2173* ET PHA-2174* ET (PHA-2079* OU PHA-2179*) ET PHA-2066*",
         "tree": {
           "all": [
-            "PHA-2076",
-            "PHA-2173",
-            "PHA-2174",
+            {
+              "concomitant": "PHA-2076"
+            },
+            {
+              "concomitant": "PHA-2173"
+            },
+            {
+              "concomitant": "PHA-2174"
+            },
             {
               "any": [
-                "PHA-2079",
-                "PHA-2179"
+                {
+                  "concomitant": "PHA-2079"
+                },
+                {
+                  "concomitant": "PHA-2179"
+                }
               ]
             },
-            "PHA-2066"
+            {
+              "concomitant": "PHA-2066"
+            }
           ]
         }
       },
@@ -299188,7 +300148,9 @@
         "tree": {
           "all": [
             "PHA-2066",
-            "PHA-2077"
+            {
+              "concomitant": "PHA-2077"
+            }
           ]
         }
       },
@@ -299258,8 +300220,12 @@
         "tree": {
           "all": [
             "PHA-2066",
-            "PHA-2078",
-            "PHA-2188"
+            {
+              "concomitant": "PHA-2078"
+            },
+            {
+              "concomitant": "PHA-2188"
+            }
           ]
         }
       },
@@ -299324,7 +300290,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "PHA-2188*",
-        "tree": "PHA-2188"
+        "tree": {
+          "concomitant": "PHA-2188"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -299493,8 +300461,12 @@
         "raw": "PHA-2088* OU PHA-2188*",
         "tree": {
           "any": [
-            "PHA-2088",
-            "PHA-2188"
+            {
+              "concomitant": "PHA-2088"
+            },
+            {
+              "concomitant": "PHA-2188"
+            }
           ]
         }
       },
@@ -299600,11 +300572,17 @@
         "raw": "PHA-2085* ET (PHA-2088* OU PHA-2188*)",
         "tree": {
           "all": [
-            "PHA-2085",
+            {
+              "concomitant": "PHA-2085"
+            },
             {
               "any": [
-                "PHA-2088",
-                "PHA-2188"
+                {
+                  "concomitant": "PHA-2088"
+                },
+                {
+                  "concomitant": "PHA-2188"
+                }
               ]
             }
           ]
@@ -299644,11 +300622,17 @@
         "raw": "PHA-2093* ET (PHA-2086* OU PHA-2094*)",
         "tree": {
           "all": [
-            "PHA-2093",
+            {
+              "concomitant": "PHA-2093"
+            },
             {
               "any": [
-                "PHA-2086",
-                "PHA-2094"
+                {
+                  "concomitant": "PHA-2086"
+                },
+                {
+                  "concomitant": "PHA-2094"
+                }
               ]
             }
           ]
@@ -299766,7 +300750,9 @@
         "tree": {
           "all": [
             "PHA-1034",
-            "PHA-2048"
+            {
+              "concomitant": "PHA-2048"
+            }
           ]
         }
       },
@@ -299957,7 +300943,9 @@
         "tree": {
           "all": [
             "PHA-1034",
-            "PHA-2048"
+            {
+              "concomitant": "PHA-2048"
+            }
           ]
         }
       },
@@ -300064,10 +301052,18 @@
         "tree": {
           "all": [
             "PHA-1034",
-            "PHA-2048",
-            "PHA-2049",
-            "PHA-2144",
-            "PHA-2145"
+            {
+              "concomitant": "PHA-2048"
+            },
+            {
+              "concomitant": "PHA-2049"
+            },
+            {
+              "concomitant": "PHA-2144"
+            },
+            {
+              "concomitant": "PHA-2145"
+            }
           ]
         }
       },
@@ -300258,7 +301254,9 @@
         "tree": {
           "all": [
             "PHA-1034",
-            "PHA-2146"
+            {
+              "concomitant": "PHA-2146"
+            }
           ]
         }
       },
@@ -300350,7 +301348,9 @@
           "all": [
             "PHA-1022",
             "PHA-1023",
-            "PHA-2048"
+            {
+              "concomitant": "PHA-2048"
+            }
           ]
         }
       },
@@ -300507,11 +301507,21 @@
         "raw": "PHA-2051* ET PHA-2146* ET PHA-2152* ET PHA-2153* ET PHA-2154*",
         "tree": {
           "all": [
-            "PHA-2051",
-            "PHA-2146",
-            "PHA-2152",
-            "PHA-2153",
-            "PHA-2154"
+            {
+              "concomitant": "PHA-2051"
+            },
+            {
+              "concomitant": "PHA-2146"
+            },
+            {
+              "concomitant": "PHA-2152"
+            },
+            {
+              "concomitant": "PHA-2153"
+            },
+            {
+              "concomitant": "PHA-2154"
+            }
           ]
         }
       },
@@ -300702,7 +301712,9 @@
         "tree": {
           "all": [
             "PHA-2147",
-            "PHA-2155"
+            {
+              "concomitant": "PHA-2155"
+            }
           ]
         }
       },
@@ -300759,7 +301771,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "PHA-2155*",
-        "tree": "PHA-2155"
+        "tree": {
+          "concomitant": "PHA-2155"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -300945,7 +301959,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "PHA-2156*",
-        "tree": "PHA-2156"
+        "tree": {
+          "concomitant": "PHA-2156"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -301029,7 +302045,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "PHA-2066*",
-        "tree": "PHA-2066"
+        "tree": {
+          "concomitant": "PHA-2066"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -301120,7 +302138,9 @@
         "tree": {
           "all": [
             "PHA-2066",
-            "PHA-2077"
+            {
+              "concomitant": "PHA-2077"
+            }
           ]
         }
       },
@@ -302144,14 +303164,22 @@
           "any": [
             {
               "all": [
-                "PHA-3022",
-                "PHA-3023"
+                {
+                  "concomitant": "PHA-3022"
+                },
+                {
+                  "concomitant": "PHA-3023"
+                }
               ]
             },
             {
               "all": [
-                "PHA-3103",
-                "PHA-3104"
+                {
+                  "concomitant": "PHA-3103"
+                },
+                {
+                  "concomitant": "PHA-3104"
+                }
               ]
             }
           ]
@@ -302228,11 +303256,17 @@
         "raw": "PHA-2095* ET (PHA-2086* OU PHA-2094*)",
         "tree": {
           "all": [
-            "PHA-2095",
+            {
+              "concomitant": "PHA-2095"
+            },
             {
               "any": [
-                "PHA-2086",
-                "PHA-2094"
+                {
+                  "concomitant": "PHA-2086"
+                },
+                {
+                  "concomitant": "PHA-2094"
+                }
               ]
             }
           ]
@@ -302309,11 +303343,17 @@
         "raw": "PHA-2095* ET (PHA-2086* OU PHA-2094*)",
         "tree": {
           "all": [
-            "PHA-2095",
+            {
+              "concomitant": "PHA-2095"
+            },
             {
               "any": [
-                "PHA-2086",
-                "PHA-2094"
+                {
+                  "concomitant": "PHA-2086"
+                },
+                {
+                  "concomitant": "PHA-2094"
+                }
               ]
             }
           ]
@@ -302391,7 +303431,9 @@
         "tree": {
           "all": [
             "PHA-2095",
-            "PHA-3100"
+            {
+              "concomitant": "PHA-3100"
+            }
           ]
         }
       },
@@ -302464,7 +303506,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "PHA-3101*",
-        "tree": "PHA-3101"
+        "tree": {
+          "concomitant": "PHA-3101"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -302535,7 +303579,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "PHA-3102*",
-        "tree": "PHA-3102"
+        "tree": {
+          "concomitant": "PHA-3102"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -302606,7 +303652,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "PHA-3101*",
-        "tree": "PHA-3101"
+        "tree": {
+          "concomitant": "PHA-3101"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -302679,7 +303727,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "PHA-2095*",
-        "tree": "PHA-2095"
+        "tree": {
+          "concomitant": "PHA-2095"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -302795,7 +303845,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "PHA-2095*",
-        "tree": "PHA-2095"
+        "tree": {
+          "concomitant": "PHA-2095"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -310205,8 +311257,12 @@
         "raw": "ANM-1004* ET ANM-1008*",
         "tree": {
           "all": [
-            "ANM-1004",
-            "ANM-1008"
+            {
+              "concomitant": "ANM-1004"
+            },
+            {
+              "concomitant": "ANM-1008"
+            }
           ]
         }
       },
@@ -313309,7 +314365,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "PHY-2003*",
-        "tree": "PHY-2003"
+        "tree": {
+          "concomitant": "PHY-2003"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -313350,7 +314408,9 @@
           "all": [
             "PHY-1007",
             "PHY-2003",
-            "PHY-2005"
+            {
+              "concomitant": "PHY-2005"
+            }
           ]
         }
       },
@@ -314763,8 +315823,12 @@
         "raw": "ART-6100* ET DES-6101*",
         "tree": {
           "all": [
-            "ART-6100",
-            "DES-6101"
+            {
+              "concomitant": "ART-6100"
+            },
+            {
+              "concomitant": "DES-6101"
+            }
           ]
         }
       },
@@ -315674,7 +316738,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PHY-7051*",
-        "tree": "PHY-7051"
+        "tree": {
+          "concomitant": "PHY-7051"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -315790,7 +316856,9 @@
         "tree": {
           "all": [
             "PHY-7051",
-            "PHY-7057"
+            {
+              "concomitant": "PHY-7057"
+            }
           ]
         }
       },
@@ -315849,7 +316917,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PHY-7051*",
-        "tree": "PHY-7051"
+        "tree": {
+          "concomitant": "PHY-7051"
+        }
       },
       "equivalents": [
         "PHY-4000"
@@ -317658,13 +318728,23 @@
                 "POL-1010"
               ]
             },
-            "SOC-1005",
+            {
+              "concomitant": "SOC-1005"
+            },
             "SVS-1004",
             "ANT-1002",
-            "LNG-1002",
-            "ORT-1001",
-            "GPL-1001",
-            "GPL-1009"
+            {
+              "concomitant": "LNG-1002"
+            },
+            {
+              "concomitant": "ORT-1001"
+            },
+            {
+              "concomitant": "GPL-1001"
+            },
+            {
+              "concomitant": "GPL-1009"
+            }
           ]
         }
       },
@@ -319629,7 +320709,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "POL-7031*",
-        "tree": "POL-7031"
+        "tree": {
+          "concomitant": "POL-7031"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -325946,9 +327028,15 @@
         "raw": "PSE-1000* ET PSE-1007* ET PSE-1010*",
         "tree": {
           "all": [
-            "PSE-1000",
-            "PSE-1007",
-            "PSE-1010"
+            {
+              "concomitant": "PSE-1000"
+            },
+            {
+              "concomitant": "PSE-1007"
+            },
+            {
+              "concomitant": "PSE-1010"
+            }
           ]
         }
       },
@@ -326191,7 +327279,9 @@
         "tree": {
           "any": [
             "PSE-1005",
-            "ENP-3010"
+            {
+              "concomitant": "ENP-3010"
+            }
           ]
         }
       },
@@ -327376,7 +328466,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "PSE-3700*",
-        "tree": "PSE-3700"
+        "tree": {
+          "concomitant": "PSE-3700"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -327890,7 +328982,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PSE-6005*",
-        "tree": "PSE-6005"
+        "tree": {
+          "concomitant": "PSE-6005"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -333293,7 +334387,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PUN-7000*",
-        "tree": "PUN-7000"
+        "tree": {
+          "concomitant": "PUN-7000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -333319,7 +334415,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PUN-7003*",
-        "tree": "PUN-7003"
+        "tree": {
+          "concomitant": "PUN-7003"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -333345,7 +334443,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PUN-7000*",
-        "tree": "PUN-7000"
+        "tree": {
+          "concomitant": "PUN-7000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -333397,7 +334497,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PUN-7000*",
-        "tree": "PUN-7000"
+        "tree": {
+          "concomitant": "PUN-7000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -333423,7 +334525,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PUN-7000*",
-        "tree": "PUN-7000"
+        "tree": {
+          "concomitant": "PUN-7000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -333475,7 +334579,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PUN-7000*",
-        "tree": "PUN-7000"
+        "tree": {
+          "concomitant": "PUN-7000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -333501,7 +334607,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PUN-7000*",
-        "tree": "PUN-7000"
+        "tree": {
+          "concomitant": "PUN-7000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -333563,7 +334671,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PUN-7000*",
-        "tree": "PUN-7000"
+        "tree": {
+          "concomitant": "PUN-7000"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -333615,7 +334725,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "PUN-7017*",
-        "tree": "PUN-7017"
+        "tree": {
+          "concomitant": "PUN-7017"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -334384,11 +335496,17 @@
           "all": [
             {
               "any": [
-                "FRN-1102",
-                "COM-1200"
+                {
+                  "concomitant": "FRN-1102"
+                },
+                {
+                  "concomitant": "COM-1200"
+                }
               ]
             },
-            "FRN-1010"
+            {
+              "concomitant": "FRN-1010"
+            }
           ]
         }
       },
@@ -339849,7 +340967,9 @@
         "raw": "SAN-2000* OU SAN-1002",
         "tree": {
           "any": [
-            "SAN-2000",
+            {
+              "concomitant": "SAN-2000"
+            },
             "SAN-1002"
           ]
         }
@@ -340006,7 +341126,9 @@
         "raw": "SAN-2000* OU SAN-1002",
         "tree": {
           "any": [
-            "SAN-2000",
+            {
+              "concomitant": "SAN-2000"
+            },
             "SAN-1002"
           ]
         }
@@ -340096,7 +341218,9 @@
         "raw": "SAN-2000* OU SAN-1002",
         "tree": {
           "any": [
-            "SAN-2000",
+            {
+              "concomitant": "SAN-2000"
+            },
             "SAN-1002"
           ]
         }
@@ -341026,7 +342150,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "BVG-7002*",
-        "tree": "BVG-7002"
+        "tree": {
+          "concomitant": "BVG-7002"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -348649,8 +349775,12 @@
         "raw": "SIN-1301* OU SIN-1300*",
         "tree": {
           "any": [
-            "SIN-1301",
-            "SIN-1300"
+            {
+              "concomitant": "SIN-1301"
+            },
+            {
+              "concomitant": "SIN-1300"
+            }
           ]
         }
       },
@@ -348859,8 +349989,12 @@
         "raw": "SIN-1300* OU SIN-1301*",
         "tree": {
           "any": [
-            "SIN-1300",
-            "SIN-1301"
+            {
+              "concomitant": "SIN-1300"
+            },
+            {
+              "concomitant": "SIN-1301"
+            }
           ]
         }
       },
@@ -348890,9 +350024,15 @@
         "raw": "MED-1920* ET SIN-1303* ET SIN-1311*",
         "tree": {
           "all": [
-            "MED-1920",
-            "SIN-1303",
-            "SIN-1311"
+            {
+              "concomitant": "MED-1920"
+            },
+            {
+              "concomitant": "SIN-1303"
+            },
+            {
+              "concomitant": "SIN-1311"
+            }
           ]
         }
       },
@@ -348915,7 +350055,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-1303*",
-        "tree": "SIN-1303"
+        "tree": {
+          "concomitant": "SIN-1303"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -348959,7 +350101,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-1308*",
-        "tree": "SIN-1308"
+        "tree": {
+          "concomitant": "SIN-1308"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -348980,7 +350124,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-1300*",
-        "tree": "SIN-1300"
+        "tree": {
+          "concomitant": "SIN-1300"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -349072,7 +350218,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-1302*",
-        "tree": "SIN-1302"
+        "tree": {
+          "concomitant": "SIN-1302"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -349211,7 +350359,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-1303*",
-        "tree": "SIN-1303"
+        "tree": {
+          "concomitant": "SIN-1303"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -349240,7 +350390,9 @@
         "tree": {
           "all": [
             "SIN-1300",
-            "SIN-1310"
+            {
+              "concomitant": "SIN-1310"
+            }
           ]
         }
       },
@@ -349351,7 +350503,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-1502*",
-        "tree": "SIN-1502"
+        "tree": {
+          "concomitant": "SIN-1502"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -349456,13 +350610,19 @@
             {
               "all": [
                 "SIN-1311",
-                "SIN-2300"
+                {
+                  "concomitant": "SIN-2300"
+                }
               ]
             },
             {
               "any": [
-                "SIN-2305",
-                "SIN-2307"
+                {
+                  "concomitant": "SIN-2305"
+                },
+                {
+                  "concomitant": "SIN-2307"
+                }
               ]
             }
           ]
@@ -349573,9 +350733,15 @@
             "SIN-1313",
             {
               "any": [
-                "SIN-2326",
-                "SIN-2328",
-                "SIN-2313"
+                {
+                  "concomitant": "SIN-2326"
+                },
+                {
+                  "concomitant": "SIN-2328"
+                },
+                {
+                  "concomitant": "SIN-2313"
+                }
               ]
             }
           ]
@@ -349653,8 +350819,12 @@
         "tree": {
           "all": [
             "SIN-1313",
-            "MED-2920",
-            "SIN-2307"
+            {
+              "concomitant": "MED-2920"
+            },
+            {
+              "concomitant": "SIN-2307"
+            }
           ]
         }
       },
@@ -349768,8 +350938,12 @@
         "raw": "SIN-2305* OU SIN-2307*",
         "tree": {
           "any": [
-            "SIN-2305",
-            "SIN-2307"
+            {
+              "concomitant": "SIN-2305"
+            },
+            {
+              "concomitant": "SIN-2307"
+            }
           ]
         }
       },
@@ -349850,7 +351024,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-2300*",
-        "tree": "SIN-2300"
+        "tree": {
+          "concomitant": "SIN-2300"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -349900,8 +351076,12 @@
         "tree": {
           "all": [
             "SIN-1313",
-            "MED-2920",
-            "SIN-2307"
+            {
+              "concomitant": "MED-2920"
+            },
+            {
+              "concomitant": "SIN-2307"
+            }
           ]
         }
       },
@@ -350016,8 +351196,12 @@
         "tree": {
           "all": [
             "SIN-1313",
-            "MED-2920",
-            "SIN-2307"
+            {
+              "concomitant": "MED-2920"
+            },
+            {
+              "concomitant": "SIN-2307"
+            }
           ]
         }
       },
@@ -350132,8 +351316,12 @@
         "tree": {
           "all": [
             "SIN-1313",
-            "MED-2920",
-            "SIN-2307"
+            {
+              "concomitant": "MED-2920"
+            },
+            {
+              "concomitant": "SIN-2307"
+            }
           ]
         }
       },
@@ -350248,8 +351436,12 @@
         "tree": {
           "all": [
             "SIN-1313",
-            "MED-2920",
-            "SIN-2307"
+            {
+              "concomitant": "MED-2920"
+            },
+            {
+              "concomitant": "SIN-2307"
+            }
           ]
         }
       },
@@ -350507,7 +351699,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-3003*",
-        "tree": "SIN-3003"
+        "tree": {
+          "concomitant": "SIN-3003"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -350549,7 +351743,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-2330*",
-        "tree": "SIN-2330"
+        "tree": {
+          "concomitant": "SIN-2330"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -350637,7 +351833,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-2323*",
-        "tree": "SIN-2323"
+        "tree": {
+          "concomitant": "SIN-2323"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -350691,8 +351889,12 @@
         "raw": "SIN-3301* ET SIN-3302*",
         "tree": {
           "all": [
-            "SIN-3301",
-            "SIN-3302"
+            {
+              "concomitant": "SIN-3301"
+            },
+            {
+              "concomitant": "SIN-3302"
+            }
           ]
         }
       },
@@ -350718,8 +351920,12 @@
         "tree": {
           "all": [
             "SIN-2313",
-            "SIN-3301",
-            "SIN-3302"
+            {
+              "concomitant": "SIN-3301"
+            },
+            {
+              "concomitant": "SIN-3302"
+            }
           ]
         }
       },
@@ -350865,7 +352071,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-2330*",
-        "tree": "SIN-2330"
+        "tree": {
+          "concomitant": "SIN-2330"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -350961,7 +352169,9 @@
                 "SIN-2323"
               ]
             },
-            "SIN-3311"
+            {
+              "concomitant": "SIN-3311"
+            }
           ]
         }
       },
@@ -351005,7 +352215,9 @@
         "tree": {
           "all": [
             "SIN-2313",
-            "SIN-3311"
+            {
+              "concomitant": "SIN-3311"
+            }
           ]
         }
       },
@@ -351165,7 +352377,9 @@
       "cycle": 1,
       "prerequisites": {
         "raw": "SIN-2323*",
-        "tree": "SIN-2323"
+        "tree": {
+          "concomitant": "SIN-2323"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -351222,8 +352436,12 @@
             "SIN-2317",
             {
               "any": [
-                "SIN-3301",
-                "SIN-3311"
+                {
+                  "concomitant": "SIN-3301"
+                },
+                {
+                  "concomitant": "SIN-3311"
+                }
               ]
             }
           ]
@@ -351347,8 +352565,12 @@
             "SIN-2313",
             {
               "any": [
-                "SIN-3301",
-                "SIN-3311"
+                {
+                  "concomitant": "SIN-3301"
+                },
+                {
+                  "concomitant": "SIN-3311"
+                }
               ]
             }
           ]
@@ -351971,7 +353193,9 @@
         "raw": "PAT-6907* ET PHA-6904 ET SIN-6036",
         "tree": {
           "all": [
-            "PAT-6907",
+            {
+              "concomitant": "PAT-6907"
+            },
             "PHA-6904",
             "SIN-6036"
           ]
@@ -352111,7 +353335,9 @@
             "SIN-6059",
             "SIN-6042",
             "SIN-6053",
-            "PAT-6908"
+            {
+              "concomitant": "PAT-6908"
+            }
           ]
         }
       },
@@ -353081,7 +354307,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "SIN-6044*",
-        "tree": "SIN-6044"
+        "tree": {
+          "concomitant": "SIN-6044"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -353107,7 +354335,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "SIN-6052*",
-        "tree": "SIN-6052"
+        "tree": {
+          "concomitant": "SIN-6052"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -355574,7 +356804,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "SIO-6035*",
-        "tree": "SIO-6035"
+        "tree": {
+          "concomitant": "SIO-6035"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -366627,7 +367859,9 @@
         "tree": {
           "any": [
             "MAT-1110",
-            "MAT-1910"
+            {
+              "concomitant": "MAT-1910"
+            }
           ]
         }
       },
@@ -370424,9 +371658,15 @@
         "raw": "SVS-2000* ET SVS-2001* ET SVS-2002*",
         "tree": {
           "all": [
-            "SVS-2000",
-            "SVS-2001",
-            "SVS-2002"
+            {
+              "concomitant": "SVS-2000"
+            },
+            {
+              "concomitant": "SVS-2001"
+            },
+            {
+              "concomitant": "SVS-2002"
+            }
           ]
         }
       },
@@ -370570,8 +371810,12 @@
         "raw": "FIS-4101* ET FIS-4102* ET SVS-2003 ET SVS-2004 ET SVS-2005 ET SVS-3100",
         "tree": {
           "all": [
-            "FIS-4101",
-            "FIS-4102",
+            {
+              "concomitant": "FIS-4101"
+            },
+            {
+              "concomitant": "FIS-4102"
+            },
             "SVS-2003",
             "SVS-2004",
             "SVS-2005",
@@ -370925,8 +372169,12 @@
         "raw": "FIS-4101* ET FIS-4102* ET SVS-2003 ET SVS-2004 ET SVS-2005 ET SVS-3100",
         "tree": {
           "all": [
-            "FIS-4101",
-            "FIS-4102",
+            {
+              "concomitant": "FIS-4101"
+            },
+            {
+              "concomitant": "FIS-4102"
+            },
             "SVS-2003",
             "SVS-2004",
             "SVS-2005",
@@ -371282,7 +372530,9 @@
         "tree": {
           "all": [
             "SVS-7000",
-            "SVS-7002",
+            {
+              "concomitant": "SVS-7002"
+            },
             "SVS-7012"
           ]
         }
@@ -371319,9 +372569,13 @@
         "raw": "SVS-6033* ET SVS-7000 ET SVS-7002* ET SVS-7012",
         "tree": {
           "all": [
-            "SVS-6033",
+            {
+              "concomitant": "SVS-6033"
+            },
             "SVS-7000",
-            "SVS-7002",
+            {
+              "concomitant": "SVS-7002"
+            },
             "SVS-7012"
           ]
         }
@@ -372802,7 +374056,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "TEN-7001*",
-        "tree": "TEN-7001"
+        "tree": {
+          "concomitant": "TEN-7001"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -373391,7 +374647,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "TEN-7006*",
-        "tree": "TEN-7006"
+        "tree": {
+          "concomitant": "TEN-7006"
+        }
       },
       "equivalents": [],
       "seasons": {
@@ -384625,7 +385883,9 @@
       "cycle": 2,
       "prerequisites": {
         "raw": "TRD-7006*",
-        "tree": "TRD-7006"
+        "tree": {
+          "concomitant": "TRD-7006"
+        }
       },
       "equivalents": [],
       "seasons": {

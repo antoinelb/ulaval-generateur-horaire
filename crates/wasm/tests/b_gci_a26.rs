@@ -50,6 +50,7 @@ fn b_gci_a26_places_the_33_base_courses_under_the_published_cap() {
         credit_cap: 17,
         concomitant: false,
         summers_open: false,
+        completed_sessions: 0,
         seed: Default::default(),
         max_nodes: Some(2_000_000),
         max_solutions: Some(1),

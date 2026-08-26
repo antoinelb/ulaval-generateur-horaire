@@ -898,15 +898,21 @@ pub struct ProgramVintages {
     pub other_local: Vec<LocalMark>,
 }
 
-// What the picker card says about a program imported by URL instead of
+// What the picker card says about a program imported locally instead of
 // shipped with the app — everything pre-worded here so `rsx!` only prints
 // fields (AP-5).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LocalMark {
-    pub badge: String, // « Ajouté localement »
+    pub badge: String,    // « Ajouté localement »
     pub semester: String, // the local millésime this mark is about
-    pub source_url: String,
-    pub provenance: String, // « Importé le … via corsproxy.io. »
+    // `Some` for a URL import (the card links to the source page); `None`
+    // for a file import — there is no live page to link to, only a chosen
+    // file's name, already folded into `provenance`
+    pub link: Option<String>,
+    // « Importé le … via corsproxy.io. » for a URL import, « Importé le …
+    // depuis le fichier … » for a file import, with a line naming the
+    // manual's cheminements types when one came with it
+    pub provenance: String,
     pub anomalies: Vec<String>,
 }
 
@@ -981,19 +987,31 @@ fn local_mark(
     code: &str,
     semester: &str,
 ) -> Option<LocalMark> {
+    use crate::import::ProgramOrigin;
+
     let entry = snapshot.local_programs.iter().find(|entry| {
         entry.program.code == code
             && entry.program.semester.to_string() == semester
     })?;
+    let date = human_date(&entry.imported_at);
+    let (link, provenance) = match entry.origin {
+        ProgramOrigin::Url => (
+            Some(entry.source_url.clone()),
+            format!("Importé le {date} via {}.", entry.proxy),
+        ),
+        ProgramOrigin::File => (
+            None,
+            format!(
+                "Importé le {date} depuis le fichier {}.",
+                entry.source_url
+            ),
+        ),
+    };
     Some(LocalMark {
         badge: "Ajouté localement".to_string(),
         semester: semester.to_string(),
-        source_url: entry.source_url.clone(),
-        provenance: format!(
-            "Importé le {} via {}.",
-            human_date(&entry.imported_at),
-            entry.proxy
-        ),
+        link,
+        provenance,
         anomalies: entry.anomalies.clone(),
     })
 }
@@ -1021,7 +1039,9 @@ fn human_date(iso: &str) -> String {
     let (year, month, day) = (date_parts[0], date_parts[1], date_parts[2]);
     let (hour, minute) = (time_parts[0], time_parts[1]);
     let well_formed = year.len() == 4
-        && [month, day, hour, minute].iter().all(|part| part.len() == 2)
+        && [month, day, hour, minute]
+            .iter()
+            .all(|part| part.len() == 2)
         && [year, month, day, hour, minute].iter().all(|part| {
             !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit())
         });
@@ -1321,6 +1341,23 @@ pub fn default_concentration(
         })
         .and_then(|program| program.concentrations.first())
         .map(|block| block.title.clone())
+}
+
+// The chosen vintage's own `credits_required` — never
+// `ProgramVintages::credits_required`, which names the newest vintage and
+// can differ from the one actually opened.
+pub fn program_credits_required(
+    snapshot: &Snapshot,
+    code: &str,
+    semester: &str,
+) -> Option<i64> {
+    snapshot
+        .programs
+        .iter()
+        .find(|program| {
+            program.code == code && program.semester.to_string() == semester
+        })
+        .map(|program| program.credits_required)
 }
 
 // the header's subtitle, the choice named whole (parité avec la version
@@ -1820,7 +1857,12 @@ fn base_row(snapshot: &Snapshot, plan: &Plan, code: &str) -> Row {
         };
     }
     let (held, held_credits) = acquired(snapshot, plan);
-    match prerequisites_met(course, &held, held_credits) {
+    match prerequisites_met(
+        course,
+        &held,
+        &std::collections::BTreeSet::new(),
+        held_credits,
+    ) {
         Ok(PrereqStatus::Met { assumed }) => Row {
             code: code.to_string(),
             title,
@@ -4570,6 +4612,24 @@ mod tests {
     }
 
     #[test]
+    fn program_credits_required_resolves_the_chosen_vintage() {
+        let snapshot = snapshot();
+        assert_eq!(
+            program_credits_required(&snapshot, "B-GEX", "A26"),
+            Some(120)
+        );
+        assert_eq!(
+            program_credits_required(&snapshot, "B-GEX", "H99"),
+            None,
+            "an unknown vintage resolves to nothing"
+        );
+        assert_eq!(
+            program_credits_required(&snapshot, "B-INCONNU", "A26"),
+            None
+        );
+    }
+
+    #[test]
     fn the_subtitle_names_the_chosen_program_concentration_and_profile() {
         let snapshot = snapshot();
         let mut plan = plan();
@@ -4687,7 +4747,10 @@ mod tests {
 
     // --- the local-import card (plan item 8) ------------------------------
 
-    fn local_program(code: &str, semester: &str) -> crate::import::LocalProgram {
+    fn local_program(
+        code: &str,
+        semester: &str,
+    ) -> crate::import::LocalProgram {
         let program: Program = serde_json::from_str(&format!(
             r#"{{"code":"{code}","slug":"slug","semester":"{semester}",
                  "title":"T","cycle":1,"credits_required":6,
@@ -4702,6 +4765,7 @@ mod tests {
             imported_at: "2026-08-24T12:00:00Z".to_string(),
             proxy: "corsproxy.io".to_string(),
             anomalies: vec!["texte non reconnu : « … »".to_string()],
+            origin: crate::import::ProgramOrigin::Url,
         }
     }
 
@@ -4750,8 +4814,9 @@ mod tests {
         assert_eq!(mark.badge, "Ajouté localement");
         assert_eq!(mark.semester, "A26");
         assert_eq!(
-            mark.source_url,
-            "https://www.ulaval.ca/etudes/programmes/slug"
+            mark.link.as_deref(),
+            Some("https://www.ulaval.ca/etudes/programmes/slug"),
+            "a URL import links to its source page"
         );
         assert_eq!(
             mark.provenance,
@@ -4761,6 +4826,31 @@ mod tests {
             mark.anomalies,
             vec!["texte non reconnu : « … »".to_string()],
             "anomalies are copied verbatim, never summarised away"
+        );
+    }
+
+    #[test]
+    fn a_file_local_program_names_the_file_without_a_link() {
+        let mut file_import = local_program("B-GLO", "A26");
+        file_import.origin = crate::import::ProgramOrigin::File;
+        file_import.source_url = "B-GLO-A26.json".to_string();
+        file_import.proxy = String::new();
+        let rows = program_vintages(&snapshot_of_with_local(
+            vec![bare_program("B-GEX", "A26", "Génie des eaux", 120)],
+            vec![file_import],
+        ));
+        let mark = rows
+            .iter()
+            .find(|row| row.code == "B-GLO")
+            .unwrap_or_else(|| panic!("B-GLO row missing"))
+            .local
+            .as_ref()
+            .unwrap_or_else(|| panic!("B-GLO should carry a mark"));
+        assert_eq!(mark.link, None, "a file import has no page to link to");
+        assert_eq!(
+            mark.provenance,
+            "Importé le 2026-08-24 12:00 UTC depuis le fichier \
+             B-GLO-A26.json."
         );
     }
 
@@ -4797,10 +4887,7 @@ mod tests {
 
     #[test]
     fn human_date_of_a_valid_iso_instant_is_absolute_and_marked_utc() {
-        assert_eq!(
-            human_date("2026-08-24T12:05:30Z"),
-            "2026-08-24 12:05 UTC"
-        );
+        assert_eq!(human_date("2026-08-24T12:05:30Z"), "2026-08-24 12:05 UTC");
     }
 
     #[test]
@@ -4809,23 +4896,11 @@ mod tests {
         assert_eq!(human_date("il y a 3 jours"), "il y a 3 jours");
         assert_eq!(human_date("2026-08-24"), "2026-08-24");
         // a `T` but no trailing `Z` (not UTC, or truncated)
-        assert_eq!(
-            human_date("2026-08-24T12:05:30"),
-            "2026-08-24T12:05:30"
-        );
+        assert_eq!(human_date("2026-08-24T12:05:30"), "2026-08-24T12:05:30");
         // wrong part counts on either side of `T`
-        assert_eq!(
-            human_date("2026-08T12:05:30Z"),
-            "2026-08T12:05:30Z"
-        );
-        assert_eq!(
-            human_date("2026-08-24T12:05Z"),
-            "2026-08-24T12:05Z"
-        );
+        assert_eq!(human_date("2026-08T12:05:30Z"), "2026-08T12:05:30Z");
+        assert_eq!(human_date("2026-08-24T12:05Z"), "2026-08-24T12:05Z");
         // right shape, non-numeric content
-        assert_eq!(
-            human_date("2026-08-XXT12:05:30Z"),
-            "2026-08-XXT12:05:30Z"
-        );
+        assert_eq!(human_date("2026-08-XXT12:05:30Z"), "2026-08-XXT12:05:30Z");
     }
 }

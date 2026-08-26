@@ -33,3 +33,6 @@ docs/livre/book/
 
 # Production bundle, re-created by `make ui-build`
 /_ui
+
+# Échantillon réel de relevé de notes : donnée personnelle, jamais livrable
+/exemple_capsule.html

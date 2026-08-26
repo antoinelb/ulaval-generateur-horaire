@@ -331,8 +331,12 @@ pub fn validate_new_code(
         _ => String::new(),
     };
     let warning =
-        match ulaval_scheduler_core::prerequisites_met(course, &held, credits)
-        {
+        match ulaval_scheduler_core::prerequisites_met(
+            course,
+            &held,
+            &std::collections::BTreeSet::new(),
+            credits,
+        ) {
             Ok(ulaval_scheduler_core::PrereqStatus::Unmet) => Some(format!(
                 "{code} ajouté, mais ses préalables ne semblent pas \
                  remplis{source}."
@@ -1004,11 +1008,14 @@ pub fn unplaced_codes(
     program: Option<&ulaval_scheduler_core::Program>,
 ) -> Result<Vec<String>, String> {
     let mut electives = plan.electives.clone();
+    // `pinned_sessions` chained for the same reason as `request_json`: a
+    // pin astray from `displayed_placement` must not kill the intake
     for code in plan
         .manual
         .values()
         .flatten()
         .chain(plan.displayed_placement.keys())
+        .chain(plan.pinned_sessions.keys())
     {
         if !electives.contains(code) {
             electives.push(code.clone());
@@ -1073,8 +1080,16 @@ fn request_json(
     }
     // every laid-out course rides with its Course: a pin without one is a
     // PlacementError — and a save from before a fix may hold a placement
-    // with no elective entry (the intake dedups against the program list)
-    for code in plan.displayed_placement.keys() {
+    // with no elective entry (the intake dedups against the program list).
+    // `pinned_sessions` is chained too: a stale solver answer adopted over
+    // a fresh import can leave a pin out of `displayed_placement`, and the
+    // pin must still ride with its Course (« BIO-1904 is passed or pinned
+    // but has no Course in the request », 2026-08-26)
+    for code in plan
+        .displayed_placement
+        .keys()
+        .chain(plan.pinned_sessions.keys())
+    {
         if !electives.contains(code) {
             electives.push(code.clone());
         }
@@ -1101,6 +1116,7 @@ fn request_json(
             "credit_cap": plan.credit_cap,
             "concomitant": plan.concomitant,
             "summers_open": plan.summers_open,
+            "completed_sessions": plan.completed_sessions,
             "seed": plan.displayed_placement,
             "max_nodes": max_nodes,
             "max_solutions": 1,
@@ -1219,6 +1235,11 @@ pub fn course_shortfall_messages(
 pub struct BlockedAnswer {
     pub code: String,
     pub reason: String,
+    // `unsatisfiable-prerequisites` names its proof: each entry one
+    // requirement, its interchangeable alternatives listed together —
+    // absent on the wire when the reason has no course to name
+    #[serde(default)]
+    pub missing: Vec<Vec<String>>,
 }
 
 pub fn parse_worker_answer(text: &str) -> Result<WorkerAnswer, String> {
@@ -1255,7 +1276,8 @@ pub fn completion_note(answer: &PlacementAnswer) -> Option<String> {
         ),
         "solution-cap" => Some(
             "D'autres agencements équivalents existent; celui proposé \
-             suit votre cheminement actuel du plus près."
+             suit votre cheminement actuel du plus près. Vous pouvez \
+             déplacer des cours en les glissant."
                 .to_string(),
         ),
         "complete"
@@ -1283,22 +1305,181 @@ pub fn left_out_line(
     code: &str,
     blocked: Option<&BlockedAnswer>,
     plan: &Plan,
+    snapshot: Option<&Snapshot>,
 ) -> String {
     match (blocked, plan.pinned_sessions.get(code)) {
         // the pre-screen's reason is more precise than the pin (a pin
         // toward a season the course never offers is an empty domain)
         (Some(blocked), _) => blocked_note(blocked),
-        (None, Some(&session)) => format!(
-            "{code} : la session {} que vous avez épinglée ne peut pas \
-             l'accueillir (plafond, horaire ou préalables) — dépinglez-le \
-             ou montez le plafond de crédits.",
-            session_label_of(plan, session)
-        ),
+        (None, Some(&session)) => {
+            pinned_refusal_line(code, session, plan, snapshot)
+        }
         (None, None) => format!(
             "{code} : aucune place ne restait — les autres cours et le \
              plafond remplissent déjà chaque session où il est offert."
         ),
     }
+}
+
+// Why the session the student pinned refuses the course, the constraint
+// named instead of the old « (plafond, horaire ou préalables) » triple:
+// the cap with its numbers, the season not offered, the missing
+// préalables by code — and « l'horaire » stays the honest remainder when
+// none of the checkable three is at fault (retour d'Antoine 2026-08-26 :
+// le message générique ne dit ni la cause ni où la trouver).
+fn pinned_refusal_line(
+    code: &str,
+    session: usize,
+    plan: &Plan,
+    snapshot: Option<&Snapshot>,
+) -> String {
+    let label = session_label_of(plan, session);
+    let causes = snapshot
+        .map(|snapshot| pinned_refusal_causes(code, session, plan, snapshot))
+        .unwrap_or_default();
+    if causes.is_empty() {
+        return format!(
+            "{code} : la session {label} que vous avez épinglée ne peut \
+             pas l'accueillir — aucune combinaison d'horaire n'y tient \
+             avec les autres cours. Dépinglez-le ou déplacez un cours de \
+             cette session."
+        );
+    }
+    format!(
+        "{code} : la session {label} que vous avez épinglée ne peut pas \
+         l'accueillir — {}. Dépinglez-le ou corrigez ce qui bloque.",
+        causes.join(" ; ")
+    )
+}
+
+// the checkable causes, in the order the student can act on them
+fn pinned_refusal_causes(
+    code: &str,
+    session: usize,
+    plan: &Plan,
+    snapshot: &Snapshot,
+) -> Vec<String> {
+    let Some(&index) = snapshot.by_code.get(code) else {
+        return Vec::new();
+    };
+    let course = &snapshot.courses[index];
+    let mut causes = Vec::new();
+    if let Some(season) = session_season(plan, session) {
+        if !course.seasons.contains_key(&season) {
+            causes.push(format!(
+                "il n'est pas offert en {}",
+                season_name(season)
+            ));
+        }
+    }
+    let load = session_load(plan, snapshot, session);
+    if load > plan.credit_cap {
+        causes.push(format!(
+            "le plafond de {} cr y est dépassé ({load} cr posés)",
+            plan.credit_cap
+        ));
+    }
+    let (satisfied, same_session, credits) =
+        acquired_before(code, session, plan, snapshot);
+    let missing = ulaval_scheduler_core::unmet_prerequisites(
+        course,
+        &satisfied,
+        &same_session,
+        credits,
+    )
+    .unwrap_or_default();
+    // a requirement the student *is* taking, only not early enough, is a
+    // different fact from one he holds nowhere — and a different fix
+    // (the répertoire's `*`, or the dérogation): naming them alike sent
+    // him hunting for a course already on his grid
+    let (concurrent, absent): (Vec<Vec<String>>, Vec<Vec<String>>) = missing
+        .into_iter()
+        .partition(|group| {
+            group.iter().all(|code| same_session.contains(code))
+        });
+    if !absent.is_empty() {
+        causes.push(format!(
+            "préalable manquant avant cette session : {}",
+            requirement_list(&absent)
+        ));
+    }
+    if !concurrent.is_empty() {
+        causes.push(format!(
+            "préalable suivi la même session sans concomitance permise : {}",
+            requirement_list(&concurrent)
+        ));
+    }
+    causes
+}
+
+fn session_season(
+    plan: &Plan,
+    session: usize,
+) -> Option<ulaval_scheduler_core::Season> {
+    ulaval_scheduler_core::horizon_sessions(
+        plan.start.season,
+        plan.study_sessions,
+    )
+    .get(session.wrapping_sub(1))
+    .copied()
+}
+
+fn season_name(season: ulaval_scheduler_core::Season) -> &'static str {
+    match season {
+        ulaval_scheduler_core::Season::Fall => "automne",
+        ulaval_scheduler_core::Season::Winter => "hiver",
+        ulaval_scheduler_core::Season::Summer => "été",
+    }
+}
+
+// the credits the displayed grid (plus the hand-added courses) put on one
+// session — what the cap judges
+fn session_load(plan: &Plan, snapshot: &Snapshot, session: usize) -> u32 {
+    crate::state::session_codes(plan, session)
+        .iter()
+        .filter_map(|code| snapshot.by_code.get(code))
+        .map(|&index| snapshot.courses[index].credits.planning())
+        .sum()
+}
+
+// what the student holds strictly before the session — earlier displayed
+// courses and the credited codes; the same session's courses join only
+// under the concomitance toggle, mirroring the solver's reading
+// what counts as acquired for a course judged at `session`: strictly
+// before (plus the credited), what shares the session — which only a
+// starred leaf may use — and the credits earned strictly before
+fn acquired_before(
+    code: &str,
+    session: usize,
+    plan: &Plan,
+    snapshot: &Snapshot,
+) -> (BTreeSet<String>, BTreeSet<String>, u32) {
+    let mut satisfied: BTreeSet<String> = plan
+        .displayed_placement
+        .iter()
+        .filter(|(_, &seated)| seated < session)
+        .map(|(held, _)| held.clone())
+        .collect();
+    satisfied.extend(plan.credited.iter().cloned());
+    // a credits threshold counts strictly before the session, so the sum
+    // stops here even when the concomitant codes join `satisfied` below
+    let credits = satisfied
+        .iter()
+        .filter_map(|held| snapshot.by_code.get(held))
+        .map(|&index| snapshot.courses[index].credits.planning())
+        .sum();
+    let same_session: BTreeSet<String> = plan
+        .displayed_placement
+        .iter()
+        .filter(|(held, &seated)| seated == session && held.as_str() != code)
+        .map(|(held, _)| held.clone())
+        .collect();
+    // the global toggle is a blanket dérogation now: it grants every leaf
+    // what the répertoire's `*` grants a starred one
+    if plan.concomitant {
+        satisfied.extend(same_session.iter().cloned());
+    }
+    (satisfied, same_session, credits)
 }
 
 // The left-out entries whose cause has disappeared: a code no longer
@@ -1350,10 +1531,20 @@ pub fn blocked_note(blocked: &BlockedAnswer) -> String {
              il est offert.",
             blocked.code
         ),
+        "unsatisfiable-prerequisites" if !blocked.missing.is_empty() => {
+            format!(
+                "{} : préalable manquant — il faudrait {}, ni acquis ni \
+                 prévu au cheminement. Ajoutez-le aux cours à option, ou \
+                 réglez-le par entente avec la direction.",
+                blocked.code,
+                requirement_list(&blocked.missing)
+            )
+        }
         "unsatisfiable-prerequisites" => format!(
-            "{} : un de ses préalables n'est dans aucune session ni \
-             acquis — ajoutez le cours préalable manquant aux cours à \
-             option, ou réglez-le par entente avec la direction.",
+            "{} : ses préalables exigent un seuil de crédits qu'aucun \
+             agencement ne peut atteindre avant lui — ajoutez des cours \
+             ou des sessions avant, ou réglez-le par entente avec la \
+             direction.",
             blocked.code
         ),
         "stage-without-summer" => format!(
@@ -1363,6 +1554,17 @@ pub fn blocked_note(blocked: &BlockedAnswer) -> String {
         ),
         other => format!("{} : {other}", blocked.code),
     }
+}
+
+// « GCI-1011 » / « ECN-2901 ou ECN-4901 » / « GCI-1011, et ECN-2901 ou
+// ECN-4901 » — every missing requirement in one breath, the alternatives
+// of a same requirement joined by « ou »
+fn requirement_list(missing: &[Vec<String>]) -> String {
+    missing
+        .iter()
+        .map(|alternatives| alternatives.join(" ou "))
+        .collect::<Vec<_>>()
+        .join(", et ")
 }
 
 #[cfg(test)]
@@ -1412,6 +1614,34 @@ mod worker_tests {
         // the chosen scopes ride with the ask (décision 2026-08-19)
         assert_eq!(query["concentration"], "Génie urbain");
         assert_eq!(query["profile"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn a_pin_astray_from_the_displayed_placement_still_rides_its_course() {
+        // the divergent state a stale adopted answer leaves behind (the
+        // BIO-1904 bug, 2026-08-26): pinned but no longer displayed — the
+        // request must still carry the code as an elective, and the
+        // intake must not die on it
+        let mut plan = Plan::default();
+        plan.pinned_sessions.insert("GEX-1000".to_string(), 1);
+        let request = place_request(9, &plan, None, PROPOSE_MAX_NODES);
+        let value: serde_json::Value =
+            serde_json::from_str(&request).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(
+            value["query"]["electives"],
+            serde_json::json!(["GEX-1000"]),
+            "the astray pin rides as an elective, so its Course rides too"
+        );
+        assert_eq!(value["query"]["pinned"]["GEX-1000"], 1);
+
+        let snapshot = snapshot();
+        let unplaced = unplaced_codes(&snapshot, &plan, None)
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(
+            unplaced.contains(&"GEX-1000".to_string()),
+            "not displayed: the code still floats, so auto-propose fires \
+             and the adopted answer heals the display"
+        );
     }
 
     #[test]
@@ -1849,20 +2079,22 @@ mod worker_tests {
         let mut plan = Plan::default();
         plan.pinned_sessions.insert("ANL-1010".to_string(), 1);
         // a pinned course names the very session the student chose —
-        // never « chaque session » when he chose exactly one
-        let line = left_out_line("ANL-1010", None, &plan);
+        // never « chaque session » when he chose exactly one; without a
+        // snapshot to diagnose against, the honest remainder stands
+        let line = left_out_line("ANL-1010", None, &plan, None);
         assert!(line.contains("que vous avez épinglée"), "{line}");
         assert!(line.starts_with("ANL-1010"), "{line}");
         // the one only the search could rule out gets the honest default
         // rather than an invented reason
-        let line = left_out_line("MAT-0130", None, &plan);
+        let line = left_out_line("MAT-0130", None, &plan, None);
         assert!(line.contains("aucune place ne restait"), "{line}");
         // the pre-screen's reason is more precise than the pin
         let blocked = BlockedAnswer {
             code: "ANL-1010".to_string(),
             reason: "empty-domain".to_string(),
+            missing: Vec::new(),
         };
-        let line = left_out_line("ANL-1010", Some(&blocked), &plan);
+        let line = left_out_line("ANL-1010", Some(&blocked), &plan, None);
         assert!(line.contains("aucune session de l'horizon"), "{line}");
         // nothing placed at all is a verdict of its own, never a silent
         // empty grid — the étés were already escalated, so the note names
@@ -1905,6 +2137,129 @@ mod worker_tests {
     }
 
     #[test]
+    fn a_pinned_refusal_names_the_checkable_causes() {
+        // a dedicated catalogue: GEX-2000 needs an unknown code, HIV-1000
+        // is winter-only — enough to trip each checkable cause on demand
+        let courses = r#"{"courses":[
+          {"code":"GEX-1000","title":"T","credits":3,"cycle":1,
+           "prerequisites":null,"equivalents":[],
+           "seasons":{"fall":{"last_offered":2026,"options":null}}},
+          {"code":"GEX-2000","title":"T","credits":4,"cycle":1,
+           "prerequisites":{"raw":"GEX-1000 ET GEX-9999",
+                            "tree":{"all":["GEX-1000","GEX-9999"]}},
+           "equivalents":[],
+           "seasons":{"fall":{"last_offered":2026,"options":null}}},
+          {"code":"HIV-1000","title":"T","credits":3,"cycle":1,
+           "prerequisites":null,"equivalents":[],
+           "seasons":{"winter":{"last_offered":2026,"options":null}}}
+        ]}"#;
+        let snapshot = crate::data::parse_data(
+            &crate::data::RawData {
+                courses: courses.to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
+                programs: Vec::new(),
+            },
+            Vec::new(),
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+
+        // session 1 is an automne (Plan::default starts Fall): the
+        // winter-only course names the season
+        let mut plan = Plan {
+            credit_cap: 3,
+            ..Plan::default()
+        };
+        plan.pinned_sessions.insert("HIV-1000".to_string(), 1);
+        plan.displayed_placement.insert("HIV-1000".to_string(), 1);
+        let line = left_out_line("HIV-1000", None, &plan, Some(&snapshot));
+        assert!(line.contains("pas offert en automne"), "{line}");
+
+        // over-cap and missing prerequisite, both named with their facts
+        let mut plan = Plan {
+            credit_cap: 3,
+            ..Plan::default()
+        };
+        plan.displayed_placement.insert("GEX-1000".to_string(), 1);
+        plan.pinned_sessions.insert("GEX-2000".to_string(), 1);
+        plan.displayed_placement.insert("GEX-2000".to_string(), 1);
+        let line = left_out_line("GEX-2000", None, &plan, Some(&snapshot));
+        assert!(line.contains("plafond de 3 cr"), "{line}");
+        assert!(line.contains("7 cr posés"), "{line}");
+        // GEX-1000 sits in the very session judged and GEX-9999 nowhere:
+        // two different facts, named apart
+        assert!(
+            line.contains("préalable manquant avant cette session : GEX-9999"),
+            "{line}"
+        );
+        assert!(
+            line.contains(
+                "préalable suivi la même session sans concomitance \
+                 permise : GEX-1000"
+            ),
+            "{line}"
+        );
+
+        // nothing checkable at fault: the honest remainder is the horaire
+        let mut plan = Plan::default();
+        plan.pinned_sessions.insert("GEX-1000".to_string(), 1);
+        plan.displayed_placement.insert("GEX-1000".to_string(), 1);
+        let line = left_out_line("GEX-1000", None, &plan, Some(&snapshot));
+        assert!(line.contains("aucune combinaison d'horaire"), "{line}");
+
+        // a code the snapshot does not carry falls back the same way
+        let mut plan = Plan::default();
+        plan.pinned_sessions.insert("ZZZ-9999".to_string(), 1);
+        let line = left_out_line("ZZZ-9999", None, &plan, Some(&snapshot));
+        assert!(line.contains("aucune combinaison d'horaire"), "{line}");
+
+        // every season speaks its own name: session 2 is an hiver,
+        // session 3 an été (the horizon always carries them)
+        let mut plan = Plan::default();
+        plan.pinned_sessions.insert("GEX-1000".to_string(), 2);
+        plan.displayed_placement.insert("GEX-1000".to_string(), 2);
+        let line = left_out_line("GEX-1000", None, &plan, Some(&snapshot));
+        assert!(line.contains("pas offert en hiver"), "{line}");
+        let mut plan = Plan::default();
+        plan.pinned_sessions.insert("GEX-1000".to_string(), 3);
+        plan.displayed_placement.insert("GEX-1000".to_string(), 3);
+        let line = left_out_line("GEX-1000", None, &plan, Some(&snapshot));
+        assert!(line.contains("pas offert en été"), "{line}");
+
+        // a prerequisite seated a session *earlier* is held (its credits
+        // counted): only the truly unknown GEX-9999 stays blamed
+        let mut plan = Plan::default();
+        plan.displayed_placement.insert("GEX-1000".to_string(), 1);
+        plan.pinned_sessions.insert("GEX-2000".to_string(), 2);
+        plan.displayed_placement.insert("GEX-2000".to_string(), 2);
+        let line = left_out_line("GEX-2000", None, &plan, Some(&snapshot));
+        assert!(!line.contains("GEX-1000, et"), "{line}");
+        assert!(line.contains("GEX-9999"), "{line}");
+
+        // a pin beyond the horizon has no season to accuse — the honest
+        // remainder stands (a corrupt save, not a reachable state)
+        let mut plan = Plan::default();
+        plan.pinned_sessions.insert("GEX-1000".to_string(), 99);
+        let line = left_out_line("GEX-1000", None, &plan, Some(&snapshot));
+        assert!(line.contains("aucune combinaison d'horaire"), "{line}");
+
+        // the concomitance toggle reads a same-session prerequisite as
+        // held — mirroring the solver: GEX-1000 leaves the blame, the
+        // truly unknown GEX-9999 stays
+        let mut plan = Plan {
+            concomitant: true,
+            ..Plan::default()
+        };
+        plan.displayed_placement.insert("GEX-1000".to_string(), 1);
+        plan.pinned_sessions.insert("GEX-2000".to_string(), 1);
+        plan.displayed_placement.insert("GEX-2000".to_string(), 1);
+        let line = left_out_line("GEX-2000", None, &plan, Some(&snapshot));
+        assert!(!line.contains("GEX-1000, et"), "{line}");
+        assert!(line.contains("GEX-9999"), "{line}");
+    }
+
+    #[test]
     fn completion_and_blocked_speak_french() {
         let answer = |completion: &str, solutions: usize| PlacementAnswer {
             completion: completion.to_string(),
@@ -1936,11 +2291,28 @@ mod worker_tests {
             blocked_note(&BlockedAnswer {
                 code: "GEX-1580".to_string(),
                 reason: reason.to_string(),
+                missing: Vec::new(),
             })
         };
         assert!(note("empty-domain").contains("aucune session"));
         assert!(note("unsatisfiable-prerequisites").contains("préalables"));
         assert!(note("stage-without-summer").contains("été"));
+        // the proof named: alternatives joined by « ou », requirements by
+        // « , et » (« GEX-3333 : préalable manquant — il faudrait … »,
+        // retour d'Antoine 2026-08-26)
+        let named = blocked_note(&BlockedAnswer {
+            code: "GEX-3333".to_string(),
+            reason: "unsatisfiable-prerequisites".to_string(),
+            missing: vec![
+                vec!["ECN-2901".to_string(), "ECN-4901".to_string()],
+                vec!["GCI-1011".to_string()],
+            ],
+        });
+        assert!(
+            named.contains("ECN-2901 ou ECN-4901, et GCI-1011"),
+            "{named}"
+        );
+        assert!(named.contains("préalable manquant"), "{named}");
         assert!(note("autre-chose").contains("autre-chose"));
     }
 }

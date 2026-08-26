@@ -1,6 +1,7 @@
 pub mod catalogue;
 pub mod course;
 pub mod program;
+pub mod transcript;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {

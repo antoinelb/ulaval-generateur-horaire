@@ -19,7 +19,7 @@ const report = generate_organigramme({
   start: "fall",                  // saison de la première session
   study_sessions: 8,              // l'alternance automne/hiver seulement
   credit_cap: 17,                 // plafond de crédits par session
-  concomitant: false,             // préalables concomitants tolérés ?
+  concomitant: false,             // dérogation : tolérer la concomitance même sans l'étoile
   summers_open: false,            // les étés acceptent-ils des cours réguliers ?
 });
 ```
@@ -56,6 +56,7 @@ Un été fermé (`summers_open: false`) n'accepte que les stages et les cours é
 - `solutions[i].assumed` : les opérandes de préalables que le verdict a dû présumer satisfaits (texte libre ou code inconnu du snapshot) — remontés, jamais imposés.
 - `solutions[i].left_out` : les cours que ce placement n'a pas pu asseoir. Vide sauf en **repli au mieux** (voir plus bas) — ce qui est placé respecte toujours toutes les contraintes.
 - `blocked` : les cours prouvés implaçables *avant* la recherche, avec leur raison (`empty-domain`, `unsatisfiable-prerequisites`, `stage-without-summer`) — une liste non vide est une preuve d'infaisabilité qui nomme ses coupables.
+- `blocked[i].missing` : présent seulement pour `unsatisfiable-prerequisites` quand la preuve a des cours à nommer — chaque entrée est une exigence insatisfaisable, ses alternatives interchangeables ensemble (`[["ECN-2901", "ECN-4901"]]` se lit « ECN-2901 ou ECN-4901 ») ; absent quand un seuil de crédits seul coule l'arbre.
 - `set_aside` : les codes exigés par le programme mais absents du snapshot de cours — écartés et remontés, jamais perdus en silence.
 - `summers_forced` : présent seulement quand l'escalade (ci-dessous) a assis des cours réguliers dans un été que `summers_open: false` fermait — les nommer permet d'expliquer au lieu de changer le réglage en douce. Un stage ou un cours épinglé n'y figure jamais : l'été est leur droit propre.
 - `coverage` : présent seulement pour `verify_organigramme` avec un `program` — le rapport de couverture des règles (voir [Programmes, règles et couverture](../domaine/programmes.md)).

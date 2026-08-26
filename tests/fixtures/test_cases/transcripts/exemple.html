@@ -1,0 +1,593 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd">
+<HTML lang="en">
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" name="Cache-Control" content="no-cache">
+<meta http-equiv="Cache-Control" name="Cache-Control" content="no-cache">
+<LINK REL="stylesheet" HREF="/css/y_web_defaultapp.css" TYPE="text/css">
+<LINK REL="stylesheet" HREF="/css/y_web_defaultprint.css " TYPE="text/css" media="print">
+<title>Relevé de notes | Capsule | Université Laval</title>
+<meta http-equiv="Content-Script-Type" name="Default_Script_Language" content="text/javascript">
+<SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+<!-- Hide JavaScript from older browsers 
+window.onunload = function() {submitcount=0;}
+var submitcount=0;
+function checkSubmit() {
+if (submitcount == 0)
+   {
+   submitcount++;
+   return true;
+   }
+else
+   {
+alert("Vos modifications ont déjà été soumises.");
+   return false;
+   }
+}
+//  End script hiding -->
+</SCRIPT>
+<SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+<!-- Hide JavaScript from older browsers 
+//  Function to open a window
+function windowOpen(window_url) {
+   helpWin = window.open(window_url,'','toolbar=yes,status=no,scrollbars=yes,menubar=yes,resizable=yes,directories=no,location=no,width=350,height=400');
+   if (document.images) { 
+       if (helpWin) helpWin.focus()
+   }
+}
+//  End script hiding -->
+</SCRIPT>
+</head>
+<body>
+<div class="headerwrapperdiv">
+<div class="pageheaderdiv1">
+<a href="#main_content" onMouseover="window.status='Aller au sommaire principal'; return true" onMouseout="window.status=''; return true" OnFocus="window.status='Aller au sommaire principal'; return true" onBlur="window.status=''; return true" class="skiplinks">Aller au sommaire principal</a>
+<h1>Capsule Université Laval</h1></DIV><div class="headerlinksdiv">
+<SPAN class="pageheaderlinks2">
+<map name="Liens_de_navigation_de_module_H" title="Liens de navigation de module">
+<p>
+<a href="#skip_Liens_de_navigation_de_module_H" onMouseover="window.status='Skip Liens de navigation de module'; return true" onMouseout="window.status=''; return true" onFocus="window.status='Skip Liens de navigation de module'; return true" onBlur="window.status=''; return true"  class="skiplinks">Skip Liens de navigation de module</a>
+<table  CLASS="plaintable" SUMMARY="Table principale pour afficher les éléments d'onglet."
+                            WIDTH="100%" cellSpacing=0 cellPadding=0 border=0
+
+>
+<tr>
+<TD CLASS="pldefault">
+<table  CLASS="plaintable" SUMMARY="Ce tableau affiche les éléments d'onglet."
+                   cellSpacing=0 cellPadding=0 border=0>
+<tr>
+<td class="taboff" height=22>
+<a href="/pls/etpr/twbkwbis.P_GenMenu?name=bmenu.P_GenMnu" onMouseover="window.status='Renseignements personnels sur l\'étudiant'; return true" onMouseout="window.status=''; return true" onFocus="window.status='Renseignements personnels sur l\'étudiant'; return true" onBlur="window.status=''; return true" >Renseignements personnels</a>
+</TD>
+<TD class="bgtaboff" height=22 vAlign="top" align="right">
+<img src="/wtlgifs/web_tab_corner_right.gif" alt="Coin droit d'onglet" CLASS="headerImg" TITLE="Coin droit d'onglet"  NAME="web_tab_corner_right" HSPACE=0 VSPACE=0 BORDER=0 HEIGHT=20 WIDTH=8 />
+</TD>
+<td class="tabon"  height=22>
+<a href="/pls/etpr/twbkwbis.P_GenMenu?name=bmenu.P_StuMainMnu" onMouseover="window.status='Renseignements sur lesétudes'; return true" onMouseout="window.status=''; return true" onFocus="window.status='Renseignements sur lesétudes'; return true" onBlur="window.status=''; return true" >Renseignements sur les études</a>
+</TD>
+<TD class="bgtabon"  height=22 vAlign="top" align="right">
+<img src="/wtlgifs/web_tab_corner_right.gif" alt="Coin droit d'onglet" CLASS="headerImg" TITLE="Coin droit d'onglet"  NAME="web_tab_corner_right" HSPACE=0 VSPACE=0 BORDER=0 HEIGHT=20 WIDTH=8 />
+</TD>
+<td class="taboff" height=22>
+<a href="/pls/etpr/twbkwbis.P_GenMenu?name=bmenu.P_FacMainMnu" onMouseover="window.status='Gestionnaires des études'; return true" onMouseout="window.status=''; return true" onFocus="window.status='Gestionnaires des études'; return true" onBlur="window.status=''; return true" >Gestionnaires des études et professeurs</a>
+</TD>
+<TD class="bgtaboff" height=22 vAlign="top" align="right">
+<img src="/wtlgifs/web_tab_corner_right.gif" alt="Coin droit d'onglet" CLASS="headerImg" TITLE="Coin droit d'onglet"  NAME="web_tab_corner_right" HSPACE=0 VSPACE=0 BORDER=0 HEIGHT=20 WIDTH=8 />
+</TD>
+</tr>
+</table>
+</TD>
+</tr>
+<tr>
+<TD class="bgtabon" width="100%" colSpan=2><img src="/wtlgifs/web_transparent.gif" alt="Image transparente" CLASS="headerImg" TITLE="Image transparente"  NAME="web_transparent" HSPACE=0 VSPACE=0 BORDER=0 HEIGHT=3 WIDTH=10 /></TD></tr></table>
+</map>
+</SPAN>
+<a name="skip_Liens_de_navigation_de_module_H"></a>
+</DIV>
+<table  CLASS="plaintable" SUMMARY="Cette table affiche des éléments de menu et la zone de texte de rechercher de Banner." 
+         WIDTH="100%">
+<tr>
+<TD CLASS="pldefault">
+<div class="headerlinksdiv2">
+<form action="/pls/etpr/twbksrch.P_ShowResults" method="post">
+Rechercher
+<SPAN class="fieldlabeltextinvisible"><LABEL for=keyword_in_id><SPAN class="fieldlabeltext">Rechercher</SPAN></LABEL></SPAN>
+<input type="text" name="KEYWRD_IN" size="20" maxlength="65" ID="keyword_in_id" />
+<input type="submit" value="OK" />
+</form>
+</div>
+</TD>
+<TD CLASS="pldefault"><p class="rightaligntext" /p>
+<SPAN class="pageheaderlinks">
+<a href="twbkwbis.P_GenMenu?name=bmenu.P_StuMainMnu"  class="submenulinktext2" id="ssbbackurl">RETOUR AU MENU</a>
+|
+<a href="/pls/etpr/twbksite.P_DispSiteMap?menu_name_in=bmenu.P_MainMnu&amp;depth_in=2&amp;columns_in=3" accesskey="2" class="submenulinktext2">PLAN DU SITE</a>
+|
+<a href="/pls/etpr/twbkfrmt.P_DispHelp?pagename_in=bwskotrn.P_ViewTran" accesskey="H" onClick="popup = window.open('/pls/etpr/twbkfrmt.P_DispHelp?pagename_in=bwskotrn.P_ViewTran', 'PopupPage','height=500,width=450,scrollbars=yes,resizable=yes'); return false" target="_blank" onMouseOver="window.status='';  return true" onMouseOut="window.status=''; return true"onFocus="window.status='';  return true" onBlur="window.status=''; return true"  class="submenulinktext2">AIDE</a>
+|
+<a href="twbkwbis.P_Logout" accesskey="3" class="submenulinktext2">QUITTER</a>
+</span>
+</TD>
+</tr>
+</table>
+</DIV>
+<div class="pagetitlediv">
+<table  CLASS="plaintable" SUMMARY="Ce tableau affiche le titre et les affichages des en-têtes statiques." 
+   WIDTH="100%">
+<tr>
+<TD CLASS="pldefault">
+<h2>Relevé de notes</h2>
+</TD>
+<TD CLASS="pldefault">
+&nbsp;
+</TD>
+<TD CLASS="pldefault"><p class="rightaligntext" /p>
+<div class="staticheaders">
+Demandeur :  Prénom Nom<br>
+2026/08/25 16:23<br>
+</div>
+</TD>
+</tr>
+<tr>
+<TD class="bg3" width="100%" colSpan=3><img src="/wtlgifs/web_transparent.gif" alt="Image transparente" CLASS="headerImg" TITLE="Image transparente"  NAME="web_transparent" HSPACE=0 VSPACE=0 BORDER=0 HEIGHT=3 WIDTH=10 /></TD>
+</tr>
+</table>
+<a name="main_content"></a>
+</DIV>
+<div class="pagebodydiv">
+<!--  ** END OF twbkwbis.P_OpenDoc **  -->
+<div class="infotextdiv"><table  CLASS="infotexttable" SUMMARY="Cette table contient des informations utiles à la compréhension du contenu et de la fonctionnalité de cette page. Ces informations peuvent être de brèves instructions, une description de messages d'erreur ou toute autre information spécifique."><tr><td CLASS="indefault">&nbsp;</td><td CLASS="indefault"><SPAN class="infotext"> Le présent relevé n'est pas officiel.<p> <b>Remarque</b> : Le relevé de notes par session n'est plus imprimé systématiquement. Vous pouvez commander une version officielle sur <a href="https://monportail.ulaval.ca/documentsofficiels/commandedocuments/releve" target=_blank><font color="#0000FF">monPortail</font></a>.<p></SPAN></td></tr></table></DIV><div class="infotextdiv"><table  CLASS="infotexttable" SUMMARY="Cette table contient des informations utiles à la compréhension du contenu et de la fonctionnalité de cette page. Ces informations peuvent être de brèves instructions, une description de messages d'erreur ou toute autre information spécifique."><tr><td CLASS="indefault"><img src="/wtlgifs/web_caution_cascade.png" alt="Avertissement" CLASS="headerImg" TITLE="Avertissement"  NAME="web_caution" HSPACE=0 VSPACE=0 BORDER=0 HEIGHT=12 WIDTH=13 /></td><td CLASS="indefault"><SPAN class="infotext"><b>Avertissement - Relevé de notes officiel</b><p>
+Avant de commander votre relevé de notes officiel, vérifiez au préalable que l’information qui s’y trouve est exacte. Si vous constatez une erreur, veuillez écrire au <A HREF="mailto:reg@reg.ulaval.ca"><font color="#0000FF">Bureau du registraire</font></A>.<p></SPAN></td></tr></table></DIV><p><div class="infotextdiv"><table  CLASS="infotexttable" SUMMARY="Cette table contient des informations utiles à la compréhension du contenu et de la fonctionnalité de cette page. Ces informations peuvent être de brèves instructions, une description de messages d'erreur ou toute autre information spécifique."><tr><td CLASS="indefault"><img src="/wtlgifs/web_help.gif" align="middle" alt="Obtenir de l'aide sur cette page. Ce lien va ouvrir une nouvelle fenêtre." CLASS="headerImg" TITLE="Obtenir de l'aide sur cette page. Ce lien va ouvrir une nouvelle fenêtre."  NAME="web_help" HSPACE=0 VSPACE=0 BORDER=0 HEIGHT=28 WIDTH=28 /></td><td CLASS="indefault"><SPAN class="infotext">Besoin d'explications sur le relevé de notes? Cliquez <a href="http://www.ulaval.ca/etudiants-actuels/etudes/releve-de-notes" target=_blank><font color="#0000FF"><b>ici</b></font></a>.</SPAN></td></tr></table><p></DIV>
+<a name="top">
+</A>
+<a href="#trans_credit">Reconnaissance des acquis</a>
+&nbsp&nbsp
+<a href="#insti_credit">Crédits de l'Université Laval</a>
+&nbsp&nbsp
+<a href="#trans_totals">Bilan</a>
+&nbsp&nbsp
+<a href="#crses_progress">Crédits en cours</a>
+<p class="whitespace1">
+<style>tr.droite_a_gauche td p.rightaligntext {text-align: left;} .hidden {display:none;}</style>
+<table  CLASS="datadisplaytable" SUMMARY="Cette table récapitule
+                                   l'historique universitaire de l'utilisateur
+                                   selon les catégories suivantes:
+                                   Informations sur le diplôme, Équivalence
+                                   par institution, Crédits d'institution
+                                   Totaux des relevés de notes
+                                   Cours à compléter" WIDTH="80%"><caption class="captiontext">Données du relevé de notes</caption>
+<tr>
+<th colspan="12" CLASS="ddtitle" scope="colgroup" >INFORMATIONS ÉTUDIANTES</th>
+</tr>
+<tr>
+<th colspan="3" CLASS="ddlabel" scope="row" >Nom:</th>
+<td colspan="10" CLASS="dddefault">Prénom Nom</td>
+</tr>
+<tr>
+<th colspan="3" CLASS="ddlabel" scope="row" >Jour de naissance:</th>
+<td colspan="10" CLASS="dddefault">01 JANVIER    </td>
+</tr>
+<tr>
+<th colspan="3" CLASS="ddlabel" scope="row" >No de dossier:</th>
+<td colspan="10" CLASS="dddefault">000000000</td>
+</tr>
+<tr>
+<td colspan="12" CLASS="ddseparator">&nbsp;</td>
+</tr>
+<tr>
+</tr>
+<tr>
+<td colspan="12" CLASS="ddseparator">&nbsp;</td>
+</tr>
+<tr>
+<th colspan="12" CLASS="ddtitle" scope="colgroup" >PROGRAMME(S) FRÉQUENTÉ(S)</th>
+</tr>
+<tr>
+</tr>
+<tr>
+<tr>
+<th colspan="3" CLASS="ddlabel" scope="row" >Programme:</th>
+<td colspan="10" CLASS="dddefault">Baccalauréat en génie des eaux</td>
+<td colspan="10" CLASS="dddefault">&nbsp;</td>
+<tr>
+<th colspan="3" CLASS="ddlabel" scope="row" >Fréquentation:</th>
+<td colspan="4" CLASS="dddefault">Automne 2024 à ce jour</td>
+</tr>
+</tr>
+<tr>
+<th colspan="2" CLASS="ddlabel" scope="row" >En cours</th>
+<td colspan="3" CLASS="dddefault">Bachelier en ingénierie (B. Ing.)</td>
+<td CLASS="dddefault">&nbsp;</td>
+</tr>
+<tr>
+<td colspan="12" CLASS="dddefault">&nbsp;</td>
+</tr>
+<tr>
+</tr>
+<tr>
+<tr>
+<th colspan="3" CLASS="ddlabel" scope="row" >Programme:</th>
+<td colspan="10" CLASS="dddefault">Microprogramme de formation en ingénierie en milieu pratique 1 - génie des eaux</td>
+<td colspan="10" CLASS="dddefault">&nbsp;</td>
+<tr>
+<th colspan="3" CLASS="ddlabel" scope="row" >Fréquentation:</th>
+<td colspan="4" CLASS="dddefault">Été 2025</td>
+</tr>
+</tr>
+<tr>
+<th colspan="2" CLASS="ddlabel" scope="row" >Diplôme obtenu</th>
+<td colspan="3" CLASS="dddefault">Attestation de premier cycle</td>
+<th colspan="2" CLASS="ddlabel" scope="row" >Date du diplôme:</th>
+<td CLASS="dddefault">2025/10/31</td>
+<th CLASS="ddlabel" scope="row" >Crédits exigés:</th>
+<td CLASS="dddefault">9 crédits</td>
+<th CLASS="ddlabel" scope="row" >Moyenne de diplomation:</th>
+<td colspan="3" CLASS="dddefault">Sans objet</td>
+</tr>
+<tr>
+<td colspan="12" CLASS="dddefault">&nbsp;</td>
+</tr>
+<tr>
+</tr>
+<tr>
+<tr>
+<th colspan="3" CLASS="ddlabel" scope="row" >Programme:</th>
+<td colspan="10" CLASS="dddefault">Microprogramme de formation en ingénierie en milieu pratique 2 - génie des eaux</td>
+<td colspan="10" CLASS="dddefault">&nbsp;</td>
+<tr>
+<th colspan="3" CLASS="ddlabel" scope="row" >Fréquentation:</th>
+<td colspan="4" CLASS="dddefault">Été 2026 à ce jour</td>
+</tr>
+</tr>
+<tr>
+<th colspan="2" CLASS="ddlabel" scope="row" >En cours</th>
+<td colspan="3" CLASS="dddefault">Attestation de premier cycle</td>
+<td CLASS="dddefault">&nbsp;</td>
+</tr>
+<tr>
+<td colspan="12" CLASS="ddseparator">&nbsp;</td>
+</tr>
+<tr>
+<td colspan="12" CLASS="ddseparator">&nbsp;</td>
+</tr>
+<tr>
+<th colspan="12" CLASS="ddtitle" scope="colgroup" >RECONNAISSANCE DES ACQUIS&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<a href="#top" ALT="HAUT" >-Haut-</a><a name="trans_credit"></A></th>
+</tr>
+<tr>
+<th colspan="2" CLASS="ddlabel" scope="row" ><SPAN class="fieldOrangetextbold">Hiver 2013:</SPAN></th>
+<td colspan="11" CLASS="dddefault">Université de Montréal</td>
+</tr>
+<tr>
+<th colspan="2" CLASS="ddheader" scope="col" >Cours</th>
+<th CLASS="ddheader" scope="col" >Cycle</th>
+<th colspan="5" CLASS="ddheader" scope="col" >Titre</th>
+<th CLASS="ddheader" scope="col" >Note</th>
+<th colspan="2" CLASS="ddheader" scope="col" >Crédits</th>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">MAT-1910</td>
+<td CLASS="dddefault">1</td>
+<td colspan="5" CLASS="dddefault">Mathématiques de l'ingénieur 2</td>
+<td CLASS="dddefault">V</td>
+<td CLASS="dddefault">3</td>
+</tr>
+<tr class="droite_a_gauche">
+<td colspan="4" CLASS="dddead">&nbsp;</td>
+<th CLASS="ddheader" scope="col" >Crédits réussis</th>
+<td CLASS="dddefault">3</td>
+<th CLASS="ddheader" scope="col" >Crédits pour moyenne</th>
+<td CLASS="dddefault">0</td>
+<th colspan="2" CLASS="ddheader" scope="col" >Moyenne</th>
+<td CLASS="dddefault">s.o.</td>
+</tr>
+<tr>
+</tr>
+<tr>
+<td colspan="12" CLASS="ddseparator">&nbsp;</td>
+</tr>
+<tr>
+<th colspan="12" CLASS="ddtitle" scope="colgroup" >CRÉDITS DE L'UNIVERSITÉ LAVAL&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<a href="#top" ALT="HAUT" >-Haut-</a><a name="insti_credit"></A></th>
+</tr>
+<tr>
+<th colspan="12" CLASS="ddlabel" scope="row" ><SPAN class="fieldOrangetextbold">Automne 2024</SPAN></th>
+</tr>
+<tr>
+<th colspan="2" CLASS="ddheader" scope="col" >Cours</th>
+<th CLASS="ddheader" scope="col" >Cycle</th>
+<th colspan="6" CLASS="ddheader" scope="col" >Titre</th>
+<th CLASS="ddheader" scope="col" >Note</th>
+<th colspan="2" CLASS="ddheader" scope="col" >Crédits / (UEC)</th>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">BIO-1904</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Organisation et physiologie des plantes</td>
+<td CLASS="dddefault">B</td>
+<td CLASS="dddefault">3</td>
+<td CLASS="dddead">&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">CHM-1903</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Chimie des eaux</td>
+<td CLASS="dddefault">A+</td>
+<td CLASS="dddefault">3</td>
+<td CLASS="dddead">&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GCI-1000</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Matériaux de construction</td>
+<td CLASS="dddefault">A</td>
+<td CLASS="dddefault">3</td>
+<td CLASS="dddead">&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GCI-1003</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Eaux vives</td>
+<td CLASS="dddefault">A+</td>
+<td CLASS="dddefault">3</td>
+<td CLASS="dddead">&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GEX-1002</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Profession : ingénieur des eaux</td>
+<td CLASS="dddefault">A+</td>
+<td CLASS="dddefault">1</td>
+<td CLASS="dddead">&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GSC-1000</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Méthodologie de design en ingénierie</td>
+<td CLASS="dddefault">A+</td>
+<td CLASS="dddefault">3</td>
+<td CLASS="dddead">&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">MAT-1900</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Mathématiques de l'ingénieur I</td>
+<td CLASS="dddefault">A</td>
+<td CLASS="dddefault">3</td>
+<td CLASS="dddead">&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">STT-1900</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Méthodes statistiques pour ingénieurs</td>
+<td CLASS="dddefault">A+</td>
+<td CLASS="dddefault">3</td>
+<td CLASS="dddead">&nbsp;</td>
+</tr>
+<tr>
+<th colspan="5" CLASS="ddheader" scope="col" >Total session (Premier cycle)</th>
+<th CLASS="ddheader" scope="col" >Crédits inscrits</th>
+<td CLASS="dddefault">22</td>
+<th CLASS="ddheader" scope="col" >Crédits réussis</th>
+<td CLASS="dddefault">22</td>
+<th CLASS="ddheader" scope="col" >Crédits pour moyenne</th>
+<td CLASS="dddefault">22</td>
+<th colspan="1" CLASS="ddheader" scope="col" >Moyenne</th>
+<td colspan="1" CLASS="dddefault"><p class="rightaligntext">                     4,06</p></td>
+</tr>
+<tr>
+</tr>
+<tr>
+<td colspan="12" CLASS="ddseparator">&nbsp;</td>
+</tr>
+<tr>
+<th colspan="12" CLASS="ddlabel" scope="row" ><SPAN class="fieldOrangetextbold">Été 2025</SPAN></th>
+</tr>
+<tr>
+<th colspan="2" CLASS="ddheader" scope="col" >Cours</th>
+<th CLASS="ddheader" scope="col" >Cycle</th>
+<th colspan="6" CLASS="ddheader" scope="col" >Titre</th>
+<th CLASS="ddheader" scope="col" >Note</th>
+<th colspan="2" CLASS="ddheader" scope="col" >Crédits / (UEC)</th>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GEX-1580</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Stage en génie des eaux I</td>
+<td CLASS="dddefault">P</td>
+<td CLASS="dddefault">9</td>
+<td CLASS="dddead">&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GGR-2305</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Climatologie</td>
+<td CLASS="dddefault">A+</td>
+<td CLASS="dddefault">3</td>
+<td CLASS="dddead">&nbsp;</td>
+</tr>
+<tr>
+<th colspan="5" CLASS="ddheader" scope="col" >Total session (Premier cycle)</th>
+<th CLASS="ddheader" scope="col" >Crédits inscrits</th>
+<td CLASS="dddefault">12</td>
+<th CLASS="ddheader" scope="col" >Crédits réussis</th>
+<td CLASS="dddefault">12</td>
+<th CLASS="ddheader" scope="col" >Crédits pour moyenne</th>
+<td CLASS="dddefault">3</td>
+<th colspan="1" CLASS="ddheader" scope="col" >Moyenne</th>
+<td colspan="1" CLASS="dddefault"><p class="rightaligntext">                     4,33</p></td>
+</tr>
+<tr>
+</tr>
+<tr>
+<td colspan="11" CLASS="ddseparator">&nbsp;</td>
+</tr>
+<tr>
+<th colspan="11" CLASS="ddtitle" scope="colgroup" >BILAN DU RELEVÉ (PREMIER CYCLE)&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<a href="#top" ALT="HAUT" >-Haut-</a><a name="trans_totals"></A></th>
+</tr>
+<tr>
+<th colspan="4" CLASS="ddlabel" scope="row" >Observation sur le cycle:</th>
+<td colspan="7" CLASS="dddefault">Exigence de français satisfaite.</td>
+</tr>
+<tr>
+<td colspan="4" CLASS="dddead">&nbsp;</td>
+<th CLASS="ddheader" scope="col" >Crédits inscrits</th>
+<th CLASS="ddheader" scope="col" >Crédits réussis</th>
+<th CLASS="ddheader" scope="col" >Crédits pour moyenne</th>
+<th colspan="2" CLASS="ddheader" scope="col" >Moyenne</th>
+</tr>
+<tr>
+<th colspan="4" CLASS="ddlabel" scope="row" >Université Laval:</th>
+<td CLASS="dddefault"><p class="rightaligntext">93</p></td>
+<td CLASS="dddefault"><p class="rightaligntext">93</p></td>
+<td CLASS="dddefault"><p class="rightaligntext">84</p></td>
+<td colspan="2" CLASS="dddefault"><p class="rightaligntext">                     4,03</p></td>
+</tr>
+<tr>
+<th colspan="4" CLASS="ddlabel" scope="row" >Reconnaissance des acquis:</th>
+<td CLASS="dddefault"><p class="rightaligntext">s.o.</p></td>
+<td CLASS="dddefault"><p class="rightaligntext">3</p></td>
+<td CLASS="dddefault"><p class="rightaligntext">0</p></td>
+<td colspan="2" CLASS="dddefault"><p class="rightaligntext">s.o.</p></td>
+</tr>
+<tr>
+<th colspan="4" CLASS="ddlabel" scope="row" >Total:</th>
+<td CLASS="dddefault"><p class="rightaligntext">93</p></td>
+<td CLASS="dddefault"><p class="rightaligntext">96</p></td>
+<td CLASS="dddefault"><p class="rightaligntext">84</p></td>
+<td colspan="2" CLASS="dddefault"><p class="rightaligntext">                     4,03</p></td>
+</tr>
+<tr>
+<td colspan="11" CLASS="ddseparator">&nbsp;</td>
+</tr>
+<tr>
+<th colspan="11" CLASS="ddtitle" scope="colgroup" >CRÉDITS EN COURS&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<a href="#top" ALT="HAUT" >-Haut-</a><a name="crses_progress"></A></th>
+</tr>
+<tr>
+<th colspan="11" CLASS="ddlabel" scope="row" ><SPAN class="fieldOrangetextbold">Été 2026</SPAN></th>
+</tr>
+<tr>
+<th colspan="2" CLASS="ddheader" scope="col" >Cours</th>
+<th CLASS="ddheader" scope="col" >Cycle</th>
+<th colspan="6" CLASS="ddheader" scope="col" >Titre</th>
+<th colspan="2" CLASS="ddheader" scope="col" >Nombre de crédits</th>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GEX-2590</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Stage en génie des eaux II</td>
+<td colspan="2" CLASS="dddefault"><p class="rightaligntext">9</p></td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">PHI-3900</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Éthique et professionnalisme</td>
+<td colspan="2" CLASS="dddefault"><p class="rightaligntext">3</p></td>
+</tr>
+<tr>
+<td colspan="11" CLASS="ddseparator">&nbsp;</td>
+</tr>
+<tr>
+<th colspan="11" CLASS="ddlabel" scope="row" ><SPAN class="fieldOrangetextbold">Automne 2026</SPAN></th>
+</tr>
+<tr>
+<th colspan="2" CLASS="ddheader" scope="col" >Cours</th>
+<th CLASS="ddheader" scope="col" >Cycle</th>
+<th colspan="6" CLASS="ddheader" scope="col" >Titre</th>
+<th colspan="2" CLASS="ddheader" scope="col" >Nombre de crédits</th>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">ESG-1020</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Español elemental II</td>
+<td colspan="2" CLASS="dddefault"><p class="rightaligntext">3</p></td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GAE-3008</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Aménagement des cours d'eau et conservation des sols</td>
+<td colspan="2" CLASS="dddefault"><p class="rightaligntext">3</p></td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GCI-2012</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Hydraulique urbaine</td>
+<td colspan="2" CLASS="dddefault"><p class="rightaligntext">3</p></td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GCI-4301</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Aménagement hydraulique</td>
+<td colspan="2" CLASS="dddefault"><p class="rightaligntext">3</p></td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GEX-2003</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Production d'eau potable</td>
+<td colspan="2" CLASS="dddefault"><p class="rightaligntext">3</p></td>
+</tr>
+<tr>
+<td colspan="2" CLASS="dddefault">GEX-3333</td>
+<td CLASS="dddefault">1</td>
+<td colspan="6" CLASS="dddefault">Projet intégrateur en génie des eaux I</td>
+<td colspan="2" CLASS="dddefault"><p class="rightaligntext">3</p></td>
+</tr>
+<tr>
+<td colspan="11" CLASS="ddseparator">&nbsp;</td>
+</tr>
+</table>
+
+<!--  ** START OF twbkwbis.P_CloseDoc **  -->
+<table  CLASS="plaintable" SUMMARY="Cette table affiche un délimiteur de ligne à la fin de la page." 
+                                             WIDTH="100%" cellSpacing=0 cellPadding=0 border=0><tr><TD class="bgtabon" width="100%" colSpan=2><img src="/wtlgifs/web_transparent.gif" alt="Image transparente" CLASS="headerImg" TITLE="Image transparente"  NAME="web_transparent" HSPACE=0 VSPACE=0 BORDER=0 HEIGHT=3 WIDTH=10 /></TD></tr></table>
+<a href="#top" onMouseover="window.status='Passer directement au début de la page'; return true" onMouseout="window.status=''; return true" OnFocus="window.status='Passer directement au début de la page'; return true" onBlur="window.status=''; return true" class="skiplinks">Passer directement au début de la page</a>
+</DIV>
+<div class="footerbeforediv">
+
+</DIV>
+<div class="footerlinksdiv">
+<SPAN class="pagefooterlinks">
+<map name="Relevé_de_notes_|_Capsule_|_Université_Laval_Links_F" title="Relevé de notes | Capsule | Université Laval Links">
+<p>
+<a href="#skip_Relevé_de_notes_|_Capsule_|_Université_Laval_Links_F" onMouseover="window.status='Skip Relevé de notes | Capsule | Université Laval Links'; return true" onMouseout="window.status=''; return true" onFocus="window.status='Skip Relevé de notes | Capsule | Université Laval Links'; return true" onBlur="window.status=''; return true"  class="skiplinks">Skip Relevé de notes | Capsule | Université Laval Links</a>
+<P>[ <a href="/pls/etpr/bwckcapp.P_DispCurrent" onMouseover="window.status='Rapport de cheminement (étudiant)'; return true" onMouseout="window.status=''; return true" onFocus="window.status='Rapport de cheminement (étudiant)'; return true" onBlur="window.status=''; return true" >Rapport de cheminement (étudiant)</a>
+ ]
+</map>
+</SPAN>
+<a name="skip_Relevé_de_notes_|_Capsule_|_Université_Laval_Links_F"></a>
+</DIV>
+<div class="footerafterdiv">
+
+</DIV>
+<div class="globalafterdiv">
+
+</DIV>
+<div class="globalfooterdiv">
+
+</DIV>
+<div class="pagefooterdiv">
+<SPAN class="releasetext">Version: 8.4.1</SPAN>
+</DIV>
+<div class="poweredbydiv">
+</DIV>
+<DIV class="div1"></DIV>
+<DIV class="div2"></DIV>
+<DIV class="div3"></DIV>
+<DIV class="div4"></DIV>
+<DIV class="div5"></DIV>
+<DIV class="div6"></DIV>
+<div class="banner_copyright"> <br><h5>© 2026 Ellucian Company L.P. et sociétés affiliées.<br></h5></div>
+
+        <script type="text/javascript">
+
+          var _gaq = _gaq || [];
+          _gaq.push(['_setAccount', 'UA-60100729-2']);
+          _gaq.push(['_trackPageview']);
+
+          (function() {
+            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+          })();
+
+        </script></body>
+</html>
+

@@ -57,6 +57,10 @@ pub struct OrganigrammeInput {
     // ponytail: all the étés or none — per-été opening when the UI asks
     #[serde(default)]
     pub summers_open: bool,
+    // sessions 1..=n déjà complétées (relevé Capsule): closed to unpinned
+    // courses (ADR `2026-08-sessions-completees-fermees-au-solveur`)
+    #[serde(default)]
+    pub completed_sessions: usize,
     #[serde(default)]
     #[cfg_attr(
         all(target_arch = "wasm32", feature = "boundary"),
@@ -367,6 +371,7 @@ fn with_request<T>(
         pinned: &intake.pinned,
         stages: &intake.stages,
         open_summers: &open_summers,
+        completed_sessions: input.completed_sessions,
         seed: &input.seed,
         max_nodes: input.max_nodes.unwrap_or(DEFAULT_MAX_NODES),
         max_solutions: input.max_solutions.unwrap_or(DEFAULT_MAX_SOLUTIONS),

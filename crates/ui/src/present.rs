@@ -1,3 +1,4 @@
+use crate::capsule::CapsuleError;
 use crate::data::{fnv1a_64, DataError};
 use crate::import::ImportError;
 
@@ -112,6 +113,13 @@ pub fn present_import_error(error: &ImportError) -> UiError {
              réessayez."
                 .to_string(),
         ),
+        ImportError::InvalidProgramJson { .. } => (
+            "Ce fichier n'est pas un instantané de programme valide."
+                .to_string(),
+            "Choisissez un fichier « {code}-{semestre}.json » produit par \
+             le scraper, puis réessayez."
+                .to_string(),
+        ),
     };
     UiError {
         what,
@@ -143,6 +151,46 @@ pub fn present_local_program_conflict(detail: &str) -> UiError {
             .to_string(),
         id: error_id(detail),
         detail: detail.to_string(),
+    }
+}
+
+// A relevé Capsule pasted into the app that the parser could not read at
+// all, or that read cleanly but named no Université Laval session to
+// anchor a plan on (ADR `2026-08-import-de-releve-capsule`). The load is a
+// non-critical path, same as an import (BLD-1): the plan open before the
+// paste is untouched either way.
+pub fn present_capsule_error(error: &CapsuleError) -> UiError {
+    let (what, action) = match error {
+        CapsuleError::NotATranscript { .. } => (
+            "Ce texte n'est pas un relevé de notes Capsule.".to_string(),
+            "Depuis la page « Relevé de notes non officiel », faites \
+             ctrl-u pour afficher la source de la page, puis ctrl-a et \
+             ctrl-c pour tout copier, puis recollez le résultat ici."
+                .to_string(),
+        ),
+        CapsuleError::Empty => (
+            "Le relevé ne contient aucune session à l'Université Laval."
+                .to_string(),
+            "Vérifiez que le texte collé provient bien de la page « \
+             Relevé de notes non officiel » de Capsule, puis réessayez."
+                .to_string(),
+        ),
+        CapsuleError::CatalogueUnavailable => (
+            "Le catalogue des cours n'est pas encore chargé.".to_string(),
+            "Attendez que les données de l'application finissent de \
+             charger, puis réessayez."
+                .to_string(),
+        ),
+    };
+    UiError {
+        what,
+        reaction: "Rien n'a été perdu; le reste de l'application continue \
+                   de fonctionner normalement."
+            .to_string(),
+        affected: "Le chargement de ce relevé seulement.".to_string(),
+        action,
+        id: error_id(&error.to_string()),
+        detail: error.to_string(),
     }
 }
 
@@ -234,26 +282,42 @@ pub fn present_prereq_draft(text: &str) -> PrereqDraft {
             };
         }
     };
-    // the operands no catalogue can check (an examination, a range of
-    // course numbers) are the surprising half: the solver presumes them
-    // rather than verifying them, and the student must know which
-    let presumed = presumed_operands(&tree);
-    let echo = if presumed.is_empty() {
+    // Two readings surprise the student, and both are invisible in the
+    // expression he typed: an operand no catalogue can check (an
+    // examination, a range of course numbers) is presumed rather than
+    // verified, and a sigle he starred is satisfied by his own session —
+    // the `*` is the répertoire's shorthand, not something to be left to
+    // guess (TRU-1: what the app knows, it says).
+    let (concomitant, presumed) = notable_operands(&tree);
+    let mut notes: Vec<String> = Vec::new();
+    if !concomitant.is_empty() {
+        notes.push(format!(
+            "{} peut être suivi la même session (concomitance permise)",
+            concomitant.join(", ")
+        ));
+    }
+    if !presumed.is_empty() {
+        notes.push(format!(
+            "{} sera présumé acquis, le solveur ne peut pas le vérifier",
+            presumed.join(", ")
+        ));
+    }
+    let echo = if notes.is_empty() {
         "compris.".to_string()
     } else {
-        format!(
-            "compris - {} sera présumé acquis, le solveur ne peut pas le \
-             vérifier.",
-            presumed.join(", ")
-        )
+        format!("compris - {}.", notes.join("; "))
     };
     PrereqDraft { valid: true, echo }
 }
 
+// the starred sigles and the operands presumed acquis, in that order —
 // a bounded walk, never a recursion: an arbitrarily deep expression is a
 // student's typing, not a trusted input
-fn presumed_operands(tree: &ulaval_scheduler_core::PrereqTree) -> Vec<String> {
+fn notable_operands(
+    tree: &ulaval_scheduler_core::PrereqTree,
+) -> (Vec<String>, Vec<String>) {
     use ulaval_scheduler_core::PrereqTree;
+    let mut concomitant = Vec::new();
     let mut presumed = Vec::new();
     let mut stack = vec![tree];
     for _ in 0..MAX_DRAFT_NODES {
@@ -261,13 +325,16 @@ fn presumed_operands(tree: &ulaval_scheduler_core::PrereqTree) -> Vec<String> {
             break;
         };
         match node {
+            PrereqTree::Concomitant { concomitant: code } => {
+                concomitant.push(code.clone())
+            }
             PrereqTree::Raw { raw } => presumed.push(format!("« {raw} »")),
             PrereqTree::All { all } => stack.extend(all.iter()),
             PrereqTree::Any { any } => stack.extend(any.iter()),
             PrereqTree::Course(_) | PrereqTree::ProgramCredits { .. } => {}
         }
     }
-    presumed
+    (concomitant, presumed)
 }
 
 pub fn error_id(detail: &str) -> String {
@@ -747,6 +814,27 @@ mod override_note_tests {
     }
 
     #[test]
+    fn a_starred_sigle_is_read_back_as_concomitance_permise() {
+        // the `*` is the répertoire's shorthand — on screen it becomes the
+        // sentence, so the student never has to know the symbol
+        let draft = present_prereq_draft("GCI-2010*");
+        assert!(draft.valid, "{}", draft.echo);
+        assert_eq!(
+            draft.echo,
+            "compris - GCI-2010 peut être suivi la même session \
+             (concomitance permise)."
+        );
+        // both surprises at once, each said in its own clause
+        let draft = present_prereq_draft("GCI-2010* ET Examen de langue");
+        assert_eq!(
+            draft.echo,
+            "compris - GCI-2010 peut être suivi la même session \
+             (concomitance permise); « Examen de langue » sera présumé \
+             acquis, le solveur ne peut pas le vérifier."
+        );
+    }
+
+    #[test]
     fn a_broken_expression_is_refused_in_words_not_only_in_colour() {
         let draft = present_prereq_draft("GCI-1000 ET");
         assert!(!draft.valid);
@@ -887,6 +975,9 @@ mod tests {
                 detail: "AbortController unavailable".to_string(),
             },
             ImportError::CatalogueUnavailable,
+            ImportError::InvalidProgramJson {
+                detail: "missing field `code`".to_string(),
+            },
         ];
         for error in &variants {
             let presented = present_import_error(error);
@@ -929,10 +1020,7 @@ mod tests {
         let presented = present_local_program_conflict(detail);
         assert_eq!(presented.what, detail);
         assert!(!presented.reaction.is_empty());
-        assert_eq!(
-            presented.affected,
-            "L'import de ce programme seulement."
-        );
+        assert_eq!(presented.affected, "L'import de ce programme seulement.");
         assert!(!presented.action.is_empty());
         assert!(presented.id.starts_with("GH-"));
         assert_eq!(presented.detail, detail);
@@ -943,6 +1031,61 @@ mod tests {
         let a = present_local_program_conflict("B-GEX A26 existe déjà.");
         let b = present_local_program_conflict("B-GLO A26 existe déjà.");
         assert_ne!(a.id, b.id);
+    }
+
+    // --- present_capsule_error ---
+
+    #[test]
+    fn a_not_a_transcript_error_names_the_manoeuvre_to_recopy_it() {
+        let error = CapsuleError::NotATranscript {
+            detail: "Missing element: th.ddtitle".to_string(),
+        };
+        let presented = present_capsule_error(&error);
+        assert!(presented.what.contains("relevé de notes Capsule"));
+        assert!(
+            presented.action.contains("ctrl-u"),
+            "copying the rendered page instead of its source is the \
+             likeliest cause of this exact error (ERR-1)"
+        );
+        assert!(presented.action.contains("ctrl-a"));
+        assert!(presented.action.contains("ctrl-c"));
+        assert_eq!(
+            presented.affected,
+            "Le chargement de ce relevé seulement."
+        );
+        assert!(!presented.reaction.is_empty());
+        assert!(presented.id.starts_with("GH-"));
+        assert_eq!(presented.detail, error.to_string());
+    }
+
+    #[test]
+    fn an_empty_transcript_error_names_the_missing_session() {
+        let error = CapsuleError::Empty;
+        let presented = present_capsule_error(&error);
+        assert!(presented
+            .what
+            .contains("aucune session à l'Université Laval"));
+        assert!(!presented.action.is_empty());
+        assert_eq!(
+            presented.affected,
+            "Le chargement de ce relevé seulement."
+        );
+        assert!(presented.id.starts_with("GH-"));
+        assert_eq!(presented.detail, error.to_string());
+    }
+
+    #[test]
+    fn a_missing_catalogue_error_says_to_wait_for_the_data() {
+        let error = CapsuleError::CatalogueUnavailable;
+        let presented = present_capsule_error(&error);
+        assert!(presented.what.contains("catalogue des cours"));
+        assert!(presented.action.contains("réessayez"));
+        assert_eq!(
+            presented.affected,
+            "Le chargement de ce relevé seulement."
+        );
+        assert!(presented.id.starts_with("GH-"));
+        assert_eq!(presented.detail, error.to_string());
     }
 
     // --- grid geometry ---

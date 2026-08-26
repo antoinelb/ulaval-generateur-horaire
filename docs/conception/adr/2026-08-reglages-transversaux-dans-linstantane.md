@@ -8,6 +8,7 @@ L'instantané par (programme, millésime) (ADR `2026-08-instantane-de-plan-par-p
 
 - L'instantané est le `Plan` **entier** : « revenir redonne exactement le même panneau » l'exige, et le plafond, l'horizon ou les corrections de préalables sont des faits du programme étudié, pas de l'étudiant en général.
 - Un document **neuf** (aucune étagère) part de `Plan::default()` + le `ProgramChoice` cliqué en emportant **seulement `start`** (`state::fresh_plan`) : la session d'entrée est l'identité calendaire de l'étudiant, et le défaut `A2026` pourrira avec le temps.
+  Exception : `study_sessions` est aussi emporté, dérivé des crédits du programme choisi (ADR `2026-08-sessions-par-defaut-derivees-des-credits`).
 - Les cours manuels (`gh.v1.cours-manuels`) restent globaux : ils prolongent le catalogue, pas le document (même raisonnement que l'ADR `2026-08-bouton-tout-reinitialiser`).
 - `View` reste global (`gh.v1.view`), remis à `View::default()` à chaque bascule : garder la recherche ou la session de l'autre programme ressusciterait des résultats périmés.
 

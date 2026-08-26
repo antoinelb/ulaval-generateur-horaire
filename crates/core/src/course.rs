@@ -123,6 +123,12 @@ pub enum Prerequisites {
 #[serde(untagged)]
 pub enum PrereqTree {
     Course(String),
+    // the répertoire's `*` : « peut être suivi en concomitance », so the
+    // same session counts as « before ». Serialized as an object beside the
+    // bare-string leaf, which keeps every existing reader — the JS
+    // grille-de-cheminement included — right about strings meaning strict
+    // precedence (ADR `2026-08-etoile-de-concomitance-au-parsing`).
+    Concomitant { concomitant: String },
     // an operand no rule can check automatically — an examination
     // (« Examen Test français … avec résultat de 060.0 à 100.0 », FRN-1904)
     // or a range of course numbers (« ESG-2020 à 3799 », ESP-1000) — kept
@@ -577,6 +583,22 @@ mod tests {
         let tree: PrereqTree =
             serde_json::from_str(r#""GLG-1000""#).expect("course leaf");
         assert_eq!(tree, PrereqTree::Course("GLG-1000".to_string()));
+    }
+
+    #[test]
+    fn prereq_concomitant_leaf_round_trips_beside_the_string_leaf() {
+        // the object leaf is what keeps the string leaf meaning « strictly
+        // before » for every reader that predates the star
+        let json = r#"{"concomitant":"GCI-2010"}"#;
+        let tree: PrereqTree =
+            serde_json::from_str(json).expect("concomitant leaf");
+        assert_eq!(
+            tree,
+            PrereqTree::Concomitant {
+                concomitant: "GCI-2010".to_string()
+            }
+        );
+        assert_eq!(serde_json::to_value(&tree).expect("ser"), as_value(json));
     }
 
     #[test]

@@ -36,7 +36,14 @@ pub fn encode_plan(plan: &Plan) -> String {
 }
 
 pub fn restore_plan(stored: Option<&str>) -> Restored<Plan> {
-    restore(stored, "du plan")
+    let mut restored: Restored<Plan> = restore(stored, "du plan");
+    // heal saves from before the horizon rule: a stray seat beyond the
+    // horizon made verify refuse the whole plan (« GEX-2001 is pinned to
+    // session 11, outside 1..=9 », 2026-08-26) — re-asserting the saved
+    // horizon evicts it and re-floors under the pins
+    let saved_horizon = restored.state.study_sessions;
+    crate::state::set_horizon(&mut restored.state, saved_horizon);
+    restored
 }
 
 pub fn encode_view(view: &View) -> String {
@@ -224,6 +231,7 @@ pub fn enter_document(
     current: &Plan,
     choice: crate::state::ProgramChoice,
     stored: Option<&str>,
+    study_sessions: usize,
 ) -> DocumentSwap {
     let stash = stash_of(current);
     let restored = restore_plan(stored);
@@ -238,9 +246,14 @@ pub fn enter_document(
             });
         }
         // nothing on the shelf, or a damaged snapshot restarted fresh
-        // (and kept): a new document, only the calendar identity carried
+        // (and kept): a new document, only the calendar identity and the
+        // credit-derived horizon carried
         None => {
-            next = crate::state::fresh_plan(current.start, choice);
+            next = crate::state::fresh_plan(
+                current.start,
+                choice,
+                study_sessions,
+            );
         }
     }
     DocumentSwap {
@@ -518,6 +531,10 @@ fn share_into(
             year: state.start_year,
         },
         study_sessions: state.study_sessions as usize,
+        // ponytail: the share URL does not carry the relevé's completed
+        // sessions — a shared organigramme reopens fully editable; add the
+        // field to the share state if that ever misleads
+        completed_sessions: 0,
         summers_open: state.summers_open,
         credit_cap: state.credit_cap,
         concomitant: state.concomitant,
@@ -695,6 +712,32 @@ mod tests {
     }
 
     #[test]
+    fn a_restored_plan_heals_a_seat_beyond_its_horizon() {
+        // a save from before the horizon rule: GEX-2001 seated at 11 by an
+        // old proposal, horizon since shrunk to 9 — verify used to refuse
+        // the whole plan for it
+        let stale = Plan {
+            study_sessions: 9,
+            displayed_placement: BTreeMap::from([
+                ("GEX-2001".to_string(), 11),
+                ("GEX-1000".to_string(), 2),
+            ]),
+            pinned_sessions: BTreeMap::from([("GEX-1000".to_string(), 2)]),
+            ..Plan::default()
+        };
+        let restored = restore_plan(Some(&encode_plan(&stale)));
+        assert!(
+            !restored.state.displayed_placement.contains_key("GEX-2001"),
+            "the stray seat falls back to « automatique »"
+        );
+        assert_eq!(
+            restored.state.displayed_placement["GEX-1000"], 2,
+            "the pinned seat survives"
+        );
+        assert_eq!(restored.state.study_sessions, 9);
+    }
+
+    #[test]
     fn the_manual_course_list_round_trips_and_survives_damage() {
         let course: Course = serde_json::from_str(
             r#"{"code":"GEX-1234","title":"Maison","credits":3,"cycle":1,
@@ -730,6 +773,7 @@ mod tests {
             imported_at: "2026-08-24T12:00:00Z".to_string(),
             proxy: "corsproxy.io".to_string(),
             anomalies: vec!["règle non reconnue".to_string()],
+            origin: crate::import::ProgramOrigin::Url,
         };
         let programs = vec![local];
         let restored =
@@ -745,6 +789,32 @@ mod tests {
         let fresh = restore_local_programs(None);
         assert!(fresh.state.is_empty());
         assert!(fresh.backup.is_none());
+    }
+
+    // An envelope written before `origin`/`manual` existed: `#[serde(default)]`
+    // must restore it as a `Url` import with no manual, not refuse it as
+    // damaged (plan item 6's `LocalProgram` grows two fields on a type
+    // already living in `localStorage`).
+    #[test]
+    fn an_envelope_without_origin_or_manual_still_restores() {
+        let raw = r#"{"version":1,"state":[{
+            "program":{"code":"B-GLO","slug":"genie-logiciel","semester":"A26",
+                "title":"Génie logiciel","cycle":1,"credits_required":120,
+                "mandatory":[],"rules":[],"concentrations":[],"profiles":[]},
+            "source_url":"https://www.ulaval.ca/etudes/programmes/genie-logiciel",
+            "imported_at":"2026-08-24T12:00:00Z",
+            "proxy":"corsproxy.io",
+            "anomalies":[]
+        }]}"#;
+        let restored = restore_local_programs(Some(raw));
+        assert!(restored.notes.is_empty(), "{:?}", restored.notes);
+        assert!(restored.backup.is_none());
+        assert_eq!(restored.state.len(), 1);
+        assert_eq!(
+            restored.state[0].origin,
+            crate::import::ProgramOrigin::Url,
+            "an envelope predating the field defaults to a URL import"
+        );
     }
 
     fn choice(code: &str, semester: &str) -> crate::state::ProgramChoice {
@@ -797,8 +867,10 @@ mod tests {
             concentration: Some("Autre".to_string()),
             ..choice("B-GEX", "A26")
         };
-        let swap = enter_document(&picker, click, Some(&encoded));
-        assert_eq!(swap.next, shelved, "restored exactly");
+        // a session count unrelated to the shelf's own 6 : the restore arm
+        // must ignore it entirely, the shelved value is the truth
+        let swap = enter_document(&picker, click, Some(&encoded), 99);
+        assert_eq!(swap.next, shelved, "restored exactly, the 99 ignored");
         assert!(swap.notes.is_empty());
         assert!(swap.stash.is_none(), "the picker shelves nothing");
     }
@@ -817,6 +889,7 @@ mod tests {
             &Plan::default(),
             choice("B-GEX", "A26"),
             Some(&encoded),
+            8,
         );
         let restored = swap.next.program.expect("a program");
         assert_eq!(restored.code, "B-GEX");
@@ -837,12 +910,13 @@ mod tests {
             ..Plan::default()
         };
         let click = choice("B-GIN", "H27");
-        let swap = enter_document(&picker, click.clone(), None);
+        let swap = enter_document(&picker, click.clone(), None, 6);
         assert_eq!(
             swap.next,
-            crate::state::fresh_plan(picker.start, click),
-            "defaults plus the click, calendar identity carried"
+            crate::state::fresh_plan(picker.start, click, 6),
+            "defaults plus the click, calendar identity and sessions carried"
         );
+        assert_eq!(swap.next.study_sessions, 6, "the passed count lands");
         assert!(swap.notes.is_empty());
         assert!(swap.backup.is_none());
     }
@@ -851,8 +925,12 @@ mod tests {
     fn a_damaged_shelf_starts_fresh_loudly_and_keeps_the_copy() {
         let picker = Plan::default();
         let click = choice("B-GIN", "H27");
-        let swap = enter_document(&picker, click.clone(), Some("pas du json"));
-        assert_eq!(swap.next, crate::state::fresh_plan(picker.start, click));
+        let swap =
+            enter_document(&picker, click.clone(), Some("pas du json"), 6);
+        assert_eq!(
+            swap.next,
+            crate::state::fresh_plan(picker.start, click, 6)
+        );
         assert_eq!(swap.notes.len(), 1);
         assert!(swap.notes[0].contains("conservée"), "{:?}", swap.notes);
         assert_eq!(swap.backup.as_deref(), Some("pas du json"));
@@ -886,14 +964,14 @@ mod tests {
         let left_a = leave_document(&plan_a);
         let (key_a, stash_a) = left_a.stash.clone().expect("A shelved");
         let entered_b =
-            enter_document(&left_a.next, choice("B-GIN", "A26"), None);
+            enter_document(&left_a.next, choice("B-GIN", "A26"), None, 8);
         let mut plan_b = entered_b.next;
         plan_b.displayed_placement.insert("IFT-1000".to_string(), 1);
         let left_b = leave_document(&plan_b);
         let (key_b, _) = left_b.stash.clone().expect("B shelved");
         assert_ne!(key_a, key_b, "two documents, two shelves");
         let choice_a = plan_a.program.clone().expect("A has a program");
-        let back = enter_document(&left_b.next, choice_a, Some(&stash_a));
+        let back = enter_document(&left_b.next, choice_a, Some(&stash_a), 8);
         assert_eq!(back.next, plan_a, "byte-identical document");
     }
 

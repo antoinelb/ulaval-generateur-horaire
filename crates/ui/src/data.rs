@@ -152,10 +152,11 @@ pub fn parse_data(
     let shipped_len = programs.len();
     let mut local_programs = Vec::new();
     for entry in local {
-        let beaten_by_shipped = programs[..shipped_len].iter().any(|program| {
-            program.code == entry.program.code
-                && program.semester == entry.program.semester
-        });
+        let beaten_by_shipped =
+            programs[..shipped_len].iter().any(|program| {
+                program.code == entry.program.code
+                    && program.semester == entry.program.semester
+            });
         let beaten_by_local = programs[shipped_len..].iter().any(|program| {
             program.code == entry.program.code
                 && program.semester == entry.program.semester
@@ -843,6 +844,7 @@ mod tests {
             imported_at: "2026-08-24T12:00:00Z".to_string(),
             proxy: "corsproxy.io".to_string(),
             anomalies: Vec::new(),
+            origin: crate::import::ProgramOrigin::Url,
         }
     }
 
@@ -891,8 +893,8 @@ mod tests {
     }
 
     #[test]
-    fn two_locals_sharing_code_and_semester_name_the_local_collision_not_the_shipped_one()
-     {
+    fn two_locals_sharing_code_and_semester_name_the_local_collision_not_the_shipped_one(
+    ) {
         // `add_local_program` is the sole writer of the persisted list and
         // already guards against this, but the restored list is not
         // re-validated: a hand-edited or corrupted `local` argument can
@@ -937,7 +939,7 @@ mod tests {
 
     #[test]
     fn add_local_program_refuses_a_repeated_local_import_naming_the_local_one()
-     {
+    {
         let mut snapshot = parse_data(&raw(), Vec::new(), Vec::new())
             .unwrap_or_else(|e| panic!("{e}"));
         add_local_program(&mut snapshot, local_program("B-GLO", "A26"))

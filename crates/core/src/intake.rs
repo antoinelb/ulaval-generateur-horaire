@@ -340,7 +340,10 @@ fn flatten_lite(tree: &PrereqTree) -> Option<Vec<LiteNode<'_>>> {
             return Some(nodes);
         }
         nodes.push(match pending[cursor] {
-            PrereqTree::Course(code) => LiteNode::Course(code),
+            PrereqTree::Course(code)
+            | PrereqTree::Concomitant { concomitant: code } => {
+                LiteNode::Course(code)
+            }
             PrereqTree::Raw { .. } | PrereqTree::ProgramCredits { .. } => {
                 LiteNode::Free
             }
@@ -1224,6 +1227,23 @@ mod tests {
                 .unwrap_or_else(|e| panic!("prerequisites literal: {e}")),
         );
         course
+    }
+
+    #[test]
+    fn a_starred_leaf_forces_its_elective_like_a_plain_one() {
+        // the star says *when* the préalable may be taken, not whether it
+        // is required: the injection reads it like any course leaf
+        let program =
+            program_with_rule(r#""GMC-3002""#, r#""GLO-1901","IFT-1903""#);
+        let all = [
+            with_prereqs("GMC-3002", "1", r#"{"concomitant":"GLO-1901"}"#),
+            monday("GLO-1901", "3"),
+            monday("IFT-1903", "4"),
+        ];
+        let intake =
+            placement_intake(Some(&program), None, None, &[], &[], &[], &all)
+                .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(intake.injected, ["GLO-1901"]);
     }
 
     #[test]

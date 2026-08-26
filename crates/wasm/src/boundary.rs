@@ -202,7 +202,8 @@ pub fn admissible_sessions(
 /// La question statique des préalables d'un cours, contre ce que l'étudiant
 /// tient déjà (`satisfied`, `credits`) : `met`, plus les opérandes que le
 /// verdict a dû présumer (texte brut, cours préuniversitaires) — remontés,
-/// jamais imposés.
+/// jamais imposés. `same_session` (optionnel) porte ce qui est posé dans la
+/// session jugée : il ne satisfait qu'une feuille étoilée au répertoire.
 #[wasm_bindgen(unchecked_return_type = "PrerequisitesReport")]
 pub fn prerequisites_met(
     #[wasm_bindgen(unchecked_param_type = "PrerequisitesInput")]

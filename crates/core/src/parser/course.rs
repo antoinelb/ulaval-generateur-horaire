@@ -948,7 +948,9 @@ mod tests {
         );
 
         assert!(
-            parse(&html).expect("a well-formed page above scope").is_none(),
+            parse(&html)
+                .expect("a well-formed page above scope")
+                .is_none(),
             "a post-MDD course must be out of scope"
         );
     }
