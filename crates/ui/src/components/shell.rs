@@ -154,7 +154,7 @@ fn Footer() -> Element {
             p {
                 "v{version} - code "
                 Commit { sha: build }
-                " - {snapshot.provenance.course_count} cours - données : "
+                " - données : "
                 "{scraped}, "
                 Commit { sha: data }
             }

@@ -76,7 +76,6 @@ pub struct Provenance {
     // `2026-08-meta-json-provenance-du-snapshot`); None = « date de
     // récolte inconnue », never a guessed date
     pub scraped_at: Option<String>,
-    pub course_count: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -218,7 +217,6 @@ pub fn parse_data(
             .collect(),
         provenance: Provenance {
             scraped_at: meta.scraped_at,
-            course_count: merged.courses.len(),
         },
         collisions,
         manual: repo_manual,
@@ -763,7 +761,6 @@ mod tests {
             snapshot.provenance.scraped_at.as_deref(),
             Some("2026-08-13T18:00:00Z")
         );
-        assert_eq!(snapshot.provenance.course_count, 1);
         assert!(snapshot.warnings.is_empty());
         assert!(snapshot.collisions.is_empty());
     }
@@ -778,7 +775,6 @@ mod tests {
         .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(snapshot.by_code["ANL-2020"], 0, "sorted before GEX");
         assert_eq!(snapshot.collisions, ["GEX-1000"]);
-        assert_eq!(snapshot.provenance.course_count, 2);
     }
 
     #[test]
@@ -1201,7 +1197,6 @@ mod tests {
         assert_eq!(snapshot.by_code["AAA-1000"], 0, "sorted first");
         assert_eq!(snapshot.by_code["GEX-1000"], 1, "reindexed");
         assert!(snapshot.manual_codes.contains("AAA-1000"));
-        assert_eq!(snapshot.provenance.course_count, 2);
 
         let doubled = build_manual_course(
             &ManualDraft {
@@ -1358,7 +1353,6 @@ pub fn add_manual_course(
         .enumerate()
         .map(|(i, course)| (course.code.clone(), i))
         .collect();
-    snapshot.provenance.course_count = snapshot.courses.len();
     Ok(())
 }
 

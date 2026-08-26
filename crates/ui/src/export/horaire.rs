@@ -73,7 +73,6 @@ pub fn schedule_document(
         provenance: export_provenance(
             generated_at,
             snapshot.provenance.scraped_at.as_deref(),
-            snapshot.provenance.course_count,
         ),
     }
 }

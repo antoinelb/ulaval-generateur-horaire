@@ -27,7 +27,6 @@ pub struct ExportProvenance {
 pub fn export_provenance(
     generated_at: &str,
     scraped_at: Option<&str>,
-    course_count: usize,
 ) -> ExportProvenance {
     let build = option_env!("BUILD_HASH").unwrap_or("dev");
     let data = option_env!("DATA_HASH").unwrap_or("dev");
@@ -42,8 +41,8 @@ pub fn export_provenance(
 
     let line = format!(
         "Document généré par le générateur d'horaire (v{version}, code \
-         {build}, données {data} — {scraped}, {course_count} cours), \
-         {generated}. Code et données : {REPO}"
+         {build}, données {data} — {scraped}), {generated}. Code et \
+         données : {REPO}"
     );
 
     ExportProvenance {
@@ -100,14 +99,13 @@ mod tests {
     #[test]
     fn a_well_formed_instant_renders_date_time_and_utc() {
         let provenance =
-            export_provenance("2026-08-25T14:03:07Z", Some("2026-08-01"), 42);
+            export_provenance("2026-08-25T14:03:07Z", Some("2026-08-01"));
         assert_eq!(provenance.generated, "généré le 2026-08-25 à 14:03 UTC");
     }
 
     #[test]
     fn a_malformed_instant_degrades_without_panicking() {
-        let provenance =
-            export_provenance("not-a-date", Some("2026-08-01"), 1);
+        let provenance = export_provenance("not-a-date", Some("2026-08-01"));
         assert_eq!(provenance.generated, "généré le not-a-date");
     }
 
@@ -116,13 +114,13 @@ mod tests {
         // `browser::now_local()`'s shape: the reader's wall time, printed
         // without claiming any zone
         let provenance =
-            export_provenance("2026-08-25T14:03:07", Some("2026-08-01"), 1);
+            export_provenance("2026-08-25T14:03:07", Some("2026-08-01"));
         assert_eq!(provenance.generated, "généré le 2026-08-25 à 14:03");
     }
 
     #[test]
     fn an_instant_with_too_few_time_parts_degrades() {
-        let provenance = export_provenance("2026-08-25T14:03Z", Some("d"), 1);
+        let provenance = export_provenance("2026-08-25T14:03Z", Some("d"));
         assert_eq!(provenance.generated, "généré le 2026-08-25T14:03Z");
     }
 
@@ -131,13 +129,13 @@ mod tests {
         // The 3-part time still matches the pattern, but the date half of
         // the split is empty — the `!date.is_empty()` guard must catch it
         // too, not just the hour/minute halves.
-        let provenance = export_provenance("T14:03:07Z", Some("d"), 1);
+        let provenance = export_provenance("T14:03:07Z", Some("d"));
         assert_eq!(provenance.generated, "généré le T14:03:07Z");
     }
 
     #[test]
     fn no_scraped_at_yields_the_french_fallback() {
-        let provenance = export_provenance("2026-08-25T14:03:07Z", None, 0);
+        let provenance = export_provenance("2026-08-25T14:03:07Z", None);
         assert_eq!(provenance.scraped, "date de récolte inconnue");
     }
 
@@ -145,8 +143,7 @@ mod tests {
     fn dev_hashes_yield_no_commit_urls() {
         // In this native test build BUILD_HASH/DATA_HASH are never set,
         // so both fall back to "dev" and must not link anywhere (TRU-1).
-        let provenance =
-            export_provenance("2026-08-25T14:03:07Z", Some("d"), 1);
+        let provenance = export_provenance("2026-08-25T14:03:07Z", Some("d"));
         assert_eq!(provenance.build, "dev");
         assert_eq!(provenance.data, "dev");
         assert_eq!(provenance.build_url, None);
@@ -164,11 +161,10 @@ mod tests {
     #[test]
     fn the_line_carries_every_provenance_fact() {
         let provenance =
-            export_provenance("2026-08-25T14:03:07Z", Some("2026-08-01"), 123);
+            export_provenance("2026-08-25T14:03:07Z", Some("2026-08-01"));
         assert!(provenance.line.contains(&provenance.version));
         assert!(provenance.line.contains(&provenance.build));
         assert!(provenance.line.contains(&provenance.data));
-        assert!(provenance.line.contains("123 cours"));
         assert!(provenance.line.contains(REPO));
         assert!(provenance.line.contains(&provenance.generated));
         assert!(provenance.line.contains(&provenance.scraped));
