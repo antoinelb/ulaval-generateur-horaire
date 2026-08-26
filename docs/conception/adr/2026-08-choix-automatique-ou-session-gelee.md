@@ -27,6 +27,7 @@ Les sessions possibles se demandaient à part, par un bouton « où le placer ? 
   Elle ne s'exécute qu'à la **première** prise : changer de puce est un déplacement déjà accepté une fois.
 - **Le retrait passe par `state::purge_codes`**, qui nettoie déjà élective, épingle, placement, ajout manuel et sections forcées. `remove_course` disparaît, et `place_course` s'en sert pour déplacer.
 - **`plan.manual` n'a plus de producteur** : le champ « Ajouter par code… » et le formulaire de cours manuel choisissent eux aussi sans session. Le champ et ses lecteurs restent, pour les plans enregistrés et parce qu'une entrée `manual` se lit encore comme un gel.
+  (Le champ « Ajouter par code… » a depuis été retiré — ADR `2026-08-une-seule-recherche-au-pied-du-panneau` ; `plan.manual` et ses lecteurs restent, pour la même raison.)
 
 ## Alternatives rejetées
 

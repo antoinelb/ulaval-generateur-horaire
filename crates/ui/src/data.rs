@@ -1,13 +1,19 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use ulaval_scheduler_core::{
-    apply_prereq_overrides, Course, CourseManual, OverrideNote,
-    PrereqOverride, Prerequisites, Program,
+    apply_prereq_overrides, borrow_seasons_from_equivalents, Course,
+    CourseManual, OverrideNote, PrereqOverride, Prerequisites, Program, Rule,
+    RuleCourses, PREPARATORY_RULE_TITLE,
 };
 
 use crate::import::LocalProgram;
 use crate::state::Plan;
 use ulaval_scheduler_wasm::merge::merge_manual;
+
+// The rule that hosts a course taken outside the program, added to every
+// program at load — public so the panel's tests and the entente key
+// (« p/Hors programme ») name it rather than spell it
+pub const OUT_OF_PROGRAM_RULE_TITLE: &str = "Hors programme";
 
 // Everything the app fetched, still unparsed: the fetch lives in `browser`
 // (wasm-only glue), the parse here — testable without a browser.
@@ -181,13 +187,19 @@ pub fn parse_data(
     programs.sort_by_key(|program| {
         (program.code.clone(), program.semester.to_string())
     });
+    let programs: Vec<Program> =
+        programs.into_iter().map(with_out_of_program).collect();
     let manual_codes: BTreeSet<String> =
         manual.iter().map(|course| course.code.clone()).collect();
     // the repo's hand-maintained courses join the catalogue first, so a
     // course the student typed before it shipped reads as the collision it
     // now is instead of silently shadowing the shared entry
     let shared = merge_manual(file.courses, repo_manual.courses.clone());
-    let merged = merge_manual(shared.courses, manual);
+    let mut merged = merge_manual(shared.courses, manual);
+    // once the catalogue is whole: a new course's invented calendar defers
+    // to the equivalent the répertoire dates (ADR
+    // `2026-08-saisons-empruntees-a-lequivalent`)
+    borrow_seasons_from_equivalents(&mut merged.courses);
     let collisions: Vec<String> = shared
         .collisions
         .into_iter()
@@ -217,6 +229,46 @@ pub fn parse_data(
         programs,
         local_programs,
     })
+}
+
+// A course taken outside the program has no home: no section lists it, and
+// crediting it only earns the « n'apparaît dans aucune règle » warning
+// (`panel::unlisted_credited`). This rule is that home — empty, since it
+// only ever fills by entente, and unconstrained, since there is nothing to
+// verdict (same reasoning as `core::preparatory::preparatory_rule`). Its
+// credits are en sus: a course outside the program does not pay for the
+// diploma. Injected at load and never written to `data/programmes/*.json`
+// — it states a fact about the student, not about the répertoire (ADR
+// `2026-08-regle-hors-programme`).
+fn with_out_of_program(mut program: Program) -> Program {
+    // just before « Scolarité préparatoire », which the panel pulls out and
+    // renders alone at the bottom: the rule lands last in the Programme
+    // group, right after « Stages »
+    let at = program
+        .rules
+        .iter()
+        .position(|rule| rule.title == PREPARATORY_RULE_TITLE)
+        .unwrap_or(program.rules.len());
+    program.rules.insert(
+        at,
+        Rule {
+            title: OUT_OF_PROGRAM_RULE_TITLE.to_string(),
+            constraint: None,
+            courses: RuleCourses::List {
+                courses: Vec::new(),
+            },
+            // the badge only counts the courses parked here, so the
+            // note is the only place that can say these credits do not
+            // count (TRU-1)
+            notes: vec![
+                "Les cours rattachés ici par entente ne comptent pas dans \
+                 les crédits exigés du programme."
+                    .to_string(),
+            ],
+            credits_in_addition: true,
+        },
+    );
+    program
 }
 
 impl Snapshot {
@@ -868,6 +920,74 @@ mod tests {
         assert_eq!(snapshot.local_programs[0].program.code, "B-GLO");
     }
 
+    // --- la règle « Hors programme » -------------------------------------
+
+    fn rule_titles(program: &Program) -> Vec<&str> {
+        program
+            .rules
+            .iter()
+            .map(|rule| rule.title.as_str())
+            .collect()
+    }
+
+    #[test]
+    fn every_program_gains_an_empty_out_of_program_rule() {
+        let mut raw = raw();
+        raw.programs.push((
+            "B-GLO-A26.json".to_string(),
+            r#"{"code":"B-GLO","slug":"glo","semester":"A26","title":"G",
+                "cycle":1,"credits_required":6,"mandatory":[],
+                "rules":[{"title":"Stages","courses":["GEX-1580"]},
+                         {"title":"Scolarité préparatoire",
+                          "courses":["MAT-0130"]}],
+                "concentrations":[],"profiles":[]}"#
+                .to_string(),
+        ));
+        let snapshot = parse_data(&raw, Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(
+            rule_titles(&snapshot.programs[0]),
+            [OUT_OF_PROGRAM_RULE_TITLE],
+            "no préparatoire to sit before: appended last"
+        );
+        assert_eq!(
+            rule_titles(&snapshot.programs[1]),
+            ["Stages", OUT_OF_PROGRAM_RULE_TITLE, PREPARATORY_RULE_TITLE],
+            "after « Stages », before « Scolarité préparatoire »"
+        );
+        let rule = &snapshot.programs[1].rules[1];
+        assert_eq!(rule.constraint, None, "nothing to verdict");
+        assert!(
+            matches!(&rule.courses,
+                RuleCourses::List { courses } if courses.is_empty()),
+            "empty: it only ever fills by entente"
+        );
+        assert!(
+            rule.credits_in_addition,
+            "a course outside the program does not pay for the diploma"
+        );
+        assert_eq!(rule.notes.len(), 1, "the note carries that fact");
+    }
+
+    #[test]
+    fn a_live_import_gains_the_rule_without_persisting_it() {
+        let mut snapshot = parse_data(&raw(), Vec::new(), Vec::new())
+            .unwrap_or_else(|e| panic!("{e}"));
+        add_local_program(&mut snapshot, local_program("B-GLO", "A26"))
+            .unwrap_or_else(|e| panic!("{e}"));
+        let added = snapshot
+            .programs
+            .iter()
+            .find(|program| program.code == "B-GLO")
+            .unwrap_or_else(|| panic!("it joined the catalogue"));
+        assert_eq!(rule_titles(added), [OUT_OF_PROGRAM_RULE_TITLE]);
+        assert!(
+            snapshot.local_programs[0].program.rules.is_empty(),
+            "what gets persisted stays as imported: a stored copy would \
+             gain a second rule at the next load"
+        );
+    }
+
     #[test]
     fn a_local_program_duplicating_a_shipped_one_is_replaced_and_named() {
         let snapshot = parse_data(
@@ -1274,7 +1394,13 @@ pub fn add_local_program(
             local.program.code, local.program.semester
         ));
     }
-    snapshot.programs.push(local.program.clone());
+    // the pushed copy gains the rule, `local.program` stays as imported:
+    // it is what `persist::encode_local_programs` writes back, and a
+    // persisted copy carrying the rule would gain a second one at the next
+    // load
+    snapshot
+        .programs
+        .push(with_out_of_program(local.program.clone()));
     snapshot.programs.sort_by_key(|program| {
         (program.code.clone(), program.semester.to_string())
     });

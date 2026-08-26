@@ -44,7 +44,6 @@ pub fn LeftPanel() -> Element {
             } else {
                 PanelBody { model }
                 ManualCourseForm {}
-                AddByCode {}
             }
         }
     }
@@ -904,13 +903,34 @@ fn PanelBody(model: PanelModel) -> Element {
     let mut view = use_context::<Signal<View>>();
     let search = view.read().search.clone();
     let searching = !search.trim().is_empty();
-    let only_fitting = view.read().only_fitting;
     let has_program = plan.read().program.is_some();
     // armed by typing only: a restored page mounts a saved search too,
     // and an auto-refresh never scrolls (LAT-7)
     let mut scroll_to_results = use_signal(|| false);
     rsx! {
         div { class: "panel-body",
+            if let Some(error) = model.coverage_error.as_ref() {
+                p { class: "warning", "⚠ {error}" }
+            }
+            for warning in model.warnings.iter() {
+                p { class: "warning", "⚠ {warning}" }
+            }
+            if has_program {
+                CheminementKnobs {}
+                OrganigrammeControls { rules_missing: missing_rules(&model) }
+                for group in model.groups.iter().cloned() {
+                    GroupView { key: "{group.title}", group }
+                }
+                if let Some(preparatory) = model.preparatory.clone() {
+                    SectionView { section: preparatory }
+                }
+                if let Some(note) = model.language_note.as_ref() {
+                    p { class: "panel-note", b { "{note}" } }
+                }
+                for note in model.notes.iter() {
+                    p { class: "panel-note", "{note}" }
+                }
+            }
             div { class: "panel-search-wrap",
                 input {
                     class: "panel-search",
@@ -932,32 +952,12 @@ fn PanelBody(model: PanelModel) -> Element {
                     }
                 }
             }
-            label { class: "panel-fit",
-                input {
-                    r#type: "checkbox",
-                    checked: only_fitting,
-                    onchange: move |event| {
-                        view.write().only_fitting = event.checked();
-                    },
-                }
-                "Seulement les cours qui rentrent dans l'horaire affiché"
-            }
-            if let Some(error) = model.coverage_error.as_ref() {
-                p { class: "warning", "⚠ {error}" }
-            }
-            for warning in model.warnings.iter() {
-                p { class: "warning", "⚠ {warning}" }
-            }
-            if has_program {
-                CheminementKnobs {}
-                OrganigrammeControls { rules_missing: missing_rules(&model) }
-            }
             if searching {
                 div {
-                    // the results land below the knobs and the
-                    // organigramme block, often under the fold (rapport
-                    // étudiante-gex 2026-08-19) — the first typed letter
-                    // brings them into view
+                    // the field sits at the foot of the panel, so its
+                    // results open under the fold (rapport étudiante-gex
+                    // 2026-08-19) — the first typed letter brings them
+                    // into view
                     onmounted: move |event: Event<MountedData>| {
                         if !scroll_to_results() {
                             return;
@@ -976,19 +976,6 @@ fn PanelBody(model: PanelModel) -> Element {
                         });
                     },
                     SearchResults {}
-                }
-            } else if has_program {
-                for group in model.groups.iter().cloned() {
-                    GroupView { key: "{group.title}", group }
-                }
-                if let Some(preparatory) = model.preparatory.clone() {
-                    SectionView { section: preparatory }
-                }
-                if let Some(note) = model.language_note.as_ref() {
-                    p { class: "panel-note", b { "{note}" } }
-                }
-                for note in model.notes.iter() {
-                    p { class: "panel-note", "{note}" }
                 }
             }
         }
@@ -1313,12 +1300,9 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
             }
             if let Some(verification) = verification {
                 if !verification.solutions.is_empty() {
-                    if rules_missing == 0 && credit_shortfalls.is_empty() {
-                        p { class: "panel-verdict panel-verdict--ok",
-                            "Cheminement vérifié ✓ — préalables, plafond, \
-                             horaires et règles comptées : tout y est."
-                        }
-                    } else {
+                    // un cheminement complet ne dit plus rien : seuls les
+                    // manques parlent (décision d'Antoine, 2026-08-26)
+                    if rules_missing > 0 || !credit_shortfalls.is_empty() {
                         p { class: "panel-verdict panel-verdict--ok",
                             "Placement vérifié ✓ (préalables, plafond, une \
                              combinaison d'horaire possible par session)"
@@ -1571,19 +1555,6 @@ fn SectionView(section: Section) -> Element {
                 span { class: "panel-rule-title",
                     "{section.title}"
                 }
-                if let Some((done, total)) = section.progress {
-                    if total > 0 {
-                        span {
-                            class: "panel-progress",
-                            role: "img",
-                            aria_label: "{done} sur {total}",
-                            span {
-                                class: "panel-progress-fill",
-                                style: "width:{done * 100 / total}%;",
-                            }
-                        }
-                    }
-                }
                 span { class: "panel-badge {badge_class}", "{badge_text}" }
                 span { class: "panel-rule-chevron", "{chevron}" }
             }
@@ -1822,16 +1793,12 @@ fn FreeBrowse(grant_key: String) -> Element {
     };
     let subjects = panel::subjects(snapshot);
     let subject = view.read().subject.clone();
-    let only_fitting = view.read().only_fitting;
     let results = panel::search_courses(
         snapshot,
         &plan.read(),
         panel::SearchScope {
-            // the fit filter judges against the displayed session
-            session: only_fitting.then(|| view.read().session),
             subject: subject.as_deref(),
             first_cycle_only: true,
-            only_fitting,
         },
         &view.read().search,
     );
@@ -1870,16 +1837,12 @@ fn SearchResults() -> Element {
     let Some(snapshot) = read.as_ref() else {
         return rsx! {};
     };
-    let only_fitting = view.read().only_fitting;
     let results = panel::search_courses(
         snapshot,
         &plan.read(),
         panel::SearchScope {
-            // the fit filter judges against the displayed session
-            session: only_fitting.then(|| view.read().session),
             subject: None,
             first_cycle_only: false,
-            only_fitting,
         },
         &view.read().search,
     );
@@ -1909,9 +1872,6 @@ fn ResultRows(
                     "{results.rows.len()} premiers affichés sur {results.matched} correspondances"
                 } else {
                     "{results.matched} cours"
-                }
-                if results.masked_by_fit > 0 {
-                    " - {results.masked_by_fit} masqués par le filtre horaire"
                 }
             }
         }
@@ -2723,84 +2683,6 @@ fn ManualCourseActions(course: ulaval_scheduler_core::Course) -> Element {
                     );
                 },
                 "Copier la fiche du cours"
-            }
-        }
-    }
-}
-
-// INP-7: validated on commit, inline, non-blocking — and the field is
-// never cleared on a rejection (ERR-6)
-#[component]
-fn AddByCode() -> Element {
-    let plan = use_context::<Signal<Plan>>();
-    let history = use_context::<Signal<History>>();
-    let snapshot = use_context::<Signal<Option<Snapshot>>>();
-    let alerts = use_context::<Signal<Vec<super::Alert>>>();
-    let mut typed = use_signal(String::new);
-    let mut rejection = use_signal(|| None::<String>);
-    let mut submit = move || {
-        let read = snapshot.read();
-        let Some(snapshot) = read.as_ref() else {
-            return;
-        };
-        let raw = typed.read().clone();
-        // typing a code is the same act as the strip's « automatique » —
-        // take the course, the solver finds it a session
-        let verdict = {
-            let plan = plan.read();
-            solve::validate_new_code(snapshot, &plan, None, &raw)
-        };
-        match verdict {
-            Ok(accepted) => {
-                let code = accepted.code;
-                edit_plan(
-                    plan,
-                    history,
-                    &format!("Ajout de {code}"),
-                    |plan| {
-                        if !plan.electives.contains(&code) {
-                            plan.electives.push(code);
-                        }
-                    },
-                );
-                if let Some(warning) = accepted.warning {
-                    super::push_alert(alerts, super::AlertBody::Note(warning));
-                }
-                typed.write().clear();
-                rejection.set(None);
-            }
-            Err(why) => rejection.set(Some(why)),
-        }
-    };
-    rsx! {
-        div { class: "panel-add",
-            div { class: "panel-add-row",
-                input {
-                    class: "panel-add-input",
-                    r#type: "text",
-                    placeholder: "Ajouter par code…",
-                    aria_label: "Code du cours à ajouter",
-                    value: "{typed}",
-                    oninput: move |event| {
-                        typed.set(event.value());
-                        // a fresh keystroke clears the old verdict, the
-                        // next commit re-judges (reject on commit, INP-7)
-                        rejection.set(None);
-                    },
-                    onkeydown: move |event| {
-                        if event.key() == Key::Enter {
-                            submit();
-                        }
-                    },
-                }
-                button {
-                    class: "panel-add-button",
-                    onclick: move |_| submit(),
-                    "Ajouter"
-                }
-            }
-            if let Some(why) = rejection.read().as_ref() {
-                p { class: "panel-add-error", role: "alert", "{why}" }
             }
         }
     }

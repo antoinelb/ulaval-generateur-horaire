@@ -71,8 +71,6 @@ pub struct Section {
     pub notes: Vec<String>,
     // a « tous les cours » rule: the rows come from a catalogue browse
     pub free: bool,
-    // the Obligatoires bar: (satisfied, total)
-    pub progress: Option<(usize, usize)>,
 }
 
 // never colour alone: the badge text itself carries the state (INP-3)
@@ -346,7 +344,6 @@ fn uncounted_panel(
         raw: None,
         notes: Vec::new(),
         free: false,
-        progress: None,
     };
     let original = |scope: Scope, title: &str| {
         find_rule(chosen, concentration, profile, scope, title)
@@ -479,7 +476,6 @@ fn uncounted_scope_group(
             raw: None,
             notes: Vec::new(),
             free: false,
-            progress: None,
         })
     };
     let sections = mandatory_section
@@ -640,7 +636,6 @@ fn scoped_mandatory_section(
         raw: None,
         notes: Vec::new(),
         free: false,
-        progress: Some((satisfied, total)),
     })
 }
 
@@ -708,7 +703,6 @@ fn bare_section(
         raw: rule_raw(rule).or_else(|| original.and_then(rule_raw)),
         notes: rule.notes.clone(),
         free: browses_catalogue(original.unwrap_or(rule)),
-        progress: None,
     }
 }
 
@@ -1365,8 +1359,10 @@ pub fn program_credits_required(
 pub fn program_subtitle(snapshot: &Snapshot, plan: &Plan) -> Option<String> {
     let program = chosen_program(snapshot, plan)?;
     let (concentration, profile) = scope_of(plan);
+    // le sigle et le millésime tombent à la ligne sous le titre, que le
+    // `white-space: pre-line` de `.header-subtitle` respecte
     let mut parts = vec![format!(
-        "{} ({} version {})",
+        "{}\n({} version {})",
         program.title, program.code, program.semester
     )];
     parts.extend(concentration.map(str::to_string));
@@ -1424,7 +1420,6 @@ fn mandatory_section(
         raw: None,
         notes: Vec::new(),
         free: false,
-        progress: Some((satisfied.len(), total)),
     }
 }
 
@@ -1455,6 +1450,15 @@ fn rule_section(
         Scope::Profile => "f",
     };
     let badge = rule_badge(snapshot, report, rule);
+    // « Hors programme » ne porte aucune contrainte, donc core la reporte
+    // sans verdict — mais le nombre de cours qu'un étudiant y range est un
+    // fait, et un « — » figé ne dit rien (même raison que
+    // `preparatory_badge`)
+    let badge = if report.title == crate::data::OUT_OF_PROGRAM_RULE_TITLE {
+        Badge::Neutral(rows.len().to_string())
+    } else {
+        badge
+    };
     // only an unsatisfied choice needs the explanation — a rule already
     // filled explains itself, a raw-only rule has no list to pick from
     let lead = (!rows.is_empty()
@@ -1471,7 +1475,6 @@ fn rule_section(
         raw: report.raw.clone().or_else(|| original.and_then(rule_raw)),
         notes: rule.map(|rule| rule.notes.clone()).unwrap_or_default(),
         free: original.or(rule).is_some_and(browses_catalogue),
-        progress: None,
     }
 }
 
@@ -1568,10 +1571,11 @@ fn unique_rows<'a>(
         .collect()
 }
 
-// « 1 parmi », « 3–9 cr », suffixed « - en sus » when the credits do not
-// count toward the diploma (the promoted Stages rule)
+// « 1 parmi », « 3–9 cr » : ce que la règle exige. Que les crédits d'un
+// stage soient en sus du diplôme est dit par la note de la règle, jamais
+// répété sur le badge ni sur l'en-tête (décision d'Antoine, 2026-08-26)
 fn constraint_label(rule: &Rule) -> Option<String> {
-    let label = match rule.constraint {
+    match rule.constraint {
         None => None,
         Some(Constraint::Course { min, max }) if min == max => {
             Some(format!("{min} parmi"))
@@ -1585,8 +1589,7 @@ fn constraint_label(rule: &Rule) -> Option<String> {
         Some(Constraint::Credits { min, max }) => {
             Some(format!("{min}–{max} cr"))
         }
-    };
-    label.map(|label| en_sus(label, rule))
+    }
 }
 
 fn rule_badge(
@@ -1595,18 +1598,19 @@ fn rule_badge(
     rule: Option<&Rule>,
 ) -> Badge {
     match report.status {
-        RuleStatus::Satisfied => match constrained(rule) {
-            Some((rule, constraint)) => {
-                let (text, _) = constraint_fraction(
-                    snapshot,
-                    report.counted.as_deref().unwrap_or_default(),
-                    rule,
-                    constraint,
-                );
-                Badge::Ok(format!("✓ {text}"))
+        RuleStatus::Satisfied => {
+            match rule.and_then(|rule| rule.constraint.as_ref()) {
+                Some(constraint) => {
+                    let (text, _) = constraint_fraction(
+                        snapshot,
+                        report.counted.as_deref().unwrap_or_default(),
+                        constraint,
+                    );
+                    Badge::Ok(format!("✓ {text}"))
+                }
+                None => Badge::Ok("✓".to_string()),
             }
-            None => Badge::Ok("✓".to_string()),
-        },
+        }
         // a reported rule that still carries a countable constraint
         // (« any », « negotiated ») says what remains — « 0/3 cr » — since
         // an entente can now fill it; « — » would hide a real requirement
@@ -1628,10 +1632,10 @@ fn incomplete_badge(
     rule: Option<&Rule>,
 ) -> Badge {
     let counted = report.counted.as_deref().unwrap_or_default();
-    match constrained(rule) {
-        Some((rule, constraint)) => {
+    match rule.and_then(|rule| rule.constraint.as_ref()) {
+        Some(constraint) => {
             let (text, any) =
-                constraint_fraction(snapshot, counted, rule, constraint);
+                constraint_fraction(snapshot, counted, constraint);
             if any {
                 Badge::Partial(text)
             } else {
@@ -1651,25 +1655,15 @@ fn incomplete_badge(
     }
 }
 
-// une règle et sa contrainte quand les deux existent — le badge ne compte
-// que dans ce cas
-fn constrained(rule: Option<&Rule>) -> Option<(&Rule, &Constraint)> {
-    let rule = rule?;
-    rule.constraint
-        .as_ref()
-        .map(|constraint| (rule, constraint))
-}
-
 // « 6/9 cr », « 1/1 » : ce que la règle a compté sur le maximum de sa
 // contrainte — le numérateur n'est jamais borné — et si elle a compté
 // quoi que ce soit (Missing contre Partial)
 fn constraint_fraction(
     snapshot: &Snapshot,
     counted: &[String],
-    rule: &Rule,
     constraint: &Constraint,
 ) -> (String, bool) {
-    let (label, any) = match *constraint {
+    match *constraint {
         Constraint::Course { max, .. } => {
             (format!("{}/{max}", counted.len()), !counted.is_empty())
         }
@@ -1681,17 +1675,6 @@ fn constraint_fraction(
                 .sum();
             (format!("{sum}/{max} cr"), sum > 0)
         }
-    };
-    (en_sus(label, rule), any)
-}
-
-// les crédits du stage promu sont en sus du total du diplôme : le libellé
-// le dit, sur le badge comme sur l'en-tête
-fn en_sus(label: String, rule: &Rule) -> String {
-    if rule.credits_in_addition {
-        format!("{label} - en sus")
-    } else {
-        label
     }
 }
 
@@ -2077,18 +2060,14 @@ pub struct SearchResults {
     pub rows: Vec<Row>,
     // full match count — truncation is announced, never silent
     pub matched: usize,
-    pub masked_by_fit: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SearchScope<'a> {
-    // restrict to the courses offered in this session's season
-    pub session: Option<usize>,
     // restrict to a matière (code prefix)
     pub subject: Option<&'a str>,
     // keep only first-cycle courses (the « cours libres » browse)
     pub first_cycle_only: bool,
-    pub only_fitting: bool,
 }
 
 pub fn search_courses(
@@ -2098,24 +2077,9 @@ pub fn search_courses(
     query: &str,
 ) -> SearchResults {
     let needle = query.trim().to_uppercase();
-    let season = scope
-        .session
-        .and_then(|session| solve::session_semester(plan, session))
-        .map(|semester| semester.season);
-    // the probe is built once; each candidate then costs a mask overlap
-    let fit = match (scope.only_fitting, scope.session) {
-        (true, Some(session)) => fit_probe(snapshot, plan, session),
-        _ => None,
-    };
     let mut rows = Vec::new();
     let mut matched = 0usize;
-    let mut masked_by_fit = 0usize;
     for course in &snapshot.courses {
-        if let Some(season) = season {
-            if !course.seasons.contains_key(&season) {
-                continue;
-            }
-        }
         if let Some(subject) = scope.subject {
             if subject_of(&course.code) != subject {
                 continue;
@@ -2130,25 +2094,12 @@ pub fn search_courses(
         {
             continue;
         }
-        if let Some(probe) = &fit {
-            if !matches!(
-                quick_fit(probe, snapshot, course),
-                Fit::Fits | Fit::AlreadyIn
-            ) {
-                masked_by_fit += 1;
-                continue;
-            }
-        }
         matched += 1;
         if rows.len() < SEARCH_LIMIT {
             rows.push(row(snapshot, plan, &course.code));
         }
     }
-    SearchResults {
-        rows,
-        matched,
-        masked_by_fit,
-    }
+    SearchResults { rows, matched }
 }
 
 // the matières of the catalogue with their course counts, for the free
@@ -2260,7 +2211,7 @@ fn season_offering<'a>(
 mod tests {
     use super::*;
 
-    use crate::data::{parse_data, RawData};
+    use crate::data::{parse_data, RawData, OUT_OF_PROGRAM_RULE_TITLE};
     use crate::state::ProgramChoice;
 
     // GEX-1000 (fall, monday), GEX-2000 (fall, monday — clashes 1000),
@@ -2522,12 +2473,11 @@ mod tests {
         let model = panel_model(&snapshot(), &plan());
         assert!(model.coverage_error.is_none());
         let mandatory = model.mandatory.expect("a program was chosen");
-        assert_eq!(mandatory.progress, Some((1, 2)));
         assert_eq!(mandatory.badge, Badge::Partial("1/2".to_string()));
         assert_eq!(mandatory.rows[0].state, RowState::Placed);
         assert_eq!(mandatory.rows[1].code, "GEX-2000");
 
-        assert_eq!(model.rules.len(), 4);
+        assert_eq!(model.rules.len(), 5);
         assert_eq!(
             model.rules[0].badge,
             Badge::Ok("✓ 1/1".to_string()),
@@ -2547,6 +2497,13 @@ mod tests {
         );
         assert_eq!(model.rules[3].badge, Badge::Neutral("—".to_string()));
         assert_eq!(model.rules[3].raw.as_deref(), Some("des cours convenus"));
+        // no préparatoire rule here, so « Hors programme » is appended last:
+        // empty, no browse — its badge counts what is parked there, and
+        // it only fills by entente
+        assert_eq!(model.rules[4].title, OUT_OF_PROGRAM_RULE_TITLE);
+        assert_eq!(model.rules[4].badge, Badge::Neutral("0".to_string()));
+        assert!(model.rules[4].rows.is_empty());
+        assert!(!model.rules[4].free);
         assert_eq!(
             model.language_note.as_deref(),
             Some("Exigence linguistique - ANL-2020 ou VEPT ≥ 53")
@@ -2557,7 +2514,7 @@ mod tests {
         // program has no préparatoire rule — same sections either way)
         let mut unchecked = plan();
         unchecked.preparatory_done = false;
-        assert_eq!(panel_model(&snapshot(), &unchecked).rules.len(), 4);
+        assert_eq!(panel_model(&snapshot(), &unchecked).rules.len(), 5);
     }
 
     #[test]
@@ -2757,7 +2714,7 @@ mod tests {
         let mandatory = model.mandatory.expect("still shown");
         assert_eq!(mandatory.rows.len(), 2);
         assert_eq!(mandatory.badge, Badge::Neutral("—".to_string()));
-        assert_eq!(model.rules.len(), 4, "the program rules still render");
+        assert_eq!(model.rules.len(), 5, "the program rules still render");
         // the constraint stays readable even without a count (no chip left
         // to carry it): the neutral badge names it instead of a bare « — »
         assert_eq!(
@@ -2772,6 +2729,10 @@ mod tests {
             model.rules[3].raw.as_deref(),
             Some("des cours convenus"),
             "raw texts survive the fallback"
+        );
+        assert_eq!(
+            model.rules[4].title, OUT_OF_PROGRAM_RULE_TITLE,
+            "the degraded panel keeps the entente target too"
         );
         assert!(model
             .language_note
@@ -3233,11 +3194,20 @@ mod tests {
         )
         .unwrap_or_else(|e| panic!("{e}"));
         let mut plan = plan();
+        let badge = |model: &PanelModel| {
+            model
+                .rules
+                .iter()
+                .find(|section| {
+                    section.title
+                        == ulaval_scheduler_core::PREPARATORY_RULE_TITLE
+                })
+                .unwrap_or_else(|| panic!("the préparatoire rule is there"))
+                .badge
+                .clone()
+        };
         let model = panel_model(&snapshot, &plan);
-        assert_eq!(
-            model.rules[0].badge,
-            Badge::Ok("✓ déjà faite".to_string())
-        );
+        assert_eq!(badge(&model), Badge::Ok("✓ déjà faite".to_string()));
         assert_eq!(
             model
                 .preparatory
@@ -3245,17 +3215,26 @@ mod tests {
                 .map(|section| section.title.as_str()),
             Some("Scolarité préparatoire")
         );
-        assert!(model.groups[0].sections.is_empty());
+        // the group holds « Hors programme » alone: the préparatoire is
+        // pulled out and rendered on its own at the bottom
+        assert_eq!(
+            model.groups[0]
+                .sections
+                .iter()
+                .map(|section| section.title.as_str())
+                .collect::<Vec<_>>(),
+            [OUT_OF_PROGRAM_RULE_TITLE]
+        );
         plan.preparatory_done = false;
         let model = panel_model(&snapshot, &plan);
         assert_eq!(
-            model.rules[0].badge,
+            badge(&model),
             Badge::Missing("1 à faire".to_string()),
             "GEX-1000 is placed, GAE-1000 remains"
         );
         plan.displayed_placement.insert("GAE-1000".to_string(), 2);
         let model = panel_model(&snapshot, &plan);
-        assert_eq!(model.rules[0].badge, Badge::Ok("✓".to_string()));
+        assert_eq!(badge(&model), Badge::Ok("✓".to_string()));
     }
 
     #[test]
@@ -3337,8 +3316,20 @@ mod tests {
         )
         .unwrap_or_else(|e| panic!("{e}"));
         let mut plan = plan();
+        let preparatory = |model: &PanelModel| {
+            model
+                .rules
+                .iter()
+                .find(|section| {
+                    section.title
+                        == ulaval_scheduler_core::PREPARATORY_RULE_TITLE
+                })
+                .unwrap_or_else(|| panic!("the préparatoire rule is there"))
+                .rows
+                .clone()
+        };
         let model = panel_model(&snapshot, &plan);
-        let rows = &model.rules[0].rows;
+        let rows = preparatory(&model);
         assert!(
             rows.iter().all(|row| row.state == RowState::Acquired),
             "{rows:?}"
@@ -3346,10 +3337,8 @@ mod tests {
         assert!(rows[0].sub.contains("décochez la case"), "{}", rows[0].sub);
         // the search offers the same course: same verdict, no side door
         let everywhere = SearchScope {
-            session: None,
             subject: None,
             first_cycle_only: false,
-            only_fitting: false,
         };
         let results =
             search_courses(&snapshot, &plan, everywhere, "hydrologie");
@@ -3360,26 +3349,23 @@ mod tests {
         plan.rule_grants
             .insert("GEX-1000".to_string(), "p/Règle 1".to_string());
         let model = panel_model(&snapshot, &plan);
-        assert_eq!(model.rules[0].rows[0].state, RowState::Placed);
+        assert_eq!(preparatory(&model)[0].state, RowState::Placed);
         plan.rule_grants.clear();
         // unchecked: ordinary work to place
         plan.preparatory_done = false;
         let model = panel_model(&snapshot, &plan);
-        assert!(model.rules[0]
-            .rows
+        assert!(preparatory(&model)
             .iter()
             .all(|row| row.state != RowState::Acquired));
     }
 
     #[test]
-    fn the_search_filters_by_query_season_subject_and_cycle() {
+    fn the_search_filters_by_query_subject_and_cycle() {
         let snapshot = snapshot();
         let plan = plan();
         let everywhere = SearchScope {
-            session: None,
             subject: None,
             first_cycle_only: false,
-            only_fitting: false,
         };
         let all = search_courses(&snapshot, &plan, everywhere, "");
         assert_eq!(all.matched, 11);
@@ -3387,17 +3373,6 @@ mod tests {
         let by_query = search_courses(&snapshot, &plan, everywhere, "hydro");
         assert_eq!(by_query.matched, 1);
         assert_eq!(by_query.rows[0].code, "GEX-1000");
-
-        let fall_only = search_courses(
-            &snapshot,
-            &plan,
-            SearchScope {
-                session: Some(1),
-                ..everywhere
-            },
-            "",
-        );
-        assert_eq!(fall_only.matched, 7, "GAE, ETE, HOR et EQU hors automne");
 
         let gex = search_courses(
             &snapshot,
@@ -3423,7 +3398,7 @@ mod tests {
     }
 
     #[test]
-    fn the_fit_filter_masks_and_counts_what_it_hides() {
+    fn a_course_added_by_hand_reads_as_placed_in_its_session() {
         let snapshot = snapshot();
         let mut plan = plan();
         plan.manual.insert(1, vec!["GEX-2000".to_string()]);
@@ -3431,18 +3406,18 @@ mod tests {
             &snapshot,
             &plan,
             SearchScope {
-                session: Some(1),
                 subject: Some("GEX"),
                 first_cycle_only: false,
-                only_fitting: true,
             },
             "",
         );
-        // GEX-1000 clashes with the placed GEX-2000; GEX-3000/9000 have no
-        // published schedule; GEX-2000 itself is AlreadyIn and stays
-        assert_eq!(results.masked_by_fit, 3);
-        assert_eq!(results.matched, 1);
-        assert_eq!(results.rows[0].code, "GEX-2000");
+        let row = results
+            .rows
+            .iter()
+            .find(|row| row.code == "GEX-2000")
+            .unwrap_or_else(|| panic!("GEX-2000 is in the results"));
+        assert_eq!(row.state, RowState::Placed);
+        assert!(row.sub.starts_with("ajouté en"), "{}", row.sub);
     }
 
     #[test]
@@ -3547,31 +3522,29 @@ mod tests {
 
     #[test]
     fn constraint_labels_speak_every_shape() {
-        let rule = |constraint: &str, en_sus: bool| -> Rule {
+        let rule = |constraint: &str| -> Rule {
             serde_json::from_str(&format!(
                 r#"{{"title":"R","constraint":{constraint},
-                     "courses":["X-1"],
-                     "credits_in_addition":{en_sus}}}"#
+                     "courses":["X-1"]}}"#
             ))
             .unwrap_or_else(|e| panic!("rule literal: {e}"))
         };
-        let label =
-            |constraint, en_sus| constraint_label(&rule(constraint, en_sus));
+        let label = |constraint| constraint_label(&rule(constraint));
         assert_eq!(
-            label(r#"{"type":"course","min":1,"max":1}"#, false).as_deref(),
+            label(r#"{"type":"course","min":1,"max":1}"#).as_deref(),
             Some("1 parmi")
         );
         assert_eq!(
-            label(r#"{"type":"course","min":1,"max":3}"#, false).as_deref(),
+            label(r#"{"type":"course","min":1,"max":3}"#).as_deref(),
             Some("1–3 parmi")
         );
         assert_eq!(
-            label(r#"{"type":"credits","min":3,"max":3}"#, false).as_deref(),
+            label(r#"{"type":"credits","min":3,"max":3}"#).as_deref(),
             Some("3 cr")
         );
         assert_eq!(
-            label(r#"{"type":"credits","min":1,"max":8}"#, true).as_deref(),
-            Some("1–8 cr - en sus")
+            label(r#"{"type":"credits","min":1,"max":8}"#).as_deref(),
+            Some("1–8 cr")
         );
         let bare: Rule =
             serde_json::from_str(r#"{"title":"R","courses":["X-1"]}"#)
@@ -3622,11 +3595,10 @@ mod tests {
 
     #[test]
     fn a_constrained_incomplete_rule_counts_against_the_maximum() {
-        let rule = |constraint: &str, en_sus: bool| -> Rule {
+        let rule = |constraint: &str| -> Rule {
             serde_json::from_str(&format!(
                 r#"{{"title":"R","constraint":{constraint},
-                     "courses":["X-1"],
-                     "credits_in_addition":{en_sus}}}"#
+                     "courses":["X-1"]}}"#
             ))
             .unwrap_or_else(|e| panic!("rule literal: {e}"))
         };
@@ -3643,7 +3615,7 @@ mod tests {
             };
         let snapshot = snapshot();
 
-        let course_rule = rule(r#"{"type":"course","min":1,"max":3}"#, false);
+        let course_rule = rule(r#"{"type":"course","min":1,"max":3}"#);
         assert_eq!(
             incomplete_badge(&snapshot, &report(None), Some(&course_rule)),
             Badge::Missing("0/3".to_string())
@@ -3657,8 +3629,7 @@ mod tests {
             Badge::Partial("1/3".to_string())
         );
 
-        let credits_rule =
-            rule(r#"{"type":"credits","min":3,"max":9}"#, false);
+        let credits_rule = rule(r#"{"type":"credits","min":3,"max":9}"#);
         assert_eq!(
             incomplete_badge(
                 &snapshot,
@@ -3668,15 +3639,9 @@ mod tests {
             Badge::Partial("3/9 cr".to_string())
         );
 
-        let credits_rule_en_sus =
-            rule(r#"{"type":"credits","min":3,"max":9}"#, true);
         assert_eq!(
-            incomplete_badge(
-                &snapshot,
-                &report(None),
-                Some(&credits_rule_en_sus)
-            ),
-            Badge::Missing("0/9 cr - en sus".to_string())
+            incomplete_badge(&snapshot, &report(None), Some(&credits_rule)),
+            Badge::Missing("0/9 cr".to_string())
         );
     }
 
@@ -3712,14 +3677,14 @@ mod tests {
             candidates: None,
             raw: None,
         };
-        let en_sus_rule: Rule = serde_json::from_str(
+        let credits_rule: Rule = serde_json::from_str(
             r#"{"title":"R","constraint":{"type":"credits","min":1,"max":8},
-                 "courses":["GAE-1000"],"credits_in_addition":true}"#,
+                 "courses":["GAE-1000"]}"#,
         )
         .unwrap_or_else(|e| panic!("rule literal: {e}"));
         assert_eq!(
-            rule_badge(&snapshot, &report, Some(&en_sus_rule)),
-            Badge::Ok("✓ 3/8 cr - en sus".to_string())
+            rule_badge(&snapshot, &report, Some(&credits_rule)),
+            Badge::Ok("✓ 3/8 cr".to_string())
         );
 
         // min ≠ max, numerator strictly between the two: a « 3–9 cr »
@@ -3849,10 +3814,8 @@ mod tests {
             &snapshot,
             &Plan::default(),
             SearchScope {
-                session: None,
                 subject: None,
                 first_cycle_only: false,
-                only_fitting: false,
             },
             "",
         );
@@ -4488,14 +4451,16 @@ mod tests {
                 "p/Règle 1",
                 "p/Règle 2",
                 "p/Règle 3",
+                "p/Hors programme",
                 "c/Règle C1",
                 "f/Règle P1"
             ],
             "« any » (Règle 3) is a target now; raw (Règle 4) stays out"
         );
         assert_eq!(rules[0].1, "Programme — Règle 1");
-        assert_eq!(rules[3].1, "Concentration « Génie urbain » — Règle C1");
-        assert_eq!(rules[4].1, "Profil « Profil international » — Règle P1");
+        assert_eq!(rules[3].1, "Programme — Hors programme");
+        assert_eq!(rules[4].1, "Concentration « Génie urbain » — Règle C1");
+        assert_eq!(rules[5].1, "Profil « Profil international » — Règle P1");
         assert_eq!(
             rules
                 .iter()
@@ -4520,6 +4485,66 @@ mod tests {
     }
 
     #[test]
+    fn an_entente_gives_an_out_of_program_course_a_home_and_keeps_it_en_sus() {
+        let snapshot = snapshot();
+        let mut plan = plan();
+        // ETE-1000 is in no rule of the program: credited, it would only
+        // earn the « n'apparaît dans aucune règle » warning
+        plan.credited.insert("ETE-1000".to_string());
+        let model = panel_model(&snapshot, &plan);
+        assert_eq!(model.warnings.len(), 1, "{:?}", model.warnings);
+        assert!(
+            model.warnings[0].contains("ETE-1000"),
+            "{:?}",
+            model.warnings
+        );
+
+        plan.rule_grants.insert(
+            "ETE-1000".to_string(),
+            format!("p/{OUT_OF_PROGRAM_RULE_TITLE}"),
+        );
+        let model = panel_model(&snapshot, &plan);
+        assert!(model.warnings.is_empty(), "{:?}", model.warnings);
+        let section = model
+            .rules
+            .iter()
+            .find(|section| section.title == OUT_OF_PROGRAM_RULE_TITLE)
+            .unwrap_or_else(|| panic!("the rule is on every program"));
+        assert_eq!(
+            section
+                .rows
+                .iter()
+                .map(|row| row.code.as_str())
+                .collect::<Vec<_>>(),
+            ["ETE-1000"]
+        );
+        assert!(
+            section.rows[0].sub.contains("entente"),
+            "{}",
+            section.rows[0].sub
+        );
+        assert_eq!(
+            section.badge,
+            Badge::Neutral("1".to_string()),
+            "no constraint to judge, so the badge counts what is parked here"
+        );
+        // and the diploma tally leaves those credits out (en sus)
+        let granted = effective_program(&snapshot, &plan);
+        let summary = ulaval_scheduler_wasm::credits::credit_summary(
+            granted.as_ref(),
+            None,
+            None,
+            &selection(&plan),
+            &snapshot.courses,
+        );
+        assert_eq!(summary.in_addition, 3);
+        assert_eq!(
+            summary.counted, 6,
+            "the plan's own two placed courses; ETE-1000 stayed out"
+        );
+    }
+
+    #[test]
     fn grantable_rules_offer_only_the_chosen_blocks() {
         let snapshot = snapshot();
         let rules = grantable_rules(&snapshot.programs[0], None, None);
@@ -4527,7 +4552,7 @@ mod tests {
             rules.iter().map(|(key, _)| key.as_str()).collect();
         assert_eq!(
             keys,
-            ["p/Règle 1", "p/Règle 2", "p/Règle 3"],
+            ["p/Règle 1", "p/Règle 2", "p/Règle 3", "p/Hors programme"],
             "no block chosen, no scoped target"
         );
     }
@@ -4635,7 +4660,7 @@ mod tests {
         let mut plan = plan();
         assert_eq!(
             program_subtitle(&snapshot, &plan).as_deref(),
-            Some("Baccalauréat en génie des eaux (B-GEX version A26)")
+            Some("Baccalauréat en génie des eaux\n(B-GEX version A26)")
         );
         if let Some(choice) = plan.program.as_mut() {
             choice.concentration = Some("Génie urbain".to_string());
@@ -4644,7 +4669,7 @@ mod tests {
         assert_eq!(
             program_subtitle(&snapshot, &plan).as_deref(),
             Some(
-                "Baccalauréat en génie des eaux (B-GEX version A26) — \
+                "Baccalauréat en génie des eaux\n(B-GEX version A26) — \
                  Génie urbain — Profil international"
             )
         );

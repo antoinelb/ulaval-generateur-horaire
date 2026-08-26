@@ -156,7 +156,6 @@ pub struct View {
     pub session: usize,
     pub search: String,
     pub subject: Option<String>,
-    pub only_fitting: bool,
     pub expanded_rule: Option<String>,
 }
 
@@ -166,7 +165,6 @@ impl Default for View {
             session: 1,
             search: String::new(),
             subject: None,
-            only_fitting: false,
             expanded_rule: None,
         }
     }
