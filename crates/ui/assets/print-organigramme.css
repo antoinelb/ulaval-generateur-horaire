@@ -1,0 +1,311 @@
+/* Organigramme print sheet styling (EXP-4, export-pdf plan item 7).
+ *
+ * - LAY-2: every rule here is scoped under `.print-organigramme-sheet`, the
+ *   root `components/print/organigramme.rs` mounts — nothing here touches
+ *   the on-screen ruban/grid classes, and the sheet only exists in the DOM
+ *   while a print is in flight (`components/print/mod.rs`).
+ * - INP-3: a shaded (concomitant) token keeps its letter — the shading is
+ *   an added fill, never a substitute for the glyph.
+ * - Reproduces `gex_organigramme.pdf`'s grammar: dashed vertical column
+ *   separators, a bordered head bar per column, thin-bordered white course
+ *   boxes with oval/square token vignettes flowing in left/right gutters,
+ *   grey fills for the option boxes and the N.B. band.
+ * - rem units and the shared `:root` tokens throughout, exactly like
+ *   `main.css` and `print-horaire.css`, so light/dark viewer themes never
+ *   leak a light-only colour onto the printed page.
+ * - A compact print-scale type ramp: up to eight columns (A1→H8) must fit
+ *   one A4-landscape page (`print.css`'s `@page organigramme`).
+ */
+
+.print-organigramme-sheet {
+  font-family: var(--font-sans);
+  color: var(--ink);
+  font-size: 0.625rem;
+  line-height: 1.25;
+  /* the paper margin: `@page` prints with margin 0 (print.css) so the
+   * browser adds no header/footer of its own */
+  padding: 10mm;
+}
+
+.print-organigramme-head {
+  margin-bottom: 0.5rem;
+}
+
+.print-organigramme-head h1 {
+  margin: 0 0 0.1875rem;
+  font-size: 1.125rem;
+}
+
+.print-organigramme-program {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.print-organigramme-version {
+  margin: 0.0625rem 0 0;
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
+/* --- la grille de colonnes, une par session --------------------------- */
+
+.print-organigramme-grid {
+  display: grid;
+  align-items: start;
+}
+
+.print-organigramme-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 0.0625rem dashed var(--border-strong);
+  padding: 0 0.1875rem;
+}
+
+.print-organigramme-column:last-child {
+  border-right: none;
+}
+
+.print-organigramme-column-head {
+  border: 0.0625rem solid var(--border-strong);
+  background: var(--card-head);
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  padding: 0.125rem 0;
+  margin-bottom: 0.25rem;
+}
+
+.print-organigramme-column-boxes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+}
+
+/* --- une case de cours : jetons en gouttières gauche/droite ------------ */
+
+.print-organigramme-box {
+  display: flex;
+  align-items: stretch;
+  border: 0.0625rem solid var(--border-strong);
+  border-radius: 0.125rem;
+  background: var(--card);
+  min-height: 2.5rem;
+}
+
+/* the gutters flow: a plain flex column, centred, that grows with however
+   many tokens the model gave it — never a hand-tuned offset */
+.print-organigramme-box-gutter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.09375rem;
+  padding: 0.09375rem;
+  flex-shrink: 0;
+}
+
+.print-organigramme-box-gutter--entry {
+  min-width: 0.75rem;
+}
+
+.print-organigramme-box-gutter--exit {
+  min-width: 0.75rem;
+}
+
+.print-organigramme-box-body {
+  flex: 1;
+  min-width: 0;
+  padding: 0.1875rem 0.125rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.0625rem;
+}
+
+.print-organigramme-box-code {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.625rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.print-organigramme-box-title {
+  font-size: 0.5625rem;
+  line-height: 1.15;
+}
+
+/* --- jetons : ovale pour une lettre, carré pour un seuil de crédits ---- */
+
+.print-organigramme-token {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.0625rem solid var(--ink);
+  font-size: 0.5rem;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--card);
+  color: var(--ink);
+}
+
+.print-organigramme-token--letter {
+  width: 0.75rem;
+  height: 0.5625rem;
+  border-radius: 50%;
+}
+
+.print-organigramme-token--credits {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 0.0625rem;
+}
+
+/* the shading is an added fill on top of the still-legible glyph (INP-3),
+   never the only carrier of the concomitant meaning */
+.print-organigramme-token--shaded {
+  background: var(--muted-3);
+}
+
+/* --- boîtes « cours option » (fond gris) -------------------------------- */
+
+.print-organigramme-option-box {
+  margin-top: 0.25rem;
+  border: 0.0625rem solid var(--border-strong);
+  border-radius: 0.125rem;
+  background: var(--active-bg);
+  padding: 0.1875rem 0.25rem;
+}
+
+.print-organigramme-option-heading p {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.625rem;
+  text-align: center;
+}
+
+.print-organigramme-option-rule {
+  margin-top: 0.25rem;
+}
+
+.print-organigramme-option-rule-constraint {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.5625rem;
+}
+
+.print-organigramme-option-rule-choices {
+  margin: 0.0625rem 0 0;
+  padding-left: 0.875rem;
+  font-size: 0.5625rem;
+}
+
+.print-organigramme-option-rule-choices li {
+  margin-bottom: 0.03125rem;
+}
+
+.print-organigramme-option-rule-raw {
+  margin: 0.0625rem 0 0;
+  font-size: 0.5625rem;
+  font-style: italic;
+}
+
+/* --- microprogrammes de stage : bandes sous la grille ------------------- */
+
+.print-organigramme-spans {
+  display: grid;
+  margin-top: 0.375rem;
+}
+
+.print-organigramme-span {
+  border: 0.0625rem solid var(--border-strong);
+  border-radius: 0.125rem;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.625rem;
+  padding: 0.1875rem;
+  margin: 0 0.1875rem;
+}
+
+/* --- cours de langue ----------------------------------------------------- */
+
+.print-organigramme-language {
+  margin-top: 0.375rem;
+  border: 0.0625rem solid var(--border-strong);
+  border-radius: 0.125rem;
+  padding: 0.25rem 0.375rem;
+  max-width: 16rem;
+}
+
+.print-organigramme-language-label {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.625rem;
+}
+
+.print-organigramme-language-detail {
+  margin: 0.0625rem 0 0;
+  font-size: 0.5625rem;
+  color: var(--muted);
+}
+
+/* --- bande N.B. (fond gris, pleine largeur) ------------------------------ */
+
+.print-organigramme-band {
+  margin: 0.375rem 0 0;
+  background: var(--active-bg);
+  border: 0.0625rem solid var(--border-strong);
+  border-radius: 0.125rem;
+  padding: 0.1875rem 0.375rem;
+  font-weight: 600;
+  font-size: 0.625rem;
+}
+
+/* --- notes et légende (Note 1), en pied de document ---------------------- */
+
+.print-organigramme-notes {
+  margin-top: 0.375rem;
+  color: var(--muted);
+  font-size: 0.5625rem;
+}
+
+.print-organigramme-notes p {
+  margin: 0 0 0.09375rem;
+}
+
+/* --- tableau des règles --------------------------------------------------- */
+
+.print-organigramme-rules {
+  margin-top: 0.375rem;
+  border-collapse: collapse;
+  font-size: 0.5625rem;
+}
+
+.print-organigramme-rules th,
+.print-organigramme-rules td {
+  border: 0.0625rem solid var(--border-strong);
+  padding: 0.09375rem 0.3125rem;
+  text-align: left;
+}
+
+.print-organigramme-rules th {
+  background: var(--card-head);
+  font-weight: 700;
+}
+
+/* --- pied de provenance (EXP-1) ------------------------------------------- */
+
+.print-organigramme-provenance {
+  margin-top: 0.375rem;
+  padding-top: 0.25rem;
+  border-top: 0.0625rem solid var(--border-strong);
+  color: var(--muted);
+  font-size: 0.5625rem;
+}
+
+.print-organigramme-provenance p {
+  margin: 0 0 0.09375rem;
+}

@@ -4,6 +4,7 @@
 pub mod grid;
 pub mod header;
 pub mod panel;
+pub mod print;
 pub mod ribbon;
 pub mod shell;
 
@@ -18,6 +19,9 @@ use crate::state::{self, History, Plan, View};
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
+const PRINT_CSS: Asset = asset!("/assets/print.css");
+const PRINT_ORGANIGRAMME_CSS: Asset = asset!("/assets/print-organigramme.css");
+const PRINT_HORAIRE_CSS: Asset = asset!("/assets/print-horaire.css");
 
 // The one loading gate: the app renders nothing data-bearing before the
 // snapshot is whole — and says so explicitly (LAT-5: no skeleton).
@@ -103,6 +107,11 @@ pub struct ManualCourses(pub Signal<Vec<ulaval_scheduler_core::Course>>);
 // (plan item 5/6)
 #[derive(Clone, Copy, PartialEq)]
 pub struct LocalPrograms(pub Signal<Vec<crate::import::LocalProgram>>);
+
+// which print sheet, if any, `print::PrintView` should mount right now —
+// `None` outside a print (EXP-4, export-pdf plan item 2)
+#[derive(Clone, Copy, PartialEq)]
+pub struct PrintTarget(pub Signal<Option<print::PrintKind>>);
 
 // --- solver B, off the main thread ----------------------------------------
 
@@ -504,8 +513,10 @@ pub fn App() -> Element {
     let solver_state = use_signal(SolverState::default);
     let manual = use_signal(|| restored.manual.clone());
     let local_programs = use_signal(|| restored.local_programs.clone());
+    let print_target = use_signal(|| None::<print::PrintKind>);
     use_context_provider(|| ManualCourses(manual));
     use_context_provider(|| LocalPrograms(local_programs));
+    use_context_provider(|| PrintTarget(print_target));
     use_context_provider(|| plan);
     use_context_provider(|| view);
     use_context_provider(|| history);
@@ -568,7 +579,11 @@ pub fn App() -> Element {
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
         document::Stylesheet { href: MAIN_CSS }
+        document::Stylesheet { href: PRINT_CSS }
+        document::Stylesheet { href: PRINT_ORGANIGRAMME_CSS }
+        document::Stylesheet { href: PRINT_HORAIRE_CSS }
         shell::Screen {}
+        print::PrintView {}
     }
 }
 

@@ -1,0 +1,65 @@
+/* The shared print mechanism (EXP-4): hidden on screen, revealed by a body
+ * class the print buttons set right before `window.print()`
+ * (crates/ui/src/components/print/mod.rs). Document-specific rules
+ * (print-organigramme.css, print-horaire.css) build on top of this. */
+
+.print-root {
+	display: none;
+}
+
+@media print {
+	/* only the print document exists in the browser's print DOM (LAY-2:
+	 * the live app is never part of what gets printed) */
+	.shell,
+	.load-screen,
+	.error-screen {
+		display: none !important;
+	}
+
+	/* .print-root only reveals the sheet whose body class start_print set
+	 * right before window.print() (components/print/mod.rs) — not just any
+	 * mounted print DOM, so the printed page always matches the class the
+	 * app is currently asserting. */
+	body.print-organigramme .print-root,
+	body.print-horaire .print-root {
+		display: block;
+	}
+
+	/* Zero page margin: browsers draw their own header/footer (date,
+	 * title, URL, page count) inside the page margin, so no margin means
+	 * none of it gets printed. The paper margin comes back as padding on
+	 * each document's own page containers (print-horaire.css,
+	 * print-organigramme.css). */
+	@page {
+		margin: 0;
+	}
+
+	/* Named pages let each document pick its own orientation. A browser
+	 * without named-`@page` support (older WebKit builds) simply keeps
+	 * whatever orientation the print dialog was already set to — an
+	 * acceptable degradation (DEG), never a broken or empty document. */
+	@page organigramme {
+		size: A4 landscape;
+	}
+
+	.print-organigramme-sheet {
+		page: organigramme;
+	}
+
+	@page horaire {
+		size: A4 portrait;
+	}
+
+	.print-horaire-sheet {
+		page: horaire;
+	}
+
+	.print-break {
+		break-after: page;
+		page-break-after: always;
+	}
+
+	/* No on-screen-only affordance rule is needed here: `.print-root`
+	 * sheets (organigramme.rs, horaire.rs) render no button or other
+	 * interactive control — nothing interactive is ever printed. */
+}

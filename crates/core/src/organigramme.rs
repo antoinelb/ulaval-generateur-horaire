@@ -414,8 +414,7 @@ fn static_course_leaf(
     concomitant: bool,
     same_session: &BTreeSet<String>,
 ) -> Verdict {
-    if satisfied.contains(code)
-        || (concomitant && same_session.contains(code))
+    if satisfied.contains(code) || (concomitant && same_session.contains(code))
     {
         Verdict::Sat(BTreeSet::new())
     } else if is_preuniversity(code) {
@@ -1387,17 +1386,17 @@ fn final_eval(tree: &FlatTree, eval_ctx: &EvalCtx) -> FinalVerdict {
         (0..tree.nodes.len()).map(|_| FinalVerdict::False).collect();
     for index in (0..tree.nodes.len()).rev() {
         verdicts[index] = match &tree.nodes[index] {
-            FlatNode::Course { code, concomitant } => match course_leaf(
-                code,
-                *concomitant,
-                eval_ctx,
-            ) {
-                Verdict::Sat(assumed) => FinalVerdict::Sat(FinalEvidence {
-                    assumed,
-                    shortfalls: BTreeSet::new(),
-                }),
-                Verdict::False | Verdict::Unknown => FinalVerdict::False,
-            },
+            FlatNode::Course { code, concomitant } => {
+                match course_leaf(code, *concomitant, eval_ctx) {
+                    Verdict::Sat(assumed) => {
+                        FinalVerdict::Sat(FinalEvidence {
+                            assumed,
+                            shortfalls: BTreeSet::new(),
+                        })
+                    }
+                    Verdict::False | Verdict::Unknown => FinalVerdict::False,
+                }
+            }
             FlatNode::Raw(raw) => FinalVerdict::Sat(FinalEvidence {
                 assumed: BTreeSet::from([raw.clone()]),
                 shortfalls: BTreeSet::new(),
@@ -1505,11 +1504,7 @@ fn node_verdict(
     }
 }
 
-fn course_leaf(
-    code: &str,
-    concomitant: bool,
-    eval_ctx: &EvalCtx,
-) -> Verdict {
+fn course_leaf(code: &str, concomitant: bool, eval_ctx: &EvalCtx) -> Verdict {
     if eval_ctx.ctx.request.passed.contains(code) {
         return Verdict::Sat(BTreeSet::new());
     }
@@ -3018,13 +3013,19 @@ mod tests {
             anytime("A-1", "monday"),
             with_prereq("B-2", "tuesday", &parsed("\"A-1\"")),
         ];
-        assert!(Inputs::new(&[Season::Fall], strict).solve().solutions.is_empty());
+        assert!(Inputs::new(&[Season::Fall], strict)
+            .solve()
+            .solutions
+            .is_empty());
     }
 
     #[test]
     fn a_starred_leaf_is_no_more_its_own_prerequisite_than_a_plain_one() {
-        let courses =
-            vec![with_prereq("B-2", "tuesday", &parsed(r#"{"concomitant":"B-2"}"#))];
+        let courses = vec![with_prereq(
+            "B-2",
+            "tuesday",
+            &parsed(r#"{"concomitant":"B-2"}"#),
+        )];
         let placement = Inputs::new(&[Season::Fall], courses).solve();
         assert!(placement.solutions.is_empty());
     }
@@ -3397,7 +3398,12 @@ mod tests {
     #[test]
     fn a_course_without_prerequisites_is_statically_met() {
         assert_eq!(
-            prerequisites_met(&anytime("A-1", "monday"), &passed(&[]), &BTreeSet::new(), 0),
+            prerequisites_met(
+                &anytime("A-1", "monday"),
+                &passed(&[]),
+                &BTreeSet::new(),
+                0
+            ),
             met_with(&[])
         );
     }
@@ -3446,7 +3452,12 @@ mod tests {
         let preuniversity =
             with_prereq("B-2", "tuesday", &parsed("{\"all\":[\"MAT-0130\"]}"));
         assert_eq!(
-            prerequisites_met(&preuniversity, &passed(&[]), &BTreeSet::new(), 0),
+            prerequisites_met(
+                &preuniversity,
+                &passed(&[]),
+                &BTreeSet::new(),
+                0
+            ),
             met_with(&["MAT-0130"])
         );
         // a whole prerequisite outside the grammar: one presumed operand
@@ -3492,17 +3503,32 @@ mod tests {
         );
         // the any satisfied, only C-1 remains blamed
         assert_eq!(
-            unmet_prerequisites(&course, &passed(&["B-1"]), &BTreeSet::new(), 0),
+            unmet_prerequisites(
+                &course,
+                &passed(&["B-1"]),
+                &BTreeSet::new(),
+                0
+            ),
             Ok(vec![vec!["C-1".to_string()]])
         );
         // everything held — met, nothing to name
         assert_eq!(
-            unmet_prerequisites(&course, &passed(&["B-1", "C-1"]), &BTreeSet::new(), 0),
+            unmet_prerequisites(
+                &course,
+                &passed(&["B-1", "C-1"]),
+                &BTreeSet::new(),
+                0
+            ),
             Ok(Vec::new())
         );
         // no tree at all — met, nothing to name
         assert_eq!(
-            unmet_prerequisites(&anytime("A-1", "monday"), &passed(&[]), &BTreeSet::new(), 0),
+            unmet_prerequisites(
+                &anytime("A-1", "monday"),
+                &passed(&[]),
+                &BTreeSet::new(),
+                0
+            ),
             Ok(Vec::new())
         );
         // sunk by a credits threshold alone: unmet, but no course to name
@@ -3528,7 +3554,12 @@ mod tests {
             ),
         );
         assert_eq!(
-            unmet_prerequisites(&nested, &passed(&["A-1"]), &BTreeSet::new(), 0),
+            unmet_prerequisites(
+                &nested,
+                &passed(&["A-1"]),
+                &BTreeSet::new(),
+                0
+            ),
             Ok(vec![vec!["B-1".to_string(), "C-1".to_string()]])
         );
         // an any of anys flattens to the same interchangeable ways out
@@ -3538,7 +3569,12 @@ mod tests {
             &parsed(r#"{"any":[{"any":["A-1","B-1"]},"C-1"]}"#),
         );
         assert_eq!(
-            unmet_prerequisites(&any_of_anys, &passed(&[]), &BTreeSet::new(), 0),
+            unmet_prerequisites(
+                &any_of_anys,
+                &passed(&[]),
+                &BTreeSet::new(),
+                0
+            ),
             Ok(vec![vec![
                 "A-1".to_string(),
                 "B-1".to_string(),
@@ -3556,7 +3592,12 @@ mod tests {
             ),
         );
         assert_eq!(
-            unmet_prerequisites(&credits_any, &passed(&[]), &BTreeSet::new(), 0),
+            unmet_prerequisites(
+                &credits_any,
+                &passed(&[]),
+                &BTreeSet::new(),
+                0
+            ),
             Ok(Vec::new())
         );
         // the same oversized tree that errors the placement errors here

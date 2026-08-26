@@ -130,14 +130,28 @@ pub fn now_secs() -> u64 {
 // the browser's own clock, dated with `core`'s civil calendar arithmetic —
 // no date logic lives here, only the wiring (plan item 7)
 pub fn now_iso() -> String {
-    let secs = now_secs();
+    format!("{}Z", civil_stamp(now_secs()))
+}
+
+// the same clock shifted into the reader's own zone (heure de l'Est at
+// ULaval, EST/EDT as the season dictates) — no `Z`, since it claims local
+// wall time, not UTC; `export::provenance` prints it without a zone
+pub fn now_local() -> String {
+    // getTimezoneOffset is positive west of UTC (300 for EST), so local =
+    // UTC minus offset; i64 keeps a zone east of UTC from underflowing
+    let offset_minutes = js_sys::Date::new_0().get_timezone_offset() as i64;
+    let secs = (now_secs() as i64 - offset_minutes * 60).max(0) as u64;
+    civil_stamp(secs)
+}
+
+fn civil_stamp(secs: u64) -> String {
     let (year, month, day) =
         ulaval_scheduler_core::civil_from_days(secs / 86_400);
     let time_of_day = secs % 86_400;
     let hour = time_of_day / 3_600;
     let minute = (time_of_day % 3_600) / 60;
     let second = time_of_day % 60;
-    format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z")
+    format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}")
 }
 
 // --- URL sharing -----------------------------------------------------------
@@ -214,6 +228,53 @@ pub fn clipboard_write(text: &str) {
         // fire-and-forget: the UI also shows the link, so a blocked
         // clipboard loses nothing
         let _ = window.navigator().clipboard().write_text(text);
+    }
+}
+
+// --- print (EXP-4) ---------------------------------------------------------
+
+// The browser names a saved PDF after `document.title`: `start_print` swaps
+// it for the document's own name around `print()`, then restores it.
+pub fn document_title() -> String {
+    web_sys::window()
+        .and_then(|window| window.document())
+        .map(|document| document.title())
+        .unwrap_or_default()
+}
+
+pub fn set_document_title(title: &str) {
+    if let Some(document) =
+        web_sys::window().and_then(|window| window.document())
+    {
+        document.set_title(title);
+    }
+}
+
+// best-effort: a page with no body just prints nothing extra — the caller
+// removes the class afterwards either way, so no state can leak
+pub fn add_body_class(class: &str) {
+    if let Some(body) = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.body())
+    {
+        let _ = body.class_list().add_1(class);
+    }
+}
+
+pub fn remove_body_class(class: &str) {
+    if let Some(body) = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.body())
+    {
+        let _ = body.class_list().remove_1(class);
+    }
+}
+
+// blocks until the browser's print dialog closes; a window that refuses
+// (sandboxed iframe) simply does nothing
+pub fn print() {
+    if let Some(window) = web_sys::window() {
+        let _ = window.print();
     }
 }
 

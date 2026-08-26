@@ -6,6 +6,7 @@
 
 pub mod capsule;
 pub mod data;
+pub mod export;
 pub mod import;
 pub mod panel;
 pub mod persist;

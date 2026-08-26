@@ -330,22 +330,21 @@ pub fn validate_new_code(
         }
         _ => String::new(),
     };
-    let warning =
-        match ulaval_scheduler_core::prerequisites_met(
-            course,
-            &held,
-            &std::collections::BTreeSet::new(),
-            credits,
-        ) {
-            Ok(ulaval_scheduler_core::PrereqStatus::Unmet) => Some(format!(
-                "{code} ajouté, mais ses préalables ne semblent pas \
+    let warning = match ulaval_scheduler_core::prerequisites_met(
+        course,
+        &held,
+        &std::collections::BTreeSet::new(),
+        credits,
+    ) {
+        Ok(ulaval_scheduler_core::PrereqStatus::Unmet) => Some(format!(
+            "{code} ajouté, mais ses préalables ne semblent pas \
                  remplis{source}."
-            )),
-            Ok(_) => None,
-            Err(error) => Some(format!(
-                "{code} ajouté; préalables illisibles : {error}."
-            )),
-        };
+        )),
+        Ok(_) => None,
+        Err(error) => {
+            Some(format!("{code} ajouté; préalables illisibles : {error}."))
+        }
+    };
     // a summer explicitly closed is not a wall either — but adding into
     // it must never be silent (rapport étudiante 2026-08-14)
     let summer_note = session
@@ -1392,9 +1391,8 @@ fn pinned_refusal_causes(
     // different fact from one he holds nowhere — and a different fix
     // (the répertoire's `*`, or the dérogation): naming them alike sent
     // him hunting for a course already on his grid
-    let (concurrent, absent): (Vec<Vec<String>>, Vec<Vec<String>>) = missing
-        .into_iter()
-        .partition(|group| {
+    let (concurrent, absent): (Vec<Vec<String>>, Vec<Vec<String>>) =
+        missing.into_iter().partition(|group| {
             group.iter().all(|code| same_session.contains(code))
         });
     if !absent.is_empty() {

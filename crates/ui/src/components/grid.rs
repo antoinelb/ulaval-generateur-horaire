@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::{edit_plan, SelectedCourse};
+use super::{edit_plan, print, SelectedCourse};
 use crate::data::Snapshot;
 use crate::present::{self, Block};
 use crate::solve;
@@ -43,11 +43,12 @@ pub fn WeeklyGrid() -> Element {
     let title = solve::session_semester(&plan.read(), session)
         .map(|semester| {
             let long = long_semester(semester);
-            // « H4 » + « Hiver 2026 » say it all — repeating « H26 »
+            // « H4 » + « Hiver 2026 » say it all — the word « Horaire »
+            // said nothing the grid below doesn't, and repeating « H26 »
             // between them said it twice (note 15) ; an été's short form
             // IS its semester, so the long form alone suffices
             if semester.season == ulaval_scheduler_core::Season::Summer {
-                return format!("Horaire — {long}");
+                return long;
             }
             let seasons = ulaval_scheduler_core::horizon_sessions(
                 plan.read().start.season,
@@ -56,7 +57,7 @@ pub fn WeeklyGrid() -> Element {
             let semesters =
                 state::session_semesters(plan.read().start, &seasons);
             format!(
-                "Horaire — {} — {long}",
+                "{} — {long}",
                 state::session_short(&semesters, session - 1),
             )
         })
@@ -69,6 +70,7 @@ pub fn WeeklyGrid() -> Element {
         .get(&session)
         .is_some_and(|chosen| !chosen.is_empty());
     let history = use_context::<Signal<History>>();
+    let print_target = use_context::<super::PrintTarget>().0;
     let status = present::schedule_status(&schedule.read(), forced);
     // what is not drawn must be announced where the eyes are, not only
     // under the fold
@@ -85,6 +87,30 @@ pub fn WeeklyGrid() -> Element {
                     class: "grid-status",
                     class: if grid.conflict { "grid-status--conflict" },
                     "{status}"
+                }
+                button {
+                    class: "grid-share grid-export",
+                    title: "Ouvre l'aperçu d'impression — choisissez \
+                            « Enregistrer en PDF »",
+                    onclick: move |_| {
+                        print::start_print(
+                            print_target,
+                            print::PrintKind::Organigramme,
+                        );
+                    },
+                    "Exporter l'organigramme"
+                }
+                button {
+                    class: "grid-share grid-export",
+                    title: "Ouvre l'aperçu d'impression — choisissez \
+                            « Enregistrer en PDF »",
+                    onclick: move |_| {
+                        print::start_print(
+                            print_target,
+                            print::PrintKind::Horaire,
+                        );
+                    },
+                    "Exporter l'horaire"
                 }
                 if off_grid > 0 {
                     span { class: "grid-status grid-status--conflict",
