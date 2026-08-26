@@ -347,7 +347,6 @@ pub fn error_id(detail: &str) -> String {
 use ulaval_scheduler_core::{Day, Section, Time};
 
 use crate::data::Snapshot;
-use crate::panel;
 use crate::solve::WeeklySchedule;
 use crate::state::{self, Plan};
 
@@ -412,9 +411,16 @@ pub fn grid_model(
     // per (course, day, time), never a duplicate (TST-1)
     let mut seen: std::collections::BTreeSet<(String, usize, u16, u16)> =
         std::collections::BTreeSet::new();
-    let subjects = panel::subjects(snapshot);
+    let mut codes: Vec<&str> = schedule
+        .report
+        .courses
+        .iter()
+        .map(|course| course.code.as_str())
+        .collect();
+    codes.sort_unstable();
+    codes.dedup();
     for course in &schedule.report.courses {
-        let hue = subject_hue(&subjects, &course.code);
+        let hue = course_hue(&codes, &course.code);
         let title = course_title(snapshot, &course.code);
         let nrcs = option_nrcs(&course.selected);
         let mut placed = false;
@@ -515,16 +521,16 @@ fn course_title<'a>(snapshot: &'a Snapshot, code: &'a str) -> &'a str {
         .unwrap_or(code)
 }
 
-// one hue per matière, by alphabetical rank among the catalogue's distinct
-// matières (ADR 2026-08-couleurs-derivees-de-la-matiere) — a matière retired
-// from the répertoire since (US-11) falls back to 0.0 rather than panicking
-fn subject_hue(subjects: &[(String, usize)], code: &str) -> f32 {
-    let subject = panel::subject_of(code);
-    let rank = subjects.iter().position(|(s, _)| s == subject);
-    match rank {
-        Some(rank) => rank as f32 / subjects.len() as f32 * 360.0,
-        None => 0.0,
-    }
+// one hue per course actually on this schedule, by alphabetical rank among
+// its distinct codes (ADR 2026-08-couleur-par-cours-plutot-que-matiere) —
+// `codes` is built from this same `schedule.report.courses` right above, so
+// `code` is always found; the `expect` documents that rather than adding an
+// unreachable `None` branch
+fn course_hue(codes: &[&str], code: &str) -> f32 {
+    let rank = codes
+        .binary_search(&code)
+        .expect("code comes from the same schedule the list was built from");
+    rank as f32 / codes.len() as f32 * 360.0
 }
 
 // « GCI-1007 - A », « GEX-4008 - Z1 - à distance » — the section letter
@@ -1126,31 +1132,6 @@ mod tests {
         .unwrap_or_else(|e| panic!("{e}"))
     }
 
-    fn multi_subject_snapshot() -> Snapshot {
-        parse_data(
-            &RawData {
-                courses: r#"{"courses":[
-                  {"code":"AAA-1000","title":"Alpha","credits":3,
-                   "cycle":1,"prerequisites":null,"equivalents":[],
-                   "seasons":{}},
-                  {"code":"MMM-1000","title":"Milieu","credits":3,
-                   "cycle":1,"prerequisites":null,"equivalents":[],
-                   "seasons":{}},
-                  {"code":"ZZZ-1000","title":"Zeta","credits":3,
-                   "cycle":1,"prerequisites":null,"equivalents":[],
-                   "seasons":{}}
-                ]}"#
-                .to_string(),
-                meta: Some(r#"{"scraped_at":null}"#.to_string()),
-                manual: None,
-                programs: Vec::new(),
-            },
-            Vec::new(),
-            Vec::new(),
-        )
-        .unwrap_or_else(|e| panic!("{e}"))
-    }
-
     fn section(json: &str) -> Section {
         serde_json::from_str(json).unwrap_or_else(|e| panic!("{e}"))
     }
@@ -1210,7 +1191,7 @@ mod tests {
     }
 
     #[test]
-    fn hue_follows_alphabetical_rank_among_the_catalogues_subjects() {
+    fn hue_follows_alphabetical_rank_among_the_schedules_courses() {
         let schedule = wrap(
             vec![
                 course(
@@ -1231,7 +1212,7 @@ mod tests {
             ],
             true,
         );
-        let grid = grid_model(&schedule, &multi_subject_snapshot(), None);
+        let grid = grid_model(&schedule, &snapshot(), None);
         let hue_of = |code: &str| {
             grid.days[0]
                 .blocks
@@ -1246,17 +1227,33 @@ mod tests {
     }
 
     #[test]
-    fn hue_falls_back_to_zero_for_a_matiere_retired_from_the_catalogue() {
+    fn courses_sharing_a_matiere_still_get_distinct_hues() {
         let schedule = wrap(
-            vec![course(
-                "ZZZ-9999",
-                true,
-                vec![monday("ZZZ-9999", "1", "08:30", "09:20")],
-            )],
+            vec![
+                course(
+                    "AAA-1000",
+                    true,
+                    vec![monday("AAA-1000", "1", "08:30", "09:20")],
+                ),
+                course(
+                    "AAA-2000",
+                    true,
+                    vec![monday("AAA-2000", "2", "10:30", "11:20")],
+                ),
+            ],
             true,
         );
         let grid = grid_model(&schedule, &snapshot(), None);
-        assert_eq!(grid.days[0].blocks[0].hue, 0.0);
+        let hue_of = |code: &str| {
+            grid.days[0]
+                .blocks
+                .iter()
+                .find(|b| b.code == code)
+                .expect("a block for this code")
+                .hue
+        };
+        assert_eq!(hue_of("AAA-1000"), 0.0);
+        assert_eq!(hue_of("AAA-2000"), 180.0, "distinct from AAA-1000's hue");
     }
 
     #[test]

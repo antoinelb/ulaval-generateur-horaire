@@ -6,10 +6,11 @@
  *   DOM while a print is in flight (`components/print/mod.rs`) besides.
  * - INP-3: a conflicted day still carries its « ⚠ » glyph (colour is not
  *   the only signal) — restated here, not reintroduced.
- * - Toner economy: the on-screen course colours are backgrounds meant for
- *   a lit screen; on paper they become ink floods for no added meaning, so
- *   every restated block keeps its border and text colour but drops the
- *   fill.
+ * - The per-course hue (ADR 2026-08-couleur-par-cours-plutot-que-matiere) is
+ *   restated whole on paper — border, text and the same 12% tint fill as
+ *   the screen — rather than dropped to a bare border: the printed sheet
+ *   is the artefact a student actually carries around, so it keeps the
+ *   colour that lets them tell courses apart at a glance.
  * - rem units and the shared `:root` tokens throughout, exactly like
  *   `main.css`, so light/dark viewer themes never leak a light-only colour
  *   onto the printed page (the browser prints in light regardless, but the
@@ -26,26 +27,27 @@
   -webkit-print-color-adjust: exact;
 }
 
-/* one line: the document title left, the program name far right, both in
- * the same face and size */
+/* a small caps kicker naming the document, then the program name as the
+ * actual headline underneath — same stacked order as `document.title`/
+ * `document.program_title` in the markup, only the sizing flips which one
+ * reads as the title */
 .print-horaire-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
   margin-bottom: 0.75rem;
 }
 
 .print-horaire-head h1 {
-  margin: 0;
-  font-size: 1.25rem;
+  margin: 0 0 0.1875rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .print-horaire-program {
   margin: 0;
-  font-size: 0.875rem;
-  font-weight: 400;
-  text-align: right;
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
 /* One année scolaire per page (automne + hiver + été); a half never splits
@@ -166,11 +168,10 @@
    * 50-minute case needs every pixel of its height */
   padding: 0 0.1875rem;
   overflow: hidden;
-  color: var(--ink);
-  /* paper white, not `none`: an opaque block costs no toner but keeps a
-   * neighbouring block's border and text from showing through when two
-   * courses touch or overlap */
-  background: #fff;
+  /* opaque white base under the hue tint below: without it the tint would
+   * composite against the hour lines of the day column, and a neighbouring
+   * block's border/text would show through when two courses touch */
+  background-color: #fff;
 }
 
 /* one ellipsized line per block, small enough that « IFT-1903 —
@@ -188,10 +189,17 @@
   text-overflow: ellipsis;
 }
 
-/* six couleurs de cours -> six traits de bordure gauche, aucun aplat
-   (toner economy) */
+/* teinte par cours (ADR 2026-08-couleur-par-cours-plutot-que-matiere),
+   restatée comme à l'écran (`main.css`): bordure et texte pleins, fond en
+   dégradé plat à 12 % posé sur le blanc opaque ci-dessus — `background`
+   n'admet qu'une seule couleur unie en dernière couche, d'où le dégradé */
 .print-horaire-half .grid-block {
   border-left-color: oklch(45% 0.12 var(--course-h));
+  color: oklch(45% 0.12 var(--course-h));
+  background-image: linear-gradient(
+    oklch(45% 0.12 var(--course-h) / 12%),
+    oklch(45% 0.12 var(--course-h) / 12%)
+  );
 }
 
 /* conflit : bordure accentuée + « ⚠ conflit » textuel (INP-3), jamais la
@@ -206,7 +214,8 @@
   font-weight: 600;
 }
 
-/* --- notes (« ⚠ … »), restatées sans aplat pour la même raison --- */
+/* --- notes (« ⚠ … »), un bandeau d'alerte : bordure seule, pas de fond
+       (économie de toner) — distinct des cases de cours ci-dessus --- */
 .print-horaire-sheet .warning {
   color: var(--warn);
   background: none;

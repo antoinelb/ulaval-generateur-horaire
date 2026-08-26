@@ -2,6 +2,8 @@
 
 Date : 2026-08-26
 
+La source de la teinte (matière plutôt que cours) est remplacée par l'ADR `2026-08-couleur-par-cours-plutot-que-matiere` ; le reste de cette décision (OKLCH à clarté/chroma fixes, l'astuce du dégradé plat, `Block.hue: f32`) reste en vigueur.
+
 ## Contexte
 
 La couleur d'une carte de cours dans la grille horaire hebdomadaire venait de `color = index_dans_l_horaire % 6`, une position de boucle sur `schedule.report.courses`, mappée vers six classes CSS et douze couleurs hex figées.
@@ -23,7 +25,7 @@ Le raccourci `background` n'admet une couleur unie que dans sa dernière couche 
 La teinte passe donc par `background-image: linear-gradient(oklch(...) / 12%, oklch(...) / 12%)` (un dégradé aux deux arrêts identiques, donc plat) posé sur `background-color: #fff`.
 Fixer clarté et chroma est l'intérêt propre de l'OKLCH par rapport au HSL : le contraste entre le texte et son fond reste constant sur toute la roue des teintes, alors qu'une même clarté HSL paraît beaucoup plus sombre pour un bleu que pour un jaune.
 `Block.hue: f32` (dans `crates/ui/src/present.rs`) remplace `Block.color: usize` ; la teinte se lit en degrés directement dans le style calculé (`--course-h`), une classe unique `grid-block` remplace les six classes `grid-block--c0`..`c5`.
-La vue imprimée demi-page garde son trait de bordure seul, sans aplat (économie de toner) : son fond `#fff` opaque, déjà présent pour une autre raison (empêcher les blocs voisins de transparaître), l'emporte sur la carte de spécificité et masque de toute façon le fond en transparence du même sélecteur en écran.
+La vue imprimée demi-page restate la même formule que l'écran — bordure, texte et dégradé plat à 12 % posés sur le fond blanc opaque (`print-horaire.css`) : le PDF est l'artefact qu'un étudiant emporte, la couleur qui distingue les cours au premier coup d'œil y a donc sa place autant qu'à l'écran.
 
 Portée : la grille horaire hebdomadaire seulement.
 Le composant « pastilles » de `tests/user_stories/53-couleurs-et-redimensionnement.md` n'existe pas encore dans ce dépôt et calcule son rang sur les seuls sigles du fichier de programme, pas sur le catalogue entier, avec un fond pastel opaque plutôt qu'en transparence — une formule différente, à réconcilier avec celle-ci quand ce composant sera construit.

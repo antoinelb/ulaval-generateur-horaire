@@ -1557,9 +1557,9 @@ code {
   opacity: 0.85;
 }
 
-/* teinte par matière (ADR 2026-08-couleurs-derivees-de-la-matiere) : clarté
-   et chroma fixes, seul --course-h varie — contraste texte/fond constant
-   peu importe la teinte, ce que HSL ne garantit pas */
+/* teinte par cours (ADR 2026-08-couleur-par-cours-plutot-que-matiere) :
+   clarté et chroma fixes, seul --course-h varie — contraste texte/fond
+   constant peu importe la teinte, ce que HSL ne garantit pas */
 .grid-block {
   border-left-color: oklch(45% 0.12 var(--course-h));
   color: oklch(45% 0.12 var(--course-h));
