@@ -52,6 +52,10 @@ enum Command {
         // `--subjects "gex gci"`
         #[arg(long, num_args = 1.., value_delimiter = ' ')]
         subjects: Vec<String>,
+        // re-fetch every page, cache or not — the cache is still written,
+        // so the next run is warm again
+        #[arg(long)]
+        force: bool,
     },
     Program {
         #[arg(long, default_value = "data")]
@@ -107,9 +111,10 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
         Command::Courses {
             output_dir,
             subjects,
+            force,
         } => {
             let (snapshot, anomalies) =
-                get_courses(&output_dir, &subjects).await?;
+                get_courses(&output_dir, &subjects, force).await?;
             write_courses(
                 snapshot,
                 anomalies,
@@ -194,6 +199,7 @@ fn write_catalogue(
 async fn get_courses(
     output_dir: &str,
     subjects: &[String],
+    force: bool,
 ) -> anyhow::Result<(Snapshot, Vec<CourseError>)> {
     let dir = Path::new(output_dir);
     let entries = filter_by_subject(read_catalogue(dir)?.courses, subjects)?;
@@ -212,7 +218,7 @@ async fn get_courses(
     let fetcher = Fetcher::new(min_interval, backoff)
         .expect("static fetcher config always builds");
     let (courses, anomalies, tally) =
-        course::scrape(&fetcher, &entries, &cache_dir).await;
+        course::scrape(&fetcher, &entries, &cache_dir, force).await;
     // the split, not just the total: a cache the parser can no longer read
     // is silently a cold run, and only this line tells the two apart
     task.done_with(&format!(

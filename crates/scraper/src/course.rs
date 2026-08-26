@@ -91,6 +91,7 @@ pub async fn scrape(
     fetcher: &Fetcher,
     entries: &[CatalogueEntry],
     cache_dir: &Path,
+    force: bool,
 ) -> (Vec<Course>, Vec<CourseError>, CacheTally) {
     let task = print::progress_task(
         "Scraping courses...",
@@ -105,7 +106,8 @@ pub async fn scrape(
     let scraped: Vec<(Option<Course>, Vec<CourseError>, Origin)> =
         stream::iter(entries)
             .map(|entry| async move {
-                let scraped = scrape_course(fetcher, entry, cache_dir).await;
+                let scraped =
+                    scrape_course(fetcher, entry, cache_dir, force).await;
                 progress.increment();
                 scraped
             })
@@ -135,9 +137,12 @@ async fn scrape_course(
     fetcher: &Fetcher,
     entry: &CatalogueEntry,
     cache_dir: &Path,
+    force: bool,
 ) -> (Option<Course>, Vec<CourseError>, Origin) {
     let path = cache_path(cache_dir, &entry.code);
-    match read_cache(&path) {
+    // `--force`: the entry is still written back below, so only this run
+    // pays the request
+    match read_cache(&path).filter(|_| !force) {
         Some(CacheEntry::Course(cached)) => {
             return (Some(cached), Vec::new(), Origin::Cache);
         }
@@ -431,7 +436,7 @@ pub(crate) mod tests {
         .unwrap_or_else(|e| panic!("prime the cache: {e}"));
         let entries = [entry(&server, "GEX-1000"), entry(&server, "GEX-2000")];
 
-        let (_, anomalies, tally) = scrape_with(&entries, &dir).await;
+        let (_, anomalies, tally) = scrape_with(&entries, &dir, false).await;
 
         assert!(anomalies.is_empty(), "{anomalies:?}");
         assert_eq!((tally.cached, tally.fetched), (1, 1));
@@ -447,7 +452,7 @@ pub(crate) mod tests {
         let dir = test_dir("scrape-404");
         let entries = [entry(&server, "GEX-1000"), entry(&server, "GEX-9999")];
 
-        let (courses, anomalies, _) = scrape_with(&entries, &dir).await;
+        let (courses, anomalies, _) = scrape_with(&entries, &dir, false).await;
 
         assert_eq!(courses.len(), 1, "the reachable course still lands");
         assert!(
@@ -527,6 +532,36 @@ pub(crate) mod tests {
             scrape_one(&server, "PSY-7851", &dir).await;
         assert_eq!((second.cached, second.fetched), (1, 0), "warm: cached");
         assert!(courses.is_empty() && anomalies.is_empty());
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn force_refetches_a_cached_course() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        // expect(2): the warm run must go back to the network under
+        // `--force`, and cache the answer again for the run after it
+        mount(&server, "/gex-1000", course_html("GEX-1000"), 2).await;
+        let dir = test_dir("scrape-force");
+        let entries = [entry(&server, "GEX-1000")];
+
+        let (_, _, cold) = scrape_with(&entries, &dir, true).await;
+        assert_eq!((cold.cached, cold.fetched), (0, 1), "cold: fetched");
+
+        let (_, _, forced) = scrape_with(&entries, &dir, true).await;
+        assert_eq!(
+            (forced.cached, forced.fetched),
+            (0, 1),
+            "--force must ignore the cache it just wrote"
+        );
+
+        let (courses, _, warm) = scrape_with(&entries, &dir, false).await;
+        assert_eq!(
+            (warm.cached, warm.fetched),
+            (1, 0),
+            "a forced run still leaves the cache warm"
+        );
+        assert_eq!(courses.len(), 1);
         cleanup(&dir);
     }
 
@@ -631,19 +666,20 @@ pub(crate) mod tests {
         code: &str,
         cache_dir: &Path,
     ) -> (Vec<Course>, Vec<CourseError>, CacheTally) {
-        scrape_with(&[entry(server, code)], cache_dir).await
+        scrape_with(&[entry(server, code)], cache_dir, false).await
     }
 
     async fn scrape_with(
         entries: &[CatalogueEntry],
         cache_dir: &Path,
+        force: bool,
     ) -> (Vec<Course>, Vec<CourseError>, CacheTally) {
         // zero intervals: throttle timing is unit-tested on a virtual
         // clock in fetch.rs; these tests assert orchestration and must
         // stay fast
         let fetcher = Fetcher::new(Duration::ZERO, Duration::ZERO)
             .unwrap_or_else(|e| panic!("build fetcher: {e}"));
-        scrape(&fetcher, entries, cache_dir).await
+        scrape(&fetcher, entries, cache_dir, force).await
     }
 
     fn entry(server: &MockServer, code: &str) -> CatalogueEntry {
