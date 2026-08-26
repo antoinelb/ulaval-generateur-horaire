@@ -161,8 +161,8 @@
    * printed hour — it inflated short blocks past their time slot, glueing
    * them onto the course below; time alone sizes a printed block */
   min-height: 0;
-  border: 0.0625rem solid var(--ink);
-  border-left-width: 0.125rem;
+  border: none;
+  border-left: 0.1875rem solid var(--ink);
   border-radius: 0.1875rem;
   /* no vertical padding: the flex centering spaces the single line, and a
    * 50-minute case needs every pixel of its height */
@@ -189,10 +189,10 @@
   text-overflow: ellipsis;
 }
 
-/* teinte par cours (ADR 2026-08-couleur-par-cours-plutot-que-matiere),
-   restatée comme à l'écran (`main.css`): bordure et texte pleins, fond en
-   dégradé plat à 12 % posé sur le blanc opaque ci-dessus — `background`
-   n'admet qu'une seule couleur unie en dernière couche, d'où le dégradé */
+/* teinte par cours (ADR 2026-08-couleur-par-cours-plutot-que-matiere) :
+   bordure gauche et texte pleins, fond en dégradé plat à 12 % posé sur le
+   blanc opaque ci-dessus — `background` n'admet qu'une seule couleur unie
+   en dernière couche, d'où le dégradé */
 .print-horaire-half .grid-block {
   border-left-color: oklch(45% 0.12 var(--course-h));
   color: oklch(45% 0.12 var(--course-h));
