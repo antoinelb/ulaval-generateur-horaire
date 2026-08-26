@@ -5,7 +5,10 @@ use serde::Serialize;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
-use ulaval_scheduler_core::{apply_prereq_overrides, Course, PrereqOverride};
+use ulaval_scheduler_core::{
+    apply_prereq_overrides, borrow_seasons_from_equivalents, Course,
+    PrereqOverride,
+};
 
 use crate::catalogue;
 use crate::merge::merge_manual;
@@ -96,6 +99,10 @@ pub fn init_snapshot(
             JsValue::from_str(&format!("prerequisite overrides : {e}"))
         })?;
     let mut merged = merge_manual(snapshot.courses, manual);
+    // the catalogue is whole here: a new course's invented calendar defers
+    // to the equivalent the répertoire dates, before any student
+    // correction (ADR `2026-08-saisons-empruntees-a-lequivalent`)
+    borrow_seasons_from_equivalents(&mut merged.courses);
     let notes = apply_prereq_overrides(&mut merged.courses, &overrides);
     let summary = serde_json::json!({
         "course_count": merged.courses.len(),

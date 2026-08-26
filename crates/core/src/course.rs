@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
@@ -171,6 +171,15 @@ pub struct SeasonOffering {
     pub options: Option<Vec<Vec<Section>>>,
 }
 
+impl SeasonOffering {
+    // « offered, schedule unknown » — what the new-course rule writes and
+    // what a borrowed season keeps
+    pub const UNPUBLISHED: SeasonOffering = SeasonOffering {
+        last_offered: None,
+        options: None,
+    };
+}
+
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 pub struct Section {
@@ -282,6 +291,73 @@ impl From<Time> for String {
 pub(crate) fn is_preuniversity(code: &str) -> bool {
     code.split_once('-')
         .is_some_and(|(_, number)| number.starts_with('0'))
+}
+
+// A course whose page carried no session section at all was given an
+// invented Fall+Winter (ADR
+// `2026-07-cours-sans-section-de-session-offert-automne-hiver`) — a guess
+// standing in for a schedule the répertoire has not published, not a fact
+// read off the page. When such a course has an equivalent the répertoire
+// *does* date, that equivalent's calendar is the better guess: GEX-4002
+// already borrows GEX-7002's Friday schedule through `resolve_offering`,
+// so it must borrow its winter-only calendar too (ADR
+// `2026-08-saisons-empruntees-a-lequivalent`).
+//
+// Only *which* seasons exist changes; each borrowed season keeps the
+// course's own unpublished placeholder, so the offering is still resolved
+// against the equivalents at query time and nothing is invented about the
+// schedule itself. Applied to the merged catalogue, so both solvers read
+// the same season set — the placement path never consulted equivalents.
+// Idempotent: a course rewritten here still matches the guard and
+// recomputes the same set.
+pub fn borrow_seasons_from_equivalents(courses: &mut [Course]) {
+    // owned, so the mutable walk below cannot alias the catalogue
+    let dated: BTreeMap<String, BTreeSet<Season>> = courses
+        .iter()
+        .map(|course| (course.code.clone(), dated_seasons(course)))
+        .collect();
+    for course in courses.iter_mut() {
+        if !is_invented_calendar(course) {
+            continue;
+        }
+        let borrowed: BTreeSet<Season> = course
+            .equivalents
+            .iter()
+            .filter_map(|code| dated.get(code))
+            .flatten()
+            .copied()
+            .collect();
+        // no equivalent, or none the répertoire dates either: the invented
+        // calendar remains the only answer available
+        if borrowed.is_empty() {
+            continue;
+        }
+        course.seasons = borrowed
+            .into_iter()
+            .map(|season| (season, SeasonOffering::UNPUBLISHED))
+            .collect();
+    }
+}
+
+// the shape the new-course rule leaves behind: seasons listed, every one
+// of them undated and unpublished. An empty map is *not* it — a course the
+// snapshot says is offered nowhere is a fact, and seasons are never added
+// to it.
+fn is_invented_calendar(course: &Course) -> bool {
+    !course.seasons.is_empty()
+        && course
+            .seasons
+            .values()
+            .all(|offering| *offering == SeasonOffering::UNPUBLISHED)
+}
+
+fn dated_seasons(course: &Course) -> BTreeSet<Season> {
+    course
+        .seasons
+        .iter()
+        .filter(|(_, offering)| offering.last_offered.is_some())
+        .map(|(&season, _)| season)
+        .collect()
 }
 
 #[cfg(test)]
@@ -790,5 +866,136 @@ mod tests {
         let options = winter.options.as_deref().expect("known schedule");
         assert_eq!(options.len(), 1);
         assert_eq!(options[0][0].nrc, "14856");
+    }
+
+    // --- borrowed seasons: the invented calendar defers to an equivalent ---
+
+    fn with_seasons(
+        code: &str,
+        equivalents: &[&str],
+        seasons: &str,
+    ) -> Course {
+        let equivalents = equivalents
+            .iter()
+            .map(|code| format!("\"{code}\""))
+            .collect::<Vec<_>>()
+            .join(",");
+        let json = format!(
+            r#"{{"code":"{code}","title":"x","credits":3,"cycle":1,
+                 "prerequisites":null,"equivalents":[{equivalents}],
+                 "seasons":{seasons}}}"#
+        );
+        serde_json::from_str(&json).expect("course")
+    }
+
+    const UNPUBLISHED_PAIR: &str = r#"{"fall":{"last_offered":null,"options":null},
+         "winter":{"last_offered":null,"options":null}}"#;
+    const DATED_WINTER: &str =
+        r#"{"winter":{"last_offered":2026,"options":null}}"#;
+
+    fn season_keys(course: &Course) -> Vec<Season> {
+        course.seasons.keys().copied().collect()
+    }
+
+    #[test]
+    fn an_invented_calendar_takes_the_dated_equivalents_seasons() {
+        // GEX-4002's own page has no session section, so the new-course
+        // rule invented Fall+Winter; GEX-7002 is dated Winter only
+        let mut courses = vec![
+            with_seasons("GEX-4002", &["GEX-7002"], UNPUBLISHED_PAIR),
+            with_seasons("GEX-7002", &[], DATED_WINTER),
+        ];
+        borrow_seasons_from_equivalents(&mut courses);
+        assert_eq!(season_keys(&courses[0]), vec![Season::Winter]);
+        // the borrowed season keeps the course's own placeholder: the
+        // schedule itself is still resolved against the equivalent later
+        assert_eq!(
+            courses[0].seasons[&Season::Winter],
+            SeasonOffering::UNPUBLISHED
+        );
+        // the equivalent is untouched
+        assert_eq!(season_keys(&courses[1]), vec![Season::Winter]);
+    }
+
+    #[test]
+    fn several_equivalents_union_their_dated_seasons() {
+        let mut courses = vec![
+            with_seasons(
+                "GEX-4002",
+                &["GEX-7002", "GCI-7002", "ABS-1000"],
+                UNPUBLISHED_PAIR,
+            ),
+            with_seasons("GEX-7002", &[], DATED_WINTER),
+            with_seasons(
+                "GCI-7002",
+                &[],
+                r#"{"summer":{"last_offered":2025,"options":null}}"#,
+            ),
+        ];
+        // ABS-1000 is in no catalogue: an equivalence the snapshot cannot
+        // resolve contributes nothing, it does not sink the borrowing
+        borrow_seasons_from_equivalents(&mut courses);
+        assert_eq!(
+            season_keys(&courses[0]),
+            vec![Season::Winter, Season::Summer]
+        );
+    }
+
+    #[test]
+    fn a_course_with_a_real_calendar_is_left_alone() {
+        // one dated season is enough: the calendar was read, not invented
+        let mut courses = vec![
+            with_seasons(
+                "GEX-4002",
+                &["GEX-7002"],
+                r#"{"fall":{"last_offered":2026,"options":null},
+                    "winter":{"last_offered":null,"options":null}}"#,
+            ),
+            with_seasons("GEX-7002", &[], DATED_WINTER),
+        ];
+        borrow_seasons_from_equivalents(&mut courses);
+        assert_eq!(
+            season_keys(&courses[0]),
+            vec![Season::Fall, Season::Winter]
+        );
+    }
+
+    #[test]
+    fn an_undated_equivalent_leaves_the_invented_calendar_standing() {
+        // both are new courses: nothing better than the guess exists
+        let mut courses = vec![
+            with_seasons("GEX-4002", &["GEX-7002"], UNPUBLISHED_PAIR),
+            with_seasons("GEX-7002", &[], UNPUBLISHED_PAIR),
+        ];
+        borrow_seasons_from_equivalents(&mut courses);
+        assert_eq!(
+            season_keys(&courses[0]),
+            vec![Season::Fall, Season::Winter]
+        );
+    }
+
+    #[test]
+    fn a_course_offered_in_no_season_never_gains_one() {
+        // an empty map is a fact about the course, not an invented guess
+        let mut courses = vec![
+            with_seasons("GEX-4002", &["GEX-7002"], "{}"),
+            with_seasons("GEX-7002", &[], DATED_WINTER),
+        ];
+        borrow_seasons_from_equivalents(&mut courses);
+        assert!(courses[0].seasons.is_empty());
+    }
+
+    #[test]
+    fn borrowing_twice_changes_nothing_more() {
+        // the rewritten course still matches the guard — the second pass
+        // must recompute the same set, not shrink or grow it
+        let mut courses = vec![
+            with_seasons("GEX-4002", &["GEX-7002"], UNPUBLISHED_PAIR),
+            with_seasons("GEX-7002", &[], DATED_WINTER),
+        ];
+        borrow_seasons_from_equivalents(&mut courses);
+        let once = courses.clone();
+        borrow_seasons_from_equivalents(&mut courses);
+        assert_eq!(courses, once);
     }
 }

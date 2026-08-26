@@ -126,15 +126,7 @@ pub fn parse(html: &str) -> Result<Option<CoursePage>, ParseError> {
     let seasons = if doc.select(&SESSION).next().is_none() {
         [Season::Fall, Season::Winter]
             .into_iter()
-            .map(|season| {
-                (
-                    season,
-                    SeasonOffering {
-                        last_offered: None,
-                        options: None,
-                    },
-                )
-            })
+            .map(|season| (season, SeasonOffering::UNPUBLISHED))
             .collect()
     } else {
         parse_seasons(&doc, &mut anomalies)
