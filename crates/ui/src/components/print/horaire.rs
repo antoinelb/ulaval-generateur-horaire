@@ -215,15 +215,16 @@ fn PrintBlock(block: present::Block, extend_pct: f32) -> Element {
     // separated by the same 0.0625rem the day gap uses
     let style = format!(
         "top:{:.3}%;height:calc({:.3}% - 0.0625rem);\
-         left:{:.3}%;width:calc({:.3}% - 0.0625rem);",
+         left:{:.3}%;width:calc({:.3}% - 0.0625rem);--course-h:{:.1};",
         block.top,
         block.height + extend_pct,
         block.left,
-        block.width
+        block.width,
+        block.hue
     );
     rsx! {
         div {
-            class: "grid-block grid-block--c{block.color}",
+            class: "grid-block",
             class: if block.clash { "grid-block--conflict" },
             style: "{style}",
             div { class: "grid-block-title",

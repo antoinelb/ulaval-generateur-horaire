@@ -190,12 +190,9 @@
 
 /* six couleurs de cours -> six traits de bordure gauche, aucun aplat
    (toner economy) */
-.print-horaire-half .grid-block--c0 { border-left-color: var(--course-1); }
-.print-horaire-half .grid-block--c1 { border-left-color: var(--course-2); }
-.print-horaire-half .grid-block--c2 { border-left-color: var(--course-3); }
-.print-horaire-half .grid-block--c3 { border-left-color: var(--course-4); }
-.print-horaire-half .grid-block--c4 { border-left-color: var(--course-5); }
-.print-horaire-half .grid-block--c5 { border-left-color: var(--course-6); }
+.print-horaire-half .grid-block {
+  border-left-color: oklch(45% 0.12 var(--course-h));
+}
 
 /* conflit : bordure accentuée + « ⚠ conflit » textuel (INP-3), jamais la
    seule couleur */

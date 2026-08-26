@@ -347,6 +347,7 @@ pub fn error_id(detail: &str) -> String {
 use ulaval_scheduler_core::{Day, Section, Time};
 
 use crate::data::Snapshot;
+use crate::panel;
 use crate::solve::WeeklySchedule;
 use crate::state::{self, Plan};
 
@@ -355,7 +356,6 @@ use crate::state::{self, Plan};
 // Data outside the frame still stretches it rather than being cut (TST-1).
 pub const AXIS_START: u16 = 8 * 60 + 30;
 pub const AXIS_END: u16 = 22 * 60 + 30;
-pub const COLOR_SLOTS: usize = 6;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GridModel {
@@ -390,7 +390,7 @@ pub struct Block {
     pub height: f32,
     pub left: f32,
     pub width: f32,
-    pub color: usize,
+    pub hue: f32,
     pub ghost: bool,
     pub valid: bool,
     // this very block overlaps another selected block: the hatch goes
@@ -412,8 +412,9 @@ pub fn grid_model(
     // per (course, day, time), never a duplicate (TST-1)
     let mut seen: std::collections::BTreeSet<(String, usize, u16, u16)> =
         std::collections::BTreeSet::new();
-    for (i, course) in schedule.report.courses.iter().enumerate() {
-        let color = i % COLOR_SLOTS;
+    let subjects = panel::subjects(snapshot);
+    for course in &schedule.report.courses {
+        let hue = subject_hue(&subjects, &course.code);
         let title = course_title(snapshot, &course.code);
         let nrcs = option_nrcs(&course.selected);
         let mut placed = false;
@@ -441,7 +442,7 @@ pub fn grid_model(
                             height: 0.0,
                             left: 0.0,
                             width: 100.0,
-                            color,
+                            hue,
                             ghost: false,
                             valid: course.valid,
                             clash: false,
@@ -475,7 +476,7 @@ pub fn grid_model(
                                     height: 0.0,
                                     left: 0.0,
                                     width: 100.0,
-                                    color,
+                                    hue,
                                     ghost: true,
                                     valid: alternative.valid,
                                     clash: false,
@@ -512,6 +513,18 @@ fn course_title<'a>(snapshot: &'a Snapshot, code: &'a str) -> &'a str {
         .get(code)
         .map(|&index| snapshot.courses[index].title.as_str())
         .unwrap_or(code)
+}
+
+// one hue per matière, by alphabetical rank among the catalogue's distinct
+// matières (ADR 2026-08-couleurs-derivees-de-la-matiere) — a matière retired
+// from the répertoire since (US-11) falls back to 0.0 rather than panicking
+fn subject_hue(subjects: &[(String, usize)], code: &str) -> f32 {
+    let subject = panel::subject_of(code);
+    let rank = subjects.iter().position(|(s, _)| s == subject);
+    match rank {
+        Some(rank) => rank as f32 / subjects.len() as f32 * 360.0,
+        None => 0.0,
+    }
 }
 
 // « GCI-1007 - A », « GEX-4008 - Z1 - à distance » — the section letter
@@ -1113,6 +1126,31 @@ mod tests {
         .unwrap_or_else(|e| panic!("{e}"))
     }
 
+    fn multi_subject_snapshot() -> Snapshot {
+        parse_data(
+            &RawData {
+                courses: r#"{"courses":[
+                  {"code":"AAA-1000","title":"Alpha","credits":3,
+                   "cycle":1,"prerequisites":null,"equivalents":[],
+                   "seasons":{}},
+                  {"code":"MMM-1000","title":"Milieu","credits":3,
+                   "cycle":1,"prerequisites":null,"equivalents":[],
+                   "seasons":{}},
+                  {"code":"ZZZ-1000","title":"Zeta","credits":3,
+                   "cycle":1,"prerequisites":null,"equivalents":[],
+                   "seasons":{}}
+                ]}"#
+                .to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
+                programs: Vec::new(),
+            },
+            Vec::new(),
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"))
+    }
+
     fn section(json: &str) -> Section {
         serde_json::from_str(json).unwrap_or_else(|e| panic!("{e}"))
     }
@@ -1163,12 +1201,62 @@ mod tests {
         let block = &grid.days[0].blocks[0];
         assert_eq!(block.title, "Hydrologie", "title read off the snapshot");
         assert_eq!(block.detail, "GEX-1000 - A");
-        assert_eq!(block.color, 0);
+        assert_eq!(block.hue, 0.0);
         assert!((block.top - 0.0).abs() < f32::EPSILON);
         assert!((block.height - 170.0 / 840.0 * 100.0).abs() < 0.01);
         assert!((block.width - 100.0).abs() < f32::EPSILON);
         assert!(!grid.conflict);
         assert_eq!(grid.days.len(), 5, "Lundi→Vendredi, no weekend");
+    }
+
+    #[test]
+    fn hue_follows_alphabetical_rank_among_the_catalogues_subjects() {
+        let schedule = wrap(
+            vec![
+                course(
+                    "ZZZ-1000",
+                    true,
+                    vec![monday("ZZZ-1000", "1", "08:30", "09:20")],
+                ),
+                course(
+                    "AAA-1000",
+                    true,
+                    vec![monday("AAA-1000", "2", "10:30", "11:20")],
+                ),
+                course(
+                    "MMM-1000",
+                    true,
+                    vec![monday("MMM-1000", "3", "12:30", "13:20")],
+                ),
+            ],
+            true,
+        );
+        let grid = grid_model(&schedule, &multi_subject_snapshot(), None);
+        let hue_of = |code: &str| {
+            grid.days[0]
+                .blocks
+                .iter()
+                .find(|b| b.code == code)
+                .expect("a block for this code")
+                .hue
+        };
+        assert_eq!(hue_of("AAA-1000"), 0.0, "first alphabetically");
+        assert_eq!(hue_of("MMM-1000"), 120.0, "second of three");
+        assert_eq!(hue_of("ZZZ-1000"), 240.0, "last alphabetically");
+    }
+
+    #[test]
+    fn hue_falls_back_to_zero_for_a_matiere_retired_from_the_catalogue() {
+        let schedule = wrap(
+            vec![course(
+                "ZZZ-9999",
+                true,
+                vec![monday("ZZZ-9999", "1", "08:30", "09:20")],
+            )],
+            true,
+        );
+        let grid = grid_model(&schedule, &snapshot(), None);
+        assert_eq!(grid.days[0].blocks[0].hue, 0.0);
     }
 
     #[test]

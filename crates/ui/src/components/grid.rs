@@ -229,8 +229,8 @@ fn GridBlock(
     let super::DropHover(mut hover) = use_context::<super::DropHover>();
     let drag_code = block.code.clone();
     let style = format!(
-        "top:{:.3}%;height:{:.3}%;left:{:.3}%;width:{:.3}%;",
-        block.top, block.height, block.left, block.width
+        "top:{:.3}%;height:{:.3}%;left:{:.3}%;width:{:.3}%;--course-h:{:.1};",
+        block.top, block.height, block.left, block.width, block.hue
     );
     let code = block.code.clone();
     let nrcs = block.nrcs.clone();
@@ -242,7 +242,7 @@ fn GridBlock(
     };
     rsx! {
         button {
-            class: "grid-block grid-block--c{block.color}",
+            class: "grid-block",
             class: if block.ghost { "grid-block--ghost" },
             class: if block.clash { "grid-block--conflict" },
             style: "{style}",

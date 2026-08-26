@@ -19,18 +19,6 @@
   --warn-2: #c19417;
   --warn-bg: #fbf3dc;
   --warn-bg-2: #fffbe9;
-  --course-1: #2a5591;
-  --course-1-bg: #e8f0fb;
-  --course-2: #3a6b40;
-  --course-2-bg: #e9f3ea;
-  --course-3: #5f4b8b;
-  --course-3-bg: #f1ecf8;
-  --course-4: #8a6d1a;
-  --course-4-bg: #fbf3dc;
-  --course-5: #a03a3a;
-  --course-5-bg: #fbecec;
-  --course-6: #2a7d7d;
-  --course-6-bg: #e6f2f2;
   --border: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.14);
   --font-serif: Georgia, "Times New Roman", serif;
@@ -1569,12 +1557,22 @@ code {
   opacity: 0.85;
 }
 
-.grid-block--c0 { background: var(--course-1-bg); border-left-color: var(--course-1); color: var(--course-1); }
-.grid-block--c1 { background: var(--course-2-bg); border-left-color: var(--course-2); color: var(--course-2); }
-.grid-block--c2 { background: var(--course-3-bg); border-left-color: var(--course-3); color: var(--course-3); }
-.grid-block--c3 { background: var(--course-4-bg); border-left-color: var(--course-4); color: var(--course-4); }
-.grid-block--c4 { background: var(--course-5-bg); border-left-color: var(--course-5); color: var(--course-5); }
-.grid-block--c5 { background: var(--course-6-bg); border-left-color: var(--course-6); color: var(--course-6); }
+/* teinte par matière (ADR 2026-08-couleurs-derivees-de-la-matiere) : clarté
+   et chroma fixes, seul --course-h varie — contraste texte/fond constant
+   peu importe la teinte, ce que HSL ne garantit pas */
+.grid-block {
+  border-left-color: oklch(45% 0.12 var(--course-h));
+  color: oklch(45% 0.12 var(--course-h));
+  /* fond blanc opaque sous la teinte transparente : la transparence se
+     compose contre le blanc, pas contre les lignes d'heure du jour —
+     `background` n'accepte qu'une seule couleur unie, en dernière couche,
+     donc le survol teinté passe par un dégradé plat (une « image ») */
+  background-color: #fff;
+  background-image: linear-gradient(
+    oklch(45% 0.12 var(--course-h) / 12%),
+    oklch(45% 0.12 var(--course-h) / 12%)
+  );
+}
 
 /* fantôme : pointillé, estompé — la forme porte le sens, pas la couleur */
 .grid-block--ghost {
