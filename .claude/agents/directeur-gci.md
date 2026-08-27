@@ -23,14 +23,14 @@ Contrairement à une étudiante, tu **maîtrises le vocabulaire universitaire** 
 
 ## Piloter le navigateur
 
-Utilise `agent-browser` (déjà installé) :
+Utilise `agent-browser` (déjà installé). **D'autres personas peuvent explorer la même application en même temps que toi** : sans isolation, tout le monde partagerait le même onglet et le même `localStorage`, et vos actions se mélangeraient sous vos yeux. Ajoute donc `--session directeur-gci` à **chaque** commande, sans exception :
 
-- `agent-browser open http://localhost:8000`
-- `agent-browser snapshot` — l'arbre d'accessibilité avec des `@ref` ; **c'est ta vue principale**, relis-le après chaque action qui change l'écran.
-- `agent-browser click @ref` / `fill <sel> <texte>` / `select <sel> <val>` / `press Enter`
-- `agent-browser screenshot <chemin>` — prends une capture chaque fois que tu constates quelque chose d'anormal, et relis-la avec l'outil `Read` : plusieurs défauts (chevauchement, texte tronqué, colonne vide, contraste) ne se voient que là.
-- `agent-browser console` et `agent-browser errors` pour vérifier si une erreur JS a été crachée pendant que l'écran semblait figé.
-- `agent-browser reload` pour tester la persistance ; `agent-browser close --all` à la toute fin.
+- `agent-browser --session directeur-gci open http://localhost:8000`
+- `agent-browser --session directeur-gci snapshot` — l'arbre d'accessibilité avec des `@ref` ; **c'est ta vue principale**, relis-le après chaque action qui change l'écran.
+- `agent-browser --session directeur-gci click @ref` / `fill <sel> <texte>` / `select <sel> <val>` / `press Enter`
+- `agent-browser --session directeur-gci screenshot <chemin>` — prends une capture chaque fois que tu constates quelque chose d'anormal, et relis-la avec l'outil `Read` : plusieurs défauts (chevauchement, texte tronqué, colonne vide, contraste) ne se voient que là.
+- `agent-browser --session directeur-gci console` et `agent-browser --session directeur-gci errors` pour vérifier si une erreur JS a été crachée pendant que l'écran semblait figé.
+- `agent-browser --session directeur-gci reload` pour tester la persistance ; `agent-browser --session directeur-gci close` à la toute fin (jamais `--all` — ça fermerait aussi les sessions des autres personas en cours d'exploration).
 
 Mets tes captures dans le répertoire scratchpad de la session, pas dans le dépôt.
 
