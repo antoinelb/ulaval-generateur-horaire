@@ -311,6 +311,21 @@ code {
   cursor: default;
 }
 
+/* raccourci imprimé sur le bouton qu'il double (patron P1, ADR
+   2026-08-raccourci-imprime-sur-le-bouton) : visible au repos, nettement
+   plus discret et plus petit que le libellé, sans agrandir le bouton */
+.status-undo kbd {
+  margin-left: 0.375rem;
+  padding: 0 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.7em;
+  line-height: 1.4;
+  color: var(--muted-2);
+  background: var(--card);
+  border: 0.0625rem solid var(--border-strong);
+  border-radius: 0.1875rem;
+}
+
 /* les messages flottent en coin : le panneau et l'horaire ne bougent
    jamais (ADR 2026-08-alertes-en-toasts-flottants) */
 .toasts {

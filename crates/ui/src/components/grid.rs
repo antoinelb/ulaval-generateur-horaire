@@ -148,8 +148,8 @@ pub fn WeeklyGrid() -> Element {
             // saisie) et la grille descendait d'une à deux lignes
             p { class: "grid-legend",
                 "Plein = plage retenue - pointillé = autre plage \
-                 possible (cliquer pour la forcer) - hachuré = \
-                 conflit - ⇄ N = N horaires \
+                 possible (cliquer pour la forcer, Échap pour \
+                 refermer) - hachuré = conflit - ⇄ N = N horaires \
                  alternatifs (cliquer le bloc pour les voir)"
             }
             if grid.days.iter().all(|day| day.blocks.is_empty())

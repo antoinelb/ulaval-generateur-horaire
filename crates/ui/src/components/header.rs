@@ -281,6 +281,7 @@ pub fn StatusStrip() -> Element {
                     state::undo(&mut plan, &mut history);
                 },
                 "↶ Annuler"
+                kbd { "Ctrl+Z" }
             }
             button {
                 class: "status-undo",
@@ -292,6 +293,7 @@ pub fn StatusStrip() -> Element {
                     state::redo(&mut plan, &mut history);
                 },
                 "↷ Rétablir"
+                kbd { "Ctrl+Y" }
             }
             SolverStatus {}
         }
