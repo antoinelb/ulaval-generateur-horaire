@@ -83,6 +83,16 @@ pub fn WeeklyGrid() -> Element {
         section { class: "grid-panel", aria_label: "Horaire hebdomadaire",
             div { class: "grid-head",
                 h2 { "{title}" }
+                if off_grid > 0 {
+                    // le détail est déjà toujours visible sous la grille
+                    // (`GridFootnotes`) et la légende le dit aussi — le
+                    // `title` est un complément, jamais la seule affordance
+                    span {
+                        class: "grid-status grid-status--conflict",
+                        title: "Détail sous l'horaire",
+                        "⚠ {off_grid} cours hors grille"
+                    }
+                }
                 span {
                     class: "grid-status",
                     class: if grid.conflict { "grid-status--conflict" },
@@ -112,12 +122,6 @@ pub fn WeeklyGrid() -> Element {
                     },
                     "Exporter l'horaire"
                 }
-                if off_grid > 0 {
-                    span { class: "grid-status grid-status--conflict",
-                        "⚠ {off_grid} cours hors grille — détail sous \
-                         l'horaire"
-                    }
-                }
                 if forced {
                     button {
                         class: "grid-share",
@@ -137,12 +141,16 @@ pub fn WeeklyGrid() -> Element {
                     }
                 }
             }
-            if !schedule.read().report.courses.is_empty() {
-                p { class: "grid-legend",
-                    "Plein = plage retenue - pointillé = autre plage \
-                     possible (cliquer pour la forcer) - hachuré = conflit - ⇄ N = N horaires \
-                     alternatifs (cliquer le bloc pour les voir)"
-                }
+            // LAY-2 : rendu inconditionnel — elle décrit la grille même
+            // vide, et sa présence permanente réserve sa place ; la
+            // conditionner à `report.courses` la faisait apparaître de
+            // façon asynchrone (`auto_propose`, 500 ms après la dernière
+            // saisie) et la grille descendait d'une à deux lignes
+            p { class: "grid-legend",
+                "Plein = plage retenue - pointillé = autre plage \
+                 possible (cliquer pour la forcer) - hachuré = \
+                 conflit - ⇄ N = N horaires \
+                 alternatifs (cliquer le bloc pour les voir)"
             }
             if grid.days.iter().all(|day| day.blocks.is_empty())
                 && grid.unplaced.is_empty()

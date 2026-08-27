@@ -33,7 +33,11 @@ fn SolverStatus() -> Element {
     };
     rsx! {
         span { class: "status-running",
-            "{what} - {elapsed} s"
+            "{what} - "
+            // LAY-2 : largeur réservée pour 3 chiffres (999 s ≈ 16 min,
+            // bien au-delà d'une recherche réelle avant annulation) —
+            // au-delà le texte s'élargirait quand même, ce cas est assumé
+            span { class: "status-running-elapsed", "{elapsed} s" }
             button {
                 class: "status-undo",
                 onclick: move |_| {
@@ -245,9 +249,10 @@ fn ResetButton() -> Element {
 }
 
 // The reserved status region (ALR-6): always present, same place, one
-// line tall forever — the solver status and the undo/redo controls. The
-// alerts float apart in `Toasts`, so this strip never pushes the panel or
-// the grid down.
+// line tall forever — the undo/redo controls, then the solver status. The
+// buttons come first so the status's appearance and disappearance never has
+// anything of its own to displace (LAY-2). The alerts float apart in
+// `Toasts`, so this strip never pushes the panel or the grid down.
 #[component]
 pub fn StatusStrip() -> Element {
     let mut plan = use_context::<Signal<Plan>>();
@@ -266,7 +271,6 @@ pub fn StatusStrip() -> Element {
     let can_redo = history.read().redo_label().is_some();
     rsx! {
         div { class: "status-strip", role: "status",
-            SolverStatus {}
             button {
                 class: "status-undo",
                 disabled: !can_undo,
@@ -289,6 +293,7 @@ pub fn StatusStrip() -> Element {
                 },
                 "↷ Rétablir"
             }
+            SolverStatus {}
         }
     }
 }

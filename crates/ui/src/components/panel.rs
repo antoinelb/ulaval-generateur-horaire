@@ -1234,96 +1234,104 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                 }
                 "Permettre un préalable en concomitance"
             }
-            if !conflicted.is_empty() {
-                p { class: "panel-verdict panel-verdict--bad",
-                    "⚠ Conflit d'horaire en {conflicted} — plages \
-                     hachurées dans la grille de ces sessions."
-                }
-            }
-            if !overloaded.is_empty() {
-                p { class: "panel-verdict panel-verdict--bad",
-                    "⚠ Plafond de crédits dépassé en {overloaded}."
-                }
-            }
-            for message in shortfall_messages.iter() {
-                p { class: "panel-verdict panel-verdict--bad",
-                    "⚠ {message}"
-                }
-            }
-            match readiness {
-                Some(Err(why)) => rsx! {
-                    p { class: "warning",
-                        "⚠ Vérification impossible : {why}"
-                    }
-                },
-                // an empty grid is a verdict of its own — « rempli au
-                // mieux » would minimize a total failure (rapport
-                // étudiante-cegep 2026-08-19, B-GMC à 0/120)
-                Some(Ok(unplaced))
-                    if !unplaced.is_empty()
-                        && !left_out.is_empty()
-                        && nothing_placed =>
-                {
-                    rsx! {
-                        p { class: "panel-verdict panel-verdict--bad",
-                            "Aucun cours n'a pu être placé. Montez le \
-                             plafond de crédits, ajoutez des sessions ou \
-                             retirez des cours — le placement repartira \
-                             de lui-même."
-                        }
-                    }
-                }
-                // « proposez un organigramme » is false once the solver
-                // has just tried and reported what does not fit — the
-                // 2026-08-14 report's « c'est justement ce que je viens de
-                // faire » (ADR `2026-08-placement-au-mieux-en-repli`)
-                Some(Ok(unplaced))
-                    if !unplaced.is_empty() && !left_out.is_empty() =>
-                {
-                    rsx! {
-                        p { class: "panel-verdict",
-                            "{unplaced.len()} cours sans session : le \
-                             solveur a rempli au mieux et n'a pas pu les \
-                             placer — voyez les messages pour la raison, \
-                             puis ajustez le plafond, les sessions ou les \
-                             cours, ou placez-les à la main."
-                        }
-                    }
-                }
-                Some(Ok(unplaced)) if !unplaced.is_empty() => rsx! {
-                    p { class: "panel-verdict",
-                        "{unplaced.len()} cours sans session — placement \
-                         automatique en cours…"
-                    }
-                },
-                _ => rsx! {},
-            }
-            if let Some(verification) = verification {
-                if !verification.solutions.is_empty() {
-                    // un cheminement complet ne dit plus rien : seuls les
-                    // manques parlent (décision d'Antoine, 2026-08-26)
-                    if rules_missing > 0 || !credit_shortfalls.is_empty() {
-                        p { class: "panel-verdict panel-verdict--ok",
-                            "Placement vérifié ✓ (préalables, plafond, une \
-                             combinaison d'horaire possible par session)"
-                        }
-                        p { class: "panel-verdict panel-verdict--bad",
-                            "⚠ mais {rules_missing} sections de règles \
-                             restent à combler ci-dessous — le bac n'est \
-                             pas complet."
-                        }
-                    }
-                } else {
+            // Tous les verdicts asynchrones (propose/verify, 500 ms
+            // après la dernière saisie) se regroupent ici, au même
+            // endroit — sans hauteur réservée : le panneau défile de
+            // toute façon, exception LAY-2 assumée (ADR
+            // `2026-08-verdicts-du-panneau-sans-hauteur-reservee`).
+            div { class: "panel-verdicts",
+                if !conflicted.is_empty() {
                     p { class: "panel-verdict panel-verdict--bad",
-                        "⚠ Le cheminement affiché brise une contrainte "
-                        "(préalable, plafond, été fermé ou conflit \
-                         d'horaire) — les avertissements ci-dessus et \
-                         l'en-tête nomment ce qui dépasse."
+                        "⚠ Conflit d'horaire en {conflicted} — plages \
+                         hachurées dans la grille de ces sessions."
                     }
                 }
-                for blocked in verification.blocked.iter() {
-                    p { class: "warning",
-                        "⚠ {crate::solve::blocked_note(blocked)}"
+                if !overloaded.is_empty() {
+                    p { class: "panel-verdict panel-verdict--bad",
+                        "⚠ Plafond de crédits dépassé en {overloaded}."
+                    }
+                }
+                for message in shortfall_messages.iter() {
+                    p { class: "panel-verdict panel-verdict--bad",
+                        "⚠ {message}"
+                    }
+                }
+                match readiness {
+                    Some(Err(why)) => rsx! {
+                        p { class: "warning",
+                            "⚠ Vérification impossible : {why}"
+                        }
+                    },
+                    // an empty grid is a verdict of its own — « rempli au
+                    // mieux » would minimize a total failure (rapport
+                    // étudiante-cegep 2026-08-19, B-GMC à 0/120)
+                    Some(Ok(unplaced))
+                        if !unplaced.is_empty()
+                            && !left_out.is_empty()
+                            && nothing_placed =>
+                    {
+                        rsx! {
+                            p { class: "panel-verdict panel-verdict--bad",
+                                "Aucun cours n'a pu être placé. Montez le \
+                                 plafond de crédits, ajoutez des sessions ou \
+                                 retirez des cours — le placement repartira \
+                                 de lui-même."
+                            }
+                        }
+                    }
+                    // « proposez un organigramme » is false once the solver
+                    // has just tried and reported what does not fit — the
+                    // 2026-08-14 report's « c'est justement ce que je viens de
+                    // faire » (ADR `2026-08-placement-au-mieux-en-repli`)
+                    Some(Ok(unplaced))
+                        if !unplaced.is_empty() && !left_out.is_empty() =>
+                    {
+                        rsx! {
+                            p { class: "panel-verdict",
+                                "{unplaced.len()} cours sans session : le \
+                                 solveur a rempli au mieux et n'a pas pu les \
+                                 placer — voyez les messages pour la raison, \
+                                 puis ajustez le plafond, les sessions ou les \
+                                 cours, ou placez-les à la main."
+                            }
+                        }
+                    }
+                    Some(Ok(unplaced)) if !unplaced.is_empty() => rsx! {
+                        p { class: "panel-verdict",
+                            "{unplaced.len()} cours sans session — placement \
+                             automatique en cours…"
+                        }
+                    },
+                    _ => rsx! {},
+                }
+                if let Some(verification) = verification {
+                    if !verification.solutions.is_empty() {
+                        // un cheminement complet ne dit plus rien : seuls les
+                        // manques parlent (décision d'Antoine, 2026-08-26)
+                        if rules_missing > 0 || !credit_shortfalls.is_empty() {
+                            p { class: "panel-verdict panel-verdict--ok",
+                                "Placement vérifié ✓ (préalables, \
+                                 plafond, une combinaison d'horaire \
+                                 possible par session)"
+                            }
+                            p { class: "panel-verdict panel-verdict--bad",
+                                "⚠ mais {rules_missing} sections de règles \
+                                 restent à combler ci-dessous — le bac n'est \
+                                 pas complet."
+                            }
+                        }
+                    } else {
+                        p { class: "panel-verdict panel-verdict--bad",
+                            "⚠ Le cheminement affiché brise une contrainte "
+                            "(préalable, plafond, été fermé ou conflit \
+                             d'horaire) — les avertissements ci-dessus et \
+                             l'en-tête nomment ce qui dépasse."
+                        }
+                    }
+                    for blocked in verification.blocked.iter() {
+                        p { class: "warning",
+                            "⚠ {crate::solve::blocked_note(blocked)}"
+                        }
                     }
                 }
             }
@@ -1884,7 +1892,6 @@ fn ResultRows(
 #[component]
 fn RowView(row: Row, grant_key: Option<String>) -> Element {
     let plan = use_context::<Signal<Plan>>();
-    let solver = use_context::<Signal<super::SolverState>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     // the advisory fit marker, swap semantics — the probe comes from the
     // shared memo, each row costs one mask overlap
@@ -1943,11 +1950,6 @@ fn RowView(row: Row, grant_key: Option<String>) -> Element {
     let dimmed =
         matches!(row.state, RowState::PrereqUnmet | RowState::Unknown);
     let assumed = row.assumed.join(", ");
-    let shortfall_messages = crate::solve::course_shortfall_messages(
-        &row.code,
-        &solver.read().credit_shortfalls,
-        &plan.read(),
-    );
     rsx! {
         div {
             class: "panel-course",
@@ -1961,11 +1963,6 @@ fn RowView(row: Row, grant_key: Option<String>) -> Element {
                 if !assumed.is_empty() {
                     div { class: "panel-course-sub",
                         "présumé acquis : {assumed}"
-                    }
-                }
-                for message in shortfall_messages.iter() {
-                    div { class: "panel-course-sub panel-course-sub--error",
-                        "⚠ {message}"
                     }
                 }
                 if !matches!(row.state, RowState::Unknown) {
