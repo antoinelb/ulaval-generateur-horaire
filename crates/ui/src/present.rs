@@ -398,6 +398,10 @@ pub struct Block {
     pub clash: bool,
     // the option's identity — the sorted NRC set a click pins
     pub nrcs: Vec<String>,
+    // how many alternative options selecting this block's course would
+    // reveal as ghosts — 0 on a ghost itself, it never advertises its own
+    // siblings (ADR 2026-08-jeton-de-plages-alternatives-sur-le-bloc)
+    pub alternatives: usize,
 }
 
 pub fn grid_model(
@@ -423,6 +427,8 @@ pub fn grid_model(
         let hue = course_hue(&codes, &course.code);
         let title = course_title(snapshot, &course.code);
         let nrcs = option_nrcs(&course.selected);
+        // same count a click on this block would reveal as ghosts below
+        let alternatives = course.alternatives.len();
         let mut placed = false;
         for section in &course.selected {
             for slot in &section.slots {
@@ -453,6 +459,7 @@ pub fn grid_model(
                             valid: course.valid,
                             clash: false,
                             nrcs: nrcs.clone(),
+                            alternatives,
                         },
                     },
                 ));
@@ -487,6 +494,7 @@ pub fn grid_model(
                                     valid: alternative.valid,
                                     clash: false,
                                     nrcs: nrcs.clone(),
+                                    alternatives: 0,
                                 },
                             },
                         ));
@@ -1186,6 +1194,7 @@ mod tests {
         assert!((block.top - 0.0).abs() < f32::EPSILON);
         assert!((block.height - 170.0 / 840.0 * 100.0).abs() < 0.01);
         assert!((block.width - 100.0).abs() < f32::EPSILON);
+        assert_eq!(block.alternatives, 0, "no alternative option offered");
         assert!(!grid.conflict);
         assert_eq!(grid.days.len(), 5, "Lundi→Vendredi, no weekend");
     }
@@ -1278,11 +1287,47 @@ mod tests {
         let silent = grid_model(&schedule, &snapshot(), None);
         assert_eq!(silent.days[1].blocks.len(), 0, "no ghost unrequested");
 
+        let full = &silent.days[0].blocks[0];
+        assert_eq!(
+            full.alternatives, 1,
+            "one alternative option to reveal on click"
+        );
+
         let grid = grid_model(&schedule, &snapshot(), Some("GEX-1000"));
         let ghost = &grid.days[1].blocks[0];
         assert!(ghost.ghost);
         assert!(!ghost.valid, "swap semantics carried through");
         assert_eq!(ghost.nrcs, ["222", "333"], "sorted option identity");
+        assert_eq!(
+            ghost.alternatives, 0,
+            "a ghost never advertises its own siblings"
+        );
+    }
+
+    #[test]
+    fn several_alternatives_are_counted_on_the_full_block() {
+        let mut with_alts = course(
+            "GEX-1000",
+            true,
+            vec![monday("GEX-1000", "111", "08:30", "09:20")],
+        );
+        with_alts.alternatives = vec![
+            Alternative {
+                sections: vec![monday("GEX-1000", "222", "10:30", "11:20")],
+                valid: true,
+            },
+            Alternative {
+                sections: vec![monday("GEX-1000", "333", "12:30", "13:20")],
+                valid: true,
+            },
+        ];
+        let schedule = wrap(vec![with_alts], true);
+
+        let grid = grid_model(&schedule, &snapshot(), None);
+        assert_eq!(
+            grid.days[0].blocks[0].alternatives, 2,
+            "both alternative options counted, ghosts not drawn"
+        );
     }
 
     #[test]

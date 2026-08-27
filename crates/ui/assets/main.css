@@ -1598,6 +1598,22 @@ code {
   font-weight: 600;
 }
 
+/* jeton de plages alternatives : flotte à droite pour céder la place au
+   titre en dessous — celui-ci a déjà overflow:hidden (bloc de 50 min) donc
+   se redimensionne autour plutôt que de le chevaucher (ADR
+   2026-08-jeton-de-plages-alternatives-sur-le-bloc) */
+.grid-block-alts {
+  float: right;
+  margin-left: 0.25rem;
+  padding: 0 0.1875rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  line-height: 1.2;
+  border: 0.0625rem solid currentColor;
+  border-radius: 0.1875rem;
+  background: var(--card);
+}
+
 .grid-notes {
   padding-top: 0.625rem;
   display: flex;

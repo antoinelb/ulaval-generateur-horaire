@@ -140,7 +140,8 @@ pub fn WeeklyGrid() -> Element {
             if !schedule.read().report.courses.is_empty() {
                 p { class: "grid-legend",
                     "Plein = plage retenue - pointillé = autre plage \
-                     possible (cliquer pour la forcer) - hachuré = conflit"
+                     possible (cliquer pour la forcer) - hachuré = conflit - ⇄ N = N horaires \
+                     alternatifs (cliquer le bloc pour les voir)"
                 }
             }
             if grid.days.iter().all(|day| day.blocks.is_empty())
@@ -235,10 +236,15 @@ fn GridBlock(
     let code = block.code.clone();
     let nrcs = block.nrcs.clone();
     let ghost = block.ghost;
+    let alternatives = block.alternatives;
     let label = if ghost {
         format!("Forcer la section {} de {}", nrcs.join("+"), block.code)
     } else {
-        format!("Voir les autres plages de {}", block.code)
+        match alternatives {
+            0 => format!("{} — aucun horaire alternatif", block.code),
+            1 => "1 horaire alternatif — cliquer pour le voir".to_string(),
+            n => format!("{n} horaires alternatifs — cliquer pour les voir"),
+        }
     };
     rsx! {
         button {
@@ -299,6 +305,17 @@ fn GridBlock(
                 dragged.set(None);
                 hover.set(None);
             },
+            if !ghost && alternatives > 0 {
+                span {
+                    class: "grid-block-alts",
+                    aria_label: if alternatives == 1 {
+                        "1 horaire alternatif".to_string()
+                    } else {
+                        format!("{alternatives} horaires alternatifs")
+                    },
+                    "⇄ {alternatives}"
+                }
+            }
             div { class: "grid-block-title", "{block.title}" }
             div { class: "grid-block-detail",
                 "{block.detail}"
