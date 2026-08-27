@@ -16,6 +16,13 @@ pub enum PrintKind {
 pub const ORGANIGRAMME_CLASS: &str = "print-organigramme";
 pub const HORAIRE_CLASS: &str = "print-horaire";
 
+// Firefox ignores the named `@page organigramme` rule used to separate the
+// two exports. Mounting the equivalent unnamed rule only while this sheet is
+// alive makes Letter landscape the dialog's default without changing the
+// horaire's A4 portrait default.
+const ORGANIGRAMME_PAGE_STYLE: &str =
+    "@page { size: letter landscape; margin: 0; }";
+
 // Ordering matters and is deliberate: `window.print()` is synchronous and
 // blocks until the dialog closes, so the DOM it captures must already be
 // final. Two frames are awaited first — one lets the browser paint the
@@ -36,12 +43,21 @@ pub fn start_print(mut target: Signal<Option<PrintKind>>, kind: PrintKind) {
         // the browser names a saved PDF after `document.title` (adding
         // `.pdf` itself): swap it for the document's name while the dialog
         // is open, then restore the app's own title
+        // the organigramme sheet has a fixed one-page height: measure it
+        // off-screen at paper width and shrink the root font size until it
+        // fits, before the dialog captures the DOM
+        if kind == PrintKind::Organigramme {
+            crate::browser::add_body_class("print-measure");
+            crate::browser::shrink_to_fit(".print-organigramme-sheet");
+            crate::browser::remove_body_class("print-measure");
+        }
         let app_title = crate::browser::document_title();
         crate::browser::set_document_title(name);
         crate::browser::add_body_class(class);
         crate::browser::print();
         crate::browser::remove_body_class(class);
         crate::browser::set_document_title(&app_title);
+        crate::browser::reset_print_fit();
         target.set(None);
     });
 }
@@ -58,6 +74,7 @@ pub fn PrintView() -> Element {
     rsx! {
         div { class: "print-root",
             if is_organigramme {
+                style { media: "print", "{ORGANIGRAMME_PAGE_STYLE}" }
                 organigramme::Sheet {}
             } else if is_horaire {
                 horaire::Sheet {}

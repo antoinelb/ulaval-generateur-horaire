@@ -30,6 +30,7 @@ web-sys = { version = "0.3", features = [
     "AbortController",
     "AbortSignal",
     "Clipboard",
+    "CssStyleDeclaration",
     "Document",
     "DomTokenList",
     "Element",

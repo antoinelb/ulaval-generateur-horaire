@@ -1,0 +1,12 @@
+[package]
+name = "decode-share"
+version = "0.1.0"
+edition = "2021"
+
+# standalone tool: its own workspace, so `make test`/`make lint` and the CI
+# workspace are untouched
+[workspace]
+
+[dependencies]
+ulaval-scheduler-ui = { path = "../../crates/ui", default-features = false }
+serde_json = "1"

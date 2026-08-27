@@ -272,6 +272,55 @@ pub fn remove_body_class(class: &str) {
 
 // blocks until the browser's print dialog closes; a window that refuses
 // (sandboxed iframe) simply does nothing
+// The printed organigramme must fit its single fixed-height page: with
+// the sheet laid out at paper width (`body.print-measure`, print.css),
+// start the ROOT font size at 90 %, then shrink it in bounded 5 % steps
+// until the sheet's content stops overflowing its own box — every
+// dimension in the print stylesheets is rem-based, so the root size scales
+// the whole document uniformly. Reading `scroll_height` after each step
+// forces the reflow the next read needs. `reset_print_fit` restores the
+// browser's own root size once the dialog closes (INP-8: the app's text zoom
+// must come back untouched).
+pub fn shrink_to_fit(selector: &str) {
+    use wasm_bindgen::JsCast;
+    let Some(document) =
+        web_sys::window().and_then(|window| window.document())
+    else {
+        return;
+    };
+    let Some(element) = document.query_selector(selector).ok().flatten()
+    else {
+        return;
+    };
+    let Some(root) = document
+        .document_element()
+        .and_then(|root| root.dyn_into::<web_sys::HtmlElement>().ok())
+    else {
+        return;
+    };
+    // Step 2 makes 90 % the normal print scale; step 8 keeps the existing
+    // 60 % readability floor if an unusually dense plan still overflows.
+    for step in 2..=8 {
+        let size = 16.0 * (1.0 - 0.05 * f64::from(step));
+        let _ = root.style().set_property("font-size", &format!("{size}px"));
+        if element.scroll_height() <= element.client_height() + 1 {
+            return;
+        }
+    }
+}
+
+pub fn reset_print_fit() {
+    if let Some(root) = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.document_element())
+    {
+        use wasm_bindgen::JsCast;
+        if let Ok(root) = root.dyn_into::<web_sys::HtmlElement>() {
+            let _ = root.style().remove_property("font-size");
+        }
+    }
+}
+
 pub fn print() {
     if let Some(window) = web_sys::window() {
         let _ = window.print();

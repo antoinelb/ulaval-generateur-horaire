@@ -7,6 +7,17 @@
 	display: none;
 }
 
+/* start_print's measuring pass: the sheet laid out off-screen at paper
+ * width so its overflow can be read before the dialog opens — never
+ * visible, removed before printing */
+body.print-measure .print-root {
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -400mm;
+	width: 11in;
+}
+
 @media print {
 	/* only the print document exists in the browser's print DOM (LAY-2:
 	 * the live app is never part of what gets printed) */
@@ -34,12 +45,11 @@
 		margin: 0;
 	}
 
-	/* Named pages let each document pick its own orientation. A browser
-	 * without named-`@page` support (older WebKit builds) simply keeps
-	 * whatever orientation the print dialog was already set to — an
-	 * acceptable degradation (DEG), never a broken or empty document. */
+	/* Named pages let each document pick its own orientation. The
+	 * organigramme also mounts an unnamed rule while it is being printed:
+	 * Firefox ignores the named page but honours that fallback. */
 	@page organigramme {
-		size: A4 landscape;
+		size: letter landscape;
 	}
 
 	.print-organigramme-sheet {

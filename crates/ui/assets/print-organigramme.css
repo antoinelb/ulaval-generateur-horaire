@@ -1,311 +1,477 @@
-/* Organigramme print sheet styling (EXP-4, export-pdf plan item 7).
+/* Organigramme print sheet (EXP-4) — the mockup-approved design (ADR
+ * `2026-08-refonte-du-design-imprime-de-lorganigramme`).
  *
- * - LAY-2: every rule here is scoped under `.print-organigramme-sheet`, the
- *   root `components/print/organigramme.rs` mounts — nothing here touches
- *   the on-screen ruban/grid classes, and the sheet only exists in the DOM
- *   while a print is in flight (`components/print/mod.rs`).
- * - INP-3: a shaded (concomitant) token keeps its letter — the shading is
- *   an added fill, never a substitute for the glyph.
- * - Reproduces `gex_organigramme.pdf`'s grammar: dashed vertical column
- *   separators, a bordered head bar per column, thin-bordered white course
- *   boxes with oval/square token vignettes flowing in left/right gutters,
- *   grey fills for the option boxes and the N.B. band.
- * - rem units and the shared `:root` tokens throughout, exactly like
- *   `main.css` and `print-horaire.css`, so light/dark viewer themes never
- *   leak a light-only colour onto the printed page.
- * - A compact print-scale type ramp: up to eight columns (A1→H8) must fit
- *   one A4-landscape page (`print.css`'s `@page organigramme`).
- */
+ * - LAY-2: every rule is scoped under `.print-organigramme-sheet`, the
+ *   root `components/print/organigramme.rs` mounts; the sheet only exists
+ *   in the DOM while a print is in flight (`components/print/mod.rs`).
+ * - Typography: `--font-sans` for the whole sheet, `--font-serif` for the
+ *   h1 alone (the app's own heading face) and NO `--font-mono` anywhere —
+ *   aligned digits come from `font-variant-numeric: tabular-nums`.
+ * - Colour: the shared `:root` tokens plus the per-course oklch hue
+ *   (`--course-h`, ADR `2026-08-couleur-par-cours-plutot-que-matiere`) on
+ *   each box's left edge and code — same treatment as the printed weekly
+ *   schedule, no ink flood (toner economy).
+ * - INP-3: a shaded (concomitant) token keeps its letter; the HP chip is
+ *   the primary out-of-program signal, the dashed border a redundant one.
+ * - A compact print-scale type ramp: up to eight A/H columns plus a summer
+ *   row must fit one Letter-landscape page. The mm padding below is the paper
+ *   margin — `@page` prints with margin 0 (print.css) so the browser adds
+ *   no header/footer of its own. */
 
+/* the full Letter-landscape page height, definite (border-box: the mm padding
+ * is the paper margin), laid out as a grid — explicit rows, the session
+ * grid on the only `1fr` one, so the leftover space provably lands there
+ * (grid re-resolves `fr` against the definite height; flexbox did not) and
+ * the foot sits at the bottom of the page. Oversized content overflows
+ * past the sheet and fragments onto a second page, never squashing a row
+ * — and `start_print` shrinks the root font size first so that case stays
+ * rare. */
 .print-organigramme-sheet {
-  font-family: var(--font-sans);
-  color: var(--ink);
-  font-size: 0.625rem;
-  line-height: 1.25;
-  /* the paper margin: `@page` prints with margin 0 (print.css) so the
-   * browser adds no header/footer of its own */
-  padding: 10mm;
+	font-family: var(--font-sans);
+	color: var(--ink);
+	background: #fff;
+	font-size: 0.625rem;
+	line-height: 1.3;
+	padding: 7mm 10mm 6mm;
+	height: 8.5in;
+	display: grid;
+	grid-template-rows: auto auto 1fr auto auto;
+	print-color-adjust: exact;
+	-webkit-print-color-adjust: exact;
 }
 
+/* ---- entête -------------------------------------------------------------- */
+
 .print-organigramme-head {
-  margin-bottom: 0.5rem;
+	grid-row: 1;
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-end;
+	gap: 1rem;
+	border-bottom: 0.09375rem solid var(--ink);
+	padding-bottom: 0.25rem;
+	margin-bottom: 0;
+}
+
+.print-organigramme-kicker {
+	margin: 0 0 0.125rem;
+	font-size: 0.53rem;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+	color: var(--muted);
 }
 
 .print-organigramme-head h1 {
-  margin: 0 0 0.1875rem;
-  font-size: 1.125rem;
+	margin: 0;
+	font-family: var(--font-serif);
+	font-size: 1.33rem;
+	font-weight: 700;
+	letter-spacing: -0.01em;
 }
 
-.print-organigramme-program {
-  margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
+.print-organigramme-subtitle {
+	margin: 0.125rem 0 0;
+	font-size: 0.625rem;
+	color: var(--ink);
 }
 
-.print-organigramme-version {
-  margin: 0.0625rem 0 0;
-  color: var(--muted);
-  font-size: 0.6875rem;
+.print-organigramme-meta {
+	text-align: right;
+	font-size: 0.48rem;
+	line-height: 1.6;
+	color: var(--muted);
+	font-variant-numeric: tabular-nums;
+	flex-shrink: 0;
 }
 
-/* --- la grille de colonnes, une par session --------------------------- */
+.print-organigramme-meta p {
+	margin: 0;
+}
 
+.print-organigramme-meta a {
+	color: var(--muted);
+	text-decoration: underline;
+}
+
+/* ---- bandeau de synthèse -------------------------------------------------- */
+
+.print-organigramme-stats {
+	grid-row: 2;
+	display: flex;
+	border-bottom: 0.03125rem solid var(--muted-3);
+	padding: 0.1875rem 0;
+	margin-bottom: 0.25rem;
+}
+
+.print-organigramme-stat {
+	padding: 0 0.75rem;
+	border-left: 0.03125rem solid var(--border);
+}
+
+.print-organigramme-stat:first-child {
+	padding-left: 0;
+	border-left: none;
+}
+
+.print-organigramme-stat b {
+	display: block;
+	font-size: 0.875rem;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+.print-organigramme-stat span {
+	font-size: 0.475rem;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--muted);
+}
+
+/* ---- grille de sessions --------------------------------------------------- */
+
+/* `grid-template-columns` is set inline from the model's column count.
+ * Two rows: the columns span both (their separator lines run all the way
+ * down to the foot — the grid itself flexes to fill the sheet), the summer
+ * groups sit in row 2, over those lines, on their own paper-white ground */
 .print-organigramme-grid {
-  display: grid;
-  align-items: start;
+	grid-row: 3;
+	display: grid;
+	grid-template-rows: 1fr auto;
 }
 
 .print-organigramme-column {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  border-right: 0.0625rem dashed var(--border-strong);
-  padding: 0 0.1875rem;
+	grid-row: 1 / 3;
+	padding: 0 0.25rem 0 0.3125rem;
+	border-left: 0.03125rem solid var(--muted-3);
+	min-width: 0;
 }
 
-.print-organigramme-column:last-child {
-  border-right: none;
+.print-organigramme-column:first-child {
+	border-left: none;
+	padding-left: 0;
 }
 
 .print-organigramme-column-head {
-  border: 0.0625rem solid var(--border-strong);
-  background: var(--card-head);
-  text-align: center;
-  font-weight: 700;
-  font-size: 0.6875rem;
-  padding: 0.125rem 0;
-  margin-bottom: 0.25rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	border-bottom: 0.0625rem solid var(--ink);
+	padding-bottom: 0.125rem;
+	margin-bottom: 0.375rem;
+}
+
+.print-organigramme-column-label {
+	font-size: 0.79rem;
+	font-weight: 700;
+}
+
+.print-organigramme-column-credits {
+	font-size: 0.55rem;
+	color: var(--muted);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
 }
 
 .print-organigramme-column-boxes {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1875rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
 }
 
-/* --- une case de cours : jetons en gouttières gauche/droite ------------ */
+/* ---- case de cours -------------------------------------------------------- */
 
+/* the same course treatment as the on-screen blocks and the printed
+ * weekly schedule: no border but the thick coloured left edge, the 12 %
+ * hue wash over paper white, the hue on the text — fixed lightness and
+ * chroma, only `--course-h` varies (set inline by the view) — and the
+ * grid blocks' own border radius */
 .print-organigramme-box {
-  display: flex;
-  align-items: stretch;
-  border: 0.0625rem solid var(--border-strong);
-  border-radius: 0.125rem;
-  background: var(--card);
-  min-height: 2.5rem;
+	position: relative;
+	display: flex;
+	align-items: stretch;
+	border: none;
+	border-left: 0.1875rem solid oklch(45% 0.12 var(--course-h));
+	border-radius: 0.3125rem;
+	background:
+		linear-gradient(
+			oklch(45% 0.12 var(--course-h) / 12%),
+			oklch(45% 0.12 var(--course-h) / 12%)
+		),
+		#fff;
+	min-height: 1.625rem;
 }
 
-/* the gutters flow: a plain flex column, centred, that grows with however
-   many tokens the model gave it — never a hand-tuned offset */
-.print-organigramme-box-gutter {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.09375rem;
-  padding: 0.09375rem;
-  flex-shrink: 0;
-}
-
-.print-organigramme-box-gutter--entry {
-  min-width: 0.75rem;
-}
-
-.print-organigramme-box-gutter--exit {
-  min-width: 0.75rem;
+/* the one bordered box — a course that is only optional (an unchosen
+ * stage, a hors-programme addition), outlined dashed in its own colour
+ * (the legend and the HP chip carry the meaning, INP-3) */
+.print-organigramme-box--optional {
+	border: 0.0625rem dashed oklch(45% 0.12 var(--course-h));
+	border-left: 0.1875rem solid oklch(45% 0.12 var(--course-h));
 }
 
 .print-organigramme-box-body {
-  flex: 1;
-  min-width: 0;
-  padding: 0.1875rem 0.125rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.0625rem;
+	flex: 1;
+	min-width: 0;
+	padding: 0.21875rem 0.1875rem;
+}
+
+.print-organigramme-box-line {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.0625rem 0.1875rem;
 }
 
 .print-organigramme-box-code {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 0.625rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+	font-weight: 700;
+	font-size: 0.6rem;
+	white-space: nowrap;
+	color: oklch(45% 0.12 var(--course-h));
+}
+
+.print-organigramme-box-credits {
+	margin-left: auto;
+	font-size: 0.5rem;
+	color: var(--muted);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
 }
 
 .print-organigramme-box-title {
-  font-size: 0.5625rem;
-  line-height: 1.15;
+	font-size: 0.53rem;
+	line-height: 1.22;
+	color: oklch(45% 0.12 var(--course-h));
+	margin-top: 0.0625rem;
 }
 
-/* --- jetons : ovale pour une lettre, carré pour un seuil de crédits ---- */
+.print-organigramme-chip {
+	font-size: 0.425rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	border: 0.03125rem solid var(--muted);
+	border-radius: 0.125rem;
+	padding: 0 0.125rem;
+	color: var(--ink);
+	white-space: nowrap;
+}
 
+/* ---- jetons : carrés, comme sur le document officiel ---------------------- */
+
+/* the gutters flow with however many tokens the model gave them and
+ * overlap the box borders by half a token width — the official document's
+ * own look; `align-items: stretch` on the box lets a tall stack of entry
+ * tokens grow the box, no hand-tuned height */
+.print-organigramme-box-gutter {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 0.09375rem;
+	flex-shrink: 0;
+	width: 0.6875rem;
+}
+
+.print-organigramme-box-gutter--entry {
+	margin-left: -0.34375rem;
+}
+
+.print-organigramme-box-gutter--exit {
+	margin-right: -0.34375rem;
+	align-items: flex-end;
+}
+
+/* whole-pixel sizes (11×9 px, 7 px glyph): a fractional height puts the
+ * flex-centred glyph on a half pixel and it visibly drifts inside the tiny
+ * square — every dimension here must stay a multiple of 1px at 16px/rem */
 .print-organigramme-token {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0.0625rem solid var(--ink);
-  font-size: 0.5rem;
-  font-weight: 700;
-  line-height: 1;
-  background: var(--card);
-  color: var(--ink);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 0.6875rem;
+	height: 0.5625rem;
+	border: 0.03125rem solid var(--ink);
+	border-radius: 0.09375rem;
+	background: var(--card);
+	color: var(--ink);
+	font-size: 0.4375rem;
+	font-weight: 600;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
 }
 
-.print-organigramme-token--letter {
-  width: 0.75rem;
-  height: 0.5625rem;
-  border-radius: 50%;
+.print-organigramme-token--shaded {
+	background: var(--muted-3);
 }
 
 .print-organigramme-token--credits {
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: 0.0625rem;
+	height: 0.6875rem;
 }
 
-/* the shading is an added fill on top of the still-legible glyph (INP-3),
-   never the only carrier of the concomitant meaning */
-.print-organigramme-token--shaded {
-  background: var(--muted-3);
-}
-
-/* --- boîtes « cours option » (fond gris) -------------------------------- */
+/* ---- boîtes grises (options) ---------------------------------------------- */
 
 .print-organigramme-option-box {
-  margin-top: 0.25rem;
-  border: 0.0625rem solid var(--border-strong);
-  border-radius: 0.125rem;
-  background: var(--active-bg);
-  padding: 0.1875rem 0.25rem;
+	border: 0.03125rem solid var(--muted-2);
+	border-radius: 0.125rem;
+	background: var(--active-bg);
+	padding: 0.1875rem 0.25rem;
+	margin: 0.25rem 0;
 }
 
-.print-organigramme-option-heading p {
-  margin: 0;
-  font-weight: 700;
-  font-size: 0.625rem;
-  text-align: center;
+.print-organigramme-option-heading {
+	margin: 0 0 0.0625rem;
+	text-align: center;
+	font-weight: 700;
+	font-size: 0.55rem;
 }
 
 .print-organigramme-option-rule {
-  margin-top: 0.25rem;
+	margin-top: 0.1875rem;
 }
 
 .print-organigramme-option-rule-constraint {
-  margin: 0;
-  font-weight: 700;
-  font-size: 0.5625rem;
+	margin: 0;
+	font-weight: 700;
+	font-size: 0.48rem;
 }
 
-.print-organigramme-option-rule-choices {
-  margin: 0.0625rem 0 0;
-  padding-left: 0.875rem;
-  font-size: 0.5625rem;
-}
-
-.print-organigramme-option-rule-choices li {
-  margin-bottom: 0.03125rem;
-}
-
+.print-organigramme-option-rule-choices,
 .print-organigramme-option-rule-raw {
-  margin: 0.0625rem 0 0;
-  font-size: 0.5625rem;
-  font-style: italic;
+	margin: 0.03125rem 0 0;
+	font-size: 0.48rem;
+	color: var(--ink);
 }
 
-/* --- microprogrammes de stage : bandes sous la grille ------------------- */
+/* ---- étés et cours de stage : la rangée entre les colonnes ---------------- */
 
-.print-organigramme-spans {
-  display: grid;
-  margin-top: 0.375rem;
+/* `grid-row: 2` and the straddling `grid-column` pair come inline from the
+ * model's indices; the white ground is what puts the group visually in
+ * front of the columns' separator lines */
+.print-organigramme-summer {
+	justify-self: center;
+	align-self: end;
+	width: 52%;
+	padding: 0.25rem 0.3125rem 0;
+	background: #fff;
 }
 
-.print-organigramme-span {
-  border: 0.0625rem solid var(--border-strong);
-  border-radius: 0.125rem;
-  text-align: center;
-  font-weight: 600;
-  font-size: 0.625rem;
-  padding: 0.1875rem;
-  margin: 0 0.1875rem;
+/* ---- pied : règles, exigences, légende ------------------------------------ */
+
+.print-organigramme-foot {
+	grid-row: 4;
+	display: grid;
+	grid-template-columns: 46fr 27fr 27fr;
+	gap: 0.5rem;
+	border-top: 0.0625rem solid var(--ink);
+	margin-top: 0.25rem;
+	padding-top: 0.25rem;
 }
 
-/* --- cours de langue ----------------------------------------------------- */
-
-.print-organigramme-language {
-  margin-top: 0.375rem;
-  border: 0.0625rem solid var(--border-strong);
-  border-radius: 0.125rem;
-  padding: 0.25rem 0.375rem;
-  max-width: 16rem;
+.print-organigramme-foot h2 {
+	font-size: 0.48rem;
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	color: var(--muted);
+	margin: 0 0 0.1875rem;
+	font-weight: 700;
 }
-
-.print-organigramme-language-label {
-  margin: 0;
-  font-weight: 700;
-  font-size: 0.625rem;
-}
-
-.print-organigramme-language-detail {
-  margin: 0.0625rem 0 0;
-  font-size: 0.5625rem;
-  color: var(--muted);
-}
-
-/* --- bande N.B. (fond gris, pleine largeur) ------------------------------ */
-
-.print-organigramme-band {
-  margin: 0.375rem 0 0;
-  background: var(--active-bg);
-  border: 0.0625rem solid var(--border-strong);
-  border-radius: 0.125rem;
-  padding: 0.1875rem 0.375rem;
-  font-weight: 600;
-  font-size: 0.625rem;
-}
-
-/* --- notes et légende (Note 1), en pied de document ---------------------- */
-
-.print-organigramme-notes {
-  margin-top: 0.375rem;
-  color: var(--muted);
-  font-size: 0.5625rem;
-}
-
-.print-organigramme-notes p {
-  margin: 0 0 0.09375rem;
-}
-
-/* --- tableau des règles --------------------------------------------------- */
 
 .print-organigramme-rules {
-  margin-top: 0.375rem;
-  border-collapse: collapse;
-  font-size: 0.5625rem;
-}
-
-.print-organigramme-rules th,
-.print-organigramme-rules td {
-  border: 0.0625rem solid var(--border-strong);
-  padding: 0.09375rem 0.3125rem;
-  text-align: left;
+	border-collapse: collapse;
+	width: 100%;
+	font-size: 0.52rem;
 }
 
 .print-organigramme-rules th {
-  background: var(--card-head);
-  font-weight: 700;
+	text-align: left;
+	font-size: 0.45rem;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--muted);
+	border-bottom: 0.03125rem solid var(--muted-2);
+	padding: 0.0625rem 0.25rem 0.125rem 0;
+	font-weight: 700;
 }
 
-/* --- pied de provenance (EXP-1) ------------------------------------------- */
-
-.print-organigramme-provenance {
-  margin-top: 0.375rem;
-  padding-top: 0.25rem;
-  border-top: 0.0625rem solid var(--border-strong);
-  color: var(--muted);
-  font-size: 0.5625rem;
+.print-organigramme-rules td {
+	border-bottom: 0.03125rem solid var(--border);
+	padding: 0.09375rem 0.25rem 0.09375rem 0;
+	vertical-align: top;
 }
 
-.print-organigramme-provenance p {
-  margin: 0 0 0.09375rem;
+.print-organigramme-rules-number {
+	text-align: right;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.print-organigramme-rules-row--unresolved td {
+	color: var(--muted);
+	font-style: italic;
+}
+
+.print-organigramme-sidebox {
+	border: 0.03125rem solid var(--muted-2);
+	border-radius: 0.125rem;
+	padding: 0.1875rem 0.3125rem;
+	margin-bottom: 0.3125rem;
+}
+
+.print-organigramme-sidebox p {
+	margin: 0;
+	font-size: 0.52rem;
+	line-height: 1.35;
+}
+
+.print-organigramme-sidebox-lead {
+	font-weight: 700;
+}
+
+.print-organigramme-legend {
+	font-size: 0.5rem;
+	color: var(--ink);
+}
+
+.print-organigramme-legend p {
+	margin: 0 0 0.125rem;
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.print-organigramme-legend .print-organigramme-token,
+.print-organigramme-legend .print-organigramme-chip,
+.print-organigramme-legend .print-organigramme-swatch {
+	flex-shrink: 0;
+}
+
+.print-organigramme-swatch {
+	display: inline-block;
+	width: 1rem;
+	height: 0.5625rem;
+	border: 0.03125rem solid #444;
+	border-radius: 0.125rem;
+}
+
+.print-organigramme-swatch--dashed {
+	border-style: dashed;
+}
+
+.print-organigramme-disclaimer {
+	font-size: 0.475rem;
+	color: var(--muted);
+	margin: 0.25rem 0 0;
+	line-height: 1.4;
+}
+
+/* ---- notes de dégradation (jamais supprimées) ----------------------------- */
+
+.print-organigramme-notes {
+	grid-row: 5;
+	margin-top: 0.25rem;
+	font-size: 0.475rem;
+	color: var(--muted);
+}
+
+.print-organigramme-notes p {
+	margin: 0 0 0.0625rem;
 }

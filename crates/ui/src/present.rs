@@ -526,7 +526,7 @@ fn course_title<'a>(snapshot: &'a Snapshot, code: &'a str) -> &'a str {
 // `codes` is built from this same `schedule.report.courses` right above, so
 // `code` is always found; the `expect` documents that rather than adding an
 // unreachable `None` branch
-fn course_hue(codes: &[&str], code: &str) -> f32 {
+pub(crate) fn course_hue(codes: &[&str], code: &str) -> f32 {
     let rank = codes
         .binary_search(&code)
         .expect("code comes from the same schedule the list was built from");
