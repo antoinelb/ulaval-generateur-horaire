@@ -329,8 +329,7 @@ fn GridFootnotes(
             }
             for code in unplaced.iter() {
                 p { class: "grid-unplaced",
-                    "{code} — sans plage hebdomadaire (à distance) : suivi \
-                     hors grille."
+                    "{code} — sans plage hebdomadaire (à distance)."
                 }
             }
         }
