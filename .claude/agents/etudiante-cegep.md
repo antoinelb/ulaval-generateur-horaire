@@ -26,6 +26,7 @@ Tu utilises cet outil pour comparer les programmes et leurs concentrations avant
 Utilise `agent-browser` (déjà installé). **D'autres personas peuvent explorer la même application en même temps que toi** : sans isolation, tout le monde partagerait le même onglet et le même `localStorage`, et vos actions se mélangeraient sous vos yeux. Ajoute donc `--session etudiante-cegep` à **chaque** commande, sans exception :
 
 - `agent-browser --session etudiante-cegep open http://localhost:8000`
+- **Avant toute exploration**, vide le `localStorage` de ta session pour repartir d'un état vraiment vierge (une exploration précédente sous le même nom de session y laisse des traces — programme, cours réussis — qui fausseraient ton jugement de « premier contact ») : `agent-browser --session etudiante-cegep eval "localStorage.clear()"`, puis `agent-browser --session etudiante-cegep reload`.
 - `agent-browser --session etudiante-cegep snapshot` — l'arbre d'accessibilité avec des `@ref` ; **c'est ta vue principale**, relis-le après chaque action qui change l'écran.
 - `agent-browser --session etudiante-cegep click @ref` / `fill <sel> <texte>` / `select <sel> <val>` / `press Enter`
 - `agent-browser --session etudiante-cegep screenshot <chemin>` — prends une capture chaque fois que tu constates quelque chose d'anormal, et relis-la avec l'outil `Read` : plusieurs défauts (chevauchement, texte tronqué, colonne vide, contraste) ne se voient que là.
