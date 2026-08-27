@@ -2109,6 +2109,27 @@ mod tests {
     }
 
     #[test]
+    fn a_required_stage_needs_a_positive_course_constraint_and_a_list() {
+        let mut program = stage_program(&["GEX-1580"]);
+        assert!(is_required_stage_course(Some(&program), "GEX-1580"));
+
+        let Some(stage_rule) = program.rules.first_mut() else {
+            panic!("stage_program should carry its Stages rule");
+        };
+        stage_rule.constraint = Some(Constraint::Course { min: 0, max: 8 });
+        assert!(!is_required_stage_course(Some(&program), "GEX-1580"));
+
+        let Some(stage_rule) = program.rules.first_mut() else {
+            panic!("stage_program should still carry its Stages rule");
+        };
+        stage_rule.constraint = Some(Constraint::Course { min: 1, max: 8 });
+        stage_rule.courses = RuleCourses::Raw {
+            raw: "Stage convenu avec la direction".to_string(),
+        };
+        assert!(!is_required_stage_course(Some(&program), "GEX-1580"));
+    }
+
+    #[test]
     fn personal_columns_carry_full_years_and_credits() {
         let document = document();
         assert_eq!(document.columns[0].label, "A2026");
