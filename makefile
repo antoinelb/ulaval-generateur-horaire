@@ -25,11 +25,7 @@ ui-data:
 	mkdir -p crates/ui/assets/data/programmes
 	cp data/cours.json crates/ui/assets/data/cours.json
 	cp data/cours.manuel.json crates/ui/assets/data/cours.manuel.json
-	if [ -f data/meta.json ]; then \
-		cp data/meta.json crates/ui/assets/data/meta.json; \
-	else \
-		echo '{"scraped_at":null}' > crates/ui/assets/data/meta.json; \
-	fi
+	cp data/meta.json crates/ui/assets/data/meta.json; \
 	cp data/programmes/*.json crates/ui/assets/data/programmes/
 
 crates/ui/assets/calc/calc.js: crates/wasm/Cargo.toml \
