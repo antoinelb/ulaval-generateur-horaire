@@ -86,7 +86,7 @@ fn Shell() -> Element {
         div {
             class: "shell",
             // Échap backs out of the ghost display wherever focus sits;
-            // Ctrl+Z / Ctrl+Maj+Z walk the labelled history (LAY-5 : the
+            // Ctrl+Z / Ctrl+Y walk the labelled history (LAY-5 : the
             // shortcut doubles the visible Annuler button, never replaces it)
             onkeydown: move |event| {
                 if event.key() == Key::Escape {
@@ -105,7 +105,7 @@ fn Shell() -> Element {
                             let mut history = history.write();
                             crate::state::undo(&mut plan, &mut history);
                         }
-                        "Z" | "y" => {
+                        "y" => {
                             let mut plan = plan.write();
                             let mut history = history.write();
                             crate::state::redo(&mut plan, &mut history);
