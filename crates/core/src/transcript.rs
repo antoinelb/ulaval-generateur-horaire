@@ -139,7 +139,10 @@ pub fn apply_transcript(
     known: &BTreeSet<String>,
 ) -> Option<TranscriptApplication> {
     let start = earliest_start(transcript, program_floor)?;
-    let latest_key = latest_laval_key(transcript)?;
+    let latest_key = latest_laval_key(transcript).expect(
+        "earliest_start already found a Laval session, so latest_laval_key's \
+         strictly wider filter finds one too",
+    );
 
     let (study_sessions, seasons) =
         grow_horizon(start, minimum_study_sessions, latest_key);
@@ -263,10 +266,11 @@ fn earliest_start(
 
 // the latest Laval/InProgress semester on the relevé — the target the
 // horizon must be grown to reach. `None` only when there is no Laval/
-// InProgress session at all, which the sole caller already rules out by
-// running this after `earliest_start` returned `Some` (ADR
-// `2026-07-expect-en-production`: an error channel exists at no cost here —
-// `?` — so no `expect` is needed to reach the "impossible" case).
+// InProgress session at all: `earliest_start`'s own filter (non-summer,
+// above `program_floor`) is strictly narrower than this one's (any Laval
+// session), so a `Some` there guarantees a `Some` here too — the sole
+// caller's `?` on `earliest_start` already rules this branch out, leaving
+// no input that could ever take it (ADR `2026-07-expect-en-production`).
 fn latest_laval_key(transcript: &Transcript) -> Option<(u16, u8)> {
     transcript
         .sessions

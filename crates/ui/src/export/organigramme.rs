@@ -780,9 +780,12 @@ fn place_option_boxes(
     let mut credits_before: Vec<u32> = vec![0; horizon + 1];
     let mut accumulated = 0u32;
     for session in 1..=horizon {
-        if let Some(cell) = credits_before.get_mut(session) {
-            *cell = accumulated;
-        }
+        // `credits_before` is sized `horizon + 1` right above and `session`
+        // never exceeds `horizon`: the index always lands in bounds
+        *credits_before
+            .get_mut(session)
+            .expect("session is within 1..=horizon, well within bounds") =
+            accumulated;
         accumulated +=
             crate::solve::session_credits(snapshot, plan, session).total;
         for code in state::session_codes(plan, session) {
@@ -3217,6 +3220,71 @@ mod tests {
     }
 
     #[test]
+    fn a_regular_session_can_carry_a_course_outside_the_stage_rule() {
+        let snapshot = snapshot_with(STAGE_COURSES);
+        let mut plan = Plan {
+            study_sessions: 8,
+            program: option_plan().program,
+            ..Plan::default()
+        };
+        // STG-4000 sits outside this program's Stages rule (only
+        // STG-1000..3000 are listed) and lands in a regular (non-été)
+        // session — a plain box, untouched by the stage bookkeeping
+        plan.displayed_placement.insert("STG-4000".to_string(), 4);
+        let program = stage_program(&["STG-1000", "STG-2000", "STG-3000"]);
+        let document = build(&snapshot, &plan, Some(&program));
+        assert!(
+            document
+                .columns
+                .iter()
+                .flat_map(|column| &column.boxes)
+                .any(|course_box| course_box.code == "STG-4000"),
+            "a regular course outside the Stages rule still draws its own \
+             box"
+        );
+    }
+
+    #[test]
+    fn a_stage_already_drawn_outside_the_plans_own_placement_leaves_no_bound()
+    {
+        // `box_position` seeded here with a stage code the plan never
+        // actually placed — normally impossible through `build`, since both
+        // maps are filled from the very same session pass — direct, to
+        // reach the guard that such a phantom entry leaves `minimum`
+        // untouched for the stages still to draw
+        let snapshot = snapshot_with(STAGE_COURSES);
+        let plan = Plan {
+            study_sessions: 8,
+            program: option_plan().program,
+            ..Plan::default()
+        };
+        let program = stage_program(&["STG-1000", "STG-2000"]);
+        let seasons = horizon_sessions(plan.start.season, plan.study_sessions);
+        let semesters = state::session_semesters(plan.start, &seasons);
+        let mut slots = Vec::new();
+        let mut operands = Vec::new();
+        let mut box_position =
+            BTreeMap::from([("STG-1000".to_string(), (0, 0))]);
+        let mut notes = Vec::new();
+        append_stage_slots(
+            &program,
+            &snapshot,
+            &plan,
+            &semesters,
+            &mut slots,
+            &mut operands,
+            &mut box_position,
+            &mut notes,
+        );
+        assert_eq!(
+            box_position.get("STG-2000"),
+            Some(&(0, 0)),
+            "no bound carried over from a stage the plan never actually \
+             placed"
+        );
+    }
+
+    #[test]
     fn stage_cards_need_an_ordinal_plan_and_a_listed_stage_rule() {
         // personal mode: only the really placed été, no synthetic card
         let personal = option_document();
@@ -3393,6 +3461,17 @@ mod tests {
                 .is_none(),
             "no chosen concentration, nothing to search"
         );
+        assert!(
+            find_rule(
+                &program,
+                Some("Inconnu"),
+                None,
+                Scope::Concentration,
+                "Règle C"
+            )
+            .is_none(),
+            "an unknown concentration resolves no rule list"
+        );
         assert!(find_rule(
             &program,
             None,
@@ -3411,6 +3490,11 @@ mod tests {
             )
             .is_none(),
             "an unknown profile resolves no rule list"
+        );
+        assert!(
+            find_rule(&program, None, None, Scope::Profile, "Règle P")
+                .is_none(),
+            "no chosen profile, nothing to search"
         );
     }
 
