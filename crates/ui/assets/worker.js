@@ -27,7 +27,7 @@ self.onmessage = (event) => {
 
 async function boot(message) {
   const mod = await import(message.calcJs);
-  await mod.default(message.calcWasm);
+  await mod.default({ module_or_path: message.calcWasm });
   const response = await fetch(message.coursesUrl);
   if (!response.ok) {
     throw new Error(`fetch ${message.coursesUrl} : HTTP ${response.status}`);
