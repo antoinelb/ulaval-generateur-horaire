@@ -42,10 +42,14 @@ Pour que l'interface puisse un jour sélectionner automatiquement le cours quand
 6. Reconnu n'est pas tout parsé :
    `raw` garde la phrase entière, donc le palier VEPT 63, la voie « autre langue moderne » et la dispense par l'École de langues restent affichables même si les deux champs structurés ne les portent pas.
 
-Conséquence assumée : retirer la règle en prose laisse un trou de numérotation (génie physique garde « Autres exigences – Règle 2 » sans « Règle 1 »).
-C'est fidèle à la page — les titres ne sont jamais réindexés.
+Conséquence assumée (à l'origine) : retirer la règle en prose laissait un trou de numérotation (génie physique gardait « Autres exigences – Règle 2 » sans « Règle 1 »).
+C'était fidèle à la page — les titres ne sont jamais réindexés.
 
 Cet ADR amende partiellement `2026-07-notes-en-prose-conservees` : l'exigence linguistique quitte `notes` pour un champ interprété ; les autres proses (stages exigés, étiquettes de sous-groupes) y restent.
+
+**Amendement du 2026-08-28** (ADR `2026-08-regle-linguistique-conservee-comblable`) : le point 5 et la conséquence assumée ci-dessus ne sont plus exacts — la règle en prose n'est plus retirée du bloc, mais réécrite en place (liste d'un cours + contrainte conservée), pour rester comblable par le solveur au lieu de laisser un trou de crédits.
+Le trou de numérotation disparaît du même coup pour les pages concernées (B-GMC, B-GIN, B-GPH) : la règle réoccupe la place qu'elle numérotait déjà.
+Le champ `language_requirement` continue d'être rempli exactement comme décrit ici ; seul le sort de la règle source change.
 
 ## Alternatives rejetées
 

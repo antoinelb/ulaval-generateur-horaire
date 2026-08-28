@@ -750,7 +750,9 @@ fn classify_prose(
 
     // the language requirement is lifted into `program.language_requirement`
     // afterwards (`extract_language_requirement`): kept whole here, without an
-    // anomaly, then removed — so the two predicates stay in lockstep
+    // anomaly, then rewritten in place by `take_language_rules` (the extracted
+    // course replaces the prose, which moves to the rule's notes) — so the two
+    // predicates stay in lockstep
     if is_language_prose(&raw) {
         return RuleCourses::Raw { raw };
     }
@@ -857,19 +859,33 @@ fn note_vectors(program: &mut Program) -> Vec<&mut Vec<String>> {
     vectors
 }
 
-// A prose rule whose body is the English requirement becomes the program
-// field, so it is dropped here; every other rule is kept in place.
+// A prose rule whose body is the English requirement fills the program field
+// as before, but the rule itself stays in the block — as an ordinary course
+// rule, so its credits remain comblable instead of leaving the surrounding
+// gauge structurally short (ADR
+// `2026-08-regle-linguistique-conservee-comblable`): the course extracted
+// from the prose replaces it as the rule's sole course, and the prose moves
+// to `rule.notes` (it stays displayable — VEPT dispense, palier 63, autre
+// langue). No code found in the prose → the rule is left untouched, never
+// inventing one.
 fn take_language_rules(
     rules: &mut Vec<Rule>,
     francophone: &mut Option<LanguageQualification>,
 ) {
-    for rule in std::mem::take(rules) {
-        match &rule.courses {
-            RuleCourses::Raw { raw } if is_language_prose(raw) => {
+    for mut rule in std::mem::take(rules) {
+        if let RuleCourses::Raw { raw } = &rule.courses {
+            if is_language_prose(raw) {
+                let raw = raw.clone();
                 set_language(francophone, raw.clone());
+                if let Some(code) = first_course_code(&raw) {
+                    rule.notes.push(raw);
+                    rule.courses = RuleCourses::List {
+                        courses: vec![code],
+                    };
+                }
             }
-            _ => rules.push(rule),
         }
+        rules.push(rule);
     }
 }
 
@@ -2049,14 +2065,15 @@ mod tests {
     }
 
     #[test]
-    fn a_prose_english_rule_becomes_the_requirement_once() {
+    fn a_prose_english_rule_stays_comblable_and_fills_the_requirement_once() {
         // prose form (génie physique/industriel/mécanique): the whole rule
-        // body is the requirement; repeated in a concentration (mécanique),
-        // the first wins
-        let english = accordion(
-            "Règle 2 – 3 crédits parmi :",
-            &line("Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues peut choisir un cours d'anglais de niveau supérieur."),
-        );
+        // body is the requirement, but the rule itself is kept — rewritten to
+        // the extracted course so its credits stay comblable instead of
+        // leaving the gauge structurally short (ADR
+        // `2026-08-regle-linguistique-conservee-comblable`); repeated in a
+        // concentration (mécanique), the first wins
+        let raw = "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues peut choisir un cours d'anglais de niveau supérieur.";
+        let english = accordion("Règle 2 – 3 crédits parmi :", &line(raw));
         let page = parsed(&format!(
             "{}{}",
             group(None, &block("Génie des eaux", None, &english)),
@@ -2066,8 +2083,23 @@ mod tests {
             ),
         ));
 
-        assert!(page.program.rules.is_empty());
-        assert!(page.program.concentrations[0].rules.is_empty());
+        for rule in [
+            &page.program.rules[0],
+            &page.program.concentrations[0].rules[0],
+        ] {
+            assert_eq!(
+                rule.constraint,
+                Some(Constraint::Credits { min: 3, max: 3 })
+            );
+            assert_eq!(
+                rule.courses,
+                RuleCourses::List {
+                    courses: vec!["ANL-2020".to_string()]
+                }
+            );
+            assert_eq!(rule.notes, vec![raw.to_string()]);
+        }
+
         let requirement =
             page.program.language_requirement.expect("requirement");
         assert_eq!(requirement.francophone.course, "ANL-2020");
@@ -2079,6 +2111,29 @@ mod tests {
             }]
         );
         assert!(requirement.non_francophone.is_none());
+        assert!(page.anomalies.is_empty(), "got {:?}", page.anomalies);
+    }
+
+    #[test]
+    fn a_prose_english_rule_without_a_readable_code_is_left_untouched() {
+        // never invent a course: the requirement is still lifted (the field
+        // does not need a code, only `LanguageQualification::course`, which
+        // defaults to empty), but the rule itself stays exactly as scraped
+        let raw = "L'étudiant doit satisfaire à l'exigence linguistique (VEPT : 53) avant l'obtention du diplôme.";
+        let english = accordion("Règle 2 – 3 crédits parmi :", &line(raw));
+        let page =
+            parsed(&group(None, &block("Génie des eaux", None, &english)));
+
+        assert_eq!(
+            page.program.rules[0].courses,
+            RuleCourses::Raw {
+                raw: raw.to_string()
+            }
+        );
+        assert!(page.program.rules[0].notes.is_empty());
+        let requirement =
+            page.program.language_requirement.expect("requirement");
+        assert_eq!(requirement.francophone.course, "");
         assert!(page.anomalies.is_empty(), "got {:?}", page.anomalies);
     }
 

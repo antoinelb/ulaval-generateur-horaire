@@ -73,6 +73,20 @@
       ]
     },
     {
+      "title": "Autres exigences – Règle 1",
+      "constraint": {
+        "type": "credits",
+        "min": 3,
+        "max": 3
+      },
+      "courses": [
+        "ANL-2020"
+      ],
+      "notes": [
+        "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues doit choisir un cours d'anglais de niveau supérieur. S'il a acquis le niveau Advanced English II (VEPT : 63), il peut choisir un cours d'une autre langue moderne."
+      ]
+    },
+    {
       "title": "Autres exigences – Règle 2",
       "constraint": {
         "type": "credits",

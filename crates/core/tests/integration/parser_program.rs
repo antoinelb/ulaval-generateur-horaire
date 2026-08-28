@@ -28,6 +28,26 @@ const FIXTURES: &[(&str, &[&str])] = &[
     ("M-GEX", &[]),
 ];
 
+// Regenerates every expected fixture from its frozen HTML (ADR
+// `2026-07-fixture-attendue-derivee-avant-le-parseur`: the parser already
+// reads these pages, so the expected output is derived by it, hand-reviewed
+// against the page, then frozen — never written by hand). Run with
+// `UPDATE_FIXTURES=1 cargo test -p ulaval-scheduler-core --test integration
+// parser_program`; a plain run leaves the files untouched.
+#[test]
+fn update_fixtures() {
+    if std::env::var_os("UPDATE_FIXTURES").is_none() {
+        return;
+    }
+    for (name, _) in FIXTURES {
+        let page = parse_fixture(name);
+        let json = serde_json::to_string_pretty(&page.program)
+            .unwrap_or_else(|e| panic!("serialize {name}: {e}"));
+        fs::write(format!("{FIXTURE_DIR}/{name}.json"), json + "\n")
+            .unwrap_or_else(|e| panic!("write {name}.json: {e}"));
+    }
+}
+
 #[test]
 fn parses_every_program_fixture() {
     for (name, expected) in FIXTURES {
