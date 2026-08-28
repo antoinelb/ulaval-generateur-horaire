@@ -55,6 +55,23 @@ pub struct PlacementRequest<'a> {
     // Internal proposal/diagnostic fallback. Course prerequisites remain
     // strict; only a final `ProgramCredits` leaf may be recorded short.
     pub allow_credit_shortfall: bool,
+    // Turns the search into a branch-and-bound over Σ|session − seed| : the
+    // returned placement is the feasible one that moves the *fewest*
+    // sessions away from `seed`, not the first the value order happens to
+    // reach. « Le plus près de votre cheminement actuel » is a claim about
+    // the whole grid, and only an optimisation can hold it once a collision
+    // forces a course out of its seeded seat (ADR
+    // `2026-08-b-minimise-la-distance-au-seed`).
+    //
+    // Semantics under the flag:
+    // - it is *de facto* disabled under `allow_unplaced` — the sentinel has
+    //   no distance to a seed and the relaxed pass answers « what fits »,
+    //   not « what moved least »;
+    // - `Completion::Complete` means the optimum is *proven*, not merely
+    //   that the search exhausted its stack;
+    // - `SolutionCap` is never emitted: one optimum is the whole answer;
+    // - `max_solutions` is ignored — a single solution comes back.
+    pub minimize_seed_distance: bool,
 }
 
 // the domain value meaning « this course is not placed » — sessions are
@@ -262,6 +279,16 @@ struct SearchCtx<'a> {
     // extension does (the potential bound in `credits_leaf` turns a
     // doomed threshold into a prune instead of a leaf-by-leaf rejection)
     credit_watch: Vec<usize>,
+    // anchors[i] = the seed session candidate i should stay at, if the seed
+    // names it — the point the branch-and-bound measures its distance from
+    anchors: Vec<Option<usize>>,
+    // suffix_min_cost[d] = the smallest distance candidates d.. can still
+    // contribute together, one entry per depth plus a final zero: the
+    // admissible bound that turns « no better leaf below » into a prune
+    suffix_min_cost: Vec<u64>,
+    // `minimize_seed_distance` once the relaxation has had its say — read
+    // everywhere instead of the request's raw flag, so the two never drift
+    minimize: bool,
 }
 
 // one tree evaluation: candidate `evaluated`'s tree against `chosen`
@@ -287,11 +314,17 @@ pub fn place(request: &PlacementRequest) -> Result<Placement, PlacementError> {
         .enumerate()
         .map(|(i, candidate)| (candidate.code.clone(), i))
         .collect();
+    let anchors = seed_anchors(&candidates, request);
     let ctx = SearchCtx {
         request,
         candidates: &candidates,
         needs_final: needs_final_flags(&candidates, &index_of, request),
         suffix_credits: suffix_credit_sums(&candidates),
+        suffix_min_cost: suffix_min_costs(&candidates, &anchors),
+        anchors,
+        // the relaxed pass has no distance to minimize: a course left out
+        // sits at no session at all
+        minimize: request.minimize_seed_distance && !request.allow_unplaced,
         index_of,
         referenced_by: referencing_map(&candidates),
         passed_credits: passed_credits(request),
@@ -448,6 +481,9 @@ pub fn admissible_sessions(
             // leaving all the others out — the chip must mean « it fits »
             allow_unplaced: false,
             allow_credit_shortfall: false,
+            // existence again: nothing here asks which arrangement is
+            // nicest, and minimizing would only cost the probe time
+            minimize_seed_distance: false,
             ..*request
         };
         if !place(&probe)?.solutions.is_empty() {
@@ -843,9 +879,22 @@ fn value_ordered_domain(
         && has_credit_threshold
         && !request.pinned.contains_key(&course.code)
     {
-        domain.sort_by_key(|&session| {
-            (demoted(session), std::cmp::Reverse(session))
-        });
+        // as late as possible, to earn the most credits before the
+        // threshold — but the seed still speaks first when there is one:
+        // the softened pass must not undo the grid it was handed just
+        // because a threshold prefers the end of the horizon
+        match request.seed.get(&course.code) {
+            Some(&anchor) => domain.sort_by_key(|&session| {
+                (
+                    demoted(session),
+                    session.abs_diff(anchor),
+                    std::cmp::Reverse(session),
+                )
+            }),
+            None => domain.sort_by_key(|&session| {
+                (demoted(session), std::cmp::Reverse(session))
+            }),
+        }
     } else {
         match request.seed.get(&course.code) {
             Some(&anchor) => domain.sort_by_key(|&session| {
@@ -908,6 +957,63 @@ fn suffix_credit_sums(candidates: &[Candidate]) -> Vec<u64> {
         sums[depth] = sums[depth + 1] + u64::from(candidates[depth].credits);
     }
     sums
+}
+
+// The seed read once, in candidate order: a code the seed does not name
+// has no anchor, and costs nothing wherever it lands — a seed covering the
+// whole bac over a partial course list is normal.
+fn seed_anchors(
+    candidates: &[Candidate],
+    request: &PlacementRequest,
+) -> Vec<Option<usize>> {
+    candidates
+        .iter()
+        .map(|candidate| request.seed.get(&candidate.code).copied())
+        .collect()
+}
+
+// The branch-and-bound's admissible bound: the cheapest each remaining
+// candidate could *ever* be, summed from the tail — an anchored candidate
+// pays at least the distance of its closest domain value, an unanchored one
+// pays nothing. Never overestimates, so pruning on it never loses the
+// optimum. One entry per depth plus a final zero, like `suffix_credits`.
+fn suffix_min_costs(
+    candidates: &[Candidate],
+    anchors: &[Option<usize>],
+) -> Vec<u64> {
+    let mut sums = vec![0u64; candidates.len() + 1];
+    for depth in (0..candidates.len()).rev() {
+        let cheapest = anchors[depth]
+            .map(|anchor| {
+                candidates[depth]
+                    .domain
+                    .iter()
+                    .map(|&session| session.abs_diff(anchor) as u64)
+                    // an empty domain is a proven infeasibility the
+                    // pre-search screen names; it costs nothing here
+                    .min()
+                    .unwrap_or(0)
+            })
+            .unwrap_or(0);
+        sums[depth] = sums[depth + 1] + cheapest;
+    }
+    sums
+}
+
+// What a partial assignment has already paid: Σ|session − anchor| over the
+// candidates it seats. The sentinel is skipped — a course left out sits at
+// no session, so it has no distance; the flag that would put it here is
+// switched off with `minimize`, and this is the belt to that suspenders.
+fn path_cost(path: &[usize], ctx: &SearchCtx) -> u64 {
+    path.iter()
+        .enumerate()
+        .filter(|&(_, &session)| session != UNPLACED)
+        .map(|(index, &session)| {
+            ctx.anchors[index]
+                .map(|anchor| session.abs_diff(anchor) as u64)
+                .unwrap_or(0)
+        })
+        .sum()
 }
 
 fn needs_final_flags(
@@ -1107,6 +1213,11 @@ fn search(ctx: &SearchCtx) -> Placement {
     let mut stack: Vec<(usize, usize)> = vec![(0, 0)];
     let mut path: Vec<usize> = Vec::with_capacity(ctx.candidates.len());
     let mut solutions: Vec<Solution> = Vec::new();
+    // the incumbent of the branch-and-bound, with the distance it costs —
+    // only ever replaced by a strictly cheaper leaf, so the first of two
+    // equals wins and the answer stays deterministic (the value order
+    // already tries « closest to the seed » first)
+    let mut best: Option<(u64, Solution)> = None;
     let flow = (0..ctx.request.max_nodes).try_fold((), |(), _| {
         match stack.pop() {
             // the stack ran dry: the search is exhausted, the set proven
@@ -1117,17 +1228,61 @@ fn search(ctx: &SearchCtx) -> Placement {
                 if len > 0 {
                     path.push(session);
                 }
+                let prefix = if ctx.minimize {
+                    path_cost(&path, ctx)
+                } else {
+                    0
+                };
+                // the bound is re-tested here and not only where the frame
+                // was pushed: `best` may have improved in between, and this
+                // is what purges the frames stacked before that improvement
+                if ctx.minimize
+                    && best.as_ref().is_some_and(|(cost, _)| {
+                        prefix + ctx.suffix_min_cost[path.len()] >= *cost
+                    })
+                {
+                    return ControlFlow::Continue(());
+                }
                 if path.len() == ctx.candidates.len() {
                     // `None` (a violated tree at the leaf) is provably
                     // unreachable — the incremental layer re-checks every
                     // tree at its last relevant assignment, `complete`
                     // flagged — but the leaf check stays: « jamais un
                     // placement en violation » deserves its last line
-                    solutions.extend(finalize(&path, ctx));
+                    let found = finalize(&path, ctx);
+                    if ctx.minimize {
+                        // the bound above already refused every leaf that
+                        // does not beat the incumbent, so reaching here is
+                        // the improvement — and a refused leaf keeps it
+                        let incumbent = best.take();
+                        best = found
+                            .map(|solution| (prefix, solution))
+                            .or(incumbent);
+                    } else {
+                        solutions.extend(found);
+                    }
                 } else {
-                    expand(&path, ctx, &mut cache, &mut stack);
+                    expand(
+                        &path,
+                        ctx,
+                        &mut cache,
+                        &mut stack,
+                        prefix,
+                        best.as_ref().map(|(cost, _)| *cost),
+                    );
                 }
-                if solutions.len() >= ctx.request.max_solutions
+                if ctx.minimize {
+                    // nothing below can cost less than the sum of the
+                    // per-candidate minima: the incumbent is the optimum,
+                    // proven, and the exhaustive descent is spared
+                    if best.as_ref().is_some_and(|(cost, _)| {
+                        *cost == ctx.suffix_min_cost[0]
+                    }) {
+                        ControlFlow::Break(Completion::Complete)
+                    } else {
+                        ControlFlow::Continue(())
+                    }
+                } else if solutions.len() >= ctx.request.max_solutions
                     && !stack.is_empty()
                 {
                     ControlFlow::Break(Completion::SolutionCap)
@@ -1146,7 +1301,14 @@ fn search(ctx: &SearchCtx) -> Placement {
     };
     Placement {
         completion,
-        solutions,
+        // anytime: a spent budget still returns the cheapest leaf reached,
+        // which is never worse than the first-found solution it replaces —
+        // only `Complete` promises it is the optimum
+        solutions: if ctx.minimize {
+            best.into_iter().map(|(_, solution)| solution).collect()
+        } else {
+            solutions
+        },
         blocked: Vec::new(),
     }
 }
@@ -1160,6 +1322,10 @@ fn expand(
     ctx: &SearchCtx,
     cache: &mut FeasibilityCache,
     stack: &mut Vec<(usize, usize)>,
+    // the distance `chosen` already costs, and the incumbent to beat — both
+    // meaningless (0 / `None`) when the search is not minimizing
+    prefix_cost: u64,
+    best_cost: Option<u64>,
 ) {
     let depth = chosen.len();
     let candidate = &ctx.candidates[depth];
@@ -1188,6 +1354,19 @@ fn expand(
         .copied()
         .filter(|&session| {
             loads[session - 1] + candidate.credits <= ctx.request.credit_cap
+        })
+        // the branch-and-bound cut, kept between the two O(1) filters and
+        // the tree/weekly ones it saves: a child whose own distance already
+        // buries the incumbent, even granting the tail its cheapest
+        // possible completion, cannot lead anywhere worth reaching
+        .filter(|&session| {
+            let child_cost = ctx.anchors[depth]
+                .map(|anchor| session.abs_diff(anchor) as u64)
+                .unwrap_or(0);
+            best_cost.is_none_or(|best| {
+                prefix_cost + child_cost + ctx.suffix_min_cost[depth + 1]
+                    < best
+            })
         })
         .filter(|&session| {
             child[depth] = session;
@@ -1693,6 +1872,20 @@ mod tests {
         format!(r#"{{"raw":"source","tree":{tree}}}"#)
     }
 
+    // one in-person option on `day`, offered in the fall only — a course
+    // the winter sessions of a horizon can never host
+    fn fall_only(code: &str, day: &str) -> Course {
+        serde_json::from_str(&format!(
+            r#"{{"code":"{code}","title":"T","credits":3,"cycle":1,
+                 "prerequisites":null,"equivalents":[],
+                 "seasons":{{"fall":{{"last_offered":2026,
+                   "options":[[{{"nrc":"1","section":"A","mode":"in-person",
+                     "slots":[{{"day":"{day}","start":"08:30",
+                                "end":"11:20"}}]}}]]}}}}}}"#
+        ))
+        .unwrap_or_else(|e| panic!("course literal: {e}"))
+    }
+
     // one in-person option on `day`, offered in fall, winter and summer
     fn all_seasons(code: &str, day: &str) -> Course {
         let offering = format!(
@@ -1733,6 +1926,7 @@ mod tests {
         max_solutions: usize,
         allow_unplaced: bool,
         allow_credit_shortfall: bool,
+        minimize_seed_distance: bool,
     }
 
     impl Inputs {
@@ -1752,11 +1946,27 @@ mod tests {
                 max_solutions: 10_000,
                 allow_unplaced: false,
                 allow_credit_shortfall: false,
+                minimize_seed_distance: false,
             }
         }
 
-        fn place(&self) -> Result<Placement, PlacementError> {
-            place(&PlacementRequest {
+        // the seed and the minimization it drives, so a test names what
+        // it is exercising instead of poking three fields
+        fn seed(mut self, entries: &[(&str, usize)]) -> Self {
+            self.seed = entries
+                .iter()
+                .map(|(code, session)| (code.to_string(), *session))
+                .collect();
+            self
+        }
+
+        fn minimize(mut self) -> Self {
+            self.minimize_seed_distance = true;
+            self
+        }
+
+        fn request(&self) -> PlacementRequest<'_> {
+            PlacementRequest {
                 sessions: &self.sessions,
                 credit_cap: self.credit_cap,
                 concomitant: self.concomitant,
@@ -1771,7 +1981,12 @@ mod tests {
                 max_solutions: self.max_solutions,
                 allow_unplaced: self.allow_unplaced,
                 allow_credit_shortfall: self.allow_credit_shortfall,
-            })
+                minimize_seed_distance: self.minimize_seed_distance,
+            }
+        }
+
+        fn place(&self) -> Result<Placement, PlacementError> {
+            place(&self.request())
         }
 
         fn solve(&self) -> Placement {
@@ -1784,21 +1999,10 @@ mod tests {
         ) -> Result<BTreeSet<usize>, PlacementError> {
             admissible_sessions(
                 &PlacementRequest {
-                    sessions: &self.sessions,
-                    credit_cap: self.credit_cap,
-                    concomitant: self.concomitant,
-                    courses: &self.courses,
-                    passed: &self.passed,
-                    pinned: &self.pinned,
-                    stages: &self.stages,
-                    open_summers: &self.open_summers,
-                    completed_sessions: self.completed_sessions,
-                    seed: &self.seed,
-                    max_nodes: self.max_nodes,
-                    max_solutions: self.max_solutions,
                     // the chip means « it fits », never « the rest is out »
                     allow_unplaced: false,
                     allow_credit_shortfall: false,
+                    ..self.request()
                 },
                 code,
             )
@@ -2604,6 +2808,7 @@ mod tests {
             max_solutions: 1,
             allow_unplaced: false,
             allow_credit_shortfall: false,
+            minimize_seed_distance: false,
         };
         let candidates =
             build_candidates(&request).unwrap_or_else(|e| panic!("{e}"));
@@ -2621,6 +2826,9 @@ mod tests {
             referenced_by: referencing_map(&candidates),
             passed_credits: 0,
             credit_watch: vec![1],
+            anchors: vec![None; candidates.len()],
+            suffix_min_cost: vec![0; candidates.len() + 1],
+            minimize: false,
         };
         // A-1 in session 1 gives 3 credits before T-9's session 2 — short
         // of the 6 demanded: the leaf must refuse, never lie
@@ -2715,6 +2923,7 @@ mod tests {
             max_solutions: 1,
             allow_unplaced: false,
             allow_credit_shortfall: true,
+            minimize_seed_distance: false,
         };
         let candidates =
             build_candidates(&request).unwrap_or_else(|e| panic!("{e}"));
@@ -2728,6 +2937,9 @@ mod tests {
             referenced_by: referencing_map(&candidates),
             passed_credits: 0,
             credit_watch: vec![0],
+            anchors: vec![None; candidates.len()],
+            suffix_min_cost: vec![0; candidates.len() + 1],
+            minimize: false,
         };
         assert!(finalize(&[2], &ctx).is_none());
     }
@@ -3363,6 +3575,274 @@ mod tests {
             Inputs::new(&[Season::Fall], vec![anytime("A-1", "monday")]);
         inputs.seed = BTreeMap::from([("Z-9".to_string(), 1)]);
         assert_eq!(inputs.solve().solutions.len(), 1);
+    }
+
+    // --- minimizing the distance to the seed (ADR
+    // --- `2026-08-b-minimise-la-distance-au-seed`) ---
+
+    // The counter-example the 2026-08-27 UX report caught, in miniature: a
+    // pin collides with the credit cap, and the value order alone answers
+    // by rebuilding half the path. Exactly one course has to leave its
+    // seeded session; the minimizing search moves exactly that one.
+    #[test]
+    fn a_pin_collision_moves_only_the_smallest_necessary_set() {
+        let sessions = [Season::Fall, Season::Winter, Season::Winter];
+        let courses = vec![
+            anytime("A-1", "monday"),
+            // fall-only over one fall session: nailed to session 1
+            fall_only("B-2", "tuesday"),
+            anytime("C-3", "wednesday"),
+            anytime("D-4", "thursday"),
+        ];
+        let mut inputs = Inputs::new(&sessions, courses)
+            .seed(&[("A-1", 1), ("B-2", 1), ("C-3", 2), ("D-4", 3)])
+            .minimize();
+        // two courses per session; the student drags C-3 into session 1,
+        // where A-1 and B-2 already sit
+        inputs.credit_cap = 6;
+        inputs.pinned = BTreeMap::from([("C-3".to_string(), 1)]);
+
+        let placement = inputs.solve();
+        assert_eq!(placement.completion, Completion::Complete);
+        let solution = &placement.solutions[0];
+        assert_eq!(
+            solution.placement["A-1"], 2,
+            "the one course that had to give way moves one session"
+        );
+        assert_eq!(solution.placement["B-2"], 1);
+        assert_eq!(solution.placement["C-3"], 1);
+        assert_eq!(
+            solution.placement["D-4"], 3,
+            "a course the collision never touched stays where it was"
+        );
+    }
+
+    // The displaced course drags whoever really depends on it, and stops
+    // there — « le plus près » is not « nothing moves », it is « nothing
+    // moves that did not have to ».
+    #[test]
+    fn a_dependent_follows_its_prerequisite_and_nothing_else_moves() {
+        let sessions = [Season::Fall, Season::Winter, Season::Winter];
+        let courses = vec![
+            anytime("P-1", "monday"),
+            with_prereq("Q-2", "tuesday", &parsed(r#""P-1""#)),
+            fall_only("U-5", "wednesday"),
+            anytime("T-4", "thursday"),
+            anytime("R-6", "friday"),
+        ];
+        let mut inputs = Inputs::new(&sessions, courses)
+            .seed(&[
+                ("P-1", 1),
+                ("Q-2", 2),
+                ("U-5", 1),
+                ("T-4", 2),
+                ("R-6", 3),
+            ])
+            .minimize();
+        inputs.credit_cap = 6;
+        inputs.pinned = BTreeMap::from([("T-4".to_string(), 1)]);
+
+        let solution = &inputs.solve().solutions[0];
+        assert_eq!(solution.placement["P-1"], 2, "the collision evicts P-1");
+        assert_eq!(
+            solution.placement["Q-2"], 3,
+            "its dependent follows, because precedence forces it to"
+        );
+        assert_eq!(solution.placement["U-5"], 1);
+        assert_eq!(solution.placement["T-4"], 1);
+        assert_eq!(
+            solution.placement["R-6"], 3,
+            "the course with no link to the chain stays put"
+        );
+    }
+
+    // Anytime: a budget spent mid-proof still hands back the cheapest leaf
+    // reached — never worse than the first-found solution it replaces.
+    #[test]
+    fn a_spent_budget_returns_the_best_placement_found() {
+        let sessions = [Season::Fall, Season::Winter, Season::Winter];
+        let courses = vec![
+            anytime("P-1", "monday"),
+            with_prereq("Q-2", "tuesday", &parsed(r#""P-1""#)),
+            fall_only("U-5", "wednesday"),
+            anytime("T-4", "thursday"),
+            anytime("R-6", "friday"),
+        ];
+        let mut inputs = Inputs::new(&sessions, courses)
+            .seed(&[
+                ("P-1", 1),
+                ("Q-2", 2),
+                ("U-5", 1),
+                ("T-4", 2),
+                ("R-6", 3),
+            ])
+            .minimize();
+        inputs.credit_cap = 6;
+        inputs.pinned = BTreeMap::from([("T-4".to_string(), 1)]);
+        // eight nodes reach the first leaf; the descent needs ten to prove
+        // there is nothing better
+        inputs.max_nodes = 8;
+
+        let placement = inputs.solve();
+        assert_eq!(placement.completion, Completion::NodeBudget);
+        assert_eq!(
+            placement.solutions.len(),
+            1,
+            "the incumbent comes back even unproven"
+        );
+        assert_eq!(placement.solutions[0].placement.len(), 5);
+    }
+
+    // A seed that already fits costs zero: the bound recognizes it at the
+    // first leaf and stops — which is what keeps the collision-free case
+    // exactly as fast as it was before the minimization.
+    #[test]
+    fn a_seed_perfect_fit_is_proven_optimal_within_a_tight_budget() {
+        let courses = vec![
+            anytime("A-1", "monday"),
+            anytime("B-2", "tuesday"),
+            anytime("C-3", "wednesday"),
+            anytime("D-4", "thursday"),
+        ];
+        let mut inputs = Inputs::new(&FALL_WINTER, courses)
+            .seed(&[("A-1", 1), ("B-2", 1), ("C-3", 2), ("D-4", 2)])
+            .minimize();
+        inputs.credit_cap = 6;
+        // root plus one node per course: no room for a second descent
+        inputs.max_nodes = 5;
+
+        let placement = inputs.solve();
+        assert_eq!(
+            placement.completion,
+            Completion::Complete,
+            "a zero-cost leaf proves the optimum on the spot"
+        );
+        assert_eq!(
+            placement.solutions[0].placement,
+            BTreeMap::from([
+                ("A-1".to_string(), 1),
+                ("B-2".to_string(), 1),
+                ("C-3".to_string(), 2),
+                ("D-4".to_string(), 2),
+            ])
+        );
+    }
+
+    // Relaxed, a course sits at no session at all: there is no distance to
+    // minimize, and the flag steps aside rather than measuring a hole.
+    #[test]
+    fn minimization_is_disabled_under_allow_unplaced() {
+        let courses = vec![
+            anytime("A-1", "monday"),
+            with_prereq("B-2", "tuesday", &parsed(r#""Z-9""#)),
+        ];
+        let mut inputs =
+            Inputs::new(&FALL_WINTER, courses).seed(&[("A-1", 2), ("B-2", 2)]);
+        inputs.allow_unplaced = true;
+        inputs.max_solutions = 1;
+
+        let relaxed = inputs.solve();
+        let minimized = inputs.minimize().solve();
+        assert_eq!(
+            minimized.solutions[0].placement, relaxed.solutions[0].placement,
+            "the relaxed answer is the same with the flag on"
+        );
+        assert_eq!(
+            minimized.solutions[0].left_out,
+            BTreeSet::from(["B-2".to_string()])
+        );
+    }
+
+    // A seeded course no session can host has no distance to its anchor:
+    // the bound must not invent one. The pre-search screen names it and the
+    // search never runs.
+    #[test]
+    fn a_seeded_course_with_an_empty_domain_bounds_at_zero() {
+        let mut inputs =
+            Inputs::new(&[Season::Winter], vec![fall_only("A-1", "monday")])
+                .seed(&[("A-1", 1)])
+                .minimize();
+        inputs.max_solutions = 1;
+        let placement = inputs.solve();
+        assert!(placement.solutions.is_empty());
+        assert_eq!(placement.blocked[0].reason, BlockedReason::EmptyDomain);
+    }
+
+    #[test]
+    fn an_unplaced_slot_costs_no_distance() {
+        // unreachable through `place` — minimizing is switched off under
+        // `allow_unplaced`, the only mode that seats the sentinel — but the
+        // skip is what guarantees a hole is never charged a distance
+        let courses =
+            vec![anytime("A-1", "monday"), anytime("B-2", "tuesday")];
+        let inputs = Inputs::new(&FALL_WINTER, courses);
+        let request = inputs.request();
+        let candidates =
+            build_candidates(&request).unwrap_or_else(|e| panic!("{e}"));
+        let ctx = SearchCtx {
+            request: &request,
+            candidates: &candidates,
+            needs_final: vec![false; candidates.len()],
+            suffix_credits: suffix_credit_sums(&candidates),
+            suffix_min_cost: vec![0; candidates.len() + 1],
+            anchors: vec![Some(2), Some(1)],
+            minimize: true,
+            index_of: BTreeMap::new(),
+            referenced_by: BTreeMap::new(),
+            passed_credits: 0,
+            credit_watch: Vec::new(),
+        };
+        assert_eq!(path_cost(&[UNPLACED, 2], &ctx), 1);
+        assert_eq!(path_cost(&[1, 2], &ctx), 2);
+    }
+
+    // --- the softened pass keeps the seed it was handed ---
+
+    #[test]
+    fn the_shortfall_order_keeps_the_seed_anchor() {
+        let sessions =
+            [Season::Fall, Season::Winter, Season::Fall, Season::Winter];
+        let courses = vec![
+            anytime("A-1", "monday"),
+            with_prereq(
+                "T-9",
+                "tuesday",
+                &parsed(r#"{"program_credits":{"credits":6}}"#),
+            ),
+        ];
+        let mut inputs =
+            Inputs::new(&sessions, courses).seed(&[("A-1", 1), ("T-9", 2)]);
+        inputs.allow_credit_shortfall = true;
+        inputs.max_solutions = 1;
+
+        assert_eq!(
+            value_ordered_domain(&inputs.courses[1], &inputs.request()),
+            vec![2, 3, 1, 4],
+            "the anchor first, then the latest of the equidistant"
+        );
+        assert_eq!(
+            inputs.solve().solutions[0].placement["T-9"],
+            2,
+            "the softened pass does not drag the course to the horizon's end"
+        );
+    }
+
+    #[test]
+    fn the_shortfall_order_without_a_seed_still_prefers_late() {
+        let sessions =
+            [Season::Fall, Season::Winter, Season::Fall, Season::Winter];
+        let courses = vec![with_prereq(
+            "T-9",
+            "tuesday",
+            &parsed(r#"{"program_credits":{"credits":6}}"#),
+        )];
+        let mut inputs = Inputs::new(&sessions, courses);
+        inputs.allow_credit_shortfall = true;
+        assert_eq!(
+            value_ordered_domain(&inputs.courses[0], &inputs.request()),
+            vec![4, 3, 2, 1],
+            "as late as possible, to earn the most credits before the leaf"
+        );
     }
 
     // --- flatten: bounded, loud when exceeded ---
