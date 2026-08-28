@@ -58,7 +58,7 @@ fn ProgramPicker() -> Element {
     let plan = use_context::<Signal<Plan>>();
     let view = use_context::<Signal<View>>();
     let history = use_context::<Signal<History>>();
-    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let alerts = use_context::<Signal<super::AlertStack>>();
     let solver = use_context::<Signal<super::SolverState>>();
     let handle = use_context::<super::SolverHandle>();
     let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
@@ -307,7 +307,7 @@ fn ProgramPicker() -> Element {
 #[component]
 fn ImportDrawer() -> Element {
     let mut snapshot = use_context::<Signal<Option<Snapshot>>>();
-    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let alerts = use_context::<Signal<super::AlertStack>>();
     let super::LocalPrograms(mut local_programs) =
         use_context::<super::LocalPrograms>();
 
@@ -733,7 +733,7 @@ fn CheminementKnobs() -> Element {
     let plan = use_context::<Signal<Plan>>();
     let history = use_context::<Signal<History>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
-    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let alerts = use_context::<Signal<super::AlertStack>>();
     let choices = use_memo(move || {
         let read = snapshot.read();
         let snapshot = read.as_ref()?;
@@ -818,7 +818,7 @@ fn CheminementKnobs() -> Element {
 fn set_scope(
     plan: Signal<Plan>,
     history: Signal<History>,
-    alerts: Signal<Vec<super::Alert>>,
+    alerts: Signal<super::AlertStack>,
     snapshot: Signal<Option<Snapshot>>,
     prefix: char,
     value: String,
@@ -1031,7 +1031,7 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
     let history = use_context::<Signal<History>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     let solver = use_context::<Signal<super::SolverState>>();
-    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let alerts = use_context::<Signal<super::AlertStack>>();
     let mut horizon_epoch = use_signal(|| 0usize);
     let start = plan.read().start.to_string();
     // the span follows the real clock instead of a frozen A24-A31 window,
@@ -1368,7 +1368,7 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
 fn CapsuleDrawer() -> Element {
     let plan = use_context::<Signal<Plan>>();
     let history = use_context::<Signal<History>>();
-    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let alerts = use_context::<Signal<super::AlertStack>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
 
     let mut open = use_signal(|| false);
@@ -2114,7 +2114,7 @@ fn CourseChoice(
     let plan = use_context::<Signal<Plan>>();
     let history = use_context::<Signal<History>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
-    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let alerts = use_context::<Signal<super::AlertStack>>();
     let SelectedCourse(mut selected) = use_context::<SelectedCourse>();
     let choice = strip.choice;
     let auto = choice == panel::Choice::Auto;
@@ -2270,7 +2270,7 @@ fn CourseChoice(
 fn take_verdict(
     snapshot: Signal<Option<Snapshot>>,
     plan: Signal<Plan>,
-    alerts: Signal<Vec<super::Alert>>,
+    alerts: Signal<super::AlertStack>,
     code: &str,
     choice: panel::Choice,
     session: Option<usize>,
@@ -2486,7 +2486,7 @@ fn ManualCourseForm() -> Element {
     let view = use_context::<Signal<View>>();
     let history = use_context::<Signal<History>>();
     let mut snapshot = use_context::<Signal<Option<Snapshot>>>();
-    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let alerts = use_context::<Signal<super::AlertStack>>();
     let solver = use_context::<Signal<super::SolverState>>();
     let handle = use_context::<super::SolverHandle>();
     let super::ManualCourses(mut manual) =
@@ -2763,7 +2763,7 @@ fn ManualCourseForm() -> Element {
 // « Copier le JSON » fallback for a student without a GitHub account
 #[component]
 fn ManualCourseActions(course: ulaval_scheduler_core::Course) -> Element {
-    let alerts = use_context::<Signal<Vec<super::Alert>>>();
+    let alerts = use_context::<Signal<super::AlertStack>>();
     // expect over `?`: serializing a Course provably cannot fail
     let json = serde_json::to_string_pretty(&course)
         .expect("Course serialization always succeeds");

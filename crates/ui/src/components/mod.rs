@@ -33,53 +33,12 @@ pub enum LoadState {
     Failed(UiError),
 }
 
-// The persistent status region's content (ALR-4: persists until
-// dismissed; ALR-6: a reserved region, never a modal).
-#[derive(Clone, Debug, PartialEq)]
-pub struct Alert {
-    pub key: u64,
-    pub body: AlertBody,
-    // what the alert reports on — a caused alert also retires by itself
-    // when its cause disappears (ADR
-    // `2026-08-peremption-des-toasts-par-cause`)
-    pub cause: AlertCause,
-}
-
-#[derive(Clone, Debug, PartialEq, Default)]
-pub enum AlertCause {
-    // lives until dismissed (ALR-4)
-    #[default]
-    Sticky,
-    // this code could not be seated — stale once it sits somewhere or
-    // leaves the plan
-    LeftOut(String),
-    // nothing could be placed at all — stale once anything is
-    EmptyGrid,
-    // the worker refused a query — stale the moment a later one answers:
-    // the refusal described an input that no longer stands (rapport
-    // étudiante-gex 2026-08-20, « ANL-1010 is pinned outside 1..=4 »
-    // survivait au retour à 8 sessions)
-    SolverError,
-    // an announcement about the current document (injection, étés forcés,
-    // acquis présumés…) — it leaves with it at a swap: « GMC-3020 en
-    // été » under B-GIN named a course of another program (contre-test
-    // étudiante-cegep 2026-08-20)
-    Document,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum AlertBody {
-    Note(String),
-    // a confirmation, styled apart from the warnings (INP-3: the glyph
-    // carries the difference, not the colour alone)
-    Success(String),
-    Error(UiError),
-    // a destructive act with no confirmation dialog, undoable from the
-    // toast itself (pattern ACT, plan item 9) — not a `Success`: it must
-    // outlive the 5 s auto-clear or the undo would vanish with it, so it
-    // carries the removed program instead of already-worded text
-    LocalProgramRemoved(crate::import::LocalProgram),
-}
+// the stack and its vocabulary live in the pure `alerts` module (every
+// decision they carry is tested there) — re-exported so the view keeps
+// naming them under `components`
+pub use crate::alerts::{
+    Alert, AlertBody, AlertCause, AlertStack, AlertTopic,
+};
 
 // the course whose alternatives (ghosts) the grid currently shows —
 // selected by click or keyboard, never by hover alone (INP-5)
@@ -172,7 +131,7 @@ pub fn boot_solver(
     handle: &SolverHandle,
     mut state: Signal<SolverState>,
     plan: Signal<Plan>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
     snapshot: Signal<Option<Snapshot>>,
 ) {
@@ -223,7 +182,7 @@ fn handle_worker_answer(
     text: &str,
     mut state: Signal<SolverState>,
     plan: Signal<Plan>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
     snapshot: Signal<Option<Snapshot>>,
 ) {
     match crate::solve::parse_worker_answer(text) {
@@ -263,16 +222,18 @@ fn handle_worker_answer(
             };
             state.write().running = None;
             // a query just answered: whatever refusal was on screen
-            // described an input that no longer stands
+            // described an input that no longer stands. A retirement, not
+            // a rejection — the student said nothing about it.
             if alerts
                 .peek()
+                .alerts()
                 .iter()
                 .any(|alert| alert.cause == AlertCause::SolverError)
             {
                 let mut alerts = alerts;
                 alerts
                     .write()
-                    .retain(|alert| alert.cause != AlertCause::SolverError);
+                    .retire(|alert| alert.cause == AlertCause::SolverError);
             }
             match running.kind {
                 QueryKind::Propose => {
@@ -297,12 +258,22 @@ fn apply_proposal(
     report: &crate::solve::PlacementReport,
     mut state: Signal<SolverState>,
     plan: Signal<Plan>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
     snapshot: Signal<Option<Snapshot>>,
 ) {
     state.write().credit_shortfalls = report.credit_shortfalls.clone();
+    // every note below owns a *subject*: this function republishes all of
+    // them at every answer, so a wording that shifted by one code used to
+    // stack a second banner on the same subject (rapport étudiante
+    // 2026-08-27, G3) — one per subject now, ADR
+    // `2026-08-toasts-un-par-sujet-et-rejet-memorise`
     if let Some(note) = crate::solve::completion_note(&report.placement) {
-        push_caused_alert(alerts, AlertBody::Note(note), AlertCause::Document);
+        push_topic_alert(
+            alerts,
+            AlertBody::Note(note),
+            AlertCause::Document,
+            AlertTopic::Completion,
+        );
     }
     // a best-effort answer words every culprit itself, blocked ones
     // included — the per-blocked loop would say each of them twice
@@ -311,10 +282,11 @@ fn apply_proposal(
             if solution.placement.is_empty() {
                 // one aggregate verdict, not one toast per code: the
                 // whole grid failing is a single fact
-                push_caused_alert(
+                push_topic_alert(
                     alerts,
                     AlertBody::Note(crate::solve::empty_grid_note()),
                     AlertCause::EmptyGrid,
+                    AlertTopic::EmptyGrid,
                 );
             } else {
                 let plan_read = plan.peek();
@@ -325,7 +297,7 @@ fn apply_proposal(
                         .blocked
                         .iter()
                         .find(|blocked| &blocked.code == code);
-                    push_caused_alert(
+                    push_topic_alert(
                         alerts,
                         AlertBody::Note(crate::solve::left_out_line(
                             code,
@@ -334,37 +306,41 @@ fn apply_proposal(
                             snapshot_read.as_ref(),
                         )),
                         AlertCause::LeftOut(code.clone()),
+                        AlertTopic::LeftOut(code.clone()),
                     );
                 }
             }
         }
         _ => {
             for blocked in &report.placement.blocked {
-                push_caused_alert(
+                push_topic_alert(
                     alerts,
                     AlertBody::Note(crate::solve::blocked_note(blocked)),
                     AlertCause::LeftOut(blocked.code.clone()),
+                    AlertTopic::LeftOut(blocked.code.clone()),
                 );
             }
         }
     }
     for code in &report.set_aside {
-        push_caused_alert(
+        push_topic_alert(
             alerts,
             AlertBody::Note(format!(
                 "{code} : au programme mais absent du catalogue — mis de \
                  côté, à suivre à la main."
             )),
             AlertCause::Document,
+            AlertTopic::SetAside(code.clone()),
         );
     }
     if !report.summers_forced.is_empty() {
-        push_caused_alert(
+        push_topic_alert(
             alerts,
             AlertBody::Note(crate::solve::summers_forced_note(
                 &report.summers_forced,
             )),
             AlertCause::Document,
+            AlertTopic::SummersForced,
         );
     }
     // every answer overwrites `left_out` whole — an answer with no
@@ -381,7 +357,7 @@ fn apply_proposal(
     if !solution.assumed.is_empty() {
         let assumed: Vec<&str> =
             solution.assumed.iter().map(String::as_str).collect();
-        push_caused_alert(
+        push_topic_alert(
             alerts,
             AlertBody::Note(format!(
                 "Le cheminement présume ces acquis (préalables que \
@@ -390,6 +366,7 @@ fn apply_proposal(
                 assumed.join(", ")
             )),
             AlertCause::Document,
+            AlertTopic::Assumed,
         );
     }
     if !report.injected.is_empty() {
@@ -402,10 +379,11 @@ fn apply_proposal(
             "ajoutés aux cours à option : des cours obligatoires les \
              exigent comme préalables"
         };
-        push_caused_alert(
+        push_topic_alert(
             alerts,
             AlertBody::Note(format!("{} {added}.", injected.join(", "))),
             AlertCause::Document,
+            AlertTopic::Injected,
         );
     }
     let mut placement = solution.placement.clone();
@@ -485,7 +463,7 @@ pub fn cancel_search(
     handle: &SolverHandle,
     mut state: Signal<SolverState>,
     plan: Signal<Plan>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
     snapshot: Signal<Option<Snapshot>>,
 ) {
@@ -507,7 +485,7 @@ pub fn App() -> Element {
     let plan = use_signal(|| restored.plan.clone());
     let view = use_signal(|| restored.view.clone());
     let history = use_signal(History::default);
-    let alerts = use_signal(|| seed_alerts(&restored.notes));
+    let alerts = use_signal(|| AlertStack::seeded(&restored.notes));
     let snapshot = use_signal(|| None::<Snapshot>);
     let load_state = use_signal(|| LoadState::Downloading);
     let solver_state = use_signal(SolverState::default);
@@ -634,52 +612,28 @@ fn restore_state() -> RestoredState {
     }
 }
 
-// Keys are unique for the whole page life, never recycled: the Toasts
-// auto-dismiss timers hold keys past an alert's death, and a recycled key
-// would let a stale timer kill an unrelated fresh message.
-thread_local! {
-    static NEXT_ALERT_KEY: std::cell::Cell<u64> =
-        const { std::cell::Cell::new(0) };
-}
-
-fn next_alert_key() -> u64 {
-    NEXT_ALERT_KEY.with(|next| {
-        let key = next.get();
-        next.set(key + 1);
-        key
-    })
-}
-
-fn seed_alerts(notes: &[String]) -> Vec<Alert> {
-    notes
-        .iter()
-        .map(|note| Alert {
-            key: next_alert_key(),
-            body: AlertBody::Note(note.clone()),
-            cause: AlertCause::Sticky,
-        })
-        .collect()
-}
-
-pub fn push_alert(alerts: Signal<Vec<Alert>>, body: AlertBody) {
+pub fn push_alert(alerts: Signal<AlertStack>, body: AlertBody) {
     push_caused_alert(alerts, body, AlertCause::Sticky);
 }
 
 pub fn push_caused_alert(
-    mut alerts: Signal<Vec<Alert>>,
+    mut alerts: Signal<AlertStack>,
     body: AlertBody,
     cause: AlertCause,
 ) {
-    let mut list = alerts.write();
-    // never the same message twice (ALR-3) — but a repeat is refreshed to
-    // the front instead of swallowed: relaunching a search that ends on
-    // the same verdict must still visibly answer (rapport 2026-08-14)
-    list.retain(|alert| alert.body != body);
-    list.push(Alert {
-        key: next_alert_key(),
-        body,
-        cause,
-    });
+    alerts.write().push(body, cause);
+}
+
+// the same door, for a note that owns a subject: one banner per subject,
+// and a subject the student waved away stays silent until its wording
+// changes (ADR `2026-08-toasts-un-par-sujet-et-rejet-memorise`)
+pub fn push_topic_alert(
+    mut alerts: Signal<AlertStack>,
+    body: AlertBody,
+    cause: AlertCause,
+    topic: AlertTopic,
+) {
+    alerts.write().push_topic(body, cause, topic);
 }
 
 // ACT-2: the one door every Plan mutation walks through — labelled,
@@ -708,7 +662,7 @@ pub fn swap_document(
     plan: Signal<Plan>,
     view: Signal<View>,
     history: Signal<History>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
     solver_state: Signal<SolverState>,
     handle: &SolverHandle,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
@@ -746,17 +700,10 @@ pub fn swap_document(
     state.proposed = None;
     drop(state);
     // the document's own announcements and verdicts leave with it — only
-    // the Sticky alerts (load warnings, confirmations) outlive a swap
-    if alerts
-        .peek()
-        .iter()
-        .any(|alert| alert.cause != AlertCause::Sticky)
-    {
-        let mut alerts = alerts;
-        alerts
-            .write()
-            .retain(|alert| alert.cause == AlertCause::Sticky);
-    }
+    // the Sticky alerts (load warnings, confirmations) outlive a swap, and
+    // the memory of what was dismissed about it goes too
+    let mut alerts = alerts;
+    alerts.write().purge_document();
 }
 
 // Suppression d'un programme importé par URL (plan item 9, pattern ACT) :
@@ -779,7 +726,7 @@ pub fn remove_local_program(
     plan: Signal<Plan>,
     view: Signal<View>,
     history: Signal<History>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
     solver_state: Signal<SolverState>,
     handle: &SolverHandle,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
@@ -821,7 +768,7 @@ pub fn remove_local_program(
             swap,
         );
     }
-    push_alert(alerts, AlertBody::LocalProgramRemoved(removed));
+    push_alert(alerts, AlertBody::LocalProgramRemoved(Box::new(removed)));
 }
 
 // The exact inverse of `remove_local_program`, driven by the toast's
@@ -832,7 +779,7 @@ pub fn remove_local_program(
 pub fn restore_local_program(
     mut snapshot: Signal<Option<Snapshot>>,
     mut local_programs: Signal<Vec<crate::import::LocalProgram>>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
     local: crate::import::LocalProgram,
 ) {
     let added = {
@@ -866,7 +813,7 @@ fn import_organigramme(
     plan: Signal<Plan>,
     mut view: Signal<View>,
     history: Signal<History>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
 ) {
     let Some(payload) = crate::browser::location_share() else {
@@ -937,7 +884,7 @@ fn import_organigramme(
 fn heal_acquired(
     plan: Signal<Plan>,
     snapshot: Signal<Option<Snapshot>>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
 ) {
     use_effect(move || {
         // materialize before any write: the read borrows must die first
@@ -990,7 +937,7 @@ fn retire_stale_left_out(
     snapshot: Signal<Option<Snapshot>>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
     solver_state: Signal<SolverState>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
 ) {
     use_effect(move || {
         let plan_read = plan.read();
@@ -1035,9 +982,11 @@ fn retire_stale_left_out(
             // retired by the document swap, not by the plan
             AlertCause::Document => false,
         };
-        if alerts.peek().iter().any(expired) {
+        // a retirement, never a dismissal: the student said nothing, so
+        // the same warning may speak again if its cause comes back
+        if alerts.peek().alerts().iter().any(expired) {
             let mut alerts = alerts;
-            alerts.write().retain(|alert| !expired(alert));
+            alerts.write().retire(expired);
         }
     });
 }
@@ -1051,7 +1000,7 @@ fn retire_stale_left_out(
 fn apply_corrections(
     plan: Signal<Plan>,
     snapshot: Signal<Option<Snapshot>>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
     handle: SolverHandle,
     solver_state: Signal<SolverState>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
@@ -1286,7 +1235,7 @@ fn save_on_change(plan: Signal<Plan>, view: Signal<View>) {
 async fn load(
     mut snapshot: Signal<Option<Snapshot>>,
     mut state: Signal<LoadState>,
-    alerts: Signal<Vec<Alert>>,
+    alerts: Signal<AlertStack>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
     local_programs: Signal<Vec<crate::import::LocalProgram>>,
 ) {
