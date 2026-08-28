@@ -5,9 +5,9 @@ use ulaval_scheduler_core::{
 };
 
 pub const HISTORY_CAP: usize = 100;
-// 17 gives every bac headroom out of the box: the B-GMC packs ~117 cr of
-// mandatories and rules into 8 sessions, which 8 × 15 cannot hold, and its
-// official cheminement itself opens at 16 cr (ADR
+// 17 gives every bac headroom out of the box: the B-GMC packs its full
+// 120 cr of mandatories and rules into 8 sessions, which 8 × 15 cannot
+// hold, and its official cheminement itself opens at 16 cr (ADR
 // `2026-08-plafond-par-defaut-17-credits`). Still a setting, never a wall.
 pub const DEFAULT_CREDIT_CAP: u32 = 17;
 // A1→H8 : the bac's eight study sessions (étés come on top, in core)
