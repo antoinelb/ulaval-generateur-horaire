@@ -2102,6 +2102,30 @@ pub fn search_courses(
     SearchResults { rows, matched }
 }
 
+// F8: a rule listing many rows (anglais, électifs…) is hard to scan — a
+// local filter, never persisted, changes nothing about what actually
+// counts toward the rule, only what is shown
+pub const RULE_FILTER_THRESHOLD: usize = 8;
+
+pub fn rule_filterable(rows: &[Row]) -> bool {
+    rows.len() > RULE_FILTER_THRESHOLD
+}
+
+// same trim + uppercase, code-or-title match as `search_courses` above
+pub fn filter_rows(rows: &[Row], query: &str) -> Vec<Row> {
+    let needle = query.trim().to_uppercase();
+    if needle.is_empty() {
+        return rows.to_vec();
+    }
+    rows.iter()
+        .filter(|row| {
+            row.code.contains(&needle)
+                || row.title.to_uppercase().contains(&needle)
+        })
+        .cloned()
+        .collect()
+}
+
 // the matières of the catalogue with their course counts, for the free
 // rule's select — « matière = préfixe du code », plan § faits du domaine
 pub fn subjects(snapshot: &Snapshot) -> Vec<(String, usize)> {
@@ -3821,6 +3845,67 @@ mod tests {
         );
         assert_eq!(results.matched, 40);
         assert_eq!(results.rows.len(), SEARCH_LIMIT, "capped, and said so");
+    }
+
+    fn stub_row(code: &str, title: &str) -> Row {
+        Row {
+            code: code.to_string(),
+            title: title.to_string(),
+            credits: String::new(),
+            sub: String::new(),
+            state: RowState::Available,
+            assumed: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn filter_rows_matches_by_code() {
+        let rows = vec![
+            stub_row("GEX-1000", "Hydrologie"),
+            stub_row("GCI-1001", "Matériaux"),
+        ];
+        let filtered = filter_rows(&rows, "gex");
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].code, "GEX-1000");
+    }
+
+    #[test]
+    fn filter_rows_matches_by_title_case_insensitive() {
+        let rows = vec![
+            stub_row("ANL-1000", "Advanced English I"),
+            stub_row("ANL-2000", "Workplace English"),
+        ];
+        let filtered = filter_rows(&rows, "advanced");
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].code, "ANL-1000");
+    }
+
+    #[test]
+    fn filter_rows_empty_query_keeps_everything() {
+        let rows = vec![
+            stub_row("GEX-1000", "Hydrologie"),
+            stub_row("GCI-1001", "Matériaux"),
+        ];
+        assert_eq!(
+            filter_rows(&rows, "   ").len(),
+            2,
+            "blank query, no filter"
+        );
+    }
+
+    #[test]
+    fn rule_filterable_only_past_the_threshold() {
+        let at_threshold: Vec<Row> = (0..RULE_FILTER_THRESHOLD)
+            .map(|i| stub_row(&format!("R-{i}"), "x"))
+            .collect();
+        assert!(
+            !rule_filterable(&at_threshold),
+            "exactly the threshold's worth of rows is still comfortable"
+        );
+        let one_more: Vec<Row> = (0..=RULE_FILTER_THRESHOLD)
+            .map(|i| stub_row(&format!("R-{i}"), "x"))
+            .collect();
+        assert!(rule_filterable(&one_more), "one row past the threshold");
     }
 
     #[test]

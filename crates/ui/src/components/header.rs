@@ -111,7 +111,8 @@ pub fn HeaderBar() -> Element {
             &crate::panel::selection(&plan_read),
             &snapshot.courses,
         );
-        (summary.counted, program.credits_required)
+        let note = crate::present::bac_credit_note(&summary);
+        (summary.counted, program.credits_required, note)
     });
     let credits =
         solve::session_credits(snapshot, &plan.read(), view.read().session);
@@ -161,8 +162,11 @@ pub fn HeaderBar() -> Element {
                  auraient changé."
             }
             span { class: "header-credits",
-                if let Some((counted, required)) = bac {
-                    span { "{counted}/{required} cr au bac - " }
+                if let Some((counted, required, note)) = bac {
+                    span {
+                        title: "{note.tooltip}",
+                        "{counted}/{required} cr au bac{note.suffix} - "
+                    }
                 }
                 b {
                     class: if over_cap { "header-credits--over" },

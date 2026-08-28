@@ -342,6 +342,52 @@ pub fn error_id(detail: &str) -> String {
     format!("GH-{:08X}", (hash >> 32) as u32 ^ hash as u32)
 }
 
+// --- the bac credit total, explained ---------------------------------------
+
+// F3: the header's « X/120 cr au bac » rarely matches summing the sessions
+// by hand — stages ridden en-sus of the total and préparatoire (0xxx)
+// credits are excluded from the count, and nothing on screen said so
+// (rapport étudiante-gex 2026-08-27). `suffix` names the en-sus credits
+// right next to the total they are *not* part of; `tooltip` decomposes
+// the whole gap. `CreditSummary` does not distinguish a course selected
+// but outside the program's own scope from one counted normally, so that
+// case is never claimed here — only what the summary actually knows.
+pub struct BacCreditNote {
+    pub suffix: String,
+    pub tooltip: String,
+}
+
+pub fn bac_credit_note(
+    summary: &ulaval_scheduler_wasm::credits::CreditSummary,
+) -> BacCreditNote {
+    let suffix = if summary.in_addition > 0 {
+        format!(" (+{} cr en sus)", summary.in_addition)
+    } else {
+        String::new()
+    };
+    let mut parts = Vec::new();
+    if summary.in_addition > 0 {
+        parts.push(format!(
+            "{} cr de stages exigés mais ajoutés aux 120 cr, jamais \
+             comptés dedans",
+            summary.in_addition
+        ));
+    }
+    if summary.preparatory > 0 {
+        parts.push(format!(
+            "{} cr de scolarité préparatoire, non comptés",
+            summary.preparatory
+        ));
+    }
+    let tooltip = if parts.is_empty() {
+        "Le compte inclut tous les cours sélectionnés — aucun écart."
+            .to_string()
+    } else {
+        parts.join(" ; ")
+    };
+    BacCreditNote { suffix, tooltip }
+}
+
 // --- the weekly grid geometry ---------------------------------------------
 
 use ulaval_scheduler_core::{Day, Section, Time};
@@ -1020,6 +1066,43 @@ mod tests {
         assert_eq!(error_id("same"), error_id("same"));
         assert_ne!(error_id("same"), error_id("other"));
         assert_eq!(error_id("x").len(), "GH-".len() + 8);
+    }
+
+    fn credit_summary(
+        in_addition: u32,
+        preparatory: u32,
+    ) -> ulaval_scheduler_wasm::credits::CreditSummary {
+        ulaval_scheduler_wasm::credits::CreditSummary {
+            counted: 0,
+            in_addition,
+            preparatory,
+            unknown: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn no_gap_has_neither_suffix_nor_anything_to_decompose() {
+        let note = bac_credit_note(&credit_summary(0, 0));
+        assert_eq!(note.suffix, "");
+        assert!(!note.tooltip.is_empty(), "still says there is no gap");
+        assert!(!note.tooltip.contains("stage"));
+        assert!(!note.tooltip.contains("préparatoire"));
+    }
+
+    #[test]
+    fn stages_en_sus_show_in_the_suffix_and_the_tooltip() {
+        let note = bac_credit_note(&credit_summary(9, 0));
+        assert_eq!(note.suffix, " (+9 cr en sus)");
+        assert!(note.tooltip.contains("9 cr de stages"));
+        assert!(!note.tooltip.contains("préparatoire"), "{}", note.tooltip);
+    }
+
+    #[test]
+    fn preparatory_credits_explain_the_gap_without_a_suffix() {
+        let note = bac_credit_note(&credit_summary(0, 6));
+        assert_eq!(note.suffix, "", "not en-sus of the required total");
+        assert!(note.tooltip.contains("6 cr de scolarité préparatoire"));
+        assert!(!note.tooltip.contains("stage"), "{}", note.tooltip);
     }
 
     #[test]

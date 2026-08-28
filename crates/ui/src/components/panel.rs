@@ -958,6 +958,12 @@ fn PanelBody(model: PanelModel) -> Element {
                     // results open under the fold (rapport étudiante-gex
                     // 2026-08-19) — the first typed letter brings them
                     // into view
+                    // deliberately stays Nearest, unlike SectionView and
+                    // Disclosure's Start (F2, 2026-08-28): this scroll
+                    // re-arms on every keystroke rather than once per open,
+                    // so Start would re-scroll the results list to the top
+                    // of the panel after each letter typed — Nearest holds
+                    // still once the results are already in view
                     onmounted: move |event: Event<MountedData>| {
                         if !scroll_to_results() {
                             return;
@@ -1176,7 +1182,13 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                         },
                     }
                 }
-                label { class: "panel-knob",
+                label {
+                    class: "panel-knob",
+                    title: "Nombre maximal de crédits par session. Le \
+                            placement automatique ne dépasse jamais ce \
+                            plafond ; un placement à la main peut le \
+                            dépasser et l'outil l'avertit. 17 cr est la \
+                            charge pleine usuelle — ajustable.",
                     "Plafond (cr)"
                     input {
                         r#type: "number",
@@ -1216,7 +1228,11 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                 }
                 "Ouvrir les étés aux cours réguliers"
             }
-            label { class: "panel-fit",
+            label {
+                class: "panel-fit",
+                title: "Concomitance : le préalable peut être suivi en \
+                        même temps (même session) que le cours qui \
+                        l'exige, plutôt qu'avant.",
                 input {
                     r#type: "checkbox",
                     checked: concomitant,
@@ -1356,6 +1372,7 @@ fn CapsuleDrawer() -> Element {
     let mut draft = use_signal(String::new);
     let mut error = use_signal(|| None::<crate::present::UiError>);
     let mut summary = use_signal(|| None::<crate::capsule::CapsuleSummary>);
+    let mut detail_open = use_signal(|| false);
 
     // `commit` below wraps the import in one undoable `edit_plan` act
     // (ACT-2), but `summary` is a signal local to this drawer that no undo
@@ -1477,8 +1494,13 @@ fn CapsuleDrawer() -> Element {
                                 "Identifiant : "
                                 code { "{error.id}" }
                             }
-                            details {
-                                summary { "Détail technique" }
+                            Disclosure {
+                                open: detail_open(),
+                                on_toggle: move |_| {
+                                    detail_open.set(!detail_open())
+                                },
+                                class: "panel-capsule-error-detail",
+                                summary: rsx! { "Détail technique" },
                                 pre { "{error.detail}" }
                             }
                         }
@@ -1524,6 +1546,62 @@ fn CapsuleDrawer() -> Element {
     }
 }
 
+// A controlled native `<details>`: the caller owns `open` and reacts to a
+// click on the summary itself (`on_toggle`) — the state signal stays in
+// the caller, this component only wires the click and the scroll. Unlike
+// `SectionView`'s own accordion (a plain div/button whose content div is
+// conditionally rendered, so a fresh `onmounted` fires on every open), a
+// native `<details>` element is never unmounted by toggling its `open`
+// attribute — the browser just hides its content — so `onmounted` here
+// only captures the node handle once, at first mount, and every summary
+// click reuses that handle to scroll when the click is the one that
+// opens the disclosure (never on mount or restore, LAT-7), the same
+// Start+Smooth as `SectionView` (ADR
+// `2026-08-defilement-vers-la-section-depliee`).
+#[component]
+fn Disclosure(
+    open: bool,
+    on_toggle: EventHandler<()>,
+    class: String,
+    summary: Element,
+    children: Element,
+) -> Element {
+    let mut node = use_signal(|| None::<std::rc::Rc<MountedData>>);
+    rsx! {
+        details {
+            class: "{class}",
+            open,
+            onmounted: move |event: Event<MountedData>| {
+                node.set(Some(event.data()));
+            },
+            summary {
+                onclick: move |event| {
+                    event.prevent_default();
+                    let opening = !open;
+                    on_toggle.call(());
+                    if !opening {
+                        return;
+                    }
+                    let Some(handle) = node.peek().clone() else {
+                        return;
+                    };
+                    spawn(async move {
+                        let _ = handle
+                            .scroll_to_with_options(ScrollToOptions {
+                                behavior: ScrollBehavior::Smooth,
+                                vertical: ScrollLogicalPosition::Start,
+                                horizontal: ScrollLogicalPosition::Nearest,
+                            })
+                            .await;
+                    });
+                },
+                {summary}
+            }
+            {children}
+        }
+    }
+}
+
 // one accordion: header button, expansion strictly in place (LAY-2)
 #[component]
 fn SectionView(section: Section) -> Element {
@@ -1541,6 +1619,15 @@ fn SectionView(section: Section) -> Element {
         Badge::Neutral(text) => ("panel-badge--neutral", text.clone()),
     };
     let chevron = if expanded { "▾" } else { "▸" };
+    // F8: a filter for rules with many rows (anglais, électifs…) — local
+    // and volatile, never persisted, decided by the pure module (AP-5)
+    let mut filter = use_signal(String::new);
+    let filter_text = filter.read().clone();
+    let filterable = panel::rule_filterable(&section.rows);
+    let filtered_rows = panel::filter_rows(&section.rows, &filter_text);
+    let filter_empty_result = filterable
+        && !filter_text.trim().is_empty()
+        && filtered_rows.is_empty();
     rsx! {
         div {
             class: "panel-rule",
@@ -1571,8 +1658,10 @@ fn SectionView(section: Section) -> Element {
                     // bring what just opened into view — the panel is a
                     // long internal scroller and the content often lands
                     // under the fold (rapport étudiante-gex 2026-08-19);
-                    // Nearest moves nothing when it is already visible
-                    // (ERR-6)
+                    // Start, not Nearest: a section taller than the panel
+                    // has its top (heading, first course) still out of
+                    // view under Nearest, which stops once *any* edge is
+                    // visible (rapport étudiante-gex 2026-08-27)
                     onmounted: move |event: Event<MountedData>| {
                         if !scroll_on_open() {
                             return;
@@ -1583,7 +1672,7 @@ fn SectionView(section: Section) -> Element {
                                 .data()
                                 .scroll_to_with_options(ScrollToOptions {
                                     behavior: ScrollBehavior::Smooth,
-                                    vertical: ScrollLogicalPosition::Nearest,
+                                    vertical: ScrollLogicalPosition::Start,
                                     horizontal:
                                         ScrollLogicalPosition::Nearest,
                                 })
@@ -1607,10 +1696,31 @@ fn SectionView(section: Section) -> Element {
                     for note in section.notes.iter() {
                         p { class: "panel-rule-raw", "{note}" }
                     }
+                    if filterable {
+                        div { class: "panel-search-wrap",
+                            input {
+                                class: "panel-search panel-rule-filter",
+                                r#type: "search",
+                                placeholder: "Filtrer cette règle (sigle \
+                                              ou titre)…",
+                                aria_label: "Filtrer cette règle (sigle \
+                                             ou titre)…",
+                                value: "{filter_text}",
+                                oninput: move |event| {
+                                    filter.set(event.value())
+                                },
+                            }
+                        }
+                    }
+                    if filter_empty_result {
+                        p { class: "panel-empty",
+                            "Aucun cours ne correspond — effacez le filtre."
+                        }
+                    }
                     // a free section lists what its ententes attached,
                     // then keeps browsing — the browse is how a course
                     // gets attached in the first place
-                    for row in section.rows.iter().cloned() {
+                    for row in filtered_rows.iter().cloned() {
                         RowView { key: "{row.code}", row }
                     }
                     if section.free {
@@ -1654,6 +1764,7 @@ fn PrereqField(code: String) -> Element {
                 .unwrap_or_default()
         }
     });
+    let mut prereq_open = use_signal(|| false);
     let mut draft = use_signal(|| current.read().0.clone());
     // an undo — or the vintage's own correction landing — moves the text
     // under the field; a stale draft would then commit what nobody asked
@@ -1703,8 +1814,11 @@ fn PrereqField(code: String) -> Element {
     };
 
     rsx! {
-        details { class: "panel-prereq",
-            summary { class: "panel-prereq-summary", "{summary}" }
+        Disclosure {
+            open: prereq_open(),
+            on_toggle: move |_| prereq_open.set(!prereq_open()),
+            class: "panel-prereq",
+            summary: rsx! { "{summary}" },
             div { class: "panel-prereq-body",
                 input {
                     class: "panel-prereq-input",
@@ -2007,7 +2121,9 @@ fn CourseChoice(
                 class: "panel-chip",
                 class: if auto { "panel-chip--chosen" },
                 aria_pressed: "{auto}",
-                title: "Prendre {code} et laisser le solveur choisir sa session",
+                title: "Prendre {code} et laisser le solveur choisir sa \
+                        session (le cours occupe une session, au \
+                        contraire d'un cours crédité)",
                 onclick: {
                     let code = code.clone();
                     let grant_key = grant_key.clone();
@@ -2191,7 +2307,11 @@ fn CreditedToggle(code: String) -> Element {
     let title = if credited {
         format!("Retirer le crédit de {code}")
     } else {
-        format!("Créditer {code} : compté sans occuper de session")
+        format!(
+            "Créditer {code} : compté sans occuper de session — \
+             contrairement à « automatique », qui le place dans une \
+             session"
+        )
     };
     rsx! {
         button {
@@ -2283,7 +2403,7 @@ fn RuleAttach(code: String) -> Element {
                 }
             },
             option { value: "-", selected: current.is_none(),
-                "entente…"
+                "entente avec la direction…"
             }
             for (key, title) in rules {
                 option {
@@ -2382,6 +2502,7 @@ fn ManualCourseForm() -> Element {
     let mut rejection = use_signal(|| None::<String>);
     // « fait partie de quelle règle ? » — the entente, granted on submit
     let mut rule = use_signal(|| "-".to_string());
+    let mut manual_open = use_signal(|| false);
     let submit = {
         let handle = handle.clone();
         move |_| {
@@ -2471,8 +2592,11 @@ fn ManualCourseForm() -> Element {
     };
     let existing = manual.read().clone();
     rsx! {
-        details { class: "panel-manual",
-            summary { "Cours absent du catalogue ?" }
+        Disclosure {
+            open: manual_open(),
+            on_toggle: move |_| manual_open.set(!manual_open()),
+            class: "panel-manual",
+            summary: rsx! { "Cours absent du catalogue ?" },
             p { class: "panel-note",
                 "Entrez-le à la main : il sera ajouté à la session \
                  affichée, marqué « manuel », et reste sur cet appareil."

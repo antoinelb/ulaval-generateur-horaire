@@ -236,6 +236,7 @@ pub fn enter_document(
     let stash = stash_of(current);
     let restored = restore_plan(stored);
     let mut next = restored.state;
+    let mut notes = restored.notes;
     match next.program.take() {
         Some(held) => {
             next.program = Some(crate::state::ProgramChoice {
@@ -249,6 +250,18 @@ pub fn enter_document(
         // (and kept): a new document, only the calendar identity and the
         // credit-derived horizon carried
         None => {
+            // the caller resolves `choice.concentration` to this vintage's
+            // default (`panel::default_concentration`) before ever calling
+            // here — announced so a first-contact student knows the choice
+            // was not her own (rapport étudiante-cegep 2026-08-27); a
+            // restored document below says nothing, since nothing was
+            // picked on its behalf
+            if let Some(title) = choice.concentration.clone() {
+                notes.push(format!(
+                    "Concentration « {title} » sélectionnée par défaut — \
+                     changez-la au besoin dans le panneau de gauche."
+                ));
+            }
             next = crate::state::fresh_plan(
                 current.start,
                 choice,
@@ -259,7 +272,7 @@ pub fn enter_document(
     DocumentSwap {
         stash,
         next,
-        notes: restored.notes,
+        notes,
         backup: restored.backup,
     }
 }
@@ -920,6 +933,26 @@ mod tests {
         assert_eq!(swap.next.study_sessions, 6, "the passed count lands");
         assert!(swap.notes.is_empty());
         assert!(swap.backup.is_none());
+    }
+
+    #[test]
+    fn a_fresh_document_announces_its_default_concentration() {
+        // F7: a first contact must not silently compare a program under a
+        // concentration the student never picked (rapport
+        // étudiante-cegep 2026-08-27)
+        let picker = Plan::default();
+        let click = crate::state::ProgramChoice {
+            concentration: Some("Aéronautique et aérospatiale".to_string()),
+            ..choice("B-GPH", "A26")
+        };
+        let swap = enter_document(&picker, click, None, 8);
+        assert_eq!(swap.notes.len(), 1);
+        assert!(
+            swap.notes[0].contains("Aéronautique et aérospatiale"),
+            "{:?}",
+            swap.notes
+        );
+        assert!(swap.notes[0].contains("par défaut"), "{:?}", swap.notes);
     }
 
     #[test]
