@@ -169,6 +169,20 @@
             "Projets spécialisés",
             "L'étudiant admis au profil entrepreneurial doit réussir les cours ENT-1000, (ENT-2023 ou ENT-4020), ENT-3000 et ENT-3010."
           ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "type": "credits",
+            "min": 3,
+            "max": 3
+          },
+          "courses": [
+            "ANL-2020"
+          ],
+          "notes": [
+            "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues peut choisir un cours d'anglais de niveau supérieur ou, s'il a acquis le niveau Advanced English II (VEPT : 63), un cours d'une autre langue moderne."
+          ]
         }
       ]
     },
@@ -198,6 +212,20 @@
             "GMC-4048",
             "GMC-4100",
             "GMC-4200"
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "type": "credits",
+            "min": 3,
+            "max": 3
+          },
+          "courses": [
+            "ANL-2020"
+          ],
+          "notes": [
+            "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues peut choisir un cours d'anglais de niveau supérieur ou, s'il a acquis le niveau Advanced English II (VEPT : 63), un cours d'une autre langue moderne."
           ]
         }
       ]
@@ -231,6 +259,20 @@
             "GMC-3550",
             "GMC-3551",
             "GMC-4100"
+          ]
+        },
+        {
+          "title": "Règle 2",
+          "constraint": {
+            "type": "credits",
+            "min": 3,
+            "max": 3
+          },
+          "courses": [
+            "ANL-2020"
+          ],
+          "notes": [
+            "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues peut choisir un cours d'anglais de niveau supérieur ou, s'il a acquis le niveau Advanced English II (VEPT : 63), un cours d'une autre langue moderne."
           ]
         }
       ]
