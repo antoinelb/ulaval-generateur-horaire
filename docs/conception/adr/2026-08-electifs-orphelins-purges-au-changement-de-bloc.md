@@ -11,7 +11,11 @@ Depuis, l'organigramme en continu **auto-place** des électifs de concentration 
 - La couverture est celle des listes explicites, jamais du mot-clé « tous les cours » : un cours que seule une entente pourrait rattacher est orphelin tant que l'entente n'existe pas.
 - Ceci amende « changer ne vide rien » : la grille et les électifs **hors du bloc quitté** ne bougent toujours pas ; seuls les cours que le bloc quitté avait amenés et que rien ne couvre plus partent avec lui.
 
+## Amendements
+
+- `2026-08-electifs-choisis-sous-le-bloc-partent-avec-lui` (2026-08-27) : la couverture seule laissait passer FOR-2020, choisi sous un bloc et listé par le suivant. Un électif **choisi sous** le bloc quittant part désormais avec lui, couvert ou non ; `scope_orphans` reste le filet des plans sans étiquettes. L'alternative ci-dessous est **renversée**.
+
 ## Alternatives rejetées
 
-- **Suivre qui a ajouté l'électif (solveur vs étudiante)** : un champ de provenance dans `Plan` pour distinguer deux cas que la même règle couvre — l'électif d'une étudiante listé seulement par l'ancien bloc est tout autant orphelin, et l'acte est annulable.
+- **Suivre qui a ajouté l'électif (solveur vs étudiante)** : un champ de provenance dans `Plan` pour distinguer deux cas que la même règle couvre — l'électif d'une étudiante listé seulement par l'ancien bloc est tout autant orphelin, et l'acte est annulable. *(Renversé le 2026-08-27 : ce n'est pas « qui » mais « sous quel bloc » qu'il fallait suivre.)*
 - **Laisser et avertir** : le total continuerait de compter un cours rattaché à rien — précisément le mensonge rapporté.

@@ -836,9 +836,10 @@ fn set_scope(
     if current == title {
         return;
     }
-    // the departing block's own electives that nothing under the new
-    // scope lists — materialized before the edit, purged inside it
-    let orphans = {
+    // everything that leaves with the departing block — what nothing under
+    // the new scope lists, plus what the student chose under it;
+    // materialized before the edit, purged inside it
+    let departures = {
         let read = snapshot.read();
         let plan_read = plan.read();
         read.as_ref()
@@ -850,8 +851,8 @@ fn set_scope(
                 } else {
                     (profile, concentration, title.as_deref())
                 };
-                panel::scope_orphans(
-                    program, &plan_read, departing, next_c, next_f,
+                panel::block_departures(
+                    program, &plan_read, departing, next_c, next_f, prefix,
                 )
             })
             .unwrap_or_default()
@@ -872,7 +873,7 @@ fn set_scope(
             }
         }
         dropped = state::purge_scope_grants(plan, prefix);
-        state::purge_codes(plan, &orphans);
+        state::purge_codes(plan, &departures);
     });
     // Document-caused: after a program swap the history is fresh and the
     // « Annuler » these advertise no longer applies
@@ -887,13 +888,13 @@ fn set_scope(
             super::AlertCause::Document,
         );
     }
-    if !orphans.is_empty() {
+    if !departures.is_empty() {
         super::push_caused_alert(
             alerts,
             super::AlertBody::Note(format!(
-                "Cours de l'ancien bloc retirés : {} — rien sous le \
-                 nouveau choix ne les liste; « Annuler » les restaure.",
-                orphans.join(", ")
+                "Cours retirés avec l'ancien bloc : {} — « Annuler » les \
+                 restaure.",
+                departures.join(", ")
             )),
             super::AlertCause::Document,
         );
@@ -1631,6 +1632,8 @@ fn SectionView(section: Section) -> Element {
     let filter_empty_result = filterable
         && !filter_text.trim().is_empty()
         && filtered_rows.is_empty();
+    // a course taken here was chosen *under* this block, and leaves with it
+    let origin = panel::section_origin(&section.key);
     rsx! {
         div {
             class: "panel-rule",
@@ -1724,7 +1727,7 @@ fn SectionView(section: Section) -> Element {
                     // then keeps browsing — the browse is how a course
                     // gets attached in the first place
                     for row in filtered_rows.iter().cloned() {
-                        RowView { key: "{row.code}", row }
+                        RowView { key: "{row.code}", row, origin }
                     }
                     if section.free {
                         FreeBrowse { grant_key: section.key.clone() }
@@ -1981,6 +1984,9 @@ fn ResultRows(
     results: panel::SearchResults,
     grant_key: Option<String>,
 ) -> Element {
+    // a « tous les cours » browse belongs to its section's block; the
+    // global search at the foot of the panel belongs to none
+    let origin = grant_key.as_deref().and_then(panel::section_origin);
     rsx! {
         div { class: "panel-results",
             for row in results.rows.iter().cloned() {
@@ -1988,6 +1994,7 @@ fn ResultRows(
                     key: "{row.code}",
                     row,
                     grant_key: grant_key.clone(),
+                    origin,
                 }
             }
             p { class: "panel-results-count",
@@ -2007,7 +2014,11 @@ fn ResultRows(
 // the course (automatique) or takes and freezes it (a session), the ✕
 // drops it — immediate and undoable, never a dialog (ACT-2)
 #[component]
-fn RowView(row: Row, grant_key: Option<String>) -> Element {
+fn RowView(
+    row: Row,
+    grant_key: Option<String>,
+    origin: Option<char>,
+) -> Element {
     let plan = use_context::<Signal<Plan>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     // the advisory fit marker, swap semantics — the probe comes from the
@@ -2093,7 +2104,12 @@ fn RowView(row: Row, grant_key: Option<String>) -> Element {
                 CreditedToggle { code: row.code.clone() }
             }
             if let Some(strip) = strip {
-                CourseChoice { code: row.code.clone(), strip, grant_key }
+                CourseChoice {
+                    code: row.code.clone(),
+                    strip,
+                    grant_key,
+                    origin,
+                }
             }
         }
     }
@@ -2110,6 +2126,9 @@ fn CourseChoice(
     code: String,
     strip: panel::ChoiceStrip,
     grant_key: Option<String>,
+    // the block this course is being chosen under, if any — it leaves with
+    // it (ADR `2026-08-electifs-choisis-sous-le-bloc-partent-avec-lui`)
+    origin: Option<char>,
 ) -> Element {
     let plan = use_context::<Signal<Plan>>();
     let history = use_context::<Signal<History>>();
@@ -2156,6 +2175,9 @@ fn CourseChoice(
                                 if !plan.electives.contains(&code) {
                                     plan.electives.push(code.clone());
                                 }
+                                state::tag_elective_origin(
+                                    plan, &code, origin,
+                                );
                                 if let Some(key) = grant {
                                     plan.rule_grants
                                         .insert(code.clone(), key);
@@ -2216,7 +2238,7 @@ fn CourseChoice(
                                     );
                                     place_course(
                                         plan, history, &code, session, &label,
-                                        grant,
+                                        grant, origin,
                                     );
                                     if let Some(warning) = warning {
                                         super::push_alert(
@@ -2423,7 +2445,10 @@ fn RuleAttach(code: String) -> Element {
 // move — `code` into `session`, every previous trace of it cleared first;
 // one labelled, undoable step. `grant` carries the entente a « tous les
 // cours » browse decided (`panel::grant_on_take`) so it lands in the same
-// act — the ribbon passes None.
+// act, and `origin` the block the course is being chosen under — the
+// ribbon and the grid pass None for both: moving a course is not choosing
+// it again, and must never overwrite the tag it already carries.
+#[allow(clippy::too_many_arguments)]
 pub fn place_course(
     plan: Signal<Plan>,
     history: Signal<History>,
@@ -2431,6 +2456,7 @@ pub fn place_course(
     session: usize,
     label: &str,
     grant: Option<String>,
+    origin: Option<char>,
 ) {
     // the read borrow must die before edit_plan opens the write
     let already = plan.read().pinned_sessions.get(code) == Some(&session);
@@ -2445,11 +2471,15 @@ pub fn place_course(
     } else {
         format!("{code} épinglé en {label}")
     };
+    // the purge below drops the origin tag with the rest: a real choice
+    // replaces it, a move gives back the one the course already carried
+    let held = crate::state::elective_origin(&plan.read(), code);
     let code = code.to_string();
     edit_plan(plan, history, &action, |plan| {
         // a move leaves nothing behind: pin, placement, hand-added entry
         // and forced sections all go, then the course is laid down anew
         crate::state::purge_codes(plan, std::slice::from_ref(&code));
+        crate::state::tag_elective_origin(plan, &code, origin.or(held));
         // placing a catalogue course IS choosing it: without the elective
         // the solver would see a pin with no Course behind it (rapport
         // étudiante : « MED-1100 is passed or pinned but has no Course »)
@@ -2558,11 +2588,16 @@ fn ManualCourseForm() -> Element {
             );
             let granted_rule =
                 Some(rule.read().clone()).filter(|value| value != "-");
+            // the rule the form attaches it to names the block it is
+            // chosen under, exactly as a section row does
+            let origin =
+                granted_rule.as_deref().and_then(panel::section_origin);
             edit_plan(
                 plan,
                 history,
                 &format!("Cours manuel {course_code} ajouté"),
                 |plan| {
+                    state::tag_elective_origin(plan, &course_code, origin);
                     if let Some(key) = granted_rule {
                         plan.rule_grants.insert(course_code.clone(), key);
                     }

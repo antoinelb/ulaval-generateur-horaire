@@ -40,6 +40,13 @@ pub struct Plan {
     pub preparatory_done: bool,
     // typed additions to the program's list, in the order they were added
     pub electives: Vec<String>,
+    // code → the block it was chosen under: « c » (concentration) or
+    // « f » (profil). Changing that block takes its electives away with
+    // it, even ones the new scope still covers (ADR
+    // `2026-08-electifs-choisis-sous-le-bloc-partent-avec-lui`). Absent
+    // from an older save and from a shared link: those electives fall back
+    // to coverage alone, which is what `panel::scope_orphans` decides.
+    pub elective_origins: BTreeMap<String, String>,
     // code → 1-based session: the student's explicit organigramme acts
     pub pinned_sessions: BTreeMap<String, usize>,
     // the organigramme as shown: pins plus the last accepted proposal —
@@ -83,6 +90,7 @@ impl Default for Plan {
             concomitant: false,
             preparatory_done: true,
             electives: Vec::new(),
+            elective_origins: BTreeMap::new(),
             pinned_sessions: BTreeMap::new(),
             displayed_placement: BTreeMap::new(),
             chosen: BTreeMap::new(),
@@ -497,6 +505,10 @@ pub fn horizon_floor_note(plan: &Plan) -> String {
 // slipped in from.
 pub fn purge_codes(plan: &mut Plan, codes: &[String]) {
     plan.electives.retain(|code| !codes.contains(code));
+    // the tag dies with the course: re-taking it later is a fresh choice,
+    // under whatever block the student is looking at then
+    plan.elective_origins
+        .retain(|code, _| !codes.contains(code));
     plan.pinned_sessions.retain(|code, _| !codes.contains(code));
     plan.displayed_placement
         .retain(|code, _| !codes.contains(code));
@@ -506,6 +518,37 @@ pub fn purge_codes(plan: &mut Plan, codes: &[String]) {
     for pins in plan.chosen.values_mut() {
         pins.retain(|code, _| !codes.contains(code));
     }
+}
+
+// Remember which block an elective was chosen under, so changing that
+// block can take it away again. `None` — a ribbon drag, a grid move, an
+// elective the solver injected — is a no-op that never erases an existing
+// tag: moving a course is not choosing it again.
+pub fn tag_elective_origin(plan: &mut Plan, code: &str, origin: Option<char>) {
+    let Some(origin) = origin else {
+        return;
+    };
+    plan.elective_origins
+        .insert(code.to_string(), origin.to_string());
+}
+
+// The tag a course carries right now — for a caller that purges its
+// traces and lays it down again in one act (`place_course`): the purge
+// takes the tag with everything else, and a move must give it back.
+pub fn elective_origin(plan: &Plan, code: &str) -> Option<char> {
+    plan.elective_origins
+        .get(code)
+        .and_then(|origin| origin.chars().next())
+}
+
+// the codes chosen under one block, sorted (a `BTreeMap` walk)
+pub fn scoped_electives(plan: &Plan, prefix: char) -> Vec<String> {
+    let prefix = prefix.to_string();
+    plan.elective_origins
+        .iter()
+        .filter(|(_, origin)| **origin == prefix)
+        .map(|(code, _)| code.clone())
+        .collect()
 }
 
 // Changing the concentration (prefix 'c') or the profile ('f') retires the
@@ -929,6 +972,74 @@ mod tests {
         assert_eq!(plan.manual[&1], ["GEX-1000"]);
         assert!(!plan.chosen[&1].contains_key("MAT-0130"));
         assert!(plan.chosen[&1].contains_key("GEX-1000"));
+    }
+
+    #[test]
+    fn purge_codes_drops_the_origin_tags() {
+        let mut plan = Plan {
+            electives: vec!["FOR-2020".to_string(), "GEX-1000".to_string()],
+            elective_origins: BTreeMap::from([
+                ("FOR-2020".to_string(), "c".to_string()),
+                ("GEX-1000".to_string(), "f".to_string()),
+            ]),
+            ..Plan::default()
+        };
+        purge_codes(&mut plan, &["FOR-2020".to_string()]);
+        assert_eq!(
+            plan.elective_origins,
+            BTreeMap::from([("GEX-1000".to_string(), "f".to_string())]),
+            "re-taking the course later is a fresh choice"
+        );
+    }
+
+    #[test]
+    fn tag_elective_origin_keeps_an_existing_tag_on_none() {
+        let mut plan = Plan::default();
+        tag_elective_origin(&mut plan, "FOR-2020", Some('c'));
+        assert_eq!(plan.elective_origins["FOR-2020"], "c");
+        // a ribbon drag or a grid move: a move is not a re-choice
+        tag_elective_origin(&mut plan, "FOR-2020", None);
+        assert_eq!(plan.elective_origins["FOR-2020"], "c");
+        // an untagged course dragged around stays untagged
+        tag_elective_origin(&mut plan, "GEX-1000", None);
+        assert!(!plan.elective_origins.contains_key("GEX-1000"));
+        // choosing it again under another block moves the tag
+        tag_elective_origin(&mut plan, "FOR-2020", Some('f'));
+        assert_eq!(plan.elective_origins["FOR-2020"], "f");
+        // read back for the purge-then-lay-down move (`place_course`)
+        assert_eq!(elective_origin(&plan, "FOR-2020"), Some('f'));
+        assert_eq!(elective_origin(&plan, "GEX-1000"), None);
+        // a tag corrupted to the empty string names no block
+        plan.elective_origins
+            .insert("GEX-1000".to_string(), String::new());
+        assert_eq!(elective_origin(&plan, "GEX-1000"), None);
+    }
+
+    #[test]
+    fn scoped_electives_reads_only_its_prefix() {
+        let plan = Plan {
+            elective_origins: BTreeMap::from([
+                ("GEX-2000".to_string(), "c".to_string()),
+                ("FOR-2020".to_string(), "c".to_string()),
+                ("ANL-2020".to_string(), "f".to_string()),
+            ]),
+            ..Plan::default()
+        };
+        assert_eq!(scoped_electives(&plan, 'c'), ["FOR-2020", "GEX-2000"]);
+        assert_eq!(scoped_electives(&plan, 'f'), ["ANL-2020"]);
+        assert!(scoped_electives(&plan, 'p').is_empty());
+    }
+
+    #[test]
+    fn an_old_save_without_origins_restores_untagged() {
+        // rétro-compat gh.v1.plan : the field simply defaults
+        let bare: Plan = serde_json::from_str(
+            r#"{"electives":["FOR-2020"],"credit_cap":15}"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(bare.electives, ["FOR-2020"]);
+        assert!(bare.elective_origins.is_empty());
+        assert_eq!(bare.credit_cap, 15);
     }
 
     #[test]

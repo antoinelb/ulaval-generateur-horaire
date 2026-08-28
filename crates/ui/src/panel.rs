@@ -1286,6 +1286,44 @@ pub fn scope_orphans(
         .collect()
 }
 
+// Which block a panel section belongs to, read off its key — the same
+// « c/ », « f/ », « p/ » prefixes `rule_grants` uses. A course taken from
+// such a section was chosen *under* that block.
+pub fn section_origin(key: &str) -> Option<char> {
+    match key.split_once('/') {
+        Some(("c", _)) => Some('c'),
+        Some(("f", _)) => Some('f'),
+        _ => None,
+    }
+}
+
+// Everything that leaves with the departing block: the electives nothing
+// under the new scope lists (`scope_orphans` — still the net for plans
+// carrying no tags: an old save, a shared link), *plus* every elective the
+// student actually chose under it, covered or not. FOR-2020, picked under
+// « Génie du bâtiment » and also listed by the neutral block's Règle 1,
+// was never an orphan and got silently recounted under a block Élodie had
+// never browsed (rapport étudiante 2026-08-27 F4, décision d'Antoine).
+pub fn block_departures(
+    program: &Program,
+    plan: &Plan,
+    departing: Option<&str>,
+    concentration: Option<&str>,
+    profile: Option<&str>,
+    prefix: char,
+) -> Vec<String> {
+    if departing.is_none() {
+        // nothing departs: no block was chosen to begin with
+        return Vec::new();
+    }
+    let mut codes: BTreeSet<String> =
+        scope_orphans(program, plan, departing, concentration, profile)
+            .into_iter()
+            .collect();
+    codes.extend(state::scoped_electives(plan, prefix));
+    codes.into_iter().collect()
+}
+
 // the codes a rule set lists explicitly — a Reference resolves one hop to
 // its target's list (references never chain, core refuses them)
 fn listed_codes<'a>(
@@ -2619,6 +2657,104 @@ mod tests {
         .is_empty());
         // no departing block, nothing brought along
         assert!(scope_orphans(program, &plan, None, None, None).is_empty());
+    }
+
+    #[test]
+    fn section_origin_reads_the_block_prefix() {
+        assert_eq!(section_origin("c/Règle C1"), Some('c'));
+        assert_eq!(section_origin("f/Règle P1"), Some('f'));
+        assert_eq!(section_origin("p/Règle 2"), None, "the program's own");
+        assert_eq!(section_origin("sans barre"), None);
+        assert_eq!(section_origin("x/Règle"), None);
+    }
+
+    // F4 (rapport étudiante 2026-08-27) : FOR-2020, choisi sous « Génie du
+    // bâtiment » et couvert par la Règle 1 du bloc neutre, restait compté
+    // en silence sous un bloc qu'Élodie n'avait jamais parcouru.
+    #[test]
+    fn block_departures_purges_a_tagged_elective_even_if_the_new_scope_covers_it(
+    ) {
+        let snapshot = snapshot();
+        let program = &snapshot.programs[0];
+        let mut plan = plan();
+        // GAE-1000 is listed by the program's own Règle 2: never an orphan
+        plan.electives = vec!["GAE-1000".to_string()];
+        plan.elective_origins = std::collections::BTreeMap::from([(
+            "GAE-1000".to_string(),
+            "c".to_string(),
+        )]);
+        assert!(
+            scope_orphans(program, &plan, Some("Génie urbain"), None, None)
+                .is_empty(),
+            "coverage alone sees nothing to purge"
+        );
+        assert_eq!(
+            block_departures(
+                program,
+                &plan,
+                Some("Génie urbain"),
+                None,
+                None,
+                'c'
+            ),
+            ["GAE-1000"],
+            "chosen under the departing block, so it leaves with it"
+        );
+        // a profile change leaves a concentration's own choice alone
+        assert!(block_departures(
+            program,
+            &plan,
+            Some("Génie urbain"),
+            None,
+            None,
+            'f'
+        )
+        .is_empty());
+        // no departing block, nothing departs
+        assert!(
+            block_departures(program, &plan, None, None, None, 'c').is_empty()
+        );
+    }
+
+    #[test]
+    fn block_departures_keeps_an_untagged_neutral_elective_listed_by_the_departing_block(
+    ) {
+        let snapshot = snapshot();
+        let program = &snapshot.programs[0];
+        let mut plan = plan();
+        // the same course, chosen from a neutral rule (no tag): coverage
+        // decides alone, and the program's Règle 2 lists it
+        plan.electives = vec!["GAE-1000".to_string()];
+        assert!(block_departures(
+            program,
+            &plan,
+            Some("Génie urbain"),
+            None,
+            None,
+            'c'
+        )
+        .is_empty());
+    }
+
+    #[test]
+    fn block_departures_still_purges_untagged_orphans() {
+        let snapshot = snapshot();
+        let program = &snapshot.programs[0];
+        let mut plan = plan();
+        // ANL-2020 exists only in « Génie urbain » — the net for a plan
+        // restored from an old save or a shared link, which carries no tags
+        plan.electives = vec!["ANL-2020".to_string()];
+        assert_eq!(
+            block_departures(
+                program,
+                &plan,
+                Some("Génie urbain"),
+                None,
+                None,
+                'c'
+            ),
+            ["ANL-2020"]
+        );
     }
 
     #[test]

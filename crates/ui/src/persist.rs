@@ -567,6 +567,11 @@ fn share_into(
         concomitant: state.concomitant,
         preparatory_done: state.preparatory_done,
         electives: state.electives,
+        // the share frame is frozen (ADR
+        // `2026-08-trame-de-partage-unique-avant-deploiement`) and carries
+        // no origin tags: a shared organigramme's electives are judged by
+        // coverage alone at the next block change
+        elective_origins: BTreeMap::new(),
         pinned_sessions: state
             .pinned_sessions
             .into_iter()
