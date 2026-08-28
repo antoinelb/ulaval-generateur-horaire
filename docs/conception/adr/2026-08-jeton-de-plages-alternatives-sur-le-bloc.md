@@ -21,3 +21,9 @@ Forme (jeton textuel) et texte portent le sens, jamais une couleur seule ; le su
 - **Pile de cartes en `box-shadow`** (empiler des ombres pour suggérer plusieurs plages sous le bloc) — maquettée, rejetée : purement visuelle, aucun compte lisible, et invisible en niveaux de gris ou à faible contraste.
 - **Ligne récapitulative sous la grille** (une liste « GEX-1000 a 3 alternatives » sous l'horaire) — maquettée, rejetée : sépare l'information du bloc qu'elle concerne, oblige un aller-retour entre la grille et la liste pour chaque cours.
 - Antoine a choisi le jeton textuel sur le bloc (« design A ») : l'information reste au même endroit que l'action qui la révèle.
+
+## Conséquence (2026-08-28)
+
+Le flottant droit décrit ci-dessus ne fonctionne pas : `.grid-block-title` a `overflow: hidden` sans `text-overflow`, donc sur deux lignes de titre le dernier élément du flux — le `.grid-block-detail` (sigle + section) — déborde du bouton, que le bloc absolu suivant peint par-dessus (rapport étudiante cégep 2026-08-27, rapport étudiante GEX 2026-08-27).
+Le jeton et le titre sont donc regroupés dans une rangée `.grid-block-top` (flex) au lieu d'un flottant : le titre se comprime en premier (`-webkit-line-clamp: 2`), le jeton garde une largeur fixe à sa droite, et `.grid-block-detail` suit toujours en dessous, tronqué proprement (`white-space: nowrap` + ellipse) plutôt que débordant.
+`.grid-block:focus-visible { z-index: 1 }` évite qu'un bloc voisin peint par-dessus masque l'anneau de focus clavier.
