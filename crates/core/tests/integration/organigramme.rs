@@ -105,6 +105,11 @@ fn reproduces_every_frozen_solution_set() {
             max_solutions: if fixture.allow_unplaced { 1 } else { 100_000 },
             allow_unplaced: fixture.allow_unplaced,
             allow_credit_shortfall: false,
+            // the frozen sets are the *complete* enumeration: minimizing
+            // would return one solution, balancing would move courses out
+            // of the arrangement the reference derived
+            minimize_seed_distance: false,
+            balance: false,
         })
         .unwrap_or_else(|e| panic!("place {name}: {e}"));
 

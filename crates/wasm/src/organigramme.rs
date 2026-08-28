@@ -147,12 +147,26 @@ pub fn generate(
 fn place_escalating(
     request: &PlacementRequest,
 ) -> Result<Placement, PlacementError> {
-    let exact = place(request)?;
+    // A seeded generation is a *re*-generation: the student has a grid on
+    // screen and something moved. Minimizing the distance to it is what
+    // makes « celui proposé suit votre cheminement actuel du plus près »
+    // true once a collision forces a course out of its seat — a first
+    // solution merely resembles the seed where nothing pushed back (ADR
+    // `2026-08-b-minimise-la-distance-au-seed`). With no seed there is
+    // nothing to stay near, and the balancing pass shapes the first grid
+    // instead (ADR `2026-08-equilibrage-glouton-du-placement-initial`).
+    let minimize = !request.seed.is_empty();
+    let exact = place(&PlacementRequest {
+        minimize_seed_distance: minimize,
+        balance: !minimize,
+        ..*request
+    })?;
     if !exact.solutions.is_empty() {
         return Ok(exact);
     }
     let softened = place(&PlacementRequest {
         allow_credit_shortfall: true,
+        minimize_seed_distance: minimize,
         ..*request
     })
     .expect("the strict pass already validated this request");
@@ -163,6 +177,7 @@ fn place_escalating(
     let escalated = if all_summers != *request.open_summers {
         place(&PlacementRequest {
             open_summers: &all_summers,
+            minimize_seed_distance: minimize,
             ..*request
         })
     } else {
@@ -175,6 +190,7 @@ fn place_escalating(
         let softened_opened = place(&PlacementRequest {
             allow_credit_shortfall: true,
             open_summers: &all_summers,
+            minimize_seed_distance: minimize,
             ..*request
         })
         .expect("opening summers cannot invalidate a validated request");
@@ -360,9 +376,12 @@ fn with_request<T>(
     };
     ask(&PlacementRequest {
         // proving stays proving: only `generate` escalates, and it says so
-        // by passing `place_escalating` as its `ask`
+        // by passing `place_escalating` as its `ask` — the two search
+        // behaviours are its call to make, per pass
         allow_unplaced: false,
         allow_credit_shortfall: false,
+        minimize_seed_distance: false,
+        balance: false,
         sessions,
         credit_cap: input.credit_cap,
         concomitant: input.concomitant,
@@ -614,6 +633,126 @@ mod tests {
             .unwrap_or_else(|| panic!("the fallback answers"));
         assert_eq!(solution.placement["GEX-1002"], 3);
         assert!(report.summers_forced.is_empty());
+    }
+
+    // Four 3-credit courses with no schedule published and no
+    // prerequisite: only the seasons and the credit cap constrain them.
+    // C-1000 is fall-only, so a horizon's single automne nails it down.
+    const PLAIN_COURSES: &str = r#"[
+        {"code":"C-1000","title":"T","credits":3,"cycle":1,
+         "prerequisites":null,"equivalents":[],
+         "seasons":{"fall":{"last_offered":2026,"options":null}}},
+        {"code":"C-1001","title":"T","credits":3,"cycle":1,
+         "prerequisites":null,"equivalents":[],
+         "seasons":{"fall":{"last_offered":2026,"options":null},
+                    "winter":{"last_offered":2026,"options":null}}},
+        {"code":"C-1002","title":"T","credits":3,"cycle":1,
+         "prerequisites":null,"equivalents":[],
+         "seasons":{"fall":{"last_offered":2026,"options":null},
+                    "winter":{"last_offered":2026,"options":null}}},
+        {"code":"C-1003","title":"T","credits":3,"cycle":1,
+         "prerequisites":null,"equivalents":[],
+         "seasons":{"fall":{"last_offered":2026,"options":null},
+                    "winter":{"last_offered":2026,"options":null}}}
+    ]"#;
+
+    fn plain_courses() -> Vec<Course> {
+        serde_json::from_str(PLAIN_COURSES)
+            .unwrap_or_else(|e| panic!("courses literal: {e}"))
+    }
+
+    // The 2026-08-27 UX report's counter-example: dropping one course onto
+    // a full session used to redistribute half the path. A seeded
+    // generation now moves the one course the cap actually evicts (ADR
+    // `2026-08-b-minimise-la-distance-au-seed`).
+    #[test]
+    fn a_seeded_generation_moves_only_what_the_collision_forces() {
+        let report = generate(
+            &input(
+                r#""electives":["C-1000","C-1001","C-1002","C-1003"],
+                   "seed":{"C-1000":1,"C-1001":1,"C-1002":2,"C-1003":2},
+                   "pinned":{"C-1002":1}"#,
+            ),
+            &plain_courses(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let solution = &report.placement.solutions[0];
+        assert_eq!(solution.placement["C-1000"], 1);
+        assert_eq!(
+            solution.placement["C-1001"], 2,
+            "the only course the collision can evict"
+        );
+        assert_eq!(solution.placement["C-1002"], 1);
+        assert_eq!(
+            solution.placement["C-1003"], 2,
+            "untouched: nothing forced it out of its seeded session"
+        );
+    }
+
+    // The softened pass inherits the minimization: a threshold nobody can
+    // meet must not become an excuse to rebuild the grid around it.
+    #[test]
+    fn a_softened_generation_still_follows_the_seed() {
+        let courses: Vec<Course> = serde_json::from_str(
+            r#"[{"code":"A-1000","title":"A","credits":3,"cycle":1,
+                 "prerequisites":null,"equivalents":[],
+                 "seasons":{"fall":{"last_offered":2026,"options":null}}},
+                {"code":"T-9000","title":"T","credits":3,"cycle":1,
+                 "prerequisites":{"raw":"Crédits exigés : 60",
+                   "tree":{"program_credits":{"credits":60}}},
+                 "equivalents":[],
+                 "seasons":{"winter":{"last_offered":2026,
+                                      "options":null}}}]"#,
+        )
+        .unwrap_or_else(|e| panic!("course literal: {e}"));
+        // four study sessions: two hivers, at 2 and at 5
+        let fields = r#""electives":["A-1000","T-9000"],"study_sessions":4"#;
+        let query: OrganigrammeInput = serde_json::from_str(&format!(
+            r#"{{"start":"fall","credit_cap":6,{fields}}}"#
+        ))
+        .unwrap_or_else(|e| panic!("input literal: {e}"));
+        let loose =
+            generate(&query, &courses).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(
+            loose.placement.solutions[0].placement["T-9000"], 5,
+            "with nothing to follow, the shortfall order takes the latest"
+        );
+
+        let seeded: OrganigrammeInput = serde_json::from_str(&format!(
+            r#"{{"start":"fall","credit_cap":6,{fields},
+                 "seed":{{"A-1000":1,"T-9000":2}}}}"#
+        ))
+        .unwrap_or_else(|e| panic!("input literal: {e}"));
+        let report =
+            generate(&seeded, &courses).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(report.placement.solutions[0].placement["T-9000"], 2);
+        assert_eq!(report.credit_shortfalls.len(), 1);
+    }
+
+    // No seed means no grid to stay near: the first proposal is spread
+    // instead of stacked into the earliest sessions (ADR
+    // `2026-08-equilibrage-glouton-du-placement-initial`).
+    #[test]
+    fn an_initial_generation_balances_when_no_seed_exists() {
+        let query: OrganigrammeInput = serde_json::from_str(
+            r#"{"start":"fall","study_sessions":2,"credit_cap":9,
+                "electives":["C-1000","C-1001","C-1002","C-1003"]}"#,
+        )
+        .unwrap_or_else(|e| panic!("input literal: {e}"));
+        let report = generate(&query, &plain_courses())
+            .unwrap_or_else(|e| panic!("{e}"));
+        let loads = report.placement.solutions[0].placement.values().fold(
+            vec![0u32; 3],
+            |mut loads, &session| {
+                loads[session - 1] += 3;
+                loads
+            },
+        );
+        assert_eq!(
+            loads,
+            vec![6, 6, 0],
+            "the same four courses, evened over the two study sessions"
+        );
     }
 
     #[test]

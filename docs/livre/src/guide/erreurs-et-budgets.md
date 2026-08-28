@@ -41,6 +41,8 @@ La troncature n'est jamais silencieuse — `completion` dit quelle borne a été
 - `"node-budget"` : budget de travail épuisé ; l'ensemble est partiel — on ne peut pas conclure à l'infaisabilité ;
 - `"solution-cap"` : plafond de solutions atteint ; l'ensemble est partiel, il en existe peut-être d'autres.
 
+Avec un `seed` non vide, `generate_organigramme` cherche l'optimum au lieu d'énumérer : `max_solutions` est ignoré, une seule grille revient, `"complete"` veut dire « optimum prouvé » et `"solution-cap"` n'est jamais émis (ADR `2026-08-b-minimise-la-distance-au-seed`).
+
 Un appelant qui sait ce qu'il fait (un worker, un test) passe des budgets plus grands :
 
 ```js

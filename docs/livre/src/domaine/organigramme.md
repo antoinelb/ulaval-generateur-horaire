@@ -22,7 +22,11 @@ Chaque solution retournée respecte :
 | infaisable prouvé par recherche complète | `completion: "complete"` et `solutions: []` |
 | énumération tronquée par budget | `completion: "node-budget"` ou `"solution-cap"` |
 
-Le germe, les épingles et les cours réussis réduisent l'espace ; `solutions` énumère tout ce qui reste faisable, dans l'ordre de recherche — la première solution ressemble au cheminement type quand un germe est donné.
+Le germe, les épingles et les cours réussis réduisent l'espace ; `solutions` énumère tout ce qui reste faisable, dans l'ordre de recherche.
+
+Une exception : **`generate_organigramme` avec un `seed` non vide rend une seule solution**, celle qui minimise la somme des distances à ce germe (ADR `2026-08-b-minimise-la-distance-au-seed`).
+`max_solutions` est alors ignoré, `completion: "complete"` veut dire « optimum prouvé » et `"node-budget"` « meilleure grille trouvée dans le budget ».
+Sans germe, la première grille proposée est équilibrée sur l'horizon plutôt qu'entassée dans les premières sessions (ADR `2026-08-equilibrage-glouton-du-placement-initial`).
 
 ## Construire, puis vérifier
 
