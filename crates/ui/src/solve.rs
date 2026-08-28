@@ -1048,6 +1048,24 @@ pub fn unplaced_codes(
         .collect())
 }
 
+// Whether the continuous placement should fire (ADR
+// `2026-08-organigramme-en-continu-sans-bouton`). A floating course always
+// calls for one — it has no seat to preserve. The *repair* of a grid a
+// verify just refused is what « Annuler » must not trigger: the restored
+// screen is exactly what the student asked to see again, and re-proposing
+// over it rewrites `displayed_placement` outside the history, so undoing
+// once would take two clicks (ADR `2026-08-annuler-fige-l-ecran-restaure`).
+pub fn propose_needed(
+    unplaced: &[String],
+    verification_empty: bool,
+    restored_screen: bool,
+) -> bool {
+    if !unplaced.is_empty() {
+        return true;
+    }
+    verification_empty && !restored_screen
+}
+
 // the chosen concentration and profile titles, read off the plan's choice
 fn scope_choice(plan: &Plan) -> (Option<String>, Option<String>) {
     match plan.program.as_ref() {
@@ -2024,6 +2042,35 @@ mod worker_tests {
         // nothing floating: everything retires
         let stale = stale_left_out(&left_out, &[]);
         assert_eq!(stale, left_out);
+    }
+
+    #[test]
+    fn propose_needed_places_floating_courses_even_on_a_restored_screen() {
+        let floating = ["GEX-1000".to_string()];
+        assert!(
+            propose_needed(&floating, false, true),
+            "a course with no seat has nothing to preserve"
+        );
+        assert!(propose_needed(&floating, true, true));
+        assert!(propose_needed(&floating, false, false));
+    }
+
+    #[test]
+    fn propose_needed_skips_the_repair_of_a_restored_screen() {
+        assert!(
+            !propose_needed(&[], true, true),
+            "« Annuler » put this grid back — leave it exactly there"
+        );
+        assert!(!propose_needed(&[], false, true), "nothing to do at all");
+    }
+
+    #[test]
+    fn propose_needed_repairs_a_broken_screen_after_a_real_edit() {
+        assert!(
+            propose_needed(&[], true, false),
+            "a verify that found no solution over an edited plan"
+        );
+        assert!(!propose_needed(&[], false, false), "a sound grid stands");
     }
 
     #[test]

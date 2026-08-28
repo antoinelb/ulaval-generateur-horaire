@@ -25,5 +25,6 @@ L'ADR `2026-08-verification-automatique-du-cheminement` avait gardé « Proposer
 
 ## Conséquences
 
+- Amendée par `2026-08-annuler-fige-l-ecran-restaure` : la réparation d'une grille refusée ne part pas sur un écran que « Annuler » ou « Rétablir » vient de restaurer.
 - Un lien partagé ou un rechargement avec des cours flottants se place tout seul au démarrage.
 - `FULL_MAX_NODES`, le champ `SolverState.truncated` et les styles des deux boutons sont retirés.

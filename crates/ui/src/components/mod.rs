@@ -574,7 +574,7 @@ pub fn App() -> Element {
         manual,
     );
     heal_acquired(plan, snapshot, alerts);
-    auto_propose(plan, snapshot, solver_state, handle.clone());
+    auto_propose(plan, snapshot, solver_state, history, handle.clone());
     auto_verify(plan, snapshot, solver_state, handle.clone());
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
@@ -1105,6 +1105,7 @@ fn auto_propose(
     plan: Signal<Plan>,
     snapshot: Signal<Option<Snapshot>>,
     solver_state: Signal<SolverState>,
+    history: Signal<History>,
     handle: SolverHandle,
 ) {
     let mut generation = use_signal(|| 0u64);
@@ -1150,12 +1151,17 @@ fn auto_propose(
                 &plan_read,
                 program.as_ref(),
             ) {
-                Ok(unplaced) if !unplaced.is_empty() => true,
-                Ok(_) => solver_state
-                    .peek()
-                    .verification
-                    .as_ref()
-                    .is_some_and(|answer| answer.solutions.is_empty()),
+                Ok(unplaced) => crate::solve::propose_needed(
+                    &unplaced,
+                    solver_state
+                        .peek()
+                        .verification
+                        .as_ref()
+                        .is_some_and(|answer| answer.solutions.is_empty()),
+                    // peek: the plan is already the subscription, and this
+                    // effect must not re-run on an undo's bookkeeping
+                    history.peek().restored(),
+                ),
                 Err(_) => false,
             };
             if !needed {

@@ -492,6 +492,11 @@ pub fn purge_scope_grants(plan: &mut Plan, prefix: char) -> Vec<String> {
 pub struct History {
     undo: Vec<(String, Plan)>,
     redo: Vec<(String, Plan)>,
+    // the plan on screen was put back by an undo/redo, not built by an
+    // edit: the automatic repair must leave it exactly as restored, or
+    // « Annuler » takes two clicks (ADR
+    // `2026-08-annuler-fige-l-ecran-restaure`). Any real edit re-arms it.
+    restored: bool,
 }
 
 impl History {
@@ -501,6 +506,10 @@ impl History {
 
     pub fn redo_label(&self) -> Option<&str> {
         self.redo.last().map(|(label, _)| label.as_str())
+    }
+
+    pub fn restored(&self) -> bool {
+        self.restored
     }
 }
 
@@ -515,6 +524,7 @@ pub fn apply(
         history.undo.remove(0);
     }
     history.redo.clear();
+    history.restored = false;
     edit(plan);
 }
 
@@ -522,6 +532,7 @@ pub fn undo(plan: &mut Plan, history: &mut History) -> Option<String> {
     let (label, previous) = history.undo.pop()?;
     history.redo.push((label.clone(), plan.clone()));
     *plan = previous;
+    history.restored = true;
     Some(label)
 }
 
@@ -529,6 +540,7 @@ pub fn redo(plan: &mut Plan, history: &mut History) -> Option<String> {
     let (label, next) = history.redo.pop()?;
     history.undo.push((label.clone(), plan.clone()));
     *plan = next;
+    history.restored = true;
     Some(label)
 }
 
@@ -954,6 +966,41 @@ mod tests {
             redo(&mut plan, &mut history).as_deref(),
             Some("Ajout de GEX-1000")
         );
+    }
+
+    #[test]
+    fn undo_marks_the_screen_restored_until_the_next_edit() {
+        let mut plan = Plan::default();
+        let mut history = History::default();
+        assert!(!history.restored(), "a fresh history restored nothing");
+        apply(&mut plan, &mut history, "A", |plan| plan.credit_cap = 12);
+        assert!(!history.restored(), "an edit builds the screen");
+        assert_eq!(undo(&mut plan, &mut history).as_deref(), Some("A"));
+        assert!(history.restored(), "the screen comes from the history");
+        apply(&mut plan, &mut history, "B", |plan| plan.credit_cap = 18);
+        assert!(!history.restored(), "a real edit re-arms the repair");
+        undo(&mut plan, &mut history);
+        redo(&mut plan, &mut history);
+        assert!(history.restored(), "redo restores a screen too");
+        // an empty pop changes nothing: the flag only follows a real move
+        let mut empty = History::default();
+        assert_eq!(undo(&mut plan, &mut empty), None);
+        assert!(!empty.restored());
+        assert_eq!(redo(&mut plan, &mut empty), None);
+        assert!(!empty.restored());
+    }
+
+    #[test]
+    fn a_document_swap_rearms_the_repair() {
+        let mut plan = Plan::default();
+        let mut history = History::default();
+        apply(&mut plan, &mut history, "A", |plan| plan.credit_cap = 12);
+        undo(&mut plan, &mut history);
+        assert!(history.restored());
+        // `swap_document` and `import_organigramme` both install a fresh
+        // History: the next document's screen is nobody's restoration
+        history = History::default();
+        assert!(!history.restored(), "the swap re-arms the repair");
     }
 
     #[test]
