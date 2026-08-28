@@ -4629,6 +4629,52 @@ mod tests {
         );
     }
 
+    // S3 (rapport étudiante 2026-08-27) : le compteur tombait de 105/120 à
+    // 99/120 quand une proposition « oubliait » un cours déjà assis, et
+    // seul un rechargement le réparait. `selection()` lit
+    // `displayed_placement` : ce que la grille perd, le compteur le perd.
+    #[test]
+    fn a_proposal_that_unseats_a_displayed_course_is_refused_not_counted() {
+        let snapshot = snapshot();
+        let plan = plan();
+        let granted = effective_program(&snapshot, &plan);
+        let counted = |plan: &Plan| {
+            ulaval_scheduler_wasm::credits::credit_summary(
+                granted.as_ref(),
+                None,
+                None,
+                &selection(plan),
+                &snapshot.courses,
+            )
+            .counted
+        };
+        assert_eq!(counted(&plan), 6, "two seated courses of three credits");
+
+        // the answer that came back: GEX-1000 left out, GMN-1000 kept
+        let left_out = BTreeSet::from(["GEX-1000".to_string()]);
+        assert_eq!(
+            crate::solve::adoption_regressions(
+                &plan.displayed_placement,
+                &left_out
+            ),
+            ["GEX-1000"],
+            "the answer would unseat a course the grid shows"
+        );
+
+        // the drift, adopting it whole
+        let mut adopted = plan.clone();
+        adopted.displayed_placement =
+            std::collections::BTreeMap::from([("GMN-1000".to_string(), 1)]);
+        assert_eq!(
+            counted(&adopted),
+            3,
+            "the unseated course's credits vanish from the counter"
+        );
+
+        // the refusal writes nothing: the grid and its tally stand
+        assert_eq!(counted(&plan), 6);
+    }
+
     #[test]
     fn grantable_rules_offer_only_the_chosen_blocks() {
         let snapshot = snapshot();

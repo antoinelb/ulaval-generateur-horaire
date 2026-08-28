@@ -262,6 +262,21 @@ fn apply_proposal(
     snapshot: Signal<Option<Snapshot>>,
 ) {
     state.write().credit_shortfalls = report.credit_shortfalls.clone();
+    // The seats this answer would take away. Adopting it would drop their
+    // credits out of the counter with no undo entry to get them back
+    // (ADR `2026-08-proposition-refusee-si-elle-desassoit`), so the whole
+    // answer is refused below — and nothing here may claim otherwise.
+    let regressions = report
+        .placement
+        .solutions
+        .first()
+        .map(|solution| {
+            crate::solve::adoption_regressions(
+                &plan.peek().displayed_placement,
+                &solution.left_out,
+            )
+        })
+        .unwrap_or_default();
     // every note below owns a *subject*: this function republishes all of
     // them at every answer, so a wording that shifted by one code used to
     // stack a second banner on the same subject (rapport étudiante
@@ -279,9 +294,10 @@ fn apply_proposal(
     // included — the per-blocked loop would say each of them twice
     match report.placement.solutions.first() {
         Some(solution) if !solution.left_out.is_empty() => {
-            if solution.placement.is_empty() {
+            if regressions.is_empty() && solution.placement.is_empty() {
                 // one aggregate verdict, not one toast per code: the
-                // whole grid failing is a single fact
+                // whole grid failing is a single fact — and never said
+                // over a grid the refusal above is about to keep
                 push_topic_alert(
                     alerts,
                     AlertBody::Note(crate::solve::empty_grid_note()),
@@ -292,6 +308,11 @@ fn apply_proposal(
                 let plan_read = plan.peek();
                 let snapshot_read = snapshot.peek();
                 for code in &solution.left_out {
+                    // a course that keeps its seat is not left out of
+                    // anything the student can see
+                    if regressions.contains(code) {
+                        continue;
+                    }
                     let blocked = report
                         .placement
                         .blocked
@@ -343,17 +364,41 @@ fn apply_proposal(
             AlertTopic::SummersForced,
         );
     }
-    // every answer overwrites `left_out` whole — an answer with no
-    // solution at all must clear it, not leave the previous one frozen
-    state.write().left_out = report
+    // Every answer overwrites `left_out` whole — an answer with no
+    // solution at all must clear it, not leave the previous one frozen.
+    // Only what really floats goes in: a code the refusal below leaves
+    // seated would make `retire_stale_left_out` and the panel contradict
+    // the grid.
+    let floating: std::collections::BTreeSet<String> = report
         .placement
         .solutions
         .first()
-        .map(|solution| solution.left_out.clone())
+        .map(|solution| {
+            solution
+                .left_out
+                .iter()
+                .filter(|code| !regressions.contains(code))
+                .cloned()
+                .collect()
+        })
         .unwrap_or_default();
+    state.write().left_out = floating;
     let Some(solution) = report.placement.solutions.first() else {
         return;
     };
+    // the whole answer is refused, before `overlay_pins` and before any
+    // write: a proposal that unseats a displayed course is worse than no
+    // proposal at all (the convergence still holds — the `proposed`
+    // fingerprint was recorded at send, so the same query never reruns)
+    if !regressions.is_empty() {
+        push_topic_alert(
+            alerts,
+            AlertBody::Note(crate::solve::proposal_kept_note(&regressions)),
+            AlertCause::Document,
+            AlertTopic::ProposalKept,
+        );
+        return;
+    }
     if !solution.assumed.is_empty() {
         let assumed: Vec<&str> =
             solution.assumed.iter().map(String::as_str).collect();

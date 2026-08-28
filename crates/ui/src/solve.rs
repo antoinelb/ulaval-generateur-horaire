@@ -1284,11 +1284,15 @@ pub fn completion_note(answer: &PlacementAnswer) -> Option<String> {
              recherche."
                 .to_string(),
         ),
+        // the seed makes an exhausted search land on the closest
+        // arrangement; a search cut short only lands on the closest one it
+        // reached, and must say so rather than promise the other
         "node-budget" => Some(
-            "La recherche s'est arrêtée avant d'avoir tout exploré : il \
-             peut exister d'autres agencements — ou un agencement là où \
-             rien n'a été trouvé. Simplifiez (plafond, sessions, cours) \
-             pour aider la recherche."
+            "La recherche s'est arrêtée avant d'avoir tout exploré : \
+             l'agencement proposé suit votre cheminement actuel du plus \
+             près trouvé (recherche écourtée), et d'autres existent \
+             peut-être. Simplifiez (plafond, sessions, cours) pour aider \
+             la recherche."
                 .to_string(),
         ),
         "solution-cap" => Some(
@@ -1309,6 +1313,32 @@ pub fn completion_note(answer: &PlacementAnswer) -> Option<String> {
         }
         _ => None,
     }
+}
+
+// The codes a proposal would unseat: courses the grid already shows,
+// which the answer leaves out. Adopting such an answer makes their credits
+// vanish from the counter without a word — 105/120 became 99/120, and only
+// a reload put them back (rapport étudiante 2026-08-27, S3). Sorted, since
+// `left_out` is a `BTreeSet` and the note names them.
+pub fn adoption_regressions(
+    displayed: &BTreeMap<String, usize>,
+    left_out: &BTreeSet<String>,
+) -> Vec<String> {
+    left_out
+        .iter()
+        .filter(|code| displayed.contains_key(*code))
+        .cloned()
+        .collect()
+}
+
+// Why the grid did not move, said before the student can wonder — refusing
+// in silence would be exactly the drift this guards against.
+pub fn proposal_kept_note(codes: &[String]) -> String {
+    format!(
+        "Proposition ignorée : elle retirerait {} de la grille — votre \
+         agencement actuel est conservé.",
+        codes.join(", ")
+    )
 }
 
 // What the best-effort pass had to leave out, and why — one line per code
@@ -2045,6 +2075,38 @@ mod worker_tests {
     }
 
     #[test]
+    fn adoption_regressions_names_only_seated_codes() {
+        let displayed = BTreeMap::from([
+            ("GEX-1000".to_string(), 1),
+            ("GEX-2000".to_string(), 3),
+        ]);
+        let left_out = BTreeSet::from([
+            "GEX-2000".to_string(),
+            "GEX-1000".to_string(),
+            "ANL-1010".to_string(),
+        ]);
+        assert_eq!(
+            adoption_regressions(&displayed, &left_out),
+            ["GEX-1000", "GEX-2000"],
+            "sorted, and ANL-1010 was floating anyway"
+        );
+        // a proposal that seats everything it was given takes nothing away
+        assert!(adoption_regressions(&displayed, &BTreeSet::new()).is_empty());
+        assert!(adoption_regressions(&BTreeMap::new(), &left_out).is_empty());
+    }
+
+    #[test]
+    fn proposal_kept_note_lists_the_codes() {
+        let note = proposal_kept_note(&[
+            "GEX-1000".to_string(),
+            "GEX-2000".to_string(),
+        ]);
+        assert!(note.contains("GEX-1000, GEX-2000"), "{note}");
+        assert!(note.contains("conservé"), "{note}");
+        assert!(!note.contains("·"), "{note}");
+    }
+
+    #[test]
     fn propose_needed_places_floating_courses_even_on_a_restored_screen() {
         let floating = ["GEX-1000".to_string()];
         assert!(
@@ -2322,9 +2384,14 @@ mod worker_tests {
         assert!(completion_note(&answer("complete", 0))
             .expect("an empty proof speaks")
             .contains("c'est certain"));
-        assert!(completion_note(&answer("node-budget", 1))
-            .expect("truncation speaks")
-            .contains("avant d'avoir tout exploré"));
+        let truncated = completion_note(&answer("node-budget", 1))
+            .expect("truncation speaks");
+        assert!(truncated.contains("avant d'avoir tout exploré"));
+        assert!(
+            truncated.contains("recherche écourtée"),
+            "a cut-short search must not promise the closest arrangement \
+             the seed would have reached: {truncated}"
+        );
         assert!(completion_note(&answer("node-budget", 0))
             .expect("an empty truncated answer says which of the two")
             .contains("sans rien trouver"));
