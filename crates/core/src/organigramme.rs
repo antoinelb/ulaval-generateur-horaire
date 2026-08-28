@@ -72,6 +72,13 @@ pub struct PlacementRequest<'a> {
     // - `SolutionCap` is never emitted: one optimum is the whole answer;
     // - `max_solutions` is ignored — a single solution comes back.
     pub minimize_seed_distance: bool,
+    // Runs the greedy balancing post-pass on the first solution (ADR
+    // `2026-08-equilibrage-glouton-du-placement-initial`): the value order
+    // fills the earliest sessions first, so a first grid with no seed to
+    // follow arrives front-loaded. Ignored under `allow_unplaced` and
+    // `allow_credit_shortfall`, whose solutions carry per-session evidence
+    // a move would silently stale.
+    pub balance: bool,
 }
 
 // the domain value meaning « this course is not placed » — sessions are
@@ -353,9 +360,19 @@ pub fn place(request: &PlacementRequest) -> Result<Placement, PlacementError> {
             blocked,
         });
     }
+    let mut placement = search(&ctx);
+    // the shortfall and « au mieux » passes carry per-solution evidence
+    // (`credit_shortfalls`, `left_out`) that a moved course would silently
+    // stale, and re-deriving it is the search's job, not a post-pass's
+    if request.balance
+        && !request.allow_unplaced
+        && !request.allow_credit_shortfall
+    {
+        balance_first_solution(&ctx, &mut placement);
+    }
     Ok(Placement {
         blocked,
-        ..search(&ctx)
+        ..placement
     })
 }
 
@@ -482,8 +499,9 @@ pub fn admissible_sessions(
             allow_unplaced: false,
             allow_credit_shortfall: false,
             // existence again: nothing here asks which arrangement is
-            // nicest, and minimizing would only cost the probe time
+            // nicest, and both extras would only cost the probe time
             minimize_seed_distance: false,
+            balance: false,
             ..*request
         };
         if !place(&probe)?.solutions.is_empty() {
@@ -1313,6 +1331,149 @@ fn search(ctx: &SearchCtx) -> Placement {
     }
 }
 
+// The first grid a student is shown should not pile every course into the
+// earliest sessions — which is exactly what the value order produces when
+// no seed says otherwise: the search answers with the first feasible
+// arrangement it reaches, and « earliest first » reaches a front-loaded
+// one. A steepest descent on Σ(charge de session)² spreads the same courses
+// over the same horizon; every move is re-checked in full, so the balanced
+// grid is one the search itself could have returned (ADR
+// `2026-08-equilibrage-glouton-du-placement-initial`).
+fn balance_first_solution(ctx: &SearchCtx, placement: &mut Placement) {
+    let Some(solution) = placement.solutions.first() else {
+        return;
+    };
+    let mut chosen: Vec<usize> = ctx
+        .candidates
+        .iter()
+        .map(|candidate| {
+            solution
+                .placement
+                .get(&candidate.code)
+                .copied()
+                .unwrap_or(UNPLACED)
+        })
+        .collect();
+    let mut cache = FeasibilityCache::new();
+    // bounded: every accepted move strictly lowers Σ(charge²), and one
+    // round per candidate is far more than the descent can use
+    for _ in 0..ctx.candidates.len() {
+        let Some((index, session, balanced)) =
+            best_balancing_move(&chosen, ctx, &mut cache)
+        else {
+            break;
+        };
+        chosen[index] = session;
+        placement.solutions[0] = balanced;
+    }
+}
+
+// One step of the descent: the admissible move that lowers Σ(charge²) the
+// most. Ties go to the earliest candidate, then to its domain's own order,
+// so the pass is deterministic. The cheap arithmetic filters first — the
+// full re-check is paid only for a move that would actually win.
+fn best_balancing_move(
+    chosen: &[usize],
+    ctx: &SearchCtx,
+    cache: &mut FeasibilityCache,
+) -> Option<(usize, usize, Solution)> {
+    let loads = session_loads(chosen, ctx);
+    let current = load_square_sum(&loads);
+    let mut best: Option<(u64, usize, usize, Solution)> = None;
+    for index in 0..ctx.candidates.len() {
+        let candidate = &ctx.candidates[index];
+        // a pin is the student's own act: balancing never overrides it
+        if ctx.request.pinned.contains_key(&candidate.code) {
+            continue;
+        }
+        for &session in &candidate.domain {
+            if session == chosen[index] {
+                continue;
+            }
+            let Some(score) = moved_square_sum(
+                &loads,
+                chosen[index],
+                session,
+                candidate.credits,
+                ctx.request.credit_cap,
+            ) else {
+                continue;
+            };
+            if score >= current
+                || best.as_ref().is_some_and(|(seen, ..)| score >= *seen)
+            {
+                continue;
+            }
+            if let Some(balanced) =
+                moved_solution(chosen, index, session, ctx, cache)
+            {
+                best = Some((score, index, session, balanced));
+            }
+        }
+    }
+    best.map(|(_, index, session, balanced)| (index, session, balanced))
+}
+
+fn load_square_sum(loads: &[u32]) -> u64 {
+    loads
+        .iter()
+        .map(|&load| u64::from(load) * u64::from(load))
+        .sum()
+}
+
+// Σ(charge²) once one course moves, or `None` when the target session would
+// break the cap. Squaring is what makes the descent spread: moving 3
+// credits from a 9-credit session to a 3-credit one takes 81 + 9 to 36 + 36.
+fn moved_square_sum(
+    loads: &[u32],
+    from: usize,
+    to: usize,
+    credits: u32,
+    cap: u32,
+) -> Option<u64> {
+    let mut moved = loads.to_vec();
+    moved[from - 1] -= credits;
+    moved[to - 1] += credits;
+    (moved[to - 1] <= cap).then(|| load_square_sum(&moved))
+}
+
+// The move's full verdict, or `None` if anything refuses it. Every tree is
+// re-evaluated, not just the mover's and its dependents': the search's
+// incremental check is sound only because placements are added and never
+// moved, so a move can falsify a tree the referencing map would never
+// revisit. `finalize` then re-derives the solution — its assumed operands
+// depend on which branch of an `any` node holds, which a move can change.
+fn moved_solution(
+    chosen: &[usize],
+    index: usize,
+    session: usize,
+    ctx: &SearchCtx,
+    cache: &mut FeasibilityCache,
+) -> Option<Solution> {
+    let mut moved = chosen.to_vec();
+    moved[index] = session;
+    let trees_hold = (0..ctx.candidates.len()).all(|evaluated| {
+        match &ctx.candidates[evaluated].tree {
+            None => true,
+            Some(tree) => {
+                let eval_ctx = EvalCtx {
+                    ctx,
+                    chosen: &moved,
+                    evaluated,
+                    complete: true,
+                };
+                eval(tree, &eval_ctx) != Verdict::False
+            }
+        }
+    });
+    // the source session can only lose a course, and the weekly veto is
+    // monotone: only the destination needs re-checking
+    if !trees_hold || !weekly_admits(&moved, index, ctx, cache) {
+        return None;
+    }
+    finalize(&moved, ctx)
+}
+
 // One extension step: try every session of the next course's domain, keep
 // the children that survive the cheap structural filters — capacity,
 // precedence, then the memoized weekly veto (costliest last). Children are
@@ -1927,6 +2088,7 @@ mod tests {
         allow_unplaced: bool,
         allow_credit_shortfall: bool,
         minimize_seed_distance: bool,
+        balance: bool,
     }
 
     impl Inputs {
@@ -1947,11 +2109,12 @@ mod tests {
                 allow_unplaced: false,
                 allow_credit_shortfall: false,
                 minimize_seed_distance: false,
+                balance: false,
             }
         }
 
-        // the seed and the minimization it drives, so a test names what
-        // it is exercising instead of poking three fields
+        // the seed and the two behaviours it drives, so a test names what
+        // it is exercising instead of poking four fields
         fn seed(mut self, entries: &[(&str, usize)]) -> Self {
             self.seed = entries
                 .iter()
@@ -1962,6 +2125,11 @@ mod tests {
 
         fn minimize(mut self) -> Self {
             self.minimize_seed_distance = true;
+            self
+        }
+
+        fn balance(mut self) -> Self {
+            self.balance = true;
             self
         }
 
@@ -1982,6 +2150,7 @@ mod tests {
                 allow_unplaced: self.allow_unplaced,
                 allow_credit_shortfall: self.allow_credit_shortfall,
                 minimize_seed_distance: self.minimize_seed_distance,
+                balance: self.balance,
             }
         }
 
@@ -2027,6 +2196,18 @@ mod tests {
             .collect();
         all.sort();
         all
+    }
+
+    // the first solution's credit load per session — every test course
+    // weighs 3, so the shape of the grid reads straight off the numbers
+    fn session_credits(placement: &Placement, sessions: usize) -> Vec<u32> {
+        placement.solutions[0].placement.values().fold(
+            vec![0u32; sessions],
+            |mut loads, &session| {
+                loads[session - 1] += 3;
+                loads
+            },
+        )
     }
 
     fn pairs(entries: &[(&str, usize)]) -> Vec<(String, usize)> {
@@ -2809,6 +2990,7 @@ mod tests {
             allow_unplaced: false,
             allow_credit_shortfall: false,
             minimize_seed_distance: false,
+            balance: false,
         };
         let candidates =
             build_candidates(&request).unwrap_or_else(|e| panic!("{e}"));
@@ -2924,6 +3106,7 @@ mod tests {
             allow_unplaced: false,
             allow_credit_shortfall: true,
             minimize_seed_distance: false,
+            balance: false,
         };
         let candidates =
             build_candidates(&request).unwrap_or_else(|e| panic!("{e}"));
@@ -3843,6 +4026,115 @@ mod tests {
             vec![4, 3, 2, 1],
             "as late as possible, to earn the most credits before the leaf"
         );
+    }
+
+    // --- the greedy balancing of a first placement (ADR
+    // --- `2026-08-equilibrage-glouton-du-placement-initial`) ---
+
+    #[test]
+    fn an_initial_placement_spreads_the_load_over_the_tail() {
+        let courses = vec![
+            anytime("A-1", "monday"),
+            anytime("B-2", "tuesday"),
+            anytime("C-3", "wednesday"),
+            anytime("D-4", "thursday"),
+        ];
+        let mut inputs = Inputs::new(&FALL_WINTER, courses);
+        inputs.credit_cap = 9;
+        inputs.max_solutions = 1;
+
+        // the value order fills the earliest session to the cap: 9 then 3
+        assert_eq!(session_credits(&inputs.solve(), 2), vec![9, 3]);
+        assert_eq!(
+            session_credits(&inputs.balance().solve(), 2),
+            vec![6, 6],
+            "the descent evens the same courses over the same horizon"
+        );
+    }
+
+    #[test]
+    fn balancing_respects_precedence_cap_and_seasons() {
+        let courses = vec![
+            anytime("P-1", "monday"),
+            with_prereq("Q-2", "tuesday", &parsed(r#""P-1""#)),
+            anytime("R-3", "wednesday"),
+            fall_only("F-4", "thursday"),
+            anytime("S-5", "friday"),
+        ];
+        let mut inputs = Inputs::new(&FALL_WINTER, courses).balance();
+        inputs.credit_cap = 12;
+        inputs.max_solutions = 1;
+
+        let solution = &inputs.solve().solutions[0];
+        assert_eq!(
+            solution.placement["P-1"], 1,
+            "moving P-1 to session 2 would sit it beside its own dependent"
+        );
+        assert_eq!(solution.placement["Q-2"], 2);
+        assert_eq!(
+            solution.placement["F-4"], 1,
+            "a fall-only course has no winter session to move to"
+        );
+        assert_eq!(
+            solution.placement["R-3"], 2,
+            "the first admissible mover takes the move"
+        );
+        assert_eq!(solution.placement["S-5"], 1);
+    }
+
+    #[test]
+    fn balancing_refuses_a_move_the_weekly_veto_blocks() {
+        // A-1 and D-4 share a slot: the move that would balance session 1
+        // is exactly the one that puts them in the same session
+        let courses = vec![
+            anytime("A-1", "tuesday"),
+            anytime("B-2", "wednesday"),
+            anytime("C-3", "thursday"),
+            anytime("D-4", "tuesday"),
+        ];
+        let mut inputs = Inputs::new(&FALL_WINTER, courses).balance();
+        inputs.credit_cap = 9;
+        inputs.max_solutions = 1;
+
+        let placement = inputs.solve();
+        let solution = &placement.solutions[0];
+        assert_eq!(solution.placement["A-1"], 1);
+        assert_eq!(solution.placement["B-2"], 2, "the next mover down");
+        assert_eq!(session_credits(&placement, 2), vec![6, 6]);
+    }
+
+    #[test]
+    fn balancing_never_moves_a_pinned_course() {
+        let courses = vec![
+            anytime("A-1", "monday"),
+            anytime("B-2", "tuesday"),
+            anytime("C-3", "wednesday"),
+            anytime("D-4", "thursday"),
+        ];
+        let mut inputs = Inputs::new(&FALL_WINTER, courses).balance();
+        inputs.credit_cap = 9;
+        inputs.max_solutions = 1;
+        inputs.pinned = BTreeMap::from([("A-1".to_string(), 1)]);
+
+        let placement = inputs.solve();
+        assert_eq!(
+            placement.solutions[0].placement["A-1"], 1,
+            "a pin is the student's own act, never a balancing target"
+        );
+        assert_eq!(session_credits(&placement, 2), vec![6, 6]);
+    }
+
+    #[test]
+    fn balancing_an_infeasible_request_changes_nothing() {
+        // one session, one seat, two courses: the descent has no solution
+        // to walk from and says so instead of reaching into an empty list
+        let courses =
+            vec![anytime("A-1", "monday"), anytime("B-2", "tuesday")];
+        let mut inputs = Inputs::new(&[Season::Fall], courses).balance();
+        inputs.credit_cap = 3;
+        let placement = inputs.solve();
+        assert!(placement.solutions.is_empty());
+        assert!(placement.blocked.is_empty());
     }
 
     // --- flatten: bounded, loud when exceeded ---

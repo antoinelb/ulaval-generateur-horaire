@@ -153,10 +153,12 @@ fn place_escalating(
     // true once a collision forces a course out of its seat — a first
     // solution merely resembles the seed where nothing pushed back (ADR
     // `2026-08-b-minimise-la-distance-au-seed`). With no seed there is
-    // nothing to stay near, and the pass runs exactly as before.
+    // nothing to stay near, and the balancing pass shapes the first grid
+    // instead (ADR `2026-08-equilibrage-glouton-du-placement-initial`).
     let minimize = !request.seed.is_empty();
     let exact = place(&PlacementRequest {
         minimize_seed_distance: minimize,
+        balance: !minimize,
         ..*request
     })?;
     if !exact.solutions.is_empty() {
@@ -374,11 +376,12 @@ fn with_request<T>(
     };
     ask(&PlacementRequest {
         // proving stays proving: only `generate` escalates, and it says so
-        // by passing `place_escalating` as its `ask` — minimizing the
-        // distance to the seed is its call to make, per pass
+        // by passing `place_escalating` as its `ask` — the two search
+        // behaviours are its call to make, per pass
         allow_unplaced: false,
         allow_credit_shortfall: false,
         minimize_seed_distance: false,
+        balance: false,
         sessions,
         credit_cap: input.credit_cap,
         concomitant: input.concomitant,
@@ -724,6 +727,32 @@ mod tests {
             generate(&seeded, &courses).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(report.placement.solutions[0].placement["T-9000"], 2);
         assert_eq!(report.credit_shortfalls.len(), 1);
+    }
+
+    // No seed means no grid to stay near: the first proposal is spread
+    // instead of stacked into the earliest sessions (ADR
+    // `2026-08-equilibrage-glouton-du-placement-initial`).
+    #[test]
+    fn an_initial_generation_balances_when_no_seed_exists() {
+        let query: OrganigrammeInput = serde_json::from_str(
+            r#"{"start":"fall","study_sessions":2,"credit_cap":9,
+                "electives":["C-1000","C-1001","C-1002","C-1003"]}"#,
+        )
+        .unwrap_or_else(|e| panic!("input literal: {e}"));
+        let report = generate(&query, &plain_courses())
+            .unwrap_or_else(|e| panic!("{e}"));
+        let loads = report.placement.solutions[0].placement.values().fold(
+            vec![0u32; 3],
+            |mut loads, &session| {
+                loads[session - 1] += 3;
+                loads
+            },
+        );
+        assert_eq!(
+            loads,
+            vec![6, 6, 0],
+            "the same four courses, evened over the two study sessions"
+        );
     }
 
     #[test]
