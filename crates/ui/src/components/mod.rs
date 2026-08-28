@@ -598,6 +598,7 @@ struct RestoredState {
 fn restore_state() -> RestoredState {
     let plan = persist::restore_plan(
         crate::browser::local_get(persist::PLAN_KEY).as_deref(),
+        state::semester_of_epoch_ms(crate::browser::now_epoch_ms()),
     );
     let view = persist::restore_view(
         crate::browser::local_get(persist::VIEW_KEY).as_deref(),

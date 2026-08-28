@@ -231,8 +231,16 @@ fn ResetButton() -> Element {
                     .program
                     .as_ref()
                     .map(crate::persist::snapshot_key);
+                // repartir de zéro, mais jamais dans le passé : le
+                // « Début » d'usine est un A26 en dur (ADR
+                // `2026-08-debut-ancre-sur-lhorloge`)
+                let start = crate::state::next_admission_semester(
+                    crate::state::semester_of_epoch_ms(
+                        crate::browser::now_epoch_ms(),
+                    ),
+                );
                 super::edit_plan(plan, history, "Réinitialisation", |plan| {
-                    *plan = Plan::default();
+                    *plan = Plan { start, ..Plan::default() };
                 });
                 if let Some(key) = shelf {
                     crate::browser::local_remove(&key);

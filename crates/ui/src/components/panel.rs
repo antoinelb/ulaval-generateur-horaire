@@ -223,6 +223,9 @@ fn ProgramPicker() -> Element {
                                         choice,
                                         stored.as_deref(),
                                         study_sessions,
+                                        state::semester_of_epoch_ms(
+                                            crate::browser::now_epoch_ms(),
+                                        ),
                                     );
                                     super::swap_document(
                                         plan,
@@ -1031,15 +1034,15 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
     let alerts = use_context::<Signal<Vec<super::Alert>>>();
     let mut horizon_epoch = use_signal(|| 0usize);
     let start = plan.read().start.to_string();
-    // a relevé Capsule import (`capsule::apply_to_plan`) can anchor `start`
-    // well outside this fixed A24-A31 window — routine for a 4th/5th-year
-    // student, guaranteed for one with ULaval credits from before it — so
-    // the option list always widens to include the actual year, never just
-    // the default span (else `selected` matches nothing and the select
-    // silently shows the wrong session)
-    let start_year = plan.read().start.year % 100;
-    let year_lo = start_year.min(24);
-    let year_hi = start_year.max(31);
+    // the span follows the real clock instead of a frozen A24-A31 window,
+    // and always widens to the plan's own start — a relevé Capsule import
+    // (`capsule::apply_to_plan`) anchors it years back for a 4th/5th-year
+    // student, and an option list missing that year would leave `selected`
+    // matching nothing and the select silently showing the wrong session
+    let today =
+        crate::state::semester_of_epoch_ms(crate::browser::now_epoch_ms());
+    let (year_lo, year_hi) =
+        state::start_year_window(plan.read().start, today);
     let study_sessions = plan.read().study_sessions;
     let horizon_floor = state::horizon_floor(&plan.read());
     let credit_cap = plan.read().credit_cap;

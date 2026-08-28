@@ -135,10 +135,14 @@ pub fn fresh_plan(
     start: Semester,
     choice: ProgramChoice,
     study_sessions: usize,
+    today: Semester,
 ) -> Plan {
     Plan {
         program: Some(choice),
-        start,
+        // a document nobody has dated yet never opens in the past (ADR
+        // `2026-08-debut-ancre-sur-lhorloge`) — an explicit past start
+        // (relevé Capsule, lien partagé, réglage manuel) never comes here
+        start: floor_start(start, today),
         study_sessions,
         ..Plan::default()
     }
@@ -266,6 +270,43 @@ pub fn semester_rank(semester: Semester) -> (u16, u8) {
 // strictly before, in real time
 pub fn semester_precedes(before: Semester, after: Semester) -> bool {
     semester_rank(before) < semester_rank(after)
+}
+
+// The session a student deciding today would be admitted into. No bac
+// admits in an été (`possible_semester_start` only ever reads « A » or
+// « H »), so a summer clock snaps to the automne of its own civil year;
+// an automne and an hiver are already their own admission session.
+pub fn next_admission_semester(today: Semester) -> Semester {
+    match today.season {
+        Season::Summer => Semester {
+            season: Season::Fall,
+            year: today.year,
+        },
+        _ => today,
+    }
+}
+
+// Raise-only: a « Début » already at or after the clock is left exactly as
+// it is — only a start nobody chose, inherited from the factory default,
+// gets pulled up to the next admission session.
+pub fn floor_start(start: Semester, today: Semester) -> Semester {
+    let floor = next_admission_semester(today);
+    if semester_precedes(start, floor) {
+        floor
+    } else {
+        start
+    }
+}
+
+// The « Début » selector's span, in the two-digit years the options are
+// spelled with. It always covers the plan's own start — a relevé Capsule
+// can anchor it years back, and an option list missing it would leave the
+// select silently showing the wrong session — and always reaches five
+// years past the clock, so there is room to plan ahead.
+pub fn start_year_window(start: Semester, today: Semester) -> (u16, u16) {
+    let start_year = start.year % 100;
+    let today_year = today.year % 100;
+    (start_year.min(today_year), start_year.max(today_year + 5))
 }
 
 // --- what one session holds ----------------------------------------------
@@ -717,8 +758,8 @@ mod tests {
             concentration: Some("Approche généraliste".to_string()),
             profile: None,
         };
-        let fresh = fresh_plan(start, choice.clone(), 6);
-        assert_eq!(fresh.program, Some(choice));
+        let fresh = fresh_plan(start, choice.clone(), 6, semester("A26"));
+        assert_eq!(fresh.program, Some(choice.clone()));
         assert_eq!(fresh.start, start);
         assert_eq!(fresh.study_sessions, 6, "the passed count lands");
         // everything else is the default — field by field, so a new Plan
@@ -731,6 +772,58 @@ mod tests {
                 ..fresh
             },
             Plan::default()
+        );
+        // a start the clock has walked past is nobody's choice: the fresh
+        // document opens on the next admission session instead
+        let dated = fresh_plan(semester("A26"), choice, 6, semester("H28"));
+        assert_eq!(dated.start, semester("H28"));
+    }
+
+    #[test]
+    fn next_admission_semester_snaps_a_summer_to_its_fall() {
+        assert_eq!(
+            next_admission_semester(semester("E27")),
+            semester("A27"),
+            "no bac admits in an été — the automne of the same civil year"
+        );
+        assert_eq!(next_admission_semester(semester("A27")), semester("A27"));
+        assert_eq!(next_admission_semester(semester("H27")), semester("H27"));
+    }
+
+    #[test]
+    fn floor_start_raises_only_a_past_start() {
+        let today = semester("A27");
+        assert_eq!(floor_start(semester("A26"), today), today, "raised");
+        assert_eq!(floor_start(semester("H27"), today), today, "raised");
+        assert_eq!(
+            floor_start(semester("H28"), today),
+            semester("H28"),
+            "a start already ahead of the clock is left alone"
+        );
+        assert_eq!(floor_start(today, today), today, "the clock itself");
+        // an été clock floors on its own automne, not on the été
+        assert_eq!(
+            floor_start(semester("H27"), semester("E27")),
+            semester("A27")
+        );
+    }
+
+    #[test]
+    fn start_year_window_always_covers_start_and_clock() {
+        assert_eq!(
+            start_year_window(semester("A26"), semester("A26")),
+            (26, 31),
+            "five years of headroom past the clock"
+        );
+        assert_eq!(
+            start_year_window(semester("H22"), semester("A27")),
+            (22, 32),
+            "a relevé anchored years back widens the low end"
+        );
+        assert_eq!(
+            start_year_window(semester("A40"), semester("A27")),
+            (27, 40),
+            "a start past the headroom widens the high end"
         );
     }
 
