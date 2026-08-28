@@ -35,8 +35,20 @@ pub fn encode_plan(plan: &Plan) -> String {
     encode(plan)
 }
 
-pub fn restore_plan(stored: Option<&str>) -> Restored<Plan> {
+pub fn restore_plan(
+    stored: Option<&str>,
+    today: ulaval_scheduler_core::Semester,
+) -> Restored<Plan> {
     let mut restored: Restored<Plan> = restore(stored, "du plan");
+    // A first visit, or a save so damaged it restarted at the factory
+    // default: `Plan::default().start` is a hard-coded A26 that the clock
+    // walks past, and « Début » would open in the past. Only the *exact*
+    // factory plan is re-dated — anything the student actually saved,
+    // past start included, is his own (ADR
+    // `2026-08-debut-ancre-sur-lhorloge`).
+    if restored.state == Plan::default() {
+        restored.state.start = crate::state::next_admission_semester(today);
+    }
     // heal saves from before the horizon rule: a stray seat beyond the
     // horizon made verify refuse the whole plan (« GEX-2001 is pinned to
     // session 11, outside 1..=9 », 2026-08-26) — re-asserting the saved
@@ -232,9 +244,10 @@ pub fn enter_document(
     choice: crate::state::ProgramChoice,
     stored: Option<&str>,
     study_sessions: usize,
+    today: ulaval_scheduler_core::Semester,
 ) -> DocumentSwap {
     let stash = stash_of(current);
-    let restored = restore_plan(stored);
+    let restored = restore_plan(stored, today);
     let mut next = restored.state;
     let mut notes = restored.notes;
     match next.program.take() {
@@ -266,6 +279,7 @@ pub fn enter_document(
                 current.start,
                 choice,
                 study_sessions,
+                today,
             );
         }
     }
@@ -553,6 +567,11 @@ fn share_into(
         concomitant: state.concomitant,
         preparatory_done: state.preparatory_done,
         electives: state.electives,
+        // the share frame is frozen (ADR
+        // `2026-08-trame-de-partage-unique-avant-deploiement`) and carries
+        // no origin tags: a shared organigramme's electives are judged by
+        // coverage alone at the next block change
+        elective_origins: BTreeMap::new(),
         pinned_sessions: state
             .pinned_sessions
             .into_iter()
@@ -646,11 +665,22 @@ mod tests {
 
     use super::*;
 
+    fn semester(raw: &str) -> ulaval_scheduler_core::Semester {
+        raw.parse().unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    // The clock most tests run against — deliberately the same session as
+    // `Plan::default().start`, so the anchoring changes nothing they assert
+    // and the tests that *do* prove it name their own clock.
+    fn today() -> ulaval_scheduler_core::Semester {
+        semester("A26")
+    }
+
     #[test]
     fn a_plan_and_a_view_round_trip_through_their_envelopes() {
         let mut plan = Plan::default();
         plan.electives.push("GEX-1000".to_string());
-        let restored = restore_plan(Some(&encode_plan(&plan)));
+        let restored = restore_plan(Some(&encode_plan(&plan)), today());
         assert_eq!(restored.state, plan);
         assert!(restored.notes.is_empty());
         assert!(restored.backup.is_none());
@@ -665,10 +695,57 @@ mod tests {
 
     #[test]
     fn a_first_visit_restores_fresh_and_silent() {
-        let restored = restore_plan(None);
+        let restored = restore_plan(None, today());
         assert_eq!(restored.state, Plan::default());
         assert!(restored.notes.is_empty());
         assert!(restored.backup.is_none());
+    }
+
+    #[test]
+    fn a_first_visit_anchors_start_on_the_clock() {
+        // S4 (rapport étudiante 2026-08-27) : « Début » proposait A26 à
+        // une étudiante planifiant en 2028 — un début déjà passé
+        let restored = restore_plan(None, semester("H28"));
+        assert_eq!(restored.state.start, semester("H28"));
+        assert_eq!(
+            Plan {
+                start: Plan::default().start,
+                ..restored.state
+            },
+            Plan::default(),
+            "only the start moves"
+        );
+        // an été clock admits into its own automne
+        assert_eq!(
+            restore_plan(None, semester("E28")).state.start,
+            semester("A28")
+        );
+    }
+
+    #[test]
+    fn an_unreadable_save_restarts_on_the_clock() {
+        let restored = restore_plan(Some("pas du json"), semester("A29"));
+        assert_eq!(
+            restored.state.start,
+            semester("A29"),
+            "a save that restarted at the factory default is re-dated too"
+        );
+        assert_eq!(restored.notes.len(), 1, "still loud");
+        assert_eq!(restored.backup.as_deref(), Some("pas du json"));
+    }
+
+    #[test]
+    fn a_stored_past_start_survives_restore() {
+        // an explicit past start — a relevé Capsule, a shared link, a hand
+        // setting — is the student's own and stays sovereign
+        let stored = Plan {
+            start: semester("A22"),
+            completed_sessions: 4,
+            ..Plan::default()
+        };
+        let restored =
+            restore_plan(Some(&encode_plan(&stored)), semester("A29"));
+        assert_eq!(restored.state.start, semester("A22"));
     }
 
     #[test]
@@ -680,7 +757,7 @@ mod tests {
             ("contentless", r#"{"version":1}"#),
             ("incompatible", r#"{"version":1,"state":{"electives":42}}"#),
         ] {
-            let restored = restore_plan(Some(raw));
+            let restored = restore_plan(Some(raw), today());
             assert_eq!(restored.state, Plan::default(), "{name}");
             assert_eq!(restored.notes.len(), 1, "{name}");
             assert!(restored.notes[0].contains("conservée"), "{name}");
@@ -709,7 +786,7 @@ mod tests {
     fn unknown_fields_are_named_and_the_save_backed_up() {
         let raw = r#"{"version":1,"state":{"credit_cap":12,
                        "futur_champ":true,"autre":1}}"#;
-        let restored = restore_plan(Some(raw));
+        let restored = restore_plan(Some(raw), today());
         assert_eq!(restored.state.credit_cap, 12, "known fields restored");
         assert!(restored.notes[0].contains("autre, futur_champ"));
         assert!(restored.backup.is_some());
@@ -718,7 +795,7 @@ mod tests {
     #[test]
     fn an_absent_field_restores_its_default_without_noise() {
         let raw = r#"{"version":1,"state":{"credit_cap":12}}"#;
-        let restored = restore_plan(Some(raw));
+        let restored = restore_plan(Some(raw), today());
         assert_eq!(restored.state.credit_cap, 12);
         assert_eq!(restored.state.study_sessions, 8, "defaulted");
         assert!(restored.notes.is_empty(), "normal evolution, no ceremony");
@@ -739,7 +816,7 @@ mod tests {
             pinned_sessions: BTreeMap::from([("GEX-1000".to_string(), 2)]),
             ..Plan::default()
         };
-        let restored = restore_plan(Some(&encode_plan(&stale)));
+        let restored = restore_plan(Some(&encode_plan(&stale)), today());
         assert!(
             !restored.state.displayed_placement.contains_key("GEX-2001"),
             "the stray seat falls back to « automatique »"
@@ -854,7 +931,11 @@ mod tests {
         let swap = leave_document(&plan);
         let (key, encoded) = swap.stash.expect("a program was open");
         assert_eq!(key, "gh.v1.plan/B-GEX-A26");
-        assert_eq!(restore_plan(Some(&encoded)).state, plan, "shelved whole");
+        assert_eq!(
+            restore_plan(Some(&encoded), today()).state,
+            plan,
+            "shelved whole"
+        );
         // the picker document: nothing placed, nothing counted — only the
         // calendar identity survives (the header-count bug's fix)
         assert_eq!(
@@ -883,7 +964,7 @@ mod tests {
         };
         // a session count unrelated to the shelf's own 6 : the restore arm
         // must ignore it entirely, the shelved value is the truth
-        let swap = enter_document(&picker, click, Some(&encoded), 99);
+        let swap = enter_document(&picker, click, Some(&encoded), 99, today());
         assert_eq!(swap.next, shelved, "restored exactly, the 99 ignored");
         assert!(swap.notes.is_empty());
         assert!(swap.stash.is_none(), "the picker shelves nothing");
@@ -904,6 +985,7 @@ mod tests {
             choice("B-GEX", "A26"),
             Some(&encoded),
             8,
+            today(),
         );
         let restored = swap.next.program.expect("a program");
         assert_eq!(restored.code, "B-GEX");
@@ -918,21 +1000,58 @@ mod tests {
     #[test]
     fn entering_without_a_shelf_starts_fresh_with_the_start_kept() {
         let picker = Plan {
-            start: "H27"
-                .parse::<ulaval_scheduler_core::Semester>()
-                .unwrap_or_else(|e| panic!("{e}")),
+            start: semester("H27"),
             ..Plan::default()
         };
         let click = choice("B-GIN", "H27");
-        let swap = enter_document(&picker, click.clone(), None, 6);
+        let swap = enter_document(&picker, click.clone(), None, 6, today());
         assert_eq!(
             swap.next,
-            crate::state::fresh_plan(picker.start, click, 6),
+            crate::state::fresh_plan(picker.start, click, 6, today()),
             "defaults plus the click, calendar identity and sessions carried"
         );
         assert_eq!(swap.next.study_sessions, 6, "the passed count lands");
         assert!(swap.notes.is_empty());
         assert!(swap.backup.is_none());
+    }
+
+    #[test]
+    fn enter_document_floors_a_past_start_for_a_fresh_document() {
+        // the picker document carries the start of whatever was left; a
+        // program chosen years later must not open in that past
+        let picker = Plan {
+            start: semester("A26"),
+            ..Plan::default()
+        };
+        let swap = enter_document(
+            &picker,
+            choice("B-GIN", "H27"),
+            None,
+            6,
+            semester("H29"),
+        );
+        assert_eq!(swap.next.start, semester("H29"));
+    }
+
+    #[test]
+    fn enter_document_keeps_a_shelved_documents_own_start() {
+        // a document the student filled in 2022 comes back exactly as it
+        // was — the clock never rewrites a real save
+        let mut shelved = Plan {
+            start: semester("A22"),
+            completed_sessions: 6,
+            ..Plan::default()
+        };
+        shelved.program = Some(choice("B-GEX", "A26"));
+        let encoded = encode_plan(&shelved);
+        let swap = enter_document(
+            &Plan::default(),
+            choice("B-GEX", "A26"),
+            Some(&encoded),
+            8,
+            semester("H29"),
+        );
+        assert_eq!(swap.next.start, semester("A22"));
     }
 
     #[test]
@@ -945,7 +1064,7 @@ mod tests {
             concentration: Some("Aéronautique et aérospatiale".to_string()),
             ..choice("B-GPH", "A26")
         };
-        let swap = enter_document(&picker, click, None, 8);
+        let swap = enter_document(&picker, click, None, 8, today());
         assert_eq!(swap.notes.len(), 1);
         assert!(
             swap.notes[0].contains("Aéronautique et aérospatiale"),
@@ -959,11 +1078,16 @@ mod tests {
     fn a_damaged_shelf_starts_fresh_loudly_and_keeps_the_copy() {
         let picker = Plan::default();
         let click = choice("B-GIN", "H27");
-        let swap =
-            enter_document(&picker, click.clone(), Some("pas du json"), 6);
+        let swap = enter_document(
+            &picker,
+            click.clone(),
+            Some("pas du json"),
+            6,
+            today(),
+        );
         assert_eq!(
             swap.next,
-            crate::state::fresh_plan(picker.start, click, 6)
+            crate::state::fresh_plan(picker.start, click, 6, today())
         );
         assert_eq!(swap.notes.len(), 1);
         assert!(swap.notes[0].contains("conservée"), "{:?}", swap.notes);
@@ -983,7 +1107,7 @@ mod tests {
         let (key, encoded) =
             import_stash(&current, &other).expect("another vintage");
         assert_eq!(key, "gh.v1.plan/B-GEX-A26");
-        assert_eq!(restore_plan(Some(&encoded)).state, current);
+        assert_eq!(restore_plan(Some(&encoded), today()).state, current);
         // a shared plan with no program still stashes the current one
         assert!(import_stash(&current, &Plan::default()).is_some());
         // a picker current has nothing to stash
@@ -997,15 +1121,21 @@ mod tests {
         let (plan_a, _) = shared_plan();
         let left_a = leave_document(&plan_a);
         let (key_a, stash_a) = left_a.stash.clone().expect("A shelved");
-        let entered_b =
-            enter_document(&left_a.next, choice("B-GIN", "A26"), None, 8);
+        let entered_b = enter_document(
+            &left_a.next,
+            choice("B-GIN", "A26"),
+            None,
+            8,
+            today(),
+        );
         let mut plan_b = entered_b.next;
         plan_b.displayed_placement.insert("IFT-1000".to_string(), 1);
         let left_b = leave_document(&plan_b);
         let (key_b, _) = left_b.stash.clone().expect("B shelved");
         assert_ne!(key_a, key_b, "two documents, two shelves");
         let choice_a = plan_a.program.clone().expect("A has a program");
-        let back = enter_document(&left_b.next, choice_a, Some(&stash_a), 8);
+        let back =
+            enter_document(&left_b.next, choice_a, Some(&stash_a), 8, today());
         assert_eq!(back.next, plan_a, "byte-identical document");
     }
 

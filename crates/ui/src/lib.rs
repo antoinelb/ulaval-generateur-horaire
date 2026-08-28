@@ -4,6 +4,7 @@
 // natively; the view and the browser glue exist only under wasm32 — the
 // same split as `wasm/src/boundary.rs`. `main.rs` only launches.
 
+pub mod alerts;
 pub mod capsule;
 pub mod data;
 pub mod export;

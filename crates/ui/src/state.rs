@@ -40,6 +40,13 @@ pub struct Plan {
     pub preparatory_done: bool,
     // typed additions to the program's list, in the order they were added
     pub electives: Vec<String>,
+    // code → the block it was chosen under: « c » (concentration) or
+    // « f » (profil). Changing that block takes its electives away with
+    // it, even ones the new scope still covers (ADR
+    // `2026-08-electifs-choisis-sous-le-bloc-partent-avec-lui`). Absent
+    // from an older save and from a shared link: those electives fall back
+    // to coverage alone, which is what `panel::scope_orphans` decides.
+    pub elective_origins: BTreeMap<String, String>,
     // code → 1-based session: the student's explicit organigramme acts
     pub pinned_sessions: BTreeMap<String, usize>,
     // the organigramme as shown: pins plus the last accepted proposal —
@@ -83,6 +90,7 @@ impl Default for Plan {
             concomitant: false,
             preparatory_done: true,
             electives: Vec::new(),
+            elective_origins: BTreeMap::new(),
             pinned_sessions: BTreeMap::new(),
             displayed_placement: BTreeMap::new(),
             chosen: BTreeMap::new(),
@@ -135,10 +143,14 @@ pub fn fresh_plan(
     start: Semester,
     choice: ProgramChoice,
     study_sessions: usize,
+    today: Semester,
 ) -> Plan {
     Plan {
         program: Some(choice),
-        start,
+        // a document nobody has dated yet never opens in the past (ADR
+        // `2026-08-debut-ancre-sur-lhorloge`) — an explicit past start
+        // (relevé Capsule, lien partagé, réglage manuel) never comes here
+        start: floor_start(start, today),
         study_sessions,
         ..Plan::default()
     }
@@ -266,6 +278,43 @@ pub fn semester_rank(semester: Semester) -> (u16, u8) {
 // strictly before, in real time
 pub fn semester_precedes(before: Semester, after: Semester) -> bool {
     semester_rank(before) < semester_rank(after)
+}
+
+// The session a student deciding today would be admitted into. No bac
+// admits in an été (`possible_semester_start` only ever reads « A » or
+// « H »), so a summer clock snaps to the automne of its own civil year;
+// an automne and an hiver are already their own admission session.
+pub fn next_admission_semester(today: Semester) -> Semester {
+    match today.season {
+        Season::Summer => Semester {
+            season: Season::Fall,
+            year: today.year,
+        },
+        _ => today,
+    }
+}
+
+// Raise-only: a « Début » already at or after the clock is left exactly as
+// it is — only a start nobody chose, inherited from the factory default,
+// gets pulled up to the next admission session.
+pub fn floor_start(start: Semester, today: Semester) -> Semester {
+    let floor = next_admission_semester(today);
+    if semester_precedes(start, floor) {
+        floor
+    } else {
+        start
+    }
+}
+
+// The « Début » selector's span, in the two-digit years the options are
+// spelled with. It always covers the plan's own start — a relevé Capsule
+// can anchor it years back, and an option list missing it would leave the
+// select silently showing the wrong session — and always reaches five
+// years past the clock, so there is room to plan ahead.
+pub fn start_year_window(start: Semester, today: Semester) -> (u16, u16) {
+    let start_year = start.year % 100;
+    let today_year = today.year % 100;
+    (start_year.min(today_year), start_year.max(today_year + 5))
 }
 
 // --- what one session holds ----------------------------------------------
@@ -456,6 +505,10 @@ pub fn horizon_floor_note(plan: &Plan) -> String {
 // slipped in from.
 pub fn purge_codes(plan: &mut Plan, codes: &[String]) {
     plan.electives.retain(|code| !codes.contains(code));
+    // the tag dies with the course: re-taking it later is a fresh choice,
+    // under whatever block the student is looking at then
+    plan.elective_origins
+        .retain(|code, _| !codes.contains(code));
     plan.pinned_sessions.retain(|code, _| !codes.contains(code));
     plan.displayed_placement
         .retain(|code, _| !codes.contains(code));
@@ -465,6 +518,37 @@ pub fn purge_codes(plan: &mut Plan, codes: &[String]) {
     for pins in plan.chosen.values_mut() {
         pins.retain(|code, _| !codes.contains(code));
     }
+}
+
+// Remember which block an elective was chosen under, so changing that
+// block can take it away again. `None` — a ribbon drag, a grid move, an
+// elective the solver injected — is a no-op that never erases an existing
+// tag: moving a course is not choosing it again.
+pub fn tag_elective_origin(plan: &mut Plan, code: &str, origin: Option<char>) {
+    let Some(origin) = origin else {
+        return;
+    };
+    plan.elective_origins
+        .insert(code.to_string(), origin.to_string());
+}
+
+// The tag a course carries right now — for a caller that purges its
+// traces and lays it down again in one act (`place_course`): the purge
+// takes the tag with everything else, and a move must give it back.
+pub fn elective_origin(plan: &Plan, code: &str) -> Option<char> {
+    plan.elective_origins
+        .get(code)
+        .and_then(|origin| origin.chars().next())
+}
+
+// the codes chosen under one block, sorted (a `BTreeMap` walk)
+pub fn scoped_electives(plan: &Plan, prefix: char) -> Vec<String> {
+    let prefix = prefix.to_string();
+    plan.elective_origins
+        .iter()
+        .filter(|(_, origin)| **origin == prefix)
+        .map(|(code, _)| code.clone())
+        .collect()
 }
 
 // Changing the concentration (prefix 'c') or the profile ('f') retires the
@@ -492,6 +576,11 @@ pub fn purge_scope_grants(plan: &mut Plan, prefix: char) -> Vec<String> {
 pub struct History {
     undo: Vec<(String, Plan)>,
     redo: Vec<(String, Plan)>,
+    // the plan on screen was put back by an undo/redo, not built by an
+    // edit: the automatic repair must leave it exactly as restored, or
+    // « Annuler » takes two clicks (ADR
+    // `2026-08-annuler-fige-l-ecran-restaure`). Any real edit re-arms it.
+    restored: bool,
 }
 
 impl History {
@@ -501,6 +590,10 @@ impl History {
 
     pub fn redo_label(&self) -> Option<&str> {
         self.redo.last().map(|(label, _)| label.as_str())
+    }
+
+    pub fn restored(&self) -> bool {
+        self.restored
     }
 }
 
@@ -515,6 +608,7 @@ pub fn apply(
         history.undo.remove(0);
     }
     history.redo.clear();
+    history.restored = false;
     edit(plan);
 }
 
@@ -522,6 +616,7 @@ pub fn undo(plan: &mut Plan, history: &mut History) -> Option<String> {
     let (label, previous) = history.undo.pop()?;
     history.redo.push((label.clone(), plan.clone()));
     *plan = previous;
+    history.restored = true;
     Some(label)
 }
 
@@ -529,6 +624,7 @@ pub fn redo(plan: &mut Plan, history: &mut History) -> Option<String> {
     let (label, next) = history.redo.pop()?;
     history.undo.push((label.clone(), plan.clone()));
     *plan = next;
+    history.restored = true;
     Some(label)
 }
 
@@ -705,8 +801,8 @@ mod tests {
             concentration: Some("Approche généraliste".to_string()),
             profile: None,
         };
-        let fresh = fresh_plan(start, choice.clone(), 6);
-        assert_eq!(fresh.program, Some(choice));
+        let fresh = fresh_plan(start, choice.clone(), 6, semester("A26"));
+        assert_eq!(fresh.program, Some(choice.clone()));
         assert_eq!(fresh.start, start);
         assert_eq!(fresh.study_sessions, 6, "the passed count lands");
         // everything else is the default — field by field, so a new Plan
@@ -719,6 +815,58 @@ mod tests {
                 ..fresh
             },
             Plan::default()
+        );
+        // a start the clock has walked past is nobody's choice: the fresh
+        // document opens on the next admission session instead
+        let dated = fresh_plan(semester("A26"), choice, 6, semester("H28"));
+        assert_eq!(dated.start, semester("H28"));
+    }
+
+    #[test]
+    fn next_admission_semester_snaps_a_summer_to_its_fall() {
+        assert_eq!(
+            next_admission_semester(semester("E27")),
+            semester("A27"),
+            "no bac admits in an été — the automne of the same civil year"
+        );
+        assert_eq!(next_admission_semester(semester("A27")), semester("A27"));
+        assert_eq!(next_admission_semester(semester("H27")), semester("H27"));
+    }
+
+    #[test]
+    fn floor_start_raises_only_a_past_start() {
+        let today = semester("A27");
+        assert_eq!(floor_start(semester("A26"), today), today, "raised");
+        assert_eq!(floor_start(semester("H27"), today), today, "raised");
+        assert_eq!(
+            floor_start(semester("H28"), today),
+            semester("H28"),
+            "a start already ahead of the clock is left alone"
+        );
+        assert_eq!(floor_start(today, today), today, "the clock itself");
+        // an été clock floors on its own automne, not on the été
+        assert_eq!(
+            floor_start(semester("H27"), semester("E27")),
+            semester("A27")
+        );
+    }
+
+    #[test]
+    fn start_year_window_always_covers_start_and_clock() {
+        assert_eq!(
+            start_year_window(semester("A26"), semester("A26")),
+            (26, 31),
+            "five years of headroom past the clock"
+        );
+        assert_eq!(
+            start_year_window(semester("H22"), semester("A27")),
+            (22, 32),
+            "a relevé anchored years back widens the low end"
+        );
+        assert_eq!(
+            start_year_window(semester("A40"), semester("A27")),
+            (27, 40),
+            "a start past the headroom widens the high end"
         );
     }
 
@@ -824,6 +972,74 @@ mod tests {
         assert_eq!(plan.manual[&1], ["GEX-1000"]);
         assert!(!plan.chosen[&1].contains_key("MAT-0130"));
         assert!(plan.chosen[&1].contains_key("GEX-1000"));
+    }
+
+    #[test]
+    fn purge_codes_drops_the_origin_tags() {
+        let mut plan = Plan {
+            electives: vec!["FOR-2020".to_string(), "GEX-1000".to_string()],
+            elective_origins: BTreeMap::from([
+                ("FOR-2020".to_string(), "c".to_string()),
+                ("GEX-1000".to_string(), "f".to_string()),
+            ]),
+            ..Plan::default()
+        };
+        purge_codes(&mut plan, &["FOR-2020".to_string()]);
+        assert_eq!(
+            plan.elective_origins,
+            BTreeMap::from([("GEX-1000".to_string(), "f".to_string())]),
+            "re-taking the course later is a fresh choice"
+        );
+    }
+
+    #[test]
+    fn tag_elective_origin_keeps_an_existing_tag_on_none() {
+        let mut plan = Plan::default();
+        tag_elective_origin(&mut plan, "FOR-2020", Some('c'));
+        assert_eq!(plan.elective_origins["FOR-2020"], "c");
+        // a ribbon drag or a grid move: a move is not a re-choice
+        tag_elective_origin(&mut plan, "FOR-2020", None);
+        assert_eq!(plan.elective_origins["FOR-2020"], "c");
+        // an untagged course dragged around stays untagged
+        tag_elective_origin(&mut plan, "GEX-1000", None);
+        assert!(!plan.elective_origins.contains_key("GEX-1000"));
+        // choosing it again under another block moves the tag
+        tag_elective_origin(&mut plan, "FOR-2020", Some('f'));
+        assert_eq!(plan.elective_origins["FOR-2020"], "f");
+        // read back for the purge-then-lay-down move (`place_course`)
+        assert_eq!(elective_origin(&plan, "FOR-2020"), Some('f'));
+        assert_eq!(elective_origin(&plan, "GEX-1000"), None);
+        // a tag corrupted to the empty string names no block
+        plan.elective_origins
+            .insert("GEX-1000".to_string(), String::new());
+        assert_eq!(elective_origin(&plan, "GEX-1000"), None);
+    }
+
+    #[test]
+    fn scoped_electives_reads_only_its_prefix() {
+        let plan = Plan {
+            elective_origins: BTreeMap::from([
+                ("GEX-2000".to_string(), "c".to_string()),
+                ("FOR-2020".to_string(), "c".to_string()),
+                ("ANL-2020".to_string(), "f".to_string()),
+            ]),
+            ..Plan::default()
+        };
+        assert_eq!(scoped_electives(&plan, 'c'), ["FOR-2020", "GEX-2000"]);
+        assert_eq!(scoped_electives(&plan, 'f'), ["ANL-2020"]);
+        assert!(scoped_electives(&plan, 'p').is_empty());
+    }
+
+    #[test]
+    fn an_old_save_without_origins_restores_untagged() {
+        // rétro-compat gh.v1.plan : the field simply defaults
+        let bare: Plan = serde_json::from_str(
+            r#"{"electives":["FOR-2020"],"credit_cap":15}"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(bare.electives, ["FOR-2020"]);
+        assert!(bare.elective_origins.is_empty());
+        assert_eq!(bare.credit_cap, 15);
     }
 
     #[test]
@@ -954,6 +1170,41 @@ mod tests {
             redo(&mut plan, &mut history).as_deref(),
             Some("Ajout de GEX-1000")
         );
+    }
+
+    #[test]
+    fn undo_marks_the_screen_restored_until_the_next_edit() {
+        let mut plan = Plan::default();
+        let mut history = History::default();
+        assert!(!history.restored(), "a fresh history restored nothing");
+        apply(&mut plan, &mut history, "A", |plan| plan.credit_cap = 12);
+        assert!(!history.restored(), "an edit builds the screen");
+        assert_eq!(undo(&mut plan, &mut history).as_deref(), Some("A"));
+        assert!(history.restored(), "the screen comes from the history");
+        apply(&mut plan, &mut history, "B", |plan| plan.credit_cap = 18);
+        assert!(!history.restored(), "a real edit re-arms the repair");
+        undo(&mut plan, &mut history);
+        redo(&mut plan, &mut history);
+        assert!(history.restored(), "redo restores a screen too");
+        // an empty pop changes nothing: the flag only follows a real move
+        let mut empty = History::default();
+        assert_eq!(undo(&mut plan, &mut empty), None);
+        assert!(!empty.restored());
+        assert_eq!(redo(&mut plan, &mut empty), None);
+        assert!(!empty.restored());
+    }
+
+    #[test]
+    fn a_document_swap_rearms_the_repair() {
+        let mut plan = Plan::default();
+        let mut history = History::default();
+        apply(&mut plan, &mut history, "A", |plan| plan.credit_cap = 12);
+        undo(&mut plan, &mut history);
+        assert!(history.restored());
+        // `swap_document` and `import_organigramme` both install a fresh
+        // History: the next document's screen is nobody's restoration
+        history = History::default();
+        assert!(!history.restored(), "the swap re-arms the repair");
     }
 
     #[test]

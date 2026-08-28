@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::{Alert, AlertBody, SolverHandle, SolverState};
+use super::{AlertBody, AlertStack, SolverHandle, SolverState};
 use crate::data::Snapshot;
 use crate::solve;
 use crate::state::{self, History, Plan, View};
@@ -10,7 +10,7 @@ use crate::state::{self, History, Plan, View};
 #[component]
 fn SolverStatus() -> Element {
     let plan = use_context::<Signal<Plan>>();
-    let alerts = use_context::<Signal<Vec<Alert>>>();
+    let alerts = use_context::<Signal<AlertStack>>();
     let solver = use_context::<Signal<SolverState>>();
     let handle = use_context::<SolverHandle>();
     let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
@@ -65,7 +65,7 @@ pub fn HeaderBar() -> Element {
     let Some(snapshot) = read.as_ref() else {
         return rsx! {};
     };
-    let alerts = use_context::<Signal<Vec<Alert>>>();
+    let alerts = use_context::<Signal<AlertStack>>();
     let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
     // note 9: the link carries the whole organigramme — the button lives
     // up here because its scope is everything, not one session's grid
@@ -202,7 +202,7 @@ fn ResetButton() -> Element {
     let plan = use_context::<Signal<Plan>>();
     let mut view = use_context::<Signal<View>>();
     let history = use_context::<Signal<History>>();
-    let alerts = use_context::<Signal<Vec<Alert>>>();
+    let alerts = use_context::<Signal<AlertStack>>();
     let solver = use_context::<Signal<SolverState>>();
     let handle = use_context::<SolverHandle>();
     let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
@@ -231,8 +231,16 @@ fn ResetButton() -> Element {
                     .program
                     .as_ref()
                     .map(crate::persist::snapshot_key);
+                // repartir de zéro, mais jamais dans le passé : le
+                // « Début » d'usine est un A26 en dur (ADR
+                // `2026-08-debut-ancre-sur-lhorloge`)
+                let start = crate::state::next_admission_semester(
+                    crate::state::semester_of_epoch_ms(
+                        crate::browser::now_epoch_ms(),
+                    ),
+                );
                 super::edit_plan(plan, history, "Réinitialisation", |plan| {
-                    *plan = Plan::default();
+                    *plan = Plan { start, ..Plan::default() };
                 });
                 if let Some(key) = shelf {
                     crate::browser::local_remove(&key);
@@ -314,7 +322,7 @@ const SUCCESS_TOAST_MS: u32 = 5_000;
 
 #[component]
 pub fn Toasts() -> Element {
-    let mut alerts = use_context::<Signal<Vec<Alert>>>();
+    let mut alerts = use_context::<Signal<AlertStack>>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     let super::LocalPrograms(local_programs) =
         use_context::<super::LocalPrograms>();
@@ -325,6 +333,7 @@ pub fn Toasts() -> Element {
     use_effect(move || {
         let successes: Vec<u64> = alerts
             .read()
+            .alerts()
             .iter()
             .filter(|alert| matches!(alert.body, AlertBody::Success(_)))
             .map(|alert| alert.key)
@@ -337,11 +346,12 @@ pub fn Toasts() -> Element {
             let mut alerts = alerts;
             spawn(async move {
                 crate::browser::sleep_ms(SUCCESS_TOAST_MS).await;
-                alerts.write().retain(|kept| kept.key != key);
+                // an auto-clear is not a rejection: nothing is memorized
+                alerts.write().retire(|kept| kept.key == key);
             });
         }
     });
-    let all = alerts.read().clone();
+    let all = alerts.read().alerts().to_vec();
     if all.is_empty() {
         return rsx! {};
     }
@@ -377,11 +387,14 @@ pub fn Toasts() -> Element {
                         "toast--success"
                     },
                     // note 12: the whole message is its own dismiss —
-                    // any link inside would stop the propagation
+                    // any link inside would stop the propagation. A real
+                    // rejection: its subject stays silent until its
+                    // wording changes (ADR
+                    // `2026-08-toasts-un-par-sujet-et-rejet-memorise`)
                     onclick: {
                         let key = alert.key;
                         move |_| {
-                            alerts.write().retain(|kept| kept.key != key);
+                            alerts.write().dismiss(key);
                         }
                     },
                     match &alert.body {
@@ -398,7 +411,7 @@ pub fn Toasts() -> Element {
                             }
                         },
                         AlertBody::LocalProgramRemoved(local) => {
-                            let local = local.clone();
+                            let local = (**local).clone();
                             let key = alert.key;
                             rsx! {
                                 span { class: "status-alert-ok",
@@ -418,9 +431,11 @@ pub fn Toasts() -> Element {
                                             alerts,
                                             local.clone(),
                                         );
+                                        // the undo consumed the toast —
+                                        // a retirement, not a rejection
                                         alerts
                                             .write()
-                                            .retain(|kept| kept.key != key);
+                                            .retire(|kept| kept.key == key);
                                     },
                                     "↶ Annuler"
                                 }
@@ -431,9 +446,7 @@ pub fn Toasts() -> Element {
                         class: "status-dismiss",
                         aria_label: "Rejeter ce message",
                         onclick: move |_| {
-                            alerts
-                                .write()
-                                .retain(|kept| kept.key != alert.key);
+                            alerts.write().dismiss(alert.key);
                         },
                         "✕"
                     }

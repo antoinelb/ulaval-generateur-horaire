@@ -15,6 +15,10 @@ Quatre méthodes lui ont été proposées (tiroir ancré à la bande, bande repl
 - **Tension AIR assumée** : ALR-6 interdit qu'une alerte occlude les données vives ; les toasts recouvrent un coin de la grille tant que des messages existent. C'est l'arbitrage explicite d'Antoine — l'occlusion est bornée (un coin, rejetable d'un clic) contre une bande qui déplaçait tout le contenu.
 - **Un doublon rafraîchit, il n'est plus avalé** (révision post-essai, rapport `2026-08-14`) : `push_alert` retire l'exemplaire existant et repousse le message en tête avec une clé neuve — relancer une recherche qui aboutit au même verdict doit répondre visiblement, et il n'y a toujours jamais deux fois le même message (ALR-3). Les clés d'alertes sont un compteur monotone jamais recyclé : une minuterie d'auto-effacement en retard ne peut pas tuer un message neuf qui aurait repris sa clé.
 
+## Amendements
+
+- `2026-08-toasts-un-par-sujet-et-rejet-memorise` : la déduplication par corps ne suffit pas aux notes que le solveur republie à chaque réponse — un **sujet** décide désormais du remplacement, et un rejet se souvient.
+
 ## Alternatives rejetées
 
 - Bande repliée dépliable en place : conforme AIR au plus strict, mais le dépliage repousse encore le contenu pendant la lecture.

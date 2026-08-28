@@ -132,8 +132,10 @@ fn SessionCard(card: RibbonCard) -> Element {
                     return;
                 };
                 dragged.set(None);
+                // a drop is a move, never a choice: it must not tag the
+                // course with a block it was not picked under
                 super::panel::place_course(
-                    plan, history, &code, index, &drop_label, None,
+                    plan, history, &code, index, &drop_label, None, None,
                 );
             },
             div { class: "ribbon-card-head",
@@ -230,8 +232,10 @@ fn SummerStrip(card: RibbonCard) -> Element {
                     return;
                 };
                 dragged.set(None);
+                // a drop is a move, never a choice: it must not tag the
+                // course with a block it was not picked under
                 super::panel::place_course(
-                    plan, history, &code, index, &drop_label, None,
+                    plan, history, &code, index, &drop_label, None, None,
                 );
             },
             span { "{card.label} - {content}" }
