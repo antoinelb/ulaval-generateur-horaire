@@ -1515,6 +1515,10 @@ code {
      hauteur de deux lignes est réservée en tout temps pour que le passage
      à une ou deux lignes ne décale jamais la légende ni la grille */
   min-height: 4.5rem;
+  /* le retour à deux lignes empile les rangées en haut plutôt que de les
+     répartir sur toute la hauteur réservée — une seconde ligne ne doit
+     jamais sembler centrée verticalement dans un vide */
+  align-content: flex-start;
 }
 
 .grid-head h2 {
@@ -1525,8 +1529,19 @@ code {
 }
 
 .grid-status {
+  min-width: 0;
+  flex: 0 1 auto;
   font-size: 0.75rem;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* les boutons d'export ne cèdent jamais de place au statut qui se
+   tronque en premier (`.grid-status` ci-dessus) */
+.grid-head .grid-share {
+  flex: none;
 }
 
 .grid-status--conflict {
@@ -1592,6 +1607,9 @@ code {
 
 .grid-block {
   position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   font: inherit;
   text-align: left;
   border: none;
@@ -1604,18 +1622,40 @@ code {
   color: var(--ink);
 }
 
+.grid-block:focus-visible {
+  z-index: 1;
+}
+
+.grid-block-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .grid-block-title {
+  flex: 1;
+  min-width: 0;
   font-family: var(--font-serif);
   font-weight: 600;
   font-size: 0.75rem;
   line-height: 1.2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .grid-block-detail {
+  flex: none;
   font-size: 0.625rem;
   opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* teinte par cours (ADR 2026-08-couleur-par-cours-plutot-que-matiere) :
@@ -1641,6 +1681,10 @@ code {
   border: 0.09375rem dashed currentColor;
   border-left-width: 0.1875rem;
   opacity: 0.55;
+  /* narrow lanes get a compact label (`ghost_label`), not the padding
+     sized for a full course title */
+  padding: 0.25rem 0.125rem;
+  min-width: 1.375rem;
 }
 
 /* conflit : bordure + hachures diagonales + « ⚠ » textuel (INP-3) */
@@ -1659,13 +1703,13 @@ code {
   font-weight: 600;
 }
 
-/* jeton de plages alternatives : flotte à droite pour céder la place au
-   titre en dessous — celui-ci a déjà overflow:hidden (bloc de 50 min) donc
-   se redimensionne autour plutôt que de le chevaucher (ADR
-   2026-08-jeton-de-plages-alternatives-sur-le-bloc) */
+/* jeton de plages alternatives : dans la rangée `.grid-block-top`, à côté
+   du titre plutôt que par-dessus lui — le titre se comprime en premier
+   (`-webkit-line-clamp`), le jeton garde toujours sa place (ADR
+   2026-08-jeton-de-plages-alternatives-sur-le-bloc, conséquence
+   2026-08-28) */
 .grid-block-alts {
-  float: right;
-  margin-left: 0.25rem;
+  flex: none;
   padding: 0 0.1875rem;
   font-family: var(--font-mono);
   font-size: 0.625rem;

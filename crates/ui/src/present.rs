@@ -469,10 +469,31 @@ pub fn grid_model(
             unplaced.push(course.code.clone());
         }
         if ghosts_for == Some(course.code.as_str()) {
+            // a hybrid option repeats the same slot across its twin
+            // sections (in-person + remote at the same time): one ghost
+            // block per (slot, option), never a duplicate — two distinct
+            // options sharing a slot stay two clickable ghosts because
+            // their nrcs differ (ADR
+            // 2026-08-fantomes-dedupliques-et-libelles-compacts)
+            let mut seen_ghosts: std::collections::BTreeSet<(
+                usize,
+                u16,
+                u16,
+                Vec<String>,
+            )> = std::collections::BTreeSet::new();
             for alternative in &course.alternatives {
                 let nrcs = option_nrcs(&alternative.sections);
                 for section in &alternative.sections {
                     for slot in &section.slots {
+                        let key = (
+                            day_index(slot.day),
+                            minutes(slot.start),
+                            minutes(slot.end),
+                            nrcs.clone(),
+                        );
+                        if !seen_ghosts.insert(key) {
+                            continue;
+                        }
                         raw.push((
                             day_index(slot.day),
                             RawBlock {
@@ -480,11 +501,15 @@ pub fn grid_model(
                                 end: minutes(slot.end),
                                 block: Block {
                                     code: course.code.clone(),
-                                    title: title.to_string(),
-                                    detail: section_detail(
-                                        &course.code,
-                                        section,
-                                    ),
+                                    // a ghost lane is narrow — the full
+                                    // course title truncates to a couple
+                                    // letters per line; the section letter
+                                    // (or NRC) is enough to tell ghosts
+                                    // apart and stays readable at that
+                                    // width, never the course's own siblings
+                                    // (comment above `alternatives: usize`)
+                                    title: ghost_label(section),
+                                    detail: String::new(),
                                     top: 0.0,
                                     height: 0.0,
                                     left: 0.0,
@@ -549,6 +574,26 @@ fn section_detail(code: &str, section: &Section) -> String {
     if let Some(letter) = &section.section {
         parts.push(letter.clone());
     }
+    match section.mode {
+        ulaval_scheduler_core::Mode::InPerson => {}
+        ulaval_scheduler_core::Mode::Remote => {
+            parts.push("à distance".to_string())
+        }
+        ulaval_scheduler_core::Mode::Hybrid => {
+            parts.push("hybride".to_string())
+        }
+    }
+    parts.join(" - ")
+}
+
+// compact ghost label — the section letter when the page gave one, else
+// the NRC, plus the same mode words as `section_detail` above (a ghost
+// lane is too narrow for the full course title, unlike a real block)
+fn ghost_label(section: &Section) -> String {
+    let mut parts = vec![section
+        .section
+        .clone()
+        .unwrap_or_else(|| section.nrc.clone())];
     match section.mode {
         ulaval_scheduler_core::Mode::InPerson => {}
         ulaval_scheduler_core::Mode::Remote => {
@@ -1302,6 +1347,133 @@ mod tests {
             ghost.alternatives, 0,
             "a ghost never advertises its own siblings"
         );
+        assert_eq!(ghost.title, "B", "compact label, not the course title");
+        assert_eq!(ghost.detail, "", "no duplicate line under a narrow ghost");
+    }
+
+    #[test]
+    fn twin_section_ghost_slots_collapse_to_one_block() {
+        // one option, two twin sections (hybrid pattern) at the same slot
+        let mut with_ghost = course(
+            "GEX-1000",
+            true,
+            vec![monday("GEX-1000", "111", "08:30", "09:20")],
+        );
+        with_ghost.alternatives = vec![Alternative {
+            sections: vec![
+                monday("GEX-1000", "222", "10:30", "11:20"),
+                section(
+                    r#"{"nrc":"223","section":"Z1","mode":"remote","slots":[
+                        {"day":"monday","start":"10:30","end":"11:20"}]}"#,
+                ),
+            ],
+            valid: true,
+        }];
+        let schedule = wrap(vec![with_ghost], true);
+        let grid = grid_model(&schedule, &snapshot(), Some("GEX-1000"));
+        let ghosts: Vec<_> =
+            grid.days[0].blocks.iter().filter(|b| b.ghost).collect();
+        assert_eq!(
+            ghosts.len(),
+            1,
+            "twin sections of one option share a slot, deduplicated"
+        );
+    }
+
+    #[test]
+    fn two_options_sharing_a_slot_stay_two_clickable_ghosts() {
+        // two distinct options that happen to land on the same slot must
+        // both stay clickable — only true twins (same option) collapse
+        let mut with_ghosts = course(
+            "GEX-1000",
+            true,
+            vec![monday("GEX-1000", "111", "08:30", "09:20")],
+        );
+        with_ghosts.alternatives = vec![
+            Alternative {
+                sections: vec![monday("GEX-1000", "222", "10:30", "11:20")],
+                valid: true,
+            },
+            Alternative {
+                sections: vec![section(
+                    r#"{"nrc":"333","section":"C","mode":"in-person","slots":[
+                        {"day":"monday","start":"10:30","end":"11:20"}]}"#,
+                )],
+                valid: true,
+            },
+        ];
+        let schedule = wrap(vec![with_ghosts], true);
+        let grid = grid_model(&schedule, &snapshot(), Some("GEX-1000"));
+        let ghosts: Vec<_> =
+            grid.days[0].blocks.iter().filter(|b| b.ghost).collect();
+        assert_eq!(ghosts.len(), 2, "distinct options, both stay clickable");
+    }
+
+    #[test]
+    fn ghosts_carry_the_section_letter_never_the_course_title() {
+        let mut with_ghost = course(
+            "GEX-1000",
+            true,
+            vec![monday("GEX-1000", "111", "08:30", "09:20")],
+        );
+        with_ghost.alternatives = vec![Alternative {
+            sections: vec![section(
+                r#"{"nrc":"444","section":"Z2","mode":"remote","slots":[
+                    {"day":"tuesday","start":"12:30","end":"13:20"}]}"#,
+            )],
+            valid: true,
+        }];
+        let schedule = wrap(vec![with_ghost], true);
+        let grid = grid_model(&schedule, &snapshot(), Some("GEX-1000"));
+        let ghost = &grid.days[1].blocks[0];
+        assert_eq!(
+            ghost.title, "Z2 - à distance",
+            "compact label, not the course title"
+        );
+        assert_eq!(
+            ghost.detail, "",
+            "no duplicate detail line on a narrow ghost"
+        );
+    }
+
+    #[test]
+    fn a_ghost_without_a_section_letter_falls_back_to_its_nrc() {
+        let mut with_ghost = course(
+            "GEX-1000",
+            true,
+            vec![monday("GEX-1000", "111", "08:30", "09:20")],
+        );
+        with_ghost.alternatives = vec![Alternative {
+            sections: vec![section(
+                r#"{"nrc":"777","section":null,"mode":"in-person","slots":[
+                    {"day":"tuesday","start":"12:30","end":"13:20"}]}"#,
+            )],
+            valid: true,
+        }];
+        let schedule = wrap(vec![with_ghost], true);
+        let grid = grid_model(&schedule, &snapshot(), Some("GEX-1000"));
+        let ghost = &grid.days[1].blocks[0];
+        assert_eq!(ghost.title, "777", "the répertoire gave no letter");
+    }
+
+    #[test]
+    fn a_hybrid_ghost_section_says_so_too() {
+        let mut with_ghost = course(
+            "GEX-1000",
+            true,
+            vec![monday("GEX-1000", "111", "08:30", "09:20")],
+        );
+        with_ghost.alternatives = vec![Alternative {
+            sections: vec![section(
+                r#"{"nrc":"555","section":"Z3","mode":"hybrid","slots":[
+                    {"day":"tuesday","start":"12:30","end":"13:20"}]}"#,
+            )],
+            valid: true,
+        }];
+        let schedule = wrap(vec![with_ghost], true);
+        let grid = grid_model(&schedule, &snapshot(), Some("GEX-1000"));
+        let ghost = &grid.days[1].blocks[0];
+        assert_eq!(ghost.title, "Z3 - hybride");
     }
 
     #[test]

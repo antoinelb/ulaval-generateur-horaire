@@ -96,10 +96,11 @@ pub fn WeeklyGrid() -> Element {
                 span {
                     class: "grid-status",
                     class: if grid.conflict { "grid-status--conflict" },
+                    title: "{status}",
                     "{status}"
                 }
                 button {
-                    class: "grid-share grid-export",
+                    class: "grid-share",
                     title: "Ouvre l'aperçu d'impression — choisissez \
                             « Enregistrer en PDF »",
                     onclick: move |_| {
@@ -111,7 +112,7 @@ pub fn WeeklyGrid() -> Element {
                     "Exporter l'organigramme"
                 }
                 button {
-                    class: "grid-share grid-export",
+                    class: "grid-share",
                     title: "Ouvre l'aperçu d'impression — choisissez \
                             « Enregistrer en PDF »",
                     onclick: move |_| {
@@ -313,18 +314,20 @@ fn GridBlock(
                 dragged.set(None);
                 hover.set(None);
             },
-            if !ghost && alternatives > 0 {
-                span {
-                    class: "grid-block-alts",
-                    aria_label: if alternatives == 1 {
-                        "1 horaire alternatif".to_string()
-                    } else {
-                        format!("{alternatives} horaires alternatifs")
-                    },
-                    "⇄ {alternatives}"
+            div { class: "grid-block-top",
+                div { class: "grid-block-title", "{block.title}" }
+                if !ghost && alternatives > 0 {
+                    span {
+                        class: "grid-block-alts",
+                        aria_label: if alternatives == 1 {
+                            "1 horaire alternatif".to_string()
+                        } else {
+                            format!("{alternatives} horaires alternatifs")
+                        },
+                        "⇄ {alternatives}"
+                    }
                 }
             }
-            div { class: "grid-block-title", "{block.title}" }
             div { class: "grid-block-detail",
                 "{block.detail}"
                 if block.clash {
