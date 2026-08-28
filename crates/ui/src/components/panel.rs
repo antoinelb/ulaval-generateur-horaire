@@ -1019,6 +1019,9 @@ fn GroupView(group: PanelGroup) -> Element {
                     span { class: "panel-group-progress", "{progress}" }
                 }
             }
+            if let Some(note) = group.note.as_ref() {
+                p { class: "panel-note", "{note}" }
+            }
             for section in group.sections.iter().cloned() {
                 SectionView { key: "{section.key}", section }
             }

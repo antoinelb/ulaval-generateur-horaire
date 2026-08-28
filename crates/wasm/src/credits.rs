@@ -1,18 +1,29 @@
 use std::collections::BTreeSet;
 
-use ulaval_scheduler_core::{Course, CourseCycle, Program, RuleCourses};
+use ulaval_scheduler_core::{
+    resolved_rule_courses, Constraint, Course, CourseCycle, Keyword, Program,
+    Rule, RuleCourses,
+};
 
-// The header's « 96/120 cr » : credits toward the diploma, with the two
-// families that never count — « en sus » (the promoted Stages rule, ADR
-// `2026-08-stage-obligatoire-en-prose-promu-en-regle`) and the préuniversité
-// (scolarité préparatoire) — tallied apart so the UI can show them instead
-// of silently miscounting (`docs/next_steps.md` : `credits_in_addition`
-// must be subtracted before comparing to `credits_required`).
+// The header's « 96/120 cr » : credits toward the diploma, with the
+// families that never count as new credits — « en sus » (the promoted
+// Stages rule, ADR `2026-08-stage-obligatoire-en-prose-promu-en-regle`),
+// the préuniversité (scolarité préparatoire), and a chosen profile's own
+// courses beyond what a free "any" rule can absorb (ADR
+// `2026-08-le-profil-napporte-jamais-de-credits-neufs`) — tallied apart so
+// the UI can show them instead of silently miscounting (`docs/next_steps.
+// md` : `credits_in_addition` must be subtracted before comparing to
+// `credits_required`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreditSummary {
     pub counted: u32,
     pub in_addition: u32,
     pub preparatory: u32,
+    // a profile course neither listed elsewhere nor absorbable into a free
+    // credits rule — the profile substitutes, it never grows the total, so
+    // this stays out of `counted` (ADR
+    // `2026-08-le-profil-napporte-jamais-de-credits-neufs`)
+    pub profile_only: u32,
     // selected codes with no Course to read credits from — surfaced,
     // never dropped
     pub unknown: Vec<String>,
@@ -30,10 +41,25 @@ pub fn credit_summary(
     let en_sus = program
         .map(|program| en_sus_codes(program, concentration, profile))
         .unwrap_or_default();
+    // a profile course also pooled elsewhere counts normally — the
+    // substitution only bites courses the profile alone would have
+    // sheltered (ADR `2026-08-le-profil-napporte-jamais-de-credits-neufs`)
+    let profile_only_codes = program
+        .map(|program| {
+            profile_codes(program, profile)
+                .difference(&elsewhere_codes(program, concentration))
+                .cloned()
+                .collect::<BTreeSet<String>>()
+        })
+        .unwrap_or_default();
+    let mut allowance = program
+        .map(|program| free_credits_allowance(program, concentration))
+        .unwrap_or(0);
     let mut summary = CreditSummary {
         counted: 0,
         in_addition: 0,
         preparatory: 0,
+        profile_only: 0,
         unknown: Vec::new(),
     };
     for code in selection {
@@ -47,11 +73,101 @@ pub fn credit_summary(
             summary.preparatory += credits;
         } else if en_sus.contains(code) {
             summary.in_addition += credits;
+        } else if profile_only_codes.contains(code) {
+            // whole-course decrement only — a course only "fits" the
+            // remaining allowance if it fits entirely, never split
+            if credits <= allowance {
+                summary.counted += credits;
+                allowance -= credits;
+            } else {
+                summary.profile_only += credits;
+            }
         } else {
             summary.counted += credits;
         }
     }
     summary
+}
+
+// Codes the chosen profile pools : its own mandatory list, plus every rule
+// naming a list of courses — a reference resolved through core the same
+// way the coverage report does. A rule that resolves to no list (Keyword,
+// Raw, or a broken reference) contributes nothing, never invented (ADR
+// `2026-08-le-profil-napporte-jamais-de-credits-neufs`).
+fn profile_codes(
+    program: &Program,
+    profile: Option<&str>,
+) -> BTreeSet<String> {
+    let Some(block) = profile.and_then(|title| program.profile(title)) else {
+        return BTreeSet::new();
+    };
+    let mut codes: BTreeSet<String> =
+        block.mandatory.iter().cloned().collect();
+    codes.extend(rule_list_codes(program, &block.rules));
+    codes
+}
+
+// Codes a course could already belong to *outside* the profile : the
+// program's own mandatory and rule lists, plus the *chosen* concentration's
+// — an unchosen concentration shelters nothing here either (mirrors
+// `en_sus_codes`, décision d'Antoine 2026-08-19).
+fn elsewhere_codes(
+    program: &Program,
+    concentration: Option<&str>,
+) -> BTreeSet<String> {
+    let mut codes: BTreeSet<String> =
+        program.mandatory.iter().cloned().collect();
+    codes.extend(rule_list_codes(program, &program.rules));
+    if let Some(block) =
+        concentration.and_then(|title| program.concentration(title))
+    {
+        codes.extend(block.mandatory.iter().cloned());
+        codes.extend(rule_list_codes(program, &block.rules));
+    }
+    codes
+}
+
+// Every code named by a rule whose courses resolve to a list — `List`
+// as-is, `Reference` chased through core; `Keyword`/`Raw`/a broken
+// reference resolve to nothing and are skipped, never guessed at.
+fn rule_list_codes(program: &Program, rules: &[Rule]) -> BTreeSet<String> {
+    rules
+        .iter()
+        .filter_map(|rule| resolved_rule_courses(program, rule).ok().flatten())
+        .flatten()
+        .cloned()
+        .collect()
+}
+
+// The only room a profile-only course can be absorbed into : the sum of
+// the trunk's and chosen concentration's free "tous les cours" credit
+// rules (`Keyword::Any` under a `Constraint::Credits`) — the official
+// pages' « le cheminement de 12 crédits s'intègre aux cours complémentaires
+// » (ADR `2026-08-le-profil-napporte-jamais-de-credits-neufs`). No `Course`
+// constraint of a free rule is honoured : none exists in the scraped data.
+fn free_credits_allowance(
+    program: &Program,
+    concentration: Option<&str>,
+) -> u32 {
+    let concentration_rules = concentration
+        .and_then(|title| program.concentration(title))
+        .map(|block| block.rules.as_slice())
+        .unwrap_or_default();
+    program
+        .rules
+        .iter()
+        .chain(concentration_rules)
+        .filter_map(|rule| match (&rule.courses, &rule.constraint) {
+            (
+                RuleCourses::Keyword {
+                    courses: Keyword::Any,
+                    ..
+                },
+                Some(Constraint::Credits { max, .. }),
+            ) => Some(u32::try_from(*max).unwrap_or(0)),
+            _ => None,
+        })
+        .sum()
 }
 
 // En-sus codes of the program and the *chosen* blocks only — an en-sus
@@ -228,5 +344,209 @@ mod tests {
             &courses,
         );
         assert_eq!(summary.counted, 6, "the lower bound, never a guess");
+    }
+
+    // --- the profile substitutes, it never adds (ADR
+    // `2026-08-le-profil-napporte-jamais-de-credits-neufs`) ---
+
+    #[test]
+    fn a_course_listed_only_by_the_profile_does_not_count() {
+        let program: Program = serde_json::from_str(
+            r#"{"code":"B-GCI","slug":"gci","semester":"A26","title":"P",
+                "cycle":1,"credits_required":120,"mandatory":[],"rules":[],
+                "concentrations":[],
+                "profiles":[{"title":"Profil DD","mandatory":[],
+                             "rules":[{"title":"R","courses":["PRF-1000"]}]}]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let courses = vec![course("PRF-1000", "3", 1)];
+        let summary = credit_summary(
+            Some(&program),
+            None,
+            Some("Profil DD"),
+            &selection(&["PRF-1000"]),
+            &courses,
+        );
+        assert_eq!(summary.counted, 0, "the profile alone shelters nothing");
+        assert_eq!(summary.profile_only, 3);
+    }
+
+    #[test]
+    fn a_profile_course_also_listed_by_the_chosen_concentration_counts() {
+        let program: Program = serde_json::from_str(
+            r#"{"code":"B-GCI","slug":"gci","semester":"A26","title":"P",
+                "cycle":1,"credits_required":120,"mandatory":[],"rules":[],
+                "concentrations":[
+                  {"title":"Structures","mandatory":[],
+                   "rules":[{"title":"Règle 1","courses":["GCI-4201"]}]}],
+                "profiles":[{"title":"Profil DD","mandatory":[],
+                             "rules":[{"title":"R","courses":["GCI-4201"]}]}]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let courses = vec![course("GCI-4201", "3", 1)];
+        let summary = credit_summary(
+            Some(&program),
+            Some("Structures"),
+            Some("Profil DD"),
+            &selection(&["GCI-4201"]),
+            &courses,
+        );
+        assert_eq!(
+            summary.counted, 3,
+            "listed by the chosen concentration too"
+        );
+        assert_eq!(summary.profile_only, 0);
+    }
+
+    #[test]
+    fn a_profile_only_course_absorbs_into_a_free_any_rule_up_to_its_max() {
+        let program: Program = serde_json::from_str(
+            r#"{"code":"B-GCI","slug":"gci","semester":"A26","title":"P",
+                "cycle":1,"credits_required":120,"mandatory":[],
+                "rules":[{"title":"Complémentaires",
+                          "constraint":{"type":"credits","min":0,"max":3},
+                          "courses":"any",
+                          "raw":"tous les cours de premier cycle"}],
+                "concentrations":[],
+                "profiles":[{"title":"Profil DD","mandatory":[],
+                             "rules":[{"title":"R",
+                                       "courses":["DDU-1000","ENT-2000"]}]}]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let courses =
+            vec![course("DDU-1000", "3", 1), course("ENT-2000", "3", 1)];
+        let summary = credit_summary(
+            Some(&program),
+            None,
+            Some("Profil DD"),
+            &selection(&["DDU-1000", "ENT-2000"]),
+            &courses,
+        );
+        // the selection is a BTreeSet, walked alphabetically: DDU-1000
+        // absorbs the whole 3-cr allowance first, leaving none for
+        // ENT-2000 — a course is never split across the two buckets
+        assert_eq!(summary.counted, 3, "DDU-1000 absorbed the free allowance");
+        assert_eq!(summary.profile_only, 3, "ENT-2000 found no room left");
+    }
+
+    #[test]
+    fn an_unlisted_course_keeps_counting_with_a_profile_chosen() {
+        let program: Program = serde_json::from_str(
+            r#"{"code":"B-GCI","slug":"gci","semester":"A26","title":"P",
+                "cycle":1,"credits_required":120,"mandatory":[],"rules":[],
+                "concentrations":[],
+                "profiles":[{"title":"Profil DD","mandatory":[],
+                             "rules":[{"title":"R","courses":["PRF-1000"]}]}]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let courses = vec![course("HORS-9999", "3", 1)];
+        let summary = credit_summary(
+            Some(&program),
+            None,
+            Some("Profil DD"),
+            &selection(&["HORS-9999"]),
+            &courses,
+        );
+        assert_eq!(summary.counted, 3, "unlisted anywhere, counts as always");
+        assert_eq!(summary.profile_only, 0);
+    }
+
+    #[test]
+    fn profile_mandatory_and_rule_lists_pool_together() {
+        let program: Program = serde_json::from_str(
+            r#"{"code":"B-GCI","slug":"gci","semester":"A26","title":"P",
+                "cycle":1,"credits_required":120,"mandatory":[],"rules":[],
+                "concentrations":[],
+                "profiles":[{"title":"Profil DD","mandatory":["PRF-9999"],
+                             "rules":[{"title":"R","courses":["PRF-1000"]}]}]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let courses =
+            vec![course("PRF-9999", "3", 1), course("PRF-1000", "3", 1)];
+        let summary = credit_summary(
+            Some(&program),
+            None,
+            Some("Profil DD"),
+            &selection(&["PRF-9999", "PRF-1000"]),
+            &courses,
+        );
+        assert_eq!(summary.counted, 0, "both pooled, neither elsewhere");
+        assert_eq!(summary.profile_only, 6, "mandatory and rule list, pooled");
+    }
+
+    #[test]
+    fn an_unchosen_profile_shelters_nothing() {
+        let program: Program = serde_json::from_str(
+            r#"{"code":"B-GCI","slug":"gci","semester":"A26","title":"P",
+                "cycle":1,"credits_required":120,"mandatory":[],"rules":[],
+                "concentrations":[],
+                "profiles":[{"title":"Profil DD","mandatory":[],
+                             "rules":[{"title":"R","courses":["PRF-1000"]}]}]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let courses = vec![course("PRF-1000", "3", 1)];
+        let summary = credit_summary(
+            Some(&program),
+            None,
+            None,
+            &selection(&["PRF-1000"]),
+            &courses,
+        );
+        assert_eq!(summary.counted, 3, "no profile chosen, nothing sheltered");
+        assert_eq!(summary.profile_only, 0);
+    }
+
+    #[test]
+    fn a_reference_shaped_profile_rule_resolves_or_contributes_nothing() {
+        let valid: Program = serde_json::from_str(
+            r#"{"code":"B-GCI","slug":"gci","semester":"A26","title":"P",
+                "cycle":1,"credits_required":120,"mandatory":[],"rules":[],
+                "concentrations":[
+                  {"title":"Structures","mandatory":[],
+                   "rules":[{"title":"Règle 1","courses":["GCI-9001"]}]}],
+                "profiles":[{"title":"Profil DD","mandatory":[],
+                             "rules":[{"title":"R",
+                                       "courses":{"concentration":"Structures",
+                                                  "rule":"Règle 1"},
+                                       "raw":"tous les cours de la Règle 1"}]}]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let courses = vec![course("GCI-9001", "3", 1)];
+        let resolved = credit_summary(
+            Some(&valid),
+            None,
+            Some("Profil DD"),
+            &selection(&["GCI-9001"]),
+            &courses,
+        );
+        assert_eq!(
+            resolved.profile_only, 3,
+            "the reference resolved to a list"
+        );
+        assert_eq!(resolved.counted, 0);
+
+        let broken: Program = serde_json::from_str(
+            r#"{"code":"B-GCI","slug":"gci","semester":"A26","title":"P",
+                "cycle":1,"credits_required":120,"mandatory":[],"rules":[],
+                "concentrations":[],
+                "profiles":[{"title":"Profil DD","mandatory":[],
+                             "rules":[{"title":"R",
+                                       "courses":{"concentration":"Inconnue",
+                                                  "rule":"Règle 1"},
+                                       "raw":"tous les cours de la Règle 1"}]}]}"#,
+        )
+        .unwrap_or_else(|e| panic!("program literal: {e}"));
+        let unresolved = credit_summary(
+            Some(&broken),
+            None,
+            Some("Profil DD"),
+            &selection(&["GCI-9001"]),
+            &courses,
+        );
+        assert_eq!(
+            unresolved.counted, 3,
+            "an unresolved reference contributes nothing, never invented"
+        );
+        assert_eq!(unresolved.profile_only, 0);
     }
 }

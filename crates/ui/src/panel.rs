@@ -54,7 +54,17 @@ pub struct PanelGroup {
     pub title: String,
     pub progress: Option<String>,
     pub sections: Vec<Section>,
+    // the profil group alone : its 12 cr substitute for option-course
+    // credits elsewhere, they never grow the bac total (ADR
+    // `2026-08-le-profil-napporte-jamais-de-credits-neufs`)
+    pub note: Option<String>,
 }
+
+// the one wording the profil group's gauge carries — its progress bar
+// reaches 12/12 like any other, but the credits behind it are borrowed,
+// not new (ADR `2026-08-le-profil-napporte-jamais-de-credits-neufs`)
+const PROFILE_SUBSTITUTION_NOTE: &str = "Crédits pris à même les cours à \
+    option des autres blocs — ils n'ajoutent rien au total du bac.";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Section {
@@ -497,6 +507,7 @@ fn uncounted_scope_group(
             format!("—/{required} cr — progression indisponible")
         }),
         sections,
+        note: (prefix == "f/").then(|| PROFILE_SUBSTITUTION_NOTE.to_string()),
     }
 }
 
@@ -597,6 +608,8 @@ fn scope_group(
         progress: credits_required
             .map(|required| scope_progress(snapshot, report, scope, required)),
         sections,
+        note: (scope == Scope::Profile)
+            .then(|| PROFILE_SUBSTITUTION_NOTE.to_string()),
     }
 }
 
@@ -3082,6 +3095,25 @@ mod tests {
             .sections
             .iter()
             .all(|section| section.key != "f/obligatoires"));
+    }
+
+    #[test]
+    fn the_profile_group_carries_its_substitution_note() {
+        let mut plan = plan();
+        if let Some(choice) = plan.program.as_mut() {
+            choice.concentration = Some("Génie urbain".to_string());
+            choice.profile = Some("Profil international".to_string());
+        }
+        let model = panel_model(&snapshot(), &plan);
+        assert_eq!(model.groups[0].note, None, "Programme carries none");
+        assert_eq!(model.groups[1].note, None, "Concentration carries none");
+        assert_eq!(
+            model.groups[2].note.as_deref(),
+            Some(
+                "Crédits pris à même les cours à option des autres blocs \
+                 — ils n'ajoutent rien au total du bac."
+            )
+        );
     }
 
     #[test]

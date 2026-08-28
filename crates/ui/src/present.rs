@@ -388,6 +388,34 @@ pub fn bac_credit_note(
     BacCreditNote { suffix, tooltip }
 }
 
+// F5 (constat d'Antoine 2026-08-27, B-GCI + concentration + profil rempli
+// à 129/120) : the header said nothing when the tally passed the program's
+// own total — a filet naming the overrun instead of a number that reads as
+// fine. `text` composes with `BacCreditNote.suffix` rather than replacing
+// it — an en-sus stage total must stay visible even past the cap.
+pub struct BacCreditLabel {
+    pub text: String,
+    pub over: bool,
+}
+
+pub fn bac_credit_label(
+    counted: u32,
+    required: i64,
+    note: &BacCreditNote,
+) -> BacCreditLabel {
+    let over = i64::from(counted) > required;
+    let text = if over {
+        format!(
+            "⚠ {counted}/{required} cr au bac{} — au-delà des {required} cr \
+             du programme",
+            note.suffix
+        )
+    } else {
+        format!("{counted}/{required} cr au bac{}", note.suffix)
+    };
+    BacCreditLabel { text, over }
+}
+
 // --- the weekly grid geometry ---------------------------------------------
 
 use ulaval_scheduler_core::{Day, Section, Time};
@@ -1076,6 +1104,7 @@ mod tests {
             counted: 0,
             in_addition,
             preparatory,
+            profile_only: 0,
             unknown: Vec::new(),
         }
     }
@@ -1103,6 +1132,41 @@ mod tests {
         assert_eq!(note.suffix, "", "not en-sus of the required total");
         assert!(note.tooltip.contains("6 cr de scolarité préparatoire"));
         assert!(!note.tooltip.contains("stage"), "{}", note.tooltip);
+    }
+
+    #[test]
+    fn a_total_at_or_under_the_required_credits_carries_no_overrun() {
+        let note = bac_credit_note(&credit_summary(0, 0));
+        let at = bac_credit_label(120, 120, &note);
+        assert!(!at.over);
+        assert_eq!(at.text, "120/120 cr au bac");
+        let under = bac_credit_label(99, 120, &note);
+        assert!(!under.over);
+        assert_eq!(under.text, "99/120 cr au bac");
+    }
+
+    #[test]
+    fn a_total_over_the_required_credits_gets_the_overrun_warning() {
+        let note = bac_credit_note(&credit_summary(0, 0));
+        let label = bac_credit_label(129, 120, &note);
+        assert!(label.over);
+        assert_eq!(
+            label.text,
+            "⚠ 129/120 cr au bac — au-delà des 120 cr du programme"
+        );
+    }
+
+    #[test]
+    fn the_overrun_warning_composes_with_the_en_sus_suffix() {
+        let note = bac_credit_note(&credit_summary(9, 0));
+        let label = bac_credit_label(129, 120, &note);
+        assert!(label.over);
+        assert_eq!(
+            label.text,
+            "⚠ 129/120 cr au bac (+9 cr en sus) — au-delà des 120 cr du \
+             programme",
+            "the suffix survives, it is never overwritten"
+        );
     }
 
     #[test]
