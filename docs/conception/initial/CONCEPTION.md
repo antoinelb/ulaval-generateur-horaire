@@ -105,9 +105,18 @@ Grammaire couvrant les trois formes observées :
 ```
 expr        := terme (OU terme)*
 terme       := facteur (ET facteur)*
-facteur     := '(' expr ')' | CODE_COURS | exigence_credits
+facteur     := '(' expr ')' | enumeration | CODE_COURS | exigence_credits
+enumeration := (CODE_COURS ',')+ CODE_COURS connecteur facteur
+connecteur  := 'ET' | 'OU'
 exigence_credits := PROGRAMME ', Crédits exigés : ' N
+CODE_COURS  := SIGLE ['*']
 ```
+
+L'`enumeration` est régie par le connecteur de son dernier séparateur, et vaut exactement le groupe parenthésé correspondant (ADR `2026-08-virgule-selon-le-connecteur-final`).
+« MAT-0130, MAT-0150 ET MAT-0260 » (MAT-1900) vaut « (MAT-0130 ET MAT-0150 ET MAT-0260) ».
+« CHM-0150, CHM-0160 OU CHM-0170 » (CHM-1003) vaut « (CHM-0150 OU CHM-0160 OU CHM-0170) ».
+Étant un `facteur`, elle est un opérande entier de la précédence ET/OU environnante : « CHM-0150, CHM-0160 OU CHM-0170 ET PHY-0150 » (CHM-1901) vaut « (CHM-0150 OU CHM-0160 OU CHM-0170) ET PHY-0150 ».
+Une énumération que ne ferme aucun connecteur (« BIO-0150, CHM-0150, CHM-0160 », BCM-1903) et une virgule dans de la prose (« Réussir 2 parmi CTB-6112, CTB-6116 », CTB-6113) restent du texte brut.
 
 Exemples d'arbres produits :
 
