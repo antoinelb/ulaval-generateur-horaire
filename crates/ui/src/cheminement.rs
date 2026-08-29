@@ -19,8 +19,11 @@ use crate::state::{self, Plan};
 pub enum CheminementError {
     #[error("this file is not a cheminement : {detail}")]
     Unreadable { detail: String },
-    // an empty timeline, or one opening on a summer: neither names the
-    // admission session every organigramme is built around
+    // a timeline opening on a summer names no admission session, and every
+    // organigramme is built around one. A timeline that is *empty* is a
+    // different matter: it says nothing about the calendar rather than
+    // something impossible, and loads (ADR
+    // `2026-08-cheminement-sans-session-charge-quand-meme`)
     #[error("the cheminement names no admission session")]
     NoAdmission,
     #[error("the cheminement runs over {max} study sessions")]
@@ -43,8 +46,11 @@ pub struct CheminementLoad {
 // against the horizon, so `apply_to_plan` decides nothing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CheminementApplication {
-    pub start: Semester,
-    pub study_sessions: usize,
+    // `None` when the file carries no session at all — « des cours réussis,
+    // rien de planifié ». The file then says nothing about the calendar, so
+    // the plan keeps its own start and horizon rather than being handed an
+    // invented one (ADR `2026-08-cheminement-sans-session-charge-quand-meme`)
+    pub timeline: Option<CheminementTimeline>,
     pub summers_open: bool,
     // code → 1-based session index
     pub pinned: BTreeMap<String, usize>,
@@ -52,6 +58,14 @@ pub struct CheminementApplication {
     // 1-based indices of the sessions the file froze (ADR
     // `2026-08-sessions-gelees-generalisent-les-completees`)
     pub frozen: BTreeSet<usize>,
+}
+
+// The two calendar facts a timeline carries, together: a start with no
+// length, or a length with no start, is not a state any file can produce.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CheminementTimeline {
+    pub start: Semester,
+    pub study_sessions: usize,
 }
 
 // Every field a finished French sentence — `rsx!` only prints them (AP-5).
@@ -86,31 +100,18 @@ fn apply(
     cheminement: &Cheminement,
     known: &BTreeSet<String>,
 ) -> Result<CheminementLoad, CheminementError> {
-    let start = cheminement
-        .sessions
-        .first()
-        .map(|session| session.semester)
-        .filter(|semester| semester.season != Season::Summer)
-        .ok_or(CheminementError::NoAdmission)?;
+    let timeline = read_timeline(cheminement)?;
 
-    let study_sessions = cheminement
-        .sessions
-        .iter()
-        .filter(|session| session.semester.season != Season::Summer)
-        .count();
-    if study_sessions > MAX_STUDY_SESSIONS {
-        return Err(CheminementError::TooLong {
-            study_sessions,
-            max: MAX_STUDY_SESSIONS,
-        });
-    }
-
-    let seasons = horizon_sessions(start.season, study_sessions);
     // `Semester` is not `Ord`, and a horizon is at most 17 entries long:
-    // the timeline itself is the index, walked rather than hashed
-    let timeline = session_semesters(start, &seasons);
+    // the calendar itself is the index, walked rather than hashed. A file
+    // with no session has no calendar and no course to look up in one.
+    let semesters = timeline.map_or_else(Vec::new, |timeline| {
+        let seasons =
+            horizon_sessions(timeline.start.season, timeline.study_sessions);
+        session_semesters(timeline.start, &seasons)
+    });
     let index_of = |semester: Semester| {
-        timeline
+        semesters
             .iter()
             .position(|held| *held == semester)
             .map(|offset| offset + 1)
@@ -189,22 +190,34 @@ fn apply(
         return Err(CheminementError::Empty);
     }
 
-    let headline = format!(
-        "{} {}, {} {}, {} {}, {} {}.",
-        study_sessions,
-        agree(study_sessions, "session", "sessions"),
-        pinned.len(),
-        agree(pinned.len(), "cours placé", "cours placés"),
-        credited.len(),
-        agree(credited.len(), "crédité", "crédités"),
-        ignored.len(),
-        agree(ignored.len(), "ignoré", "ignorés"),
-    );
+    let headline = match timeline {
+        Some(timeline) => format!(
+            "{} {}, {} {}, {} {}, {} {}.",
+            timeline.study_sessions,
+            agree(timeline.study_sessions, "session", "sessions"),
+            pinned.len(),
+            agree(pinned.len(), "cours placé", "cours placés"),
+            credited.len(),
+            agree(credited.len(), "crédité", "crédités"),
+            ignored.len(),
+            agree(ignored.len(), "ignoré", "ignorés"),
+        ),
+        // the file named no session, so the calendar it did not describe is
+        // the calendar that stays: saying so is the whole difference
+        // between a load and something that looks like a no-op
+        None => format!(
+            "Aucune session dans le fichier : l'horizon n'a pas bougé, \
+             {} {}, {} {}.",
+            credited.len(),
+            agree(credited.len(), "crédité", "crédités"),
+            ignored.len(),
+            agree(ignored.len(), "ignoré", "ignorés"),
+        ),
+    };
 
     Ok(CheminementLoad {
         application: CheminementApplication {
-            start,
-            study_sessions,
+            timeline,
             summers_open,
             pinned,
             credited,
@@ -212,6 +225,37 @@ fn apply(
         },
         summary: CheminementSummary { ignored, headline },
     })
+}
+
+// The calendar the file describes, or `None` when it describes none. A
+// timeline that opens on a summer is refused rather than defaulted: a
+// summer is never an admission session, so guessing one would be inventing
+// a fact the file never carried.
+fn read_timeline(
+    cheminement: &Cheminement,
+) -> Result<Option<CheminementTimeline>, CheminementError> {
+    let Some(first) = cheminement.sessions.first() else {
+        return Ok(None);
+    };
+    let start = first.semester;
+    if start.season == Season::Summer {
+        return Err(CheminementError::NoAdmission);
+    }
+    let study_sessions = cheminement
+        .sessions
+        .iter()
+        .filter(|session| session.semester.season != Season::Summer)
+        .count();
+    if study_sessions > MAX_STUDY_SESSIONS {
+        return Err(CheminementError::TooLong {
+            study_sessions,
+            max: MAX_STUDY_SESSIONS,
+        });
+    }
+    Ok(Some(CheminementTimeline {
+        start,
+        study_sessions,
+    }))
 }
 
 // « 1 crédité » but « 0 ignoré » : French agreement singularizes both 0
@@ -249,6 +293,12 @@ pub fn apply_to_plan(plan: &mut Plan, application: &CheminementApplication) {
     // an été carrying courses opens the summers; a grid with none never
     // closes a student's own choice to use them (same rule as the relevé)
     let summers_open = plan.summers_open || application.summers_open;
+    // a file that named no session named no calendar either: the plan's own
+    // start and horizon stand, exactly as `credit_cap` and the rest do
+    let timeline = application.timeline.unwrap_or(CheminementTimeline {
+        start: plan.start,
+        study_sessions: plan.study_sessions,
+    });
 
     *plan = Plan {
         program,
@@ -257,8 +307,8 @@ pub fn apply_to_plan(plan: &mut Plan, application: &CheminementApplication) {
         preparatory_done,
         prereq_overrides,
         summers_open,
-        start: application.start,
-        study_sessions: application.study_sessions,
+        start: timeline.start,
+        study_sessions: timeline.study_sessions,
         // the file is the authority on its own freezes — an official grid
         // carries none and every session opens, an exported past keeps its
         // frozen sessions frozen
@@ -432,8 +482,12 @@ mod tests {
     fn a_grid_becomes_an_application_and_a_bilan() {
         let loaded = load(GRID, &known(&["GMC-1001", "MAT-1900", "GMC-1024"]))
             .expect("the grid loads");
-        assert_eq!(loaded.application.start.to_string(), "A26");
-        assert_eq!(loaded.application.study_sessions, 2);
+        let timeline = loaded
+            .application
+            .timeline
+            .expect("the grid names a calendar");
+        assert_eq!(timeline.start.to_string(), "A26");
+        assert_eq!(timeline.study_sessions, 2);
         assert!(!loaded.application.summers_open);
         assert_eq!(loaded.application.pinned["GMC-1001"], 1);
         assert_eq!(loaded.application.pinned["MAT-1900"], 2);
@@ -529,10 +583,9 @@ mod tests {
             load("pas du json", &known(&[])),
             Err(CheminementError::Unreadable { .. })
         ));
-        assert_eq!(
-            load(r#"{ "completed": [], "sessions": [] }"#, &known(&[])),
-            Err(CheminementError::NoAdmission)
-        );
+        // a timeline that opens on a summer names no admission; an *empty*
+        // one names no calendar at all, which is a different verdict and
+        // has its own test above
         assert_eq!(
             load(
                 r#"{ "completed": [], "sessions": [
@@ -583,7 +636,98 @@ mod tests {
         )
         .expect("the gabarit shown in the help must load");
         assert!(loaded.summary.ignored.is_empty());
-        assert_eq!(loaded.application.study_sessions, 2);
+        assert_eq!(
+            loaded
+                .application
+                .timeline
+                .map(|timeline| timeline.study_sessions),
+            Some(2)
+        );
+    }
+
+    // The bug this test was written for: a file that is only « des cours
+    // réussis, rien de planifié » used to be refused as `NoAdmission`, and
+    // the refusal read as nothing happening at all. It loads (ADR
+    // `2026-08-cheminement-sans-session-charge-quand-meme`).
+    #[test]
+    fn a_cheminement_with_no_session_credits_its_courses_and_says_so() {
+        let raw = r#"{
+  "completed": ["GCI-1000", "GCI-1011", "GLG-1000"],
+  "sessions": []
+}"#;
+        let loaded = load(raw, &known(&["GCI-1000", "GCI-1011", "GLG-1000"]))
+            .expect("a cheminement of credits alone loads");
+        assert_eq!(loaded.application.timeline, None);
+        assert_eq!(loaded.application.credited.len(), 3);
+        assert!(loaded.application.pinned.is_empty());
+        assert!(loaded.summary.ignored.is_empty());
+        // the bilan says what did *not* move, or the load reads as a no-op
+        assert_eq!(
+            loaded.summary.headline,
+            "Aucune session dans le fichier : l'horizon n'a pas bougé, \
+             3 crédités, 0 ignoré."
+        );
+    }
+
+    // the same file, still not silent about what it could not use
+    #[test]
+    fn a_cheminement_with_no_session_still_names_the_sigles_it_refuses() {
+        let raw = r#"{ "completed": ["GCI-1000", "OPT-ION1"],
+                       "sessions": [] }"#;
+        let loaded =
+            load(raw, &known(&["GCI-1000"])).expect("the file still loads");
+        assert_eq!(loaded.summary.ignored.len(), 1);
+        assert!(
+            loaded.summary.ignored[0].contains("OPT-ION1"),
+            "{:?}",
+            loaded.summary.ignored
+        );
+        assert_eq!(
+            loaded.summary.headline,
+            "Aucune session dans le fichier : l'horizon n'a pas bougé, \
+             1 crédité, 1 ignoré."
+        );
+    }
+
+    // the neighbours of the bug: nothing to load, and nothing at all — both
+    // refused by name, neither in silence
+    #[test]
+    fn an_empty_document_and_a_missing_field_are_both_named() {
+        assert_eq!(
+            load(r#"{ "completed": [], "sessions": [] }"#, &known(&[])),
+            Err(CheminementError::Empty)
+        );
+        let missing = load(r#"{ "completed": ["GCI-1000"] }"#, &known(&[]))
+            .expect_err("a document without « sessions » is refused");
+        let CheminementError::Unreadable { detail } = missing else {
+            panic!("the refusal must name the missing field: {missing:?}");
+        };
+        assert!(detail.contains("sessions"), "{detail}");
+    }
+
+    #[test]
+    fn a_cheminement_with_no_session_leaves_the_horizon_where_it_was() {
+        let mut plan = Plan {
+            start: Semester {
+                season: Season::Winter,
+                year: 2025,
+            },
+            study_sessions: 9,
+            ..Plan::default()
+        };
+        plan.displayed_placement.insert("GMC-1001".to_string(), 3);
+        let loaded = load(
+            r#"{ "completed": ["GCI-1000"], "sessions": [] }"#,
+            &known(&["GCI-1000"]),
+        )
+        .expect("a cheminement of credits alone loads");
+        apply_to_plan(&mut plan, &loaded.application);
+
+        assert_eq!(plan.start.to_string(), "H25");
+        assert_eq!(plan.study_sessions, 9);
+        assert!(plan.credited.contains("GCI-1000"));
+        // the load still replaces the document rather than merging into it
+        assert!(plan.displayed_placement.is_empty());
     }
 
     // --- apply_to_plan -----------------------------------------------------
