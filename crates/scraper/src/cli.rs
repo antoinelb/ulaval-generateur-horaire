@@ -7,8 +7,9 @@ use crate::course::{self, CourseError, Snapshot};
 use crate::program::{self, ProgramError};
 use crate::{catalogue, fetch::Fetcher, parser::ParseError, print};
 use ulaval_scheduler_core::{
-    civil_from_days, preparatory_rule, semester_after, Catalogue,
-    CatalogueEntry, Course, Program, Semester,
+    civil_from_days, parse_prereq_tree, preparatory_rule, semester_after,
+    Catalogue, CatalogueEntry, Course, PrereqParseError, Prerequisites,
+    Program, Semester,
 };
 
 // ~10 requests/second, the politeness budget the whole scraper shares
@@ -56,6 +57,13 @@ enum Command {
         // so the next run is warm again
         #[arg(long)]
         force: bool,
+    },
+    // Re-derives every préalable tree from the `raw` the snapshot already
+    // holds, so a grammar change reaches the data without a single request
+    // (ADR `2026-08-virgule-selon-le-connecteur-final`)
+    Reparse {
+        #[arg(long, default_value = "data")]
+        output_dir: String,
     },
     Program {
         #[arg(long, default_value = "data")]
@@ -123,6 +131,7 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
                 std::time::SystemTime::now(),
             )
         }
+        Command::Reparse { output_dir } => reparse_courses(&output_dir),
         Command::Program {
             output_dir,
             semester,
@@ -418,6 +427,77 @@ fn merge_into_existing(
     // the order a full run writes (`course::snapshot`), so a subject run
     // leaves a diff holding its own courses and nothing else
     Ok(course::snapshot(courses))
+}
+
+// A grammar change reaches the data without a single request: every
+// préalable keeps its source text in the snapshot, so the tree is
+// re-derived from that `raw` rather than re-scraped — no network, no drift,
+// and the run is repeatable (ADR
+// `2026-08-virgule-selon-le-connecteur-final`). `meta.json` is left alone:
+// it dates the scrape, which did not happen.
+fn reparse_courses(output_dir: &str) -> anyhow::Result<()> {
+    let dir = Path::new(output_dir);
+    let path = dir.join("cours.json");
+    let task = print::task(
+        &format!("Reparsing préalables in {}...", path.display()),
+        &format!("Reparsed préalables in {}.", path.display()),
+    );
+
+    let snapshot = read_snapshot(dir)?;
+    let mut anomalies: Vec<PrereqParseError> = Vec::new();
+    let mut changed = 0;
+    let courses = snapshot
+        .courses
+        .into_iter()
+        .map(|course| {
+            let (course, was_changed) = reparse_course(course, &mut anomalies);
+            changed += usize::from(was_changed);
+            course
+        })
+        .collect();
+
+    // expect over `?`: serializing strings, maps and vecs provably cannot
+    // fail
+    let json = serde_json::to_string_pretty(&Snapshot { courses })
+        .expect("Snapshot serialization always succeeds");
+    write_atomic(&path, &(json + "\n"))?;
+    // its own log: `cours_errors.log` belongs to the last scrape, and a
+    // reparse has seen no page at all
+    write_error_log(&dir.join("cours_reparse_errors.log"), &anomalies)?;
+
+    task.done_with(&format!(
+        "Reparsed préalables in {}: {changed} tree(s) changed.",
+        path.display()
+    ));
+    Ok(())
+}
+
+// A phrase the grammar cannot read keeps its text and is reported, exactly
+// as the scraper's own parse does — including one that *used* to parse: a
+// grammar change must never turn an unreadable préalable into a silently
+// absent one.
+fn reparse_course(
+    mut course: Course,
+    anomalies: &mut Vec<PrereqParseError>,
+) -> (Course, bool) {
+    let Some(prerequisites) = course.prerequisites.take() else {
+        return (course, false);
+    };
+    let raw = match &prerequisites {
+        Prerequisites::Parsed { raw, .. } | Prerequisites::Raw { raw } => {
+            raw.clone()
+        }
+    };
+    let reparsed = match parse_prereq_tree(&raw) {
+        Ok(tree) => Prerequisites::Parsed { raw, tree },
+        Err(error) => {
+            anomalies.push(error);
+            Prerequisites::Raw { raw }
+        }
+    };
+    let changed = reparsed != prerequisites;
+    course.prerequisites = Some(reparsed);
+    (course, changed)
 }
 
 // An empty URL list means « refresh what is already there »: file names now
@@ -934,6 +1014,142 @@ mod tests {
             let result = run(courses_args(&dir, &["gex"])).await;
 
             assert!(result.is_err(), "an {name} snapshot must fail the run");
+            cleanup(&dir);
+        }
+    }
+
+    #[tokio::test]
+    async fn reparse_rederives_every_tree_from_the_snapshot_own_raw() {
+        // a grammar change reaches the data with no request at all: the
+        // `raw` the last scrape stored carries everything (ADR
+        // `2026-08-virgule-selon-le-connecteur-final`)
+        let _guard = lock_print();
+        let dir = test_dir("reparse-rederives");
+        plant_snapshot_with_prereqs(
+            &dir,
+            &[
+                // the tree the old grammar left behind, comma run and all
+                (
+                    "MAT-1900",
+                    Some(
+                        r#"{"raw":"MAT-0130, MAT-0150 ET MAT-0260","tree":{"all":[{"raw":"MAT-0130, MAT-0150"},"MAT-0260"]}}"#,
+                    ),
+                ),
+                // already current: reparsing must leave it alone
+                ("GCI-1000", Some(r#"{"raw":"GCI-1001","tree":"GCI-1001"}"#)),
+                // no préalable at all
+                ("GEX-1000", None),
+            ],
+        );
+
+        run(vec![
+            "reparse".to_string(),
+            "--output-dir".to_string(),
+            dir.display().to_string(),
+        ])
+        .await
+        .unwrap_or_else(|e| panic!("reparse: {e}"));
+
+        let written = std::fs::read_to_string(dir.join("cours.json"))
+            .unwrap_or_else(|e| panic!("read the snapshot: {e}"));
+        let snapshot: Snapshot = serde_json::from_str(&written)
+            .unwrap_or_else(|e| panic!("parse the snapshot: {e}"));
+        let trees: Vec<Option<Prerequisites>> = snapshot
+            .courses
+            .into_iter()
+            .map(|course| course.prerequisites)
+            .collect();
+        assert_eq!(
+            trees,
+            [
+                Some(Prerequisites::Parsed {
+                    raw: "MAT-0130, MAT-0150 ET MAT-0260".to_string(),
+                    tree: parse_prereq_tree("MAT-0130, MAT-0150 ET MAT-0260")
+                        .unwrap_or_else(|e| panic!("expected tree: {e}")),
+                }),
+                Some(Prerequisites::Parsed {
+                    raw: "GCI-1001".to_string(),
+                    tree: parse_prereq_tree("GCI-1001")
+                        .unwrap_or_else(|e| panic!("expected tree: {e}")),
+                }),
+                None,
+            ]
+        );
+        assert!(
+            !dir.join("cours_reparse_errors.log").exists(),
+            "a clean reparse leaves no error log"
+        );
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn reparse_keeps_a_phrase_no_grammar_reads_and_reports_it() {
+        // a grammar change must never turn an unreadable préalable into an
+        // absent one: the text stays, the anomaly is written down
+        let _guard = lock_print();
+        let dir = test_dir("reparse-out-of-grammar");
+        plant_snapshot_with_prereqs(
+            &dir,
+            &[("MAT-1900", Some(r#"{"raw":"GLG-1900 OU"}"#))],
+        );
+
+        run(vec![
+            "reparse".to_string(),
+            "--output-dir".to_string(),
+            dir.display().to_string(),
+        ])
+        .await
+        .unwrap_or_else(|e| panic!("reparse: {e}"));
+
+        let written = std::fs::read_to_string(dir.join("cours.json"))
+            .unwrap_or_else(|e| panic!("read the snapshot: {e}"));
+        assert!(written.contains(r#""raw": "GLG-1900 OU""#), "{written}");
+        assert!(!written.contains("tree"), "{written}");
+        let log =
+            std::fs::read_to_string(dir.join("cours_reparse_errors.log"))
+                .unwrap_or_else(|e| panic!("read the reparse log: {e}"));
+        assert!(log.contains("GLG-1900 OU"), "{log}");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn a_reparse_that_cannot_read_or_write_fails_the_run() {
+        // the three ways the pass can fail on IO: no snapshot to read, a
+        // snapshot that cannot be rewritten, and an anomaly log that cannot
+        // be written. None may pass for a successful reparse.
+        let _guard = lock_print();
+        let readable = r#"{"raw":"MAT-0130, MAT-0150 ET MAT-0260"}"#;
+        let unreadable = r#"{"raw":"GLG-1900 OU"}"#;
+        for (name, prerequisites, blocked) in [
+            ("no-snapshot", None, None),
+            ("blocked-snapshot", Some(readable), Some("cours.tmp")),
+            (
+                "blocked-log",
+                Some(unreadable),
+                Some("cours_reparse_errors.tmp"),
+            ),
+        ] {
+            let dir = test_dir(&format!("reparse-{name}"));
+            if let Some(prerequisites) = prerequisites {
+                plant_snapshot_with_prereqs(
+                    &dir,
+                    &[("MAT-1900", Some(prerequisites))],
+                );
+            }
+            // a directory where the atomic write puts its temporary file
+            if let Some(blocked) = blocked {
+                std::fs::create_dir_all(dir.join(blocked))
+                    .unwrap_or_else(|e| panic!("block {name}: {e}"));
+            }
+
+            let result = run(vec![
+                "reparse".to_string(),
+                "--output-dir".to_string(),
+                dir.display().to_string(),
+            ])
+            .await;
+
+            assert!(result.is_err(), "{name} must fail the run");
             cleanup(&dir);
         }
     }

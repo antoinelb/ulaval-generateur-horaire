@@ -26,6 +26,21 @@ Un opérande `raw` — un test de classement, une plage de sigles (« ESG-2020 �
 
 `prerequisites` vaut `null` quand le cours n'en a pas ; la variante sans `tree` (`{"raw": "…"}` seul) signifie que la phrase entière est hors grammaire.
 
+## L'énumération à virgules
+
+Le répertoire écrit ses listes de sigles avec des virgules et un seul connecteur, à la fin : c'est **ce connecteur qui régit toute l'énumération** (ADR `2026-08-virgule-selon-le-connecteur-final`).
+
+| Texte source | Arbre |
+|---|---|
+| « MAT-0130, MAT-0150 ET MAT-0260 » (MAT-1900) | `{"all": ["MAT-0130", "MAT-0150", "MAT-0260"]}` |
+| « CHM-0150, CHM-0160 OU CHM-0170 » (CHM-1003) | `{"any": ["CHM-0150", "CHM-0160", "CHM-0170"]}` |
+
+L'énumération vaut exactement le groupe parenthésé correspondant : elle est donc **un seul opérande** de la précédence ET/OU qui l'entoure.
+« CHM-0150, CHM-0160 OU CHM-0170 ET PHY-0150 » (CHM-1901) donne `{"all": [{"any": [trois cours]}, "PHY-0150"]}`, et non un OU dont le dernier terme serait un ET.
+Chaque élément garde sa propre étoile : « MAT-0130, MAT-0150, MAT-0260* ET PHY-0150 » (GMC-1001) place `{"concomitant": "MAT-0260"}` au milieu du `all`.
+
+Deux formes restent en texte brut, faute d'un sens que la grammaire puisse prouver : une énumération que ne ferme aucun connecteur (« BIO-0150, CHM-0150, CHM-0160 », BCM-1903) et une virgule prise dans de la prose (« Réussir 2 parmi CTB-6112, CTB-6116, … », CTB-6113).
+
 ## Ce que le placement en fait
 
 Dans un organigramme, un préalable doit être satisfait **avant** la session du cours — sauf une feuille `concomitant`, que la même session satisfait déjà.
