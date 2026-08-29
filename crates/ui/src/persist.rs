@@ -304,6 +304,46 @@ pub fn enter_document(
     }
 }
 
+// What « Réinitialiser » decides, computed pure — the component only
+// writes localStorage and the signals around it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DocumentReset {
+    // the shelf key to drop, so re-choosing the program never resurrects
+    // the pre-reset grid (ADR
+    // `2026-08-reinitialiser-le-document-courant-et-son-etagere`)
+    pub shelf: Option<String>,
+    // the living document afterwards
+    pub next: Plan,
+}
+
+// « Réinitialiser » : the document empties *inside its program*. The
+// program, its vintage and its scope are the document's identity, not its
+// content — dropping them would hand the student back to the picker, whose
+// next click is a `swap_document` that clears `History` and destroys the
+// one undo step the reset just created (ADR
+// `2026-08-reinitialiser-reste-dans-le-programme`).
+pub fn reset_document(
+    current: &Plan,
+    study_sessions: usize,
+    today: ulaval_scheduler_core::Semester,
+) -> DocumentReset {
+    let start = crate::state::next_admission_semester(today);
+    DocumentReset {
+        shelf: current.program.as_ref().map(snapshot_key),
+        next: match current.program.clone() {
+            Some(choice) => {
+                crate::state::fresh_plan(start, choice, study_sessions, today)
+            }
+            // resetting from the picker: there is no document to empty,
+            // only the calendar identity to re-date
+            None => Plan {
+                start,
+                ..Plan::default()
+            },
+        },
+    }
+}
+
 // The fragment import stashes the current document only when the shared
 // plan belongs to another (program, vintage): stashing the same key would
 // let a later « changer » overwrite the shelf with the shared version.
@@ -1154,6 +1194,53 @@ mod tests {
         assert!(import_stash(&current, &Plan::default()).is_some());
         // a picker current has nothing to stash
         assert!(import_stash(&Plan::default(), &other).is_none());
+    }
+
+    // The regression of 2026-08-29: « Réinitialiser » dropped the program
+    // and handed back the picker, whose « Choisir » is a `swap_document`
+    // that clears `History` — the reset's own undo step died at the click
+    // that got the student back into his program. The document stays in
+    // its program, so no swap is ever needed to recover it.
+    #[test]
+    fn resetting_stays_in_the_program_so_the_undo_step_survives() {
+        let (plan, _) = shared_plan();
+        let reset = reset_document(&plan, 10, today());
+        let kept = reset.next.program.expect("the document keeps its program");
+        assert_eq!(
+            kept,
+            plan.program.clone().expect("a program"),
+            "identity and scope kept — nothing to re-pick"
+        );
+        // the content is what goes back to zero
+        assert!(reset.next.electives.is_empty());
+        assert!(reset.next.pinned_sessions.is_empty());
+        assert!(reset.next.displayed_placement.is_empty());
+        assert_eq!(reset.next.credit_cap, Plan::default().credit_cap);
+        assert!(!reset.next.summers_open);
+        assert_eq!(
+            reset.next.study_sessions, 10,
+            "the horizon a fresh document of this program would get"
+        );
+        assert_eq!(
+            reset.next.start,
+            crate::state::next_admission_semester(today()),
+            "repartir de zéro, jamais dans le passé"
+        );
+        // and its shelf copy goes with the content
+        assert_eq!(reset.shelf.as_deref(), Some("gh.v1.plan/B-GEX-A26"));
+    }
+
+    #[test]
+    fn resetting_from_the_picker_only_re_dates_it() {
+        let reset = reset_document(&Plan::default(), 8, semester("E27"));
+        assert!(reset.shelf.is_none(), "no document, no shelf");
+        assert_eq!(
+            reset.next,
+            Plan {
+                start: semester("A27"),
+                ..Plan::default()
+            }
+        );
     }
 
     // user story 10, the contract: A rempli → changer → B rempli →
