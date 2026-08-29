@@ -34,12 +34,14 @@ pub struct PlacementRequest<'a> {
     // regular courses; an été absent from the set accepts only stages and
     // pinned courses (ADR `2026-08-stage-place-en-ete-sauf-epinglage`)
     pub open_summers: &'a BTreeSet<usize>,
-    // sessions 1..=completed_sessions are déjà complétées (a relevé
-    // Capsule import anchors the plan in the past): the search never
-    // seats an unpinned course there — only a pin, the student's or the
-    // relevé's own explicit act, can occupy a finished session (ADR
-    // `2026-08-sessions-completees-fermees-au-solveur`). 0 = none.
-    pub completed_sessions: usize,
+    // 1-based indices of the frozen sessions — settled ones (a relevé
+    // Capsule import, or the student's own « geler » toggle): the search
+    // never seats an unpinned course there — only a pin, an explicit act,
+    // can occupy a frozen session. The caller anchors what a frozen
+    // session already displays by pinning it before the ask (ADRs
+    // `2026-08-sessions-completees-fermees-au-solveur`,
+    // `2026-08-sessions-gelees-generalisent-les-completees`).
+    pub frozen: &'a BTreeSet<usize>,
     pub seed: &'a BTreeMap<String, usize>,
     // the double bound (ADR `2026-07-budget-de-b-en-double-borne`): work
     // (expanded partial assignments) and memory (returned solutions)
@@ -875,11 +877,11 @@ fn value_ordered_domain(
             request.pinned.contains_key(&course.code)
                 || summer_admits(&course.code, session, request)
         })
-        // a finished session takes no new course — pins only (checked
+        // a frozen session takes no new course — pins only (checked
         // above: a pinned domain is already the singleton)
         .filter(|&session| {
             request.pinned.contains_key(&course.code)
-                || session > request.completed_sessions
+                || !request.frozen.contains(&session)
         })
         .collect();
     let demoted = |session: usize| {
@@ -2079,7 +2081,7 @@ mod tests {
         pinned: BTreeMap<String, usize>,
         stages: BTreeSet<String>,
         open_summers: BTreeSet<usize>,
-        completed_sessions: usize,
+        frozen: BTreeSet<usize>,
         seed: BTreeMap<String, usize>,
         credit_cap: u32,
         concomitant: bool,
@@ -2100,7 +2102,7 @@ mod tests {
                 pinned: BTreeMap::new(),
                 stages: BTreeSet::new(),
                 open_summers: BTreeSet::new(),
-                completed_sessions: 0,
+                frozen: BTreeSet::new(),
                 seed: BTreeMap::new(),
                 credit_cap: 30,
                 concomitant: false,
@@ -2143,7 +2145,7 @@ mod tests {
                 pinned: &self.pinned,
                 stages: &self.stages,
                 open_summers: &self.open_summers,
-                completed_sessions: self.completed_sessions,
+                frozen: &self.frozen,
                 seed: &self.seed,
                 max_nodes: self.max_nodes,
                 max_solutions: self.max_solutions,
@@ -2217,25 +2219,51 @@ mod tests {
             .collect()
     }
 
-    // --- sessions déjà complétées (ADR
-    // `2026-08-sessions-completees-fermees-au-solveur`)
+    // --- sessions gelées (ADRs
+    // `2026-08-sessions-completees-fermees-au-solveur`,
+    // `2026-08-sessions-gelees-generalisent-les-completees`)
 
     #[test]
-    fn a_completed_session_seats_pins_only() {
-        // both courses could sit in either session; with session 1 déjà
-        // complétée the unpinned one has only session 2 left, while the
-        // pinned one keeps its finished seat — the relevé's explicit act
+    fn a_frozen_session_seats_pins_only() {
+        // both courses could sit in either session; with session 1 gelée
+        // the unpinned one has only session 2 left, while the pinned one
+        // keeps its frozen seat — the relevé's or the student's explicit act
         let mut inputs = Inputs::new(
             &FALL_WINTER,
             vec![anytime("GEX-1000", "monday"), anytime("GEX-1001", "monday")],
         );
-        inputs.completed_sessions = 1;
+        inputs.frozen.insert(1);
         inputs.pinned.insert("GEX-1000".to_string(), 1);
         let placement = inputs.solve();
         assert_eq!(
             sorted_placements(&placement),
             vec![pairs(&[("GEX-1000", 1), ("GEX-1001", 2)])],
             "the only arrangement leaves session 1 to its pin"
+        );
+    }
+
+    #[test]
+    fn freezing_holds_any_session_not_only_a_prefix() {
+        // a frozen session in the middle of an open horizon: the free
+        // course may land on either side of it, never inside — the set
+        // generalizes the old 1..=n prefix
+        let sessions = [Season::Fall, Season::Winter, Season::Fall];
+        let mut inputs = Inputs::new(
+            &sessions,
+            vec![anytime("GEX-1000", "monday"), anytime("GEX-1001", "monday")],
+        );
+        inputs.frozen.insert(2);
+        inputs.pinned.insert("GEX-1000".to_string(), 2);
+        let placement = inputs.solve();
+        let seats: BTreeSet<usize> = placement
+            .solutions
+            .iter()
+            .filter_map(|solution| solution.placement.get("GEX-1001").copied())
+            .collect();
+        assert_eq!(
+            seats,
+            BTreeSet::from([1, 3]),
+            "the unpinned course goes around the frozen middle, never in it"
         );
     }
 
@@ -2983,7 +3011,7 @@ mod tests {
             pinned: &empty_map,
             stages: &empty_set,
             open_summers: &BTreeSet::new(),
-            completed_sessions: 0,
+            frozen: &BTreeSet::new(),
             seed: &empty_map,
             max_nodes: 0,
             max_solutions: 1,
@@ -3099,7 +3127,7 @@ mod tests {
             pinned: &empty_map,
             stages: &empty_set,
             open_summers: &empty_summers,
-            completed_sessions: 0,
+            frozen: &empty_summers,
             seed: &empty_map,
             max_nodes: 0,
             max_solutions: 1,

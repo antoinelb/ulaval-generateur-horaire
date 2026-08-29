@@ -69,6 +69,11 @@ pub fn WeeklyGrid() -> Element {
         .chosen
         .get(&session)
         .is_some_and(|chosen| !chosen.is_empty());
+    // la bascule « geler » ne s'offre que sur une session que l'horizon
+    // connaît — « Horaire » sans session n'a rien à geler
+    let known_session =
+        solve::session_semester(&plan.read(), session).is_some();
+    let session_frozen = plan.read().frozen.contains(&session);
     let history = use_context::<Signal<History>>();
     // ADR `2026-08-recalcul-visible-sur-la-grille` : un état transitoire
     // plausible ne doit jamais se lire comme le résultat final (rapport
@@ -123,6 +128,35 @@ pub fn WeeklyGrid() -> Element {
                             );
                         },
                         "Libérer les sections forcées"
+                    }
+                }
+                // ACT-2 : une bascule annulable, jamais de confirmation
+                // (ADR `2026-08-sessions-gelees-generalisent-les-completees`)
+                if known_session {
+                    button {
+                        class: "grid-share",
+                        title: if session_frozen {
+                            "Dégeler : le solveur pourra de nouveau ajouter \
+                             ou déplacer des cours dans cette session"
+                        } else {
+                            "Geler : le solveur n'ajoutera ni ne déplacera \
+                             plus rien dans cette session — vous pourrez \
+                             toujours la modifier vous-même"
+                        },
+                        onclick: move |_| {
+                            let label = if session_frozen {
+                                "Session dégelée"
+                            } else {
+                                "Session gelée"
+                            };
+                            edit_plan(plan, history, label, |plan| {
+                                let thawed = plan.frozen.remove(&session);
+                                if !thawed {
+                                    plan.frozen.insert(session);
+                                }
+                            });
+                        },
+                        if session_frozen { "❄ Dégeler" } else { "Geler" }
                     }
                 }
             }

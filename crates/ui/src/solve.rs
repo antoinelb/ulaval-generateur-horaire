@@ -1133,7 +1133,7 @@ fn request_json(
             "credit_cap": plan.credit_cap,
             "concomitant": plan.concomitant,
             "summers_open": plan.summers_open,
-            "completed_sessions": plan.completed_sessions,
+            "frozen": plan.frozen,
             "seed": plan.displayed_placement,
             "max_nodes": max_nodes,
             "max_solutions": 1,

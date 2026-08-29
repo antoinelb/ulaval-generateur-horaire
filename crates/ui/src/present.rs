@@ -1008,6 +1008,9 @@ pub struct RibbonCard {
     // courses are the student's acquired past (purely visual, ADR
     // `2026-08-retrait-de-la-notion-de-cours-reussi`)
     pub passed: bool,
+    // gelée : the solver neither adds nor moves anything here (ADR
+    // `2026-08-sessions-gelees-generalisent-les-completees`)
+    pub frozen: bool,
     // its weekly schedule clashes: the card must say so even when the
     // session is not displayed (rapport étudiante 2026-08-13)
     pub conflict: bool,
@@ -1040,6 +1043,7 @@ pub fn ribbon_model(
                 over_cap: credits.total > plan.credit_cap,
                 has_range: credits.has_range,
                 passed: state::semester_precedes(semester, today),
+                frozen: plan.frozen.contains(&index),
                 conflict: !codes.is_empty()
                     && !crate::solve::weekly_schedule(snapshot, plan, index)
                         .report

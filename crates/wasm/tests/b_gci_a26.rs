@@ -116,7 +116,7 @@ fn base_input() -> OrganigrammeInput {
         credit_cap: 17,
         concomitant: false,
         summers_open: false,
-        completed_sessions: 0,
+        frozen: Default::default(),
         seed: Default::default(),
         max_nodes: Some(2_000_000),
         max_solutions: Some(1),

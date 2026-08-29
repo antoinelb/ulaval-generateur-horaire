@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use ulaval_scheduler_core::Course;
 
@@ -558,10 +558,10 @@ fn share_into(
             year: state.start_year,
         },
         study_sessions: state.study_sessions as usize,
-        // ponytail: the share URL does not carry the relevé's completed
-        // sessions — a shared organigramme reopens fully editable; add the
-        // field to the share state if that ever misleads
-        completed_sessions: 0,
+        // ponytail: the share URL does not carry the frozen sessions — a
+        // shared organigramme reopens fully editable; add the field to the
+        // share state if that ever misleads
+        frozen: BTreeSet::new(),
         summers_open: state.summers_open,
         credit_cap: state.credit_cap,
         concomitant: state.concomitant,
@@ -740,7 +740,7 @@ mod tests {
         // setting — is the student's own and stays sovereign
         let stored = Plan {
             start: semester("A22"),
-            completed_sessions: 4,
+            frozen: (1..=4).collect(),
             ..Plan::default()
         };
         let restored =
@@ -1039,7 +1039,7 @@ mod tests {
         // was — the clock never rewrites a real save
         let mut shelved = Plan {
             start: semester("A22"),
-            completed_sessions: 6,
+            frozen: (1..=6).collect(),
             ..Plan::default()
         };
         shelved.program = Some(choice("B-GEX", "A26"));

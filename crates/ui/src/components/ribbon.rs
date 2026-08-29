@@ -99,6 +99,7 @@ fn SessionCard(card: RibbonCard) -> Element {
             class: "ribbon-card",
             class: if card.current { "ribbon-card--current" },
             class: if card.passed { "ribbon-card--passed" },
+            class: if card.frozen { "ribbon-card--frozen" },
             class: if card.summer { "ribbon-card--ete" },
             class: if card.over_cap { "ribbon-card--over" },
             class: if target == Some(true) { "ribbon-card--target" },
@@ -162,6 +163,16 @@ fn SessionCard(card: RibbonCard) -> Element {
                     "⚠ conflit d'horaire"
                 }
             }
+            // glyphe + mot, jamais couleur seule (INP-3) ; la bascule vit
+            // dans l'en-tête de l'horaire, la carte ne fait qu'annoncer
+            if card.frozen {
+                div {
+                    class: "ribbon-card-special",
+                    title: "Session gelée — le solveur n'y ajoute ni n'en \
+                            déplace rien ; vous pouvez toujours la modifier",
+                    "❄ gelée"
+                }
+            }
             if card.codes.is_empty() {
                 div { class: "ribbon-card-empty", "à planifier" }
             } else {
@@ -199,12 +210,24 @@ fn SummerStrip(card: RibbonCard) -> Element {
         .clone()
         .or_else(|| (!card.codes.is_empty()).then(|| card.codes.join(" ")))
         .unwrap_or_else(|| "—".to_string());
+    // la bande étroite n'a pas de place pour un insigne : le glyphe
+    // préfixe le contenu, le `title` porte le mot
+    let content = if card.frozen {
+        format!("❄ {content}")
+    } else {
+        content
+    };
     rsx! {
         button {
             class: "ribbon-summer",
             class: if card.current { "ribbon-summer--current" },
+            class: if card.frozen { "ribbon-card--frozen" },
             class: if !card.codes.is_empty() || card.special.is_some() {
                 "ribbon-summer--busy"
+            },
+            title: if card.frozen {
+                "Session gelée — le solveur n'y ajoute ni n'en déplace \
+                 rien ; vous pouvez toujours la modifier"
             },
             class: if target == Some(true) { "ribbon-card--target" },
             class: if target == Some(false) { "ribbon-card--barred" },

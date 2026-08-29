@@ -146,8 +146,10 @@ pub fn apply_to_plan(plan: &mut Plan, application: &TranscriptApplication) {
     plan.start = application.start;
     plan.study_sessions = application.study_sessions;
     // the relevé is the authority on what is already behind the student:
-    // the solver stops seating unpinned courses in those sessions
-    plan.completed_sessions = application.completed_sessions;
+    // the graded sessions freeze. Extension, never overwrite — a freeze
+    // the student set himself on a later session survives a re-import (ADR
+    // `2026-08-sessions-gelees-generalisent-les-completees`)
+    plan.frozen.extend(1..=application.completed_sessions);
     // raise-only: the heaviest relevé session sets the floor of the cap —
     // a cap below a load the student actually carried would make his own
     // past infeasible; a light relevé never shrinks the setting (ADR
@@ -424,13 +426,17 @@ mod tests {
             &["MAT-1910"],
         );
         application.completed_sessions = 1;
+        // a freeze the student set on a later session must survive the
+        // import — extension, never overwrite
+        plan.frozen.insert(2);
         apply_to_plan(&mut plan, &application);
 
         assert_eq!(plan.start, application.start);
         assert_eq!(plan.study_sessions, 2);
         assert_eq!(
-            plan.completed_sessions, 1,
-            "le relevé ferme les sessions déjà notées au solveur"
+            plan.frozen,
+            std::collections::BTreeSet::from([1, 2]),
+            "le relevé gèle les sessions déjà notées sans dégeler le reste"
         );
         assert!(!plan.summers_open);
         assert_eq!(plan.pinned_sessions["GEX-1000"], 1);

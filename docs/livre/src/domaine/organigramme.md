@@ -11,8 +11,9 @@ Chaque solution retournée respecte :
 2. **les préalables** : satisfaits avant la session du cours — la même session suffit pour une feuille `concomitant` (l'étoile du répertoire), et `concomitant: true` étend cette tolérance à toutes les feuilles ;
 3. **le plafond de crédits** (`credit_cap`) par session, les fourchettes comptant leur borne basse ;
 4. **les étés fermés** : sans `summers_open`, un été n'accueille que stages et cours épinglés ;
-5. **les stages en été** : un stage non épinglé ne se place qu'en été — l'épingler ailleurs est un geste explicite qui lève la règle ;
-6. **la faisabilité hebdomadaire** : les cours d'une même session doivent admettre au moins une combinaison d'options sans conflit d'horaire.
+5. **les sessions gelées** : une session listée dans `frozen` n'accueille aucun cours non épinglé, et ce que le germe y assoit est épinglé avant la recherche — le solveur n'y ajoute ni n'en déplace rien (ADR `2026-08-sessions-gelees-generalisent-les-completees`) ;
+6. **les stages en été** : un stage non épinglé ne se place qu'en été — l'épingler ailleurs est un geste explicite qui lève la règle ;
+7. **la faisabilité hebdomadaire** : les cours d'une même session doivent admettre au moins une combinaison d'options sans conflit d'horaire.
 
 ## Les trois issues, jamais confondues
 

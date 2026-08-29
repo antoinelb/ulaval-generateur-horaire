@@ -1508,7 +1508,10 @@ fn CheminementLoader() -> Element {
                         code { "semester" }
                         " (A26, H27, E27) et ses "
                         code { "courses" }
-                        ". C'est le format qu'écrit « Exporter → \
+                        ". Une session peut aussi porter "
+                        code { "\"frozen\": true" }
+                        " — gelée : le solveur n'y ajoute ni n'en déplace \
+                         rien. C'est le format qu'écrit « Exporter → \
                          Organigramme → JSON »."
                     }
                     pre { class: "panel-cheminement-gabarit",

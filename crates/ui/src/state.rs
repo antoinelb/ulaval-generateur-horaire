@@ -26,10 +26,12 @@ pub struct Plan {
     // the A1 identity — « A26 » = automne 2026
     pub start: Semester,
     pub study_sessions: usize,
-    // sessions 1..=n déjà complétées (import Capsule) : fermées au solveur
-    // pour tout cours non épinglé (ADR
-    // `2026-08-sessions-completees-fermees-au-solveur`); 0 = aucune
-    pub completed_sessions: usize,
+    // 1-based indices des sessions gelées (import Capsule, ou la bascule
+    // « geler » de l'étudiant) : le solveur n'y ajoute rien et n'en
+    // déplace rien — l'étudiant, lui, y touche librement (ADRs
+    // `2026-08-sessions-completees-fermees-au-solveur`,
+    // `2026-08-sessions-gelees-generalisent-les-completees`)
+    pub frozen: BTreeSet<usize>,
     pub summers_open: bool,
     pub credit_cap: u32,
     pub concomitant: bool,
@@ -84,7 +86,7 @@ impl Default for Plan {
                 year: 2026,
             },
             study_sessions: DEFAULT_STUDY_SESSIONS,
-            completed_sessions: 0,
+            frozen: BTreeSet::new(),
             summers_open: false,
             credit_cap: DEFAULT_CREDIT_CAP,
             concomitant: false,
@@ -403,9 +405,10 @@ fn binding_slot(plan: &Plan) -> usize {
         .map(|(&session, _)| session)
         .max()
         .unwrap_or(0);
-    pinned
-        .max(manual)
-        .max(plan.completed_sessions.saturating_add(1))
+    // the highest frozen session binds: it must stay on the horizon, plus
+    // one open slot beyond the settled past for what remains to place
+    let frozen = plan.frozen.iter().max().copied().unwrap_or(0);
+    pinned.max(manual).max(frozen.saturating_add(1))
 }
 
 // The smallest alternation count whose expanded horizon reaches `slot`:
@@ -486,14 +489,14 @@ pub fn horizon_floor_note(plan: &Plan) -> String {
         );
     }
     // `> 0`: an empty plan's binding slot is the single open session, no
-    // relevé behind it — that is the bare minimum, not a closed past
-    if plan.completed_sessions > 0
-        && plan.completed_sessions.saturating_add(1) == slot
-    {
+    // frozen past behind it — that is the bare minimum, not a closed past
+    let last_frozen = plan.frozen.iter().max().copied().unwrap_or(0);
+    if last_frozen > 0 && last_frozen.saturating_add(1) == slot {
+        let frozen_label =
+            session_label(&semesters, last_frozen.wrapping_sub(1));
         return format!(
-            "L'horizon reste à {floor} sessions : votre relevé occupe les \
-             {} premières, et une session reste ouverte pour la suite.",
-            plan.completed_sessions
+            "L'horizon reste à {floor} sessions : {frozen_label} est \
+             gelée, et une session reste ouverte pour la suite."
         );
     }
     format!("L'horizon garde au moins {floor} sessions.")
@@ -672,12 +675,12 @@ mod tests {
         plan.pinned_sessions.insert("GEX-1000".to_string(), 5);
         plan.manual.insert(7, vec!["MAN-1000".to_string()]);
         plan.manual.insert(9, Vec::new());
-        plan.completed_sessions = 3;
+        plan.frozen.insert(3);
         assert_eq!(
             horizon_floor(&plan),
             5,
             "the highest of pins, non-empty manual sessions and the \
-             completed past — an emptied manual session holds nothing — \
+             frozen past — an emptied manual session holds nothing — \
              read back in study sessions: slot 7 of an automne start is \
              A1-H1-É1-A2-H2-É2-A3, five study sessions"
         );
@@ -748,14 +751,15 @@ mod tests {
         assert!(note.contains("cours manuels"), "{note}");
         assert!(note.contains("retirez-les"), "{note}");
 
-        // the relevé's completed sessions hold it
+        // the frozen sessions hold it — the highest one binds
         let plan = Plan {
             study_sessions: 8,
-            completed_sessions: 5,
+            frozen: BTreeSet::from([2, 5]),
             ..Plan::default()
         };
         let note = horizon_floor_note(&plan);
-        assert!(note.contains("relevé occupe les 5 premières"), "{note}");
+        assert!(note.contains("est gelée"), "{note}");
+        assert!(note.contains("reste ouverte pour la suite"), "{note}");
 
         // nothing explicit: the bare minimum speaks for itself
         let note = horizon_floor_note(&Plan::default());

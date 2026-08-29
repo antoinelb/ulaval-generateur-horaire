@@ -49,6 +49,9 @@ pub struct CheminementApplication {
     // code → 1-based session index
     pub pinned: BTreeMap<String, usize>,
     pub credited: BTreeSet<String>,
+    // 1-based indices of the sessions the file froze (ADR
+    // `2026-08-sessions-gelees-generalisent-les-completees`)
+    pub frozen: BTreeSet<usize>,
 }
 
 // Every field a finished French sentence — `rsx!` only prints them (AP-5).
@@ -119,17 +122,27 @@ fn apply(
     // lookup that could fail
     let mut placed_in: BTreeMap<String, Semester> = BTreeMap::new();
     let mut credited = BTreeSet::new();
+    let mut frozen = BTreeSet::new();
     let mut ignored = Vec::new();
     let mut summers_open = false;
 
     for session in &cheminement.sessions {
         let semester = session.semester;
         let Some(index) = index_of(semester) else {
+            // a freeze the horizon cannot hold is named, never dropped
+            if session.frozen {
+                ignored.push(format!(
+                    "{semester} gelée — hors de l'horizon, gel ignoré"
+                ));
+            }
             for code in &session.courses {
                 ignored.push(format!("{code} — {semester} hors de l'horizon"));
             }
             continue;
         };
+        if session.frozen {
+            frozen.insert(index);
+        }
         if semester.season == Season::Summer && !session.courses.is_empty() {
             summers_open = true;
         }
@@ -195,6 +208,7 @@ fn apply(
             summers_open,
             pinned,
             credited,
+            frozen,
         },
         summary: CheminementSummary { ignored, headline },
     })
@@ -245,9 +259,10 @@ pub fn apply_to_plan(plan: &mut Plan, application: &CheminementApplication) {
         summers_open,
         start: application.start,
         study_sessions: application.study_sessions,
-        // a cheminement type is a plan, not a past: nothing in it is behind
-        // the student, so the solver keeps every session open
-        completed_sessions: 0,
+        // the file is the authority on its own freezes — an official grid
+        // carries none and every session opens, an exported past keeps its
+        // frozen sessions frozen
+        frozen: application.frozen.clone(),
         ..Plan::default()
     };
 
@@ -318,6 +333,7 @@ pub fn export(
             // the whole timeline is written, empty summers included: it is
             // what makes `study_sessions` come back the same on re-reading
             courses: state::session_codes(plan, offset + 1),
+            frozen: plan.frozen.contains(&(offset + 1)),
         })
         .collect();
     let exported = Exported {
@@ -606,7 +622,7 @@ mod tests {
             .insert("GCI-2010".to_string(), "p/Règle 2".to_string());
         plan.special.insert(3, "à l'étranger".to_string());
         plan.chosen.insert(1, Default::default());
-        plan.completed_sessions = 2;
+        plan.frozen.insert(2);
         plan.credit_cap = 21;
 
         let loaded = load(GRID, &known(&["GMC-1001", "MAT-1900", "GMC-1024"]))
@@ -636,7 +652,49 @@ mod tests {
             plan.program.as_ref().map(|program| program.code.as_str()),
             Some("B-GEX")
         );
-        assert_eq!(plan.completed_sessions, 0);
+        // GRID froze nothing: the file is the authority on its freezes
+        assert!(plan.frozen.is_empty());
+    }
+
+    // --- sessions gelées (ADR
+    // `2026-08-sessions-gelees-generalisent-les-completees`) ----------------
+
+    #[test]
+    fn a_frozen_flag_lands_in_the_plan_and_survives_the_export_round_trip() {
+        let raw = r#"{ "completed": [], "sessions": [
+            { "semester": "A26", "courses": ["GMC-1001"], "frozen": true },
+            { "semester": "H27", "courses": ["MAT-1900"] } ] }"#;
+        let mut plan = Plan::default();
+        let loaded = load(raw, &known(&["GMC-1001", "MAT-1900"]))
+            .expect("the frozen grid loads");
+        assert!(loaded.summary.ignored.is_empty());
+        apply_to_plan(&mut plan, &loaded.application);
+        assert_eq!(plan.frozen, BTreeSet::from([1]));
+
+        let written = export(&plan, "2026-08-29T18:32:00Z", &provenance());
+        let reloaded = load(&written, &known(&["GMC-1001", "MAT-1900"]))
+            .expect("the exported grid loads back");
+        assert_eq!(reloaded.application.frozen, BTreeSet::from([1]));
+    }
+
+    #[test]
+    fn a_frozen_session_out_of_the_horizon_is_named_never_dropped() {
+        // E26 sits before the A26 admission: out of the horizon entirely
+        let raw = r#"{ "completed": [], "sessions": [
+            { "semester": "A26", "courses": ["GMC-1001"] },
+            { "semester": "E26", "courses": [], "frozen": true } ] }"#;
+        let loaded =
+            load(raw, &known(&["GMC-1001"])).expect("the grid still loads");
+        assert!(loaded.application.frozen.is_empty());
+        assert!(
+            loaded
+                .summary
+                .ignored
+                .iter()
+                .any(|line| line.contains("gelée") && line.contains("E26")),
+            "{:?}",
+            loaded.summary.ignored
+        );
     }
 
     #[test]

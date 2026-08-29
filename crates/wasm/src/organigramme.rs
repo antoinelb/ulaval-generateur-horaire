@@ -57,10 +57,17 @@ pub struct OrganigrammeInput {
     // ponytail: all the étés or none — per-été opening when the UI asks
     #[serde(default)]
     pub summers_open: bool,
-    // sessions 1..=n déjà complétées (relevé Capsule): closed to unpinned
-    // courses (ADR `2026-08-sessions-completees-fermees-au-solveur`)
+    // 1-based indices of the frozen sessions (relevé Capsule, or the
+    // student's « geler » toggle): closed to unpinned courses, and what
+    // the seed seats there is pinned before the ask (ADRs
+    // `2026-08-sessions-completees-fermees-au-solveur`,
+    // `2026-08-sessions-gelees-generalisent-les-completees`)
     #[serde(default)]
-    pub completed_sessions: usize,
+    #[cfg_attr(
+        all(target_arch = "wasm32", feature = "boundary"),
+        tsify(type = "number[]")
+    )]
+    pub frozen: BTreeSet<usize>,
     #[serde(default)]
     #[cfg_attr(
         all(target_arch = "wasm32", feature = "boundary"),
@@ -373,6 +380,21 @@ fn with_request<T>(
     } else {
         BTreeSet::new()
     };
+    // a frozen session keeps what it displays: every seed entry seated in
+    // one becomes a pin, so the search can neither move it nor seat anyone
+    // else there. Only codes the request actually carries qualify — a seed
+    // over a partial course list stays ignorable, and a passed course is
+    // never pinned (ADR `2026-08-sessions-gelees-generalisent-les-completees`)
+    let mut pinned = intake.pinned.clone();
+    for (code, &session) in &input.seed {
+        let anchored = input.frozen.contains(&session)
+            && !pinned.contains_key(code)
+            && !intake.passed.contains(code)
+            && intake.courses.iter().any(|course| &course.code == code);
+        if anchored {
+            pinned.insert(code.clone(), session);
+        }
+    }
     ask(&PlacementRequest {
         // proving stays proving: only `generate` escalates, and it says so
         // by passing `place_escalating` as its `ask` — the two search
@@ -386,10 +408,10 @@ fn with_request<T>(
         concomitant: input.concomitant,
         courses: &intake.courses,
         passed: &intake.passed,
-        pinned: &intake.pinned,
+        pinned: &pinned,
         stages: &intake.stages,
         open_summers: &open_summers,
-        completed_sessions: input.completed_sessions,
+        frozen: &input.frozen,
         seed: &input.seed,
         max_nodes: input.max_nodes.unwrap_or(DEFAULT_MAX_NODES),
         max_solutions: input.max_solutions.unwrap_or(DEFAULT_MAX_SOLUTIONS),
@@ -504,6 +526,64 @@ mod tests {
         assert!(report.summers_forced.is_empty());
         // the culprit keeps its reason for the UI to word
         assert_eq!(report.placement.blocked[0].code, "GEX-1002");
+    }
+
+    // ADR `2026-08-sessions-gelees-generalisent-les-completees` : the seed
+    // of a frozen session becomes a pin before the ask — held even when
+    // moving it would make the whole placement feasible — and a stray seed
+    // code anchors nothing rather than poisoning the request.
+    #[test]
+    fn a_frozen_session_keeps_its_seed_even_against_feasibility() {
+        // cap 3 = one course per session. GEX-1000 seeded in session 2 of
+        // a frozen 2: unfrozen, the solver would move it to 1 and seat
+        // GEX-1001 (its dependant) in 2; frozen, GEX-1000 must not move,
+        // so GEX-1001 has no legal seat and is left out by name
+        let query: OrganigrammeInput = serde_json::from_str(&format!(
+            r#"{{"start":"fall","study_sessions":2,"credit_cap":3,
+                 "program":{PROGRAM},
+                 "frozen":[2],
+                 "seed":{{"GEX-1000":2,"XYZ-9999":2}}}}"#
+        ))
+        .unwrap_or_else(|e| panic!("input literal: {e}"));
+        let report =
+            generate(&query, &courses()).unwrap_or_else(|e| panic!("{e}"));
+        let solution = report
+            .placement
+            .solutions
+            .first()
+            .unwrap_or_else(|| panic!("the fallback answers"));
+        assert_eq!(solution.placement["GEX-1000"], 2, "the frozen seat holds");
+        assert!(
+            solution.left_out.contains("GEX-1001"),
+            "the dependant is left out rather than evicting the frozen \
+             course: {:?}",
+            solution.left_out
+        );
+        assert!(!solution.placement.contains_key("XYZ-9999"));
+    }
+
+    // a code already pinned is not re-anchored by the frozen seed: the
+    // student's explicit act stands alone in the pinned map
+    #[test]
+    fn an_explicit_pin_is_not_re_anchored_by_the_frozen_seed() {
+        let query: OrganigrammeInput = serde_json::from_str(&format!(
+            r#"{{"start":"fall","study_sessions":2,"credit_cap":6,
+                 "program":{PROGRAM},
+                 "frozen":[1],
+                 "pinned":{{"GEX-1000":1}},
+                 "seed":{{"GEX-1000":1}}}}"#
+        ))
+        .unwrap_or_else(|e| panic!("input literal: {e}"));
+        let report =
+            generate(&query, &courses()).unwrap_or_else(|e| panic!("{e}"));
+        let solution = report
+            .placement
+            .solutions
+            .first()
+            .unwrap_or_else(|| panic!("a placement exists"));
+        assert_eq!(solution.placement["GEX-1000"], 1);
+        // the unpinned dependant goes around the frozen session
+        assert_eq!(solution.placement["GEX-1001"], 2);
     }
 
     #[test]

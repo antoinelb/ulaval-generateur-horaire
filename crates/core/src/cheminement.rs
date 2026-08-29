@@ -25,6 +25,11 @@ pub struct CheminementSession {
     // empty = the timeline holds the slot (an off summer, an alignment row
     // before the admission) with nothing scheduled
     pub courses: Vec<String>,
+    // gelée : the solver neither adds to nor moves what this session holds
+    // — absent (the official grids, older exports) means open (ADR
+    // `2026-08-sessions-gelees-generalisent-les-completees`)
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub frozen: bool,
 }
 
 #[cfg(test)]
@@ -45,8 +50,35 @@ mod tests {
         assert_eq!(cheminement.completed, ["GMC-1024", "OPT-ION3"]);
         assert_eq!(cheminement.sessions[0].courses, Vec::<String>::new());
         assert_eq!(cheminement.sessions[1].semester.to_string(), "H27");
+        // absent from the file — the official grids predate the flag
+        assert!(!cheminement.sessions[0].frozen);
         let reserialized = serde_json::to_string_pretty(&cheminement)
             .expect("the cheminement serializes");
+        assert_eq!(
+            serde_json::from_str::<Cheminement>(&reserialized)
+                .expect("the reserialized form parses"),
+            cheminement
+        );
+    }
+
+    #[test]
+    fn a_frozen_flag_survives_the_round_trip_and_absent_stays_unwritten() {
+        let raw = r#"{
+  "completed": [],
+  "sessions": [
+    { "semester": "A26", "courses": ["GMC-1001"], "frozen": true },
+    { "semester": "H27", "courses": [] }
+  ]
+}"#;
+        let cheminement: Cheminement =
+            serde_json::from_str(raw).expect("the frozen sample parses");
+        assert!(cheminement.sessions[0].frozen);
+        assert!(!cheminement.sessions[1].frozen);
+        let reserialized = serde_json::to_string_pretty(&cheminement)
+            .expect("the cheminement serializes");
+        // a frozen session writes its flag; an open one writes nothing, so
+        // a grid that never froze anything keeps its historical shape
+        assert_eq!(reserialized.matches("frozen").count(), 1);
         assert_eq!(
             serde_json::from_str::<Cheminement>(&reserialized)
                 .expect("the reserialized form parses"),
