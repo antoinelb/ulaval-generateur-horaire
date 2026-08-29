@@ -1331,6 +1331,39 @@ pub fn adoption_regressions(
         .collect()
 }
 
+// An `assumed` element can be a multi-code raw operand — the préalables
+// grammar keeps « MAT-0130, MAT-0150 » as one leaf — so joining elements
+// with a comma would fabricate lookalike duplicates on screen (rapport
+// étudiante-cegep 2026-08-27). Elements made only of comma-separated
+// sigles are split and pooled; anything else stays verbatim.
+pub fn assumed_line(assumed: &BTreeSet<String>) -> String {
+    let mut codes: BTreeSet<String> = BTreeSet::new();
+    for element in assumed {
+        let parts: Vec<&str> = element.split(", ").collect();
+        // a trailing « * » is the répertoire's concomitance star — still a
+        // sigle, and it stays on the displayed entry
+        let all_codes = parts.iter().all(|part| {
+            looks_like_code(part.strip_suffix('*').unwrap_or(part))
+        });
+        if all_codes {
+            codes.extend(parts.iter().map(|part| (*part).to_string()));
+        } else {
+            codes.insert(element.clone());
+        }
+    }
+    codes.into_iter().collect::<Vec<_>>().join(", ")
+}
+
+// A répertoire sigle: 2-4 uppercase letters, a dash, four digits.
+fn looks_like_code(text: &str) -> bool {
+    let (letters, rest) = text.split_at(text.find('-').unwrap_or(0));
+    (2..=4).contains(&letters.len())
+        && letters.chars().all(|c| c.is_ascii_uppercase())
+        && rest.len() == 5
+        && rest.starts_with('-')
+        && rest[1..].chars().all(|c| c.is_ascii_digit())
+}
+
 // Why the grid did not move, said before the student can wonder — refusing
 // in silence would be exactly the drift this guards against.
 pub fn proposal_kept_note(codes: &[String]) -> String {
@@ -2093,6 +2126,57 @@ mod worker_tests {
         // a proposal that seats everything it was given takes nothing away
         assert!(adoption_regressions(&displayed, &BTreeSet::new()).is_empty());
         assert!(adoption_regressions(&BTreeMap::new(), &left_out).is_empty());
+    }
+
+    #[test]
+    fn assumed_line_splits_multi_code_raw_operands() {
+        // the B-GCI case seen on screen: « MAT-0130, MAT-0150 » is ONE
+        // raw operand — joined naively it fabricated a fake duplicate
+        let assumed: BTreeSet<String> = [
+            "MAT-0130, MAT-0150".to_string(),
+            "MAT-0150".to_string(),
+            "MAT-0260".to_string(),
+        ]
+        .into();
+        assert_eq!(assumed_line(&assumed), "MAT-0130, MAT-0150, MAT-0260");
+    }
+
+    #[test]
+    fn assumed_line_splits_operands_carrying_a_concomitance_star() {
+        // the B-GMC case seen on screen: GMC-1001's operand keeps its
+        // star, and the codes it shares with other operands still pool
+        let assumed: BTreeSet<String> = [
+            "MAT-0130".to_string(),
+            "MAT-0130, MAT-0150, MAT-0260*".to_string(),
+            "MAT-0150".to_string(),
+        ]
+        .into();
+        assert_eq!(assumed_line(&assumed), "MAT-0130, MAT-0150, MAT-0260*");
+    }
+
+    #[test]
+    fn assumed_line_keeps_prose_operands_verbatim() {
+        let assumed: BTreeSet<String> = [
+            "MAT-0130".to_string(),
+            "un cours de mise à niveau, au choix".to_string(),
+        ]
+        .into();
+        assert_eq!(
+            assumed_line(&assumed),
+            "MAT-0130, un cours de mise à niveau, au choix"
+        );
+    }
+
+    #[test]
+    fn looks_like_code_rejects_near_misses() {
+        assert!(looks_like_code("MAT-0130"));
+        assert!(looks_like_code("GLG-1000"));
+        assert!(!looks_like_code("MAT-0130*"));
+        assert!(!looks_like_code("MAT0130"));
+        assert!(!looks_like_code("MATIERE-0130"));
+        assert!(!looks_like_code("M-0130"));
+        assert!(!looks_like_code("mat-0130"));
+        assert!(!looks_like_code("équivalent"));
     }
 
     #[test]

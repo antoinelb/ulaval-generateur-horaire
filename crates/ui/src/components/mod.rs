@@ -400,15 +400,13 @@ fn apply_proposal(
         return;
     }
     if !solution.assumed.is_empty() {
-        let assumed: Vec<&str> =
-            solution.assumed.iter().map(String::as_str).collect();
         push_topic_alert(
             alerts,
             AlertBody::Note(format!(
                 "Le cheminement présume ces acquis (préalables que \
                  l'outil ne peut pas vérifier) : {}. Assurez-vous que \
                  cela vous décrit.",
-                assumed.join(", ")
+                crate::solve::assumed_line(&solution.assumed)
             )),
             AlertCause::Document,
             AlertTopic::Assumed,
