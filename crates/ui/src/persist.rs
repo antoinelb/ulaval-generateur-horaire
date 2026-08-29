@@ -214,9 +214,24 @@ pub struct DocumentSwap {
     pub stash: Option<(String, String)>,
     // the living document afterwards
     pub next: Plan,
-    // the loud tolerance of a damaged shelf snapshot, as at boot
+    // the loud tolerance of a damaged shelf snapshot, as at boot — a past
+    // act, so it stays until dismissed (Sticky)
     pub notes: Vec<String>,
+    // the concentration picked on the student's behalf, kept apart from
+    // `notes`: its note describes the *current* document and must retire
+    // when he picks another (ADR
+    // `2026-08-peremption-de-toute-alerte-jugeable`)
+    pub default_concentration: Option<String>,
     pub backup: Option<String>,
+}
+
+// the wording of that announcement, here beside the decision that raises
+// it — the view only pushes it (AP-5)
+pub fn default_concentration_note(title: &str) -> String {
+    format!(
+        "Concentration « {title} » sélectionnée par défaut — changez-la au \
+         besoin dans le panneau de gauche."
+    )
 }
 
 // « changer » : shelve the current document, hand back the picker — the
@@ -230,6 +245,7 @@ pub fn leave_document(current: &Plan) -> DocumentSwap {
             ..Plan::default()
         },
         notes: Vec::new(),
+        default_concentration: None,
         backup: None,
     }
 }
@@ -249,7 +265,8 @@ pub fn enter_document(
     let stash = stash_of(current);
     let restored = restore_plan(stored, today);
     let mut next = restored.state;
-    let mut notes = restored.notes;
+    let notes = restored.notes;
+    let mut default_concentration = None;
     match next.program.take() {
         Some(held) => {
             next.program = Some(crate::state::ProgramChoice {
@@ -269,12 +286,7 @@ pub fn enter_document(
             // was not her own (rapport étudiante-cegep 2026-08-27); a
             // restored document below says nothing, since nothing was
             // picked on its behalf
-            if let Some(title) = choice.concentration.clone() {
-                notes.push(format!(
-                    "Concentration « {title} » sélectionnée par défaut — \
-                     changez-la au besoin dans le panneau de gauche."
-                ));
-            }
+            default_concentration = choice.concentration.clone();
             next = crate::state::fresh_plan(
                 current.start,
                 choice,
@@ -287,6 +299,7 @@ pub fn enter_document(
         stash,
         next,
         notes,
+        default_concentration,
         backup: restored.backup,
     }
 }
@@ -1065,13 +1078,42 @@ mod tests {
             ..choice("B-GPH", "A26")
         };
         let swap = enter_document(&picker, click, None, 8, today());
-        assert_eq!(swap.notes.len(), 1);
-        assert!(
-            swap.notes[0].contains("Aéronautique et aérospatiale"),
-            "{:?}",
-            swap.notes
+        // apart from `notes`: this one describes the *current* document
+        // and retires when the student picks another concentration, so it
+        // cannot travel as a Sticky note (ADR
+        // `2026-08-peremption-de-toute-alerte-jugeable`)
+        assert!(swap.notes.is_empty(), "{:?}", swap.notes);
+        assert_eq!(
+            swap.default_concentration.as_deref(),
+            Some("Aéronautique et aérospatiale")
         );
-        assert!(swap.notes[0].contains("par défaut"), "{:?}", swap.notes);
+        let note = default_concentration_note("Aéronautique et aérospatiale");
+        assert!(note.contains("Aéronautique et aérospatiale"), "{note}");
+        assert!(note.contains("par défaut"), "{note}");
+    }
+
+    #[test]
+    fn a_restored_document_announces_no_default_concentration() {
+        // nothing was picked on its behalf: the student's own last state
+        // came back, so there is nothing to retire later either
+        let shelved = Plan {
+            program: Some(crate::state::ProgramChoice {
+                concentration: Some("Eau et environnement".to_string()),
+                ..choice("B-GCI", "A26")
+            }),
+            ..Plan::default()
+        };
+        let encoded = encode_plan(&shelved);
+        let swap = enter_document(
+            &Plan::default(),
+            choice("B-GCI", "A26"),
+            Some(&encoded),
+            8,
+            today(),
+        );
+        assert_eq!(swap.default_concentration, None);
+        // and « changer » never picks anything at all
+        assert_eq!(leave_document(&shelved).default_concentration, None);
     }
 
     #[test]

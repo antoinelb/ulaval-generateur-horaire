@@ -874,9 +874,12 @@ fn set_scope(
         state::purge_codes(plan, &departures);
     });
     // Document-caused: after a program swap the history is fresh and the
-    // « Annuler » these advertise no longer applies
+    // « Annuler » these advertise no longer applies. Each owns a subject,
+    // so a *second* scope change replaces its predecessor instead of
+    // stacking beside it — deux bascules laissaient quatre bandeaux
+    // par-dessus la grille (évaluation 2026-08-29, ALR-3).
     if !dropped.is_empty() {
-        super::push_caused_alert(
+        super::push_topic_alert(
             alerts,
             super::AlertBody::Note(format!(
                 "Ententes retirées avec l'ancien choix : {} — « Annuler » \
@@ -884,10 +887,11 @@ fn set_scope(
                 dropped.join(", ")
             )),
             super::AlertCause::Document,
+            super::AlertTopic::ScopeGrants,
         );
     }
     if !departures.is_empty() {
-        super::push_caused_alert(
+        super::push_topic_alert(
             alerts,
             super::AlertBody::Note(format!(
                 "Cours retirés avec l'ancien bloc : {} — « Annuler » les \
@@ -895,6 +899,7 @@ fn set_scope(
                 departures.join(", ")
             )),
             super::AlertCause::Document,
+            super::AlertTopic::ScopeDepartures,
         );
     }
 }
