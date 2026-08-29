@@ -84,11 +84,12 @@ livré.
 
 `data/cours.manuel.json` définit « LAN-GUES — Cours de langue selon le résultat
 VEPT », 3 crédits, même famille que `OPT-ION1` et `AUC-HOIX`
-(`2026-08-cours-manuels-offerts-en-toute-saison`). **Tous** les
-`cheminement_type` du B-GMC et du B-GIN le placent en session comme créneau de
-langue. Une règle linguistique qui ne le liste pas laisse ce placement compté
-par aucune règle — exactement le symptôme que `2026-08-entente-vers-une-regle-any`
-décrit pour `AUC-HOIX`. Il est donc ajouté à toute règle élargie.
+(`2026-08-cours-manuels-offerts-en-toute-saison`). **Vingt-cinq** des fichiers
+de `data/cheminements/` (`2026-08-un-cheminement-par-fichier`) le placent en
+session comme créneau de langue — tous ceux du B-GMC et du B-GIN. Une règle
+linguistique qui ne le liste pas laisse ce placement compté par aucune règle —
+exactement le symptôme que `2026-08-entente-vers-une-regle-any` décrit pour
+`AUC-HOIX`. Il est donc ajouté à toute règle élargie.
 
 ### Les millésimes antérieurs sont réparés hors ligne
 
@@ -169,8 +170,8 @@ personne n'a lu (AIR TRU-1).
   `untagged`), le vérificateur de couverture, la référence Python
   `verify_rules.py` à parité bit-à-bit, `wasm`, l'UI et les ententes — un
   chantier pour un gain de propreté.
-- **Encoder la liste à la main dans `*.manuel.json`** : un fichier par
-  millésime, alors que la prose est machine-lisible.
+- **Encoder la liste à la main dans la couche manuelle** : un fichier par
+  millésime à tenir à jour, alors que la prose est machine-lisible.
 - **Un parcours restreint (recherche bornée aux matières de langue) au lieu
   d'une liste** : suppose la variante ci-dessus pour que `core` sache compter ce
   qui y est pris.

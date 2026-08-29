@@ -36,9 +36,10 @@ const ENGLISH_SUBJECT: &str = "ANL";
 // same family as `OPT-ION1` and `AUC-HOIX` (ADR
 // `2026-08-cours-manuels-offerts-en-toute-saison`). Two things depend on it:
 //
-// - every `cheminement_type` of the B-GMC and B-GIN places it in a session
-//   as the language slot, so a language rule that does not list it leaves
-//   that placement counted by no rule at all;
+// - twenty-five of the `data/cheminements/` files place it in a session as
+//   the language slot (ADR `2026-08-un-cheminement-par-fichier`), so a
+//   language rule that does not list it leaves that placement counted by no
+//   rule at all;
 // - the vintages scraped before 2026-08-28 carry it as the *whole* content
 //   of their language rule — the prose was stripped out to
 //   `language_requirement` back then and the placeholder stood in for the
