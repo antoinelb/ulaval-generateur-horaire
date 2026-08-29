@@ -15,7 +15,8 @@ const FIXTURE_DIR: &str = concat!(
 //   cso-6702  two top-level sections hanging off one common seminar NRC
 //   drt-7104  a stray `<b>` on the page, which HTML5 turns into a re-parent
 //   bio-1003  two distinct préuniversitaire messages, one behind
-//             « REMARQUE : », comma lists and cégep sigles kept Raw
+//             « REMARQUE : », a comma enumeration its « ou » governs, and
+//             cégep sigles kept Raw
 //   gex-3001  « GCI-2010* », the répertoire's mark for a préalable that
 //             « peut être suivi simultanément »
 const FIXTURES: &[&str] = &[
