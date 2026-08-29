@@ -979,6 +979,158 @@ code {
   padding-left: 1.125rem;
 }
 
+/* « Charger depuis JSON » (ADR `2026-08-un-cheminement-par-fichier`) : le
+   bouton EST le sélecteur de fichier — la rangée `.panel-import-file`
+   ci-dessus porte déjà l'input invisible et son focus visible */
+.panel-cheminement {
+  border-top: 0.0625rem solid var(--border);
+  padding-top: 0.5rem;
+}
+
+.panel-cheminement-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.panel-cheminement-row .panel-import-file {
+  flex: 1;
+}
+
+.panel-cheminement-row .panel-import-file-button {
+  width: 100%;
+}
+
+/* carré, jamais plus étroit que la cible tactile minimale (INP-1) */
+.panel-cheminement-help-toggle {
+  font: inherit;
+  font-size: 0.875rem;
+  flex: none;
+  width: 3rem;
+  min-height: 3rem;
+  background: var(--card);
+  border: 0.0625rem solid var(--border-strong);
+  border-radius: 0.4375rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.panel-cheminement-help {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  background: var(--active-bg);
+  border: 0.0625rem solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.panel-cheminement-help p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.panel-cheminement-help code {
+  background: var(--card);
+  padding: 0.0625rem 0.3125rem;
+  border-radius: 0.25rem;
+}
+
+.panel-cheminement-gabarit {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink);
+  background: var(--card);
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  /* le gabarit est large : il défile chez lui, jamais la page (LAY) */
+  overflow-x: auto;
+}
+
+.panel-cheminement-bilan {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  background: var(--card);
+  border: 0.0625rem solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.panel-cheminement-headline {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ok);
+}
+
+/* ce que le fichier demandait et que le plan a refusé : jamais replié,
+   jamais tu (« ne jamais laisser tomber une entrée en silence ») */
+.panel-cheminement-ignored {
+  margin: 0.375rem 0 0;
+  padding-left: 1.125rem;
+  color: var(--muted);
+}
+
+/* le menu « Exporter » (ADR `2026-08-menu-d-export-unique`) : une
+   surcouche ancrée sous le bouton — la bande et la grille ne bougent pas
+   quand il s'ouvre (LAY-1) */
+.status-exports {
+  position: relative;
+}
+
+.status-export-menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 20;
+  /* la largeur est celle de son plus large contenu — l'entête
+     « ORGANIGRAMME » — et rien de plus */
+  width: max-content;
+  padding: 0.25rem;
+  background: var(--card);
+  border: 0.0625rem solid var(--border-strong);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.375rem 1.125rem rgba(0, 0, 0, 0.13);
+  display: flex;
+  flex-direction: column;
+}
+
+.status-export-group {
+  margin: 0.375rem 0 0.0625rem;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+/* le format seul, aligné à droite sous son entête de groupe */
+.status-export-item {
+  font: inherit;
+  font-size: 0.875rem;
+  width: 100%;
+  min-height: 2.75rem; /* INP-1 */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.375rem 0.5rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0.3125rem;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: right;
+}
+
+.status-export-item:hover,
+.status-export-item:focus-visible {
+  background: var(--active-bg);
+}
+
+
 /* accordéons de règles */
 .panel-group {
   display: flex;

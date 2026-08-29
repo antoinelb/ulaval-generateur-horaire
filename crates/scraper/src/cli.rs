@@ -523,9 +523,12 @@ fn refresh_urls(
         .collect())
 }
 
-// `{code}-{semester}.manuel.json` is hand-maintained and never scraped (ADR
-// `2026-07-cheminement-type-en-fichier-manuel`); several vintages of one
-// program fold into a single slug; a missing directory holds nothing. A
+// The `.manuel.json` guard outlives the files it was written for — the
+// cheminements moved to `data/cheminements/` (ADR
+// `2026-08-un-cheminement-par-fichier`) — and stays as a guard: this
+// directory is hand-edited, and a stray hand-maintained file must be
+// skipped, not parsed as a snapshot. Several vintages of one program fold
+// into a single slug; a missing directory holds nothing. A
 // snapshot that cannot yield its slug is a hard error naming the file: a
 // silently skipped program would quietly stop being refreshed.
 fn program_slugs(

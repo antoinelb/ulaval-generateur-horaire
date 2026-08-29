@@ -2,6 +2,8 @@
 
 Date : 2026-08-17
 
+> **Révisée par** `2026-08-un-cheminement-par-fichier` : le document est désormais un cheminement seul, sans `label` ni `cheminements_types`, sous `data/cheminements/{code}-{semester}[-{concentration}].json` ; le nom du fichier porte la concentration.
+
 ## Contexte
 
 `data/programmes/{code}.manuel.json` n'avait pas de millésime dans son nom et le portait à l'intérieur, en champ `admission` que le `label` répétait (« H27 - Sciences de la nature »).

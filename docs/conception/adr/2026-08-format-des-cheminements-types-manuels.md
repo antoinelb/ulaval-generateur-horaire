@@ -3,6 +3,7 @@
 Date : 2026-08-15
 
 > **Révisée par** `2026-08-fichier-manuel-de-programme-millesime` : le fichier est désormais `{code}-{semester}.manuel.json`, un par millésime ; le champ `admission` de chaque `CheminementType` disparaît (le nom du fichier le porte) et le `label` perd son préfixe de millésime.
+> **Révisée par** `2026-08-un-cheminement-par-fichier` : le document est désormais un cheminement seul, sans `label` ni `cheminements_types`, sous `data/cheminements/{code}-{semester}[-{concentration}].json` ; le nom du fichier porte la concentration.
 
 ## Contexte
 

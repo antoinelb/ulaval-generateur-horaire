@@ -288,6 +288,72 @@ pub fn StatusStrip() -> Element {
     let can_undo = history.read().undo_label().is_some();
     let can_redo = history.read().redo_label().is_some();
     let print_target = use_context::<super::PrintTarget>().0;
+    let snapshot = use_context::<Signal<Option<Snapshot>>>();
+    let alerts = use_context::<Signal<AlertStack>>();
+    let mut export_open = use_signal(|| false);
+    // bumped by every focusin inside the menu, so a deferred close can
+    // tell « le focus a quitté le menu » from « le focus s'est déplacé
+    // dans le menu »
+    let mut focus_inside = use_signal(|| 0u64);
+    // the menu's rows, wording included, come from the pure module (AP-5)
+    let export_entries = crate::export::menu::entries();
+
+    // The two print paths are unchanged; the JSON one writes the very file
+    // « Charger depuis JSON » reads back (ADR
+    // `2026-08-un-cheminement-par-fichier`). Nothing here decides anything:
+    // the document is built by `cheminement::export`, the sentence by
+    // `export::download_note`, both tested natively.
+    let run_export = move |choice: crate::export::menu::ExportChoice| {
+        match choice {
+            crate::export::menu::ExportChoice::OrganigrammePdf => {
+                super::print::start_print(
+                    print_target,
+                    super::print::PrintKind::Organigramme,
+                );
+            }
+            crate::export::menu::ExportChoice::HorairePdf => {
+                super::print::start_print(
+                    print_target,
+                    super::print::PrintKind::Horaire,
+                );
+            }
+            crate::export::menu::ExportChoice::OrganigrammeJson => {
+                let generated_at = crate::browser::now_iso();
+                let scraped_at =
+                    snapshot.peek().as_ref().and_then(|snapshot| {
+                        snapshot.provenance.scraped_at.clone()
+                    });
+                let provenance = crate::export::provenance::export_provenance(
+                    &generated_at,
+                    scraped_at.as_deref(),
+                );
+                let document = plan.peek().clone();
+                let file_name =
+                    crate::cheminement::export_file_name(&document);
+                let body = crate::cheminement::export(
+                    &document,
+                    &generated_at,
+                    &provenance,
+                );
+                let taken = crate::browser::download_text(
+                    &file_name,
+                    "application/json",
+                    &body,
+                );
+                let note =
+                    crate::export::menu::download_note(&file_name, taken);
+                // a refused download is a note that stays, never a ✓ that
+                // clears itself after five seconds (TRU-1, ALR-4)
+                let alert = if taken {
+                    AlertBody::Success(note)
+                } else {
+                    AlertBody::Note(note)
+                };
+                super::push_alert(alerts, alert);
+            }
+        }
+    };
+
     rsx! {
         div { class: "status-strip", role: "status",
             button {
@@ -317,30 +383,77 @@ pub fn StatusStrip() -> Element {
             SolverStatus {}
             // les deux exports se rangent à droite de la bande, figés avec
             // elle : la grille défile sous eux sans les emporter
-            div { class: "status-exports",
+            div {
+                class: "status-exports",
+                // Échap referme, comme partout ailleurs. Il s'ouvre au
+                // clic, jamais au survol (INP-5).
+                onkeydown: move |event| {
+                    if event.key() == Key::Escape {
+                        export_open.set(false);
+                    }
+                },
+                onfocusin: move |_| {
+                    *focus_inside.write() += 1;
+                },
+                // Refermer sur-le-champ mangerait le clic : cliquer une
+                // entrée retire d'abord le focus du bouton, ce qui
+                // démonterait l'entrée avant que son `click` ne parte — le
+                // menu se refermait sans rien faire. Un macrotask plus
+                // tard, le clic a été distribué. Et si le focus n'a fait
+                // que passer à une entrée (Tab), le compteur a bougé et le
+                // menu reste ouvert (INP-4).
+                onfocusout: move |_| {
+                    let seen = focus_inside();
+                    spawn(async move {
+                        crate::browser::next_frame().await;
+                        if *focus_inside.peek() == seen {
+                            export_open.set(false);
+                        }
+                    });
+                },
                 button {
                     class: "grid-share",
-                    title: "Ouvre l'aperçu d'impression — choisissez \
-                            « Enregistrer en PDF »",
+                    r#type: "button",
+                    aria_haspopup: "menu",
+                    aria_expanded: export_open(),
+                    title: "PDF ou JSON pour l'organigramme, PDF pour \
+                            l'horaire",
                     onclick: move |_| {
-                        super::print::start_print(
-                            print_target,
-                            super::print::PrintKind::Organigramme,
-                        );
+                        let open = !export_open();
+                        export_open.set(open);
                     },
-                    "Exporter l'organigramme"
+                    "Exporter ▾"
                 }
-                button {
-                    class: "grid-share",
-                    title: "Ouvre l'aperçu d'impression — choisissez \
-                            « Enregistrer en PDF »",
-                    onclick: move |_| {
-                        super::print::start_print(
-                            print_target,
-                            super::print::PrintKind::Horaire,
-                        );
-                    },
-                    "Exporter l'horaire"
+                if export_open() {
+                    div { class: "status-export-menu", role: "menu",
+                        for entry in export_entries.iter().cloned() {
+                            // one keyed root per row (AP-8): the group
+                            // heading rides inside it, so the key still
+                            // sits on the first node of the block
+                            div {
+                                key: "{entry.key}",
+                                class: "status-export-row",
+                            if let Some(group) = entry.group {
+                                p {
+                                    class: "status-export-group",
+                                    "{group}"
+                                }
+                            }
+                            button {
+                                class: "status-export-item",
+                                r#type: "button",
+                                role: "menuitem",
+                                onclick: move |_| {
+                                    export_open.set(false);
+                                    run_export(entry.choice);
+                                },
+                                span { class: "status-export-label",
+                                    "{entry.label}"
+                                }
+                            }
+                            }
+                        }
+                    }
                 }
             }
         }
