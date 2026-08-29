@@ -1241,15 +1241,20 @@ fn neutral_concentration(title: &str) -> bool {
         || title == "Approche généraliste"
 }
 
-// The electives the departing block brought along and nothing under the
-// new scope lists: an auto-placed « Robotique » elective surviving under
+// The courses the departing block brought along and the new scope no
+// longer justifies: an auto-placed « Robotique » elective surviving under
 // « Génie du développement durable » sat in the grid and the totals
 // attached to nothing (contre-test étudiante-cegep 2026-08-20). Purged
 // with the very act that changes the block — one « Annuler » restores
-// everything. Coverage means the explicit lists (mandatory, List rules, a
-// one-hop Reference resolved), never the « tous les cours » keyword: a
-// course only an entente could attach is an orphan until the entente
-// exists (ADR `2026-08-electifs-orphelins-purges-au-changement-de-bloc`).
+// everything. Two tests, not one (ADR
+// `2026-08-obligatoire-de-bloc-purge-meme-liste-ailleurs`): a course the
+// departing block made *mandatory* survives only where the new scope makes
+// it mandatory too, while a course it merely *listed* survives wherever
+// the new scope lists it. Coverage means the explicit lists (mandatory,
+// List rules, a one-hop Reference resolved), never the « tous les cours »
+// keyword: a course only an entente could attach is an orphan until the
+// entente exists (ADR
+// `2026-08-electifs-orphelins-purges-au-changement-de-bloc`).
 pub fn scope_orphans(
     program: &Program,
     plan: &Plan,
@@ -1273,22 +1278,27 @@ pub fn scope_orphans(
                 (block.title.as_str(), &block.mandatory, &block.rules)
             }))
     };
-    let mut from_block = BTreeSet::new();
+    // What the departing block *imposed* and what it merely *offered* are
+    // two different debts, and the same coverage test cannot settle both.
+    let mut imposed = BTreeSet::new();
+    let mut offered = BTreeSet::new();
     for (title, mandatory, rules) in blocks() {
         if title == departing {
-            from_block.extend(mandatory.iter().map(String::as_str));
-            listed_codes(program, rules, &mut from_block);
+            imposed.extend(mandatory.iter().map(String::as_str));
+            listed_codes(program, rules, &mut offered);
         }
     }
-    let mut covered: BTreeSet<&str> =
+    let mut required: BTreeSet<&str> =
         program.mandatory.iter().map(String::as_str).collect();
+    let mut covered = BTreeSet::new();
     listed_codes(program, &program.rules, &mut covered);
     for (title, mandatory, rules) in blocks() {
         if Some(title) == concentration || Some(title) == profile {
-            covered.extend(mandatory.iter().map(String::as_str));
+            required.extend(mandatory.iter().map(String::as_str));
             listed_codes(program, rules, &mut covered);
         }
     }
+    covered.extend(required.iter().copied());
     // wherever the plan holds the course: a concentration's mandatory is
     // auto-placed straight into `displayed_placement` without ever being
     // an elective — and the placement self-perpetuates through the next
@@ -1302,8 +1312,14 @@ pub fn scope_orphans(
         .map(String::as_str)
         .collect();
     held.into_iter()
-        .filter(|code| from_block.contains(code))
-        .filter(|code| !covered.contains(code))
+        .filter(|code| {
+            // an imposed course was never a choice: only a new scope that
+            // imposes it too keeps it — being one option among a hundred
+            // in the arriving block's list is not the student having
+            // picked it
+            (imposed.contains(code) && !required.contains(code))
+                || (offered.contains(code) && !covered.contains(code))
+        })
         .map(str::to_string)
         .collect()
 }
@@ -2734,6 +2750,66 @@ mod tests {
         .is_empty());
         // no departing block, nothing brought along
         assert!(scope_orphans(program, &plan, None, None, None).is_empty());
+    }
+
+    // Rapport persona 2026-08-29 : « Cheminement sans concentration » →
+    // « Robotique » → retour, et GMC-3351 (obligatoire de Robotique)
+    // restait accroché à H8, le total à 114/120. Le bloc neutre le liste
+    // parmi la centaine de cours de sa Règle 1 : couvert, donc gardé par
+    // l'ancienne définition d'orphelin — alors que l'étudiante ne l'avait
+    // jamais choisi, c'est Robotique qui l'avait imposé.
+    #[test]
+    fn a_departing_blocks_mandatory_leaves_even_when_the_new_block_lists_it() {
+        let program: Program = serde_json::from_str(include_str!(
+            "../../../data/programmes/B-GMC-A26.json"
+        ))
+        .unwrap_or_else(|e| panic!("{e}"));
+        let neutral = "Cheminement sans concentration";
+        // the arriving block really does list it — this is the trap, not a
+        // fixture accident
+        assert!(program
+            .concentrations
+            .iter()
+            .filter(|block| block.title == neutral)
+            .flat_map(|block| block.rules.iter())
+            .any(|rule| matches!(
+                &rule.courses,
+                RuleCourses::List { courses }
+                    if courses.iter().any(|code| code == "GMC-3351")
+            )));
+        let mut plan = plan();
+        if let Some(choice) = plan.program.as_mut() {
+            choice.code = "B-GMC".to_string();
+            choice.concentration = Some("Robotique".to_string());
+        }
+        // auto-placed as a concentration mandatory: never an elective, so
+        // it carries no origin tag either
+        plan.displayed_placement.clear();
+        plan.displayed_placement.insert("GMC-3351".to_string(), 8);
+        assert_eq!(
+            scope_orphans(
+                &program,
+                &plan,
+                Some("Robotique"),
+                Some(neutral),
+                None
+            ),
+            ["GMC-3351"]
+        );
+        // GLO-1901, injected as a prerequisite, is listed by the program's
+        // own Règle 1: it belongs to no block and stays
+        plan.electives = vec!["GLO-1901".to_string()];
+        assert_eq!(
+            block_departures(
+                &program,
+                &plan,
+                Some("Robotique"),
+                Some(neutral),
+                None,
+                'c'
+            ),
+            ["GMC-3351"]
+        );
     }
 
     #[test]

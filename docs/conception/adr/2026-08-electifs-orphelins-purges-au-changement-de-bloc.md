@@ -14,6 +14,7 @@ Depuis, l'organigramme en continu **auto-place** des électifs de concentration 
 ## Amendements
 
 - `2026-08-electifs-choisis-sous-le-bloc-partent-avec-lui` (2026-08-27) : la couverture seule laissait passer FOR-2020, choisi sous un bloc et listé par le suivant. Un électif **choisi sous** le bloc quittant part désormais avec lui, couvert ou non ; `scope_orphans` reste le filet des plans sans étiquettes. L'alternative ci-dessous est **renversée**.
+- `2026-08-obligatoire-de-bloc-purge-meme-liste-ailleurs` (2026-08-29) : la couverture gardait GMC-3351, obligatoire de « Robotique » auto-placé (donc sans étiquette) et listé par la Règle 1 du bloc neutre. Un cours que le bloc quittant avait en `mandatory` ne survit désormais que si la nouvelle portée l'**impose** aussi ; la couverture par liste ne juge plus que ce que le bloc *offrait*.
 
 ## Alternatives rejetées
 
