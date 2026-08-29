@@ -2617,6 +2617,42 @@ mod tests {
         );
     }
 
+    // The one state where the choice strip's click does nothing: the chip
+    // already carries the choice, so `CourseChoice` returns at once. It
+    // used to return in silence; the title it now carries must match the
+    // state the strip reports — Auto without a ✕ for an imposed course,
+    // Pinned with the session's own label for a frozen one (ADR
+    // `2026-08-puce-deja-choisie-parle-au-lieu-de-refuser-en-silence`).
+    #[test]
+    fn the_chip_that_refuses_the_click_says_so_from_the_strip_it_reads() {
+        let snapshot = snapshot();
+        let mut plan = plan();
+        let imposed = choice_strip(&snapshot, &plan, "GEX-2000");
+        assert_eq!(imposed.choice, Choice::Auto);
+        assert!(imposed.mandatory, "no ✕ to send the student to");
+        let title = crate::present::chosen_chip_title(
+            "GEX-2000",
+            None,
+            !imposed.mandatory,
+        );
+        assert!(title.contains("déjà pris"), "{title}");
+        assert!(!title.contains('✕'), "{title}");
+        // frozen by hand: the chip of that very session refuses the click
+        plan.pinned_sessions.insert("GEX-3000".to_string(), 1);
+        let frozen = choice_strip(&snapshot, &plan, "GEX-3000");
+        assert_eq!(frozen.choice, Choice::Pinned(1));
+        assert!(!frozen.mandatory);
+        let (session, label) = frozen.sessions[0].clone();
+        assert_eq!(session, 1);
+        let title = crate::present::chosen_chip_title(
+            "GEX-3000",
+            Some(&label),
+            !frozen.mandatory,
+        );
+        assert!(title.contains(&format!("déjà gelé en {label}")), "{title}");
+        assert!(title.contains('✕'), "{title}");
+    }
+
     #[test]
     fn without_a_program_the_panel_is_empty_and_calm() {
         let model = panel_model(&snapshot(), &Plan::default());
