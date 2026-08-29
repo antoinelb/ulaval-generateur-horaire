@@ -2431,7 +2431,16 @@ fn RuleAttach(code: String) -> Element {
                     );
                 }
             },
-            option { value: "-", selected: current.is_none(),
+            option {
+                value: "-",
+                selected: current.is_none(),
+                // le terme lui-même restait non défini (rapport
+                // étudiante-cegep 2026-08-29) : la mécanique était déjà
+                // expliquée sur le `select` (title ci-dessus), il manquait
+                // la définition de l'entente elle-même
+                title: "Entente : accord pris avec la direction du \
+                        programme pour compter {code} sous une règle qui \
+                        ne le liste pas.",
                 "entente avec la direction…"
             }
             for (key, title) in rules {
