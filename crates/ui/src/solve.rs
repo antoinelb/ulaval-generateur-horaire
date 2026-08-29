@@ -1048,6 +1048,29 @@ pub fn unplaced_codes(
         .collect())
 }
 
+// The seasons the catalogue offers each *placed* course in — the one fact
+// `state::set_start` needs to tell a seat the new start still holds from
+// one it has just invalidated. Owned rather than a borrow of the snapshot:
+// the view hands it to `edit_plan`, which holds the plan's own write lock
+// meanwhile. A code the snapshot does not know stays out of the map, and
+// `set_start` keeps its seat (unknown stays unknown, TRU-1).
+pub fn placed_offerings(
+    snapshot: &Snapshot,
+    plan: &Plan,
+) -> BTreeMap<String, BTreeSet<ulaval_scheduler_core::Season>> {
+    plan.displayed_placement
+        .keys()
+        .filter_map(|code| {
+            // `by_code` is built by enumerating `courses` (`data::parse_data`),
+            // so the index it hands back always addresses one — the same
+            // idiom as `Snapshot::official_prerequisites`
+            let &index = snapshot.by_code.get(code)?;
+            let seasons = snapshot.courses[index].seasons.keys().copied();
+            Some((code.clone(), seasons.collect()))
+        })
+        .collect()
+}
+
 // Whether the continuous placement should fire (ADR
 // `2026-08-organigramme-en-continu-sans-bouton`). A floating course always
 // calls for one — it has no seat to preserve. The *repair* of a grid a
@@ -1693,6 +1716,30 @@ mod worker_tests {
         // the chosen scopes ride with the ask (décision 2026-08-19)
         assert_eq!(query["concentration"], "Génie urbain");
         assert_eq!(query["profile"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn the_placed_offerings_answer_only_for_the_seats_the_catalogue_knows() {
+        let mut plan = Plan::default();
+        plan.displayed_placement.insert("GEX-1000".to_string(), 1);
+        plan.displayed_placement.insert("ANL-1010".to_string(), 2);
+        // un jeton de grille officielle, jamais un sigle : le catalogue
+        // ne peut pas le juger, donc il reste hors de la table
+        plan.displayed_placement.insert("OPT-ION1".to_string(), 3);
+        let offerings = placed_offerings(&snapshot(), &plan);
+        assert_eq!(
+            offerings,
+            BTreeMap::from([
+                (
+                    "ANL-1010".to_string(),
+                    BTreeSet::from([ulaval_scheduler_core::Season::Winter])
+                ),
+                (
+                    "GEX-1000".to_string(),
+                    BTreeSet::from([ulaval_scheduler_core::Season::Fall])
+                ),
+            ])
+        );
     }
 
     #[test]

@@ -333,6 +333,12 @@ pub fn StatusStrip() -> Element {
     let mut focus_inside = use_signal(|| 0u64);
     // the menu's rows, wording included, come from the pure module (AP-5)
     let export_entries = crate::export::menu::entries();
+    // le menu dit lui-même qu'un export lancé pendant un recalcul fige un
+    // état provisoire (ADR
+    // `2026-08-le-debut-n-herite-pas-d-un-placement-hors-saison`)
+    let solver = use_context::<Signal<SolverState>>();
+    let export_pending =
+        crate::export::menu::pending_note(solver.read().running.is_some());
 
     // The two print paths are unchanged; the JSON one writes the very file
     // « Charger depuis JSON » reads back (ADR
@@ -462,6 +468,9 @@ pub fn StatusStrip() -> Element {
                 }
                 if export_open() {
                     div { class: "status-export-menu", role: "menu",
+                        if let Some(pending) = export_pending {
+                            p { class: "status-export-pending", "{pending}" }
+                        }
                         for entry in export_entries.iter().cloned() {
                             // one keyed root per row (AP-8): the group
                             // heading rides inside it, so the key still

@@ -445,6 +445,62 @@ pub fn set_horizon(plan: &mut Plan, requested: usize) -> usize {
     horizon
 }
 
+// The one entry point for changing « Début », for the same reason
+// `set_horizon` is one for the horizon (ADR
+// `2026-08-le-debut-n-herite-pas-d-un-placement-hors-saison`). The seats
+// are session *indices*: moving the start renames every session without
+// moving anyone, so an automne course keeps its index and lands in a hiver
+// that does not offer it — a placement shown as true while it is provably
+// false (TRU-3). Those seats leave the placement in the same undoable act,
+// which is also what makes `solve::unplaced_codes` see them at once and
+// arm the automatic proposal directly, instead of waiting for a
+// vérification to come back « aucune solution ».
+//
+// `offerings` answers « which seasons the catalogue offers this course
+// in », for the placed codes it knows — a code absent from the map is one
+// the catalogue cannot judge, and it keeps its seat (unknown stays
+// unknown). Explicit acts are sovereign: a pinned course is the student's
+// own and is never un-seated in silence; the vérification refuses it out
+// loud, as it always did. Returns the evicted codes, for the caller's
+// bilan.
+pub fn set_start(
+    plan: &mut Plan,
+    start: Semester,
+    offerings: &BTreeMap<String, BTreeSet<Season>>,
+) -> Vec<String> {
+    let before: BTreeSet<String> =
+        plan.displayed_placement.keys().cloned().collect();
+    plan.start = start;
+    let seasons = ulaval_scheduler_core::horizon_sessions(
+        start.season,
+        plan.study_sessions,
+    );
+    let semesters = session_semesters(start, &seasons);
+    let pinned = &plan.pinned_sessions;
+    plan.displayed_placement.retain(|code, &mut session| {
+        pinned.contains_key(code)
+            || !semesters.get(session.wrapping_sub(1)).is_some_and(
+                |semester| {
+                    offerings.get(code).is_some_and(|offered| {
+                        !offered.contains(&semester.season)
+                    })
+                },
+            )
+    });
+    // flipping the start season changes how many slots the same count of
+    // study sessions spans (an odd horizon gains or loses its last été),
+    // so the horizon is re-asserted: `set_horizon` is the self-heal for
+    // the seats the new span no longer holds
+    let horizon = plan.study_sessions;
+    set_horizon(plan, horizon);
+    // the bilan is the diff, not one of the two causes: whichever of the
+    // season and the span dropped a seat, the student is told
+    before
+        .into_iter()
+        .filter(|code| !plan.displayed_placement.contains_key(code))
+        .collect()
+}
+
 // Why the horizon refuses to shrink below its floor, the binding fact
 // named with the gesture that frees it — a knob that clamps in silence is
 // the refusal AIR forbids (retour d'Antoine 2026-08-26 : « un bogue qui
@@ -722,6 +778,100 @@ mod tests {
             MAX_STUDY_SESSIONS,
             "the growth stops at MAX"
         );
+    }
+
+    fn offered(
+        pairs: &[(&str, &[Season])],
+    ) -> BTreeMap<String, BTreeSet<Season>> {
+        pairs
+            .iter()
+            .map(|(code, seasons)| {
+                ((*code).to_string(), seasons.iter().copied().collect())
+            })
+            .collect()
+    }
+
+    #[test]
+    fn moving_the_start_never_seats_a_course_in_a_season_that_refuses_it() {
+        // le bogue rapporté le 2026-08-29 : B-GCI sans concentration,
+        // départ A26 → H27. Les sièges sont des *indices* : sans ce
+        // correctif, GCI-1000 et GCI-1001 — que `data/cours.json` n'offre
+        // qu'à l'automne — restaient assis en H1-H27, un cheminement faux
+        // affiché comme vrai le temps que le solveur le répare.
+        let mut plan = Plan {
+            start: semester("A26"),
+            study_sessions: 8,
+            ..Plan::default()
+        };
+        plan.displayed_placement = BTreeMap::from([
+            ("GCI-1000".to_string(), 1),
+            ("GCI-1001".to_string(), 1),
+            ("GCI-1011".to_string(), 1),
+            ("GLG-1000".to_string(), 1),
+        ]);
+        let offerings = offered(&[
+            ("GCI-1000", &[Season::Fall]),
+            ("GCI-1001", &[Season::Fall]),
+            ("GCI-1011", &[Season::Fall, Season::Winter]),
+            ("GLG-1000", &[Season::Fall, Season::Winter]),
+        ]);
+        let evicted = set_start(&mut plan, semester("H27"), &offerings);
+        assert_eq!(plan.start, semester("H27"));
+        assert_eq!(
+            evicted,
+            vec!["GCI-1000".to_string(), "GCI-1001".to_string()],
+            "les cours que l'hiver n'offre pas quittent le placement"
+        );
+        assert_eq!(
+            plan.displayed_placement,
+            BTreeMap::from([
+                ("GCI-1011".to_string(), 1),
+                ("GLG-1000".to_string(), 1),
+            ]),
+            "ceux que la nouvelle saison offre gardent leur siège : rien \
+             n'est vidé pour rien"
+        );
+    }
+
+    #[test]
+    fn an_explicit_pin_and_an_unknown_code_keep_their_seat() {
+        let mut plan = Plan {
+            start: semester("A26"),
+            study_sessions: 8,
+            ..Plan::default()
+        };
+        plan.displayed_placement = BTreeMap::from([
+            ("GCI-1000".to_string(), 1),
+            ("OPT-ION1".to_string(), 1),
+        ]);
+        plan.pinned_sessions.insert("GCI-1000".to_string(), 1);
+        // `OPT-ION1` n'est pas au catalogue : absent de la table, donc
+        // rien à juger — et rien à retirer
+        let offerings = offered(&[("GCI-1000", &[Season::Fall])]);
+        let evicted = set_start(&mut plan, semester("H27"), &offerings);
+        assert!(
+            evicted.is_empty(),
+            "un geste explicite n'est jamais défait en silence, et un code \
+             que le catalogue ne connaît pas n'est jamais jugé : {evicted:?}"
+        );
+        assert_eq!(plan.displayed_placement.len(), 2);
+    }
+
+    #[test]
+    fn a_seat_the_new_span_no_longer_holds_is_named_too() {
+        // un horizon impair change de longueur quand la saison de départ
+        // bascule : H27 sur 7 sessions couvre 11 créneaux, A26 seulement
+        // 10 — le siège 11 doit tomber, et être nommé comme les autres
+        let mut plan = Plan {
+            start: semester("H27"),
+            study_sessions: 7,
+            ..Plan::default()
+        };
+        plan.displayed_placement =
+            BTreeMap::from([("GCI-4000".to_string(), 11)]);
+        let evicted = set_start(&mut plan, semester("A26"), &offered(&[]));
+        assert_eq!(evicted, vec!["GCI-4000".to_string()]);
+        assert!(plan.displayed_placement.is_empty());
     }
 
     #[test]

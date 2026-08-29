@@ -1030,6 +1030,29 @@ pub fn verification_verdict(searching: bool) -> (&'static str, String) {
     }
 }
 
+// Le bilan du changement de Début : un siège retiré parce que sa nouvelle
+// saison n'offre pas le cours ne disparaît jamais en silence (ADR
+// `2026-08-le-debut-n-herite-pas-d-un-placement-hors-saison`). `None`
+// quand la nouvelle saison tenait tous les sièges — pas de bandeau pour
+// rien (ALR-3).
+pub fn start_move_note(evicted: &[String]) -> Option<String> {
+    match evicted {
+        [] => None,
+        [code] => Some(format!(
+            "{code} est retiré du placement : sa session ne l'accueille \
+             plus après ce changement de Début. Il redevient « à \
+             planifier » — le placement automatique lui cherche une place."
+        )),
+        codes => Some(format!(
+            "{} sont retirés du placement : leur session ne les accueille \
+             plus après ce changement de Début. Ils redeviennent « à \
+             planifier » — le placement automatique leur cherche une \
+             place.",
+            codes.join(", ")
+        )),
+    }
+}
+
 // « 3 cr » ou « 6–12 cr » — showing the interval whole is the UI's choice
 // for a stage the student weights himself (plan § Source)
 pub fn credits_label(credits: &ulaval_scheduler_core::Credits) -> String {
@@ -2208,6 +2231,20 @@ mod tests {
             "no checkmark next to a provisional state"
         );
         assert!(label.contains("recalcul en cours"));
+    }
+
+    #[test]
+    fn a_seat_the_new_start_dropped_is_never_dropped_in_silence() {
+        assert_eq!(start_move_note(&[]), None, "rien à dire, rien à dire");
+        let one =
+            start_move_note(&["GCI-1000".to_string()]).unwrap_or_default();
+        assert!(one.contains("GCI-1000 est retiré"), "{one}");
+        assert!(one.contains("à planifier"), "{one}");
+        let many =
+            start_move_note(&["GCI-1000".to_string(), "GLG-1000".to_string()])
+                .unwrap_or_default();
+        assert!(many.contains("GCI-1000, GLG-1000 sont retirés"), "{many}");
+        assert!(many.contains("placement automatique"), "{many}");
     }
 
     #[test]
