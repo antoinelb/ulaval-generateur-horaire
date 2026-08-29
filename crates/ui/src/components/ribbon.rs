@@ -25,8 +25,18 @@ pub fn SessionRibbon() -> Element {
         view.read().session,
         today,
     );
+    // même voile discret que la grille pendant une recherche (ADR
+    // `2026-08-recalcul-visible-sur-la-grille`) : les cartes de session
+    // peuvent elles aussi refléter un placement transitoire
+    let searching = use_context::<Signal<super::SolverState>>()
+        .read()
+        .running
+        .is_some();
     rsx! {
-        nav { class: "ribbon", aria_label: "Sessions du cheminement",
+        nav {
+            class: "ribbon",
+            class: if searching { "ribbon--searching" },
+            aria_label: "Sessions du cheminement",
             for card in cards {
                 if card.summer
                     && card.codes.is_empty()

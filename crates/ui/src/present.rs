@@ -850,6 +850,44 @@ pub fn schedule_status(schedule: &WeeklySchedule, forced: bool) -> String {
     }
 }
 
+// pendant qu'une recherche tourne, l'horaire affiché peut n'être qu'une
+// étape transitoire (rapport directeur-gci 2026-08-29 : un décalage de
+// session ou une violation apparente de préalable, corrigés quelques
+// secondes plus tard) — le statut le dit avant tout le reste, dans la même
+// ligne déjà réservée (`.grid-status`, `white-space: nowrap` + ellipsis :
+// pas de nouvelle hauteur, LAY-2).
+pub fn grid_status_label(status: &str, searching: bool) -> String {
+    if searching {
+        format!("⟳ recalcul en cours… — {status}")
+    } else {
+        status.to_string()
+    }
+}
+
+// Jamais un « ✓ » à côté d'un état provisoire (rapport directeur-gci
+// 2026-08-29, scénarios « départ hiver » et « double échec ») : tant
+// qu'une recherche tourne, le dernier verdict vérifié ne s'applique plus
+// à ce qui est affiché — le panneau le dit au lieu de laisser le ✓
+// figé pendant le recalcul. Renvoie la classe CSS et le texte ensemble :
+// les deux changent de pair, jamais l'un sans l'autre.
+pub fn verification_verdict(searching: bool) -> (&'static str, String) {
+    if searching {
+        (
+            "panel-verdict panel-verdict--pending",
+            "⟳ recalcul en cours… (le verdict précédent ne s'applique \
+             plus)"
+                .to_string(),
+        )
+    } else {
+        (
+            "panel-verdict panel-verdict--ok",
+            "Placement vérifié ✓ (préalables, plafond, une combinaison \
+             d'horaire possible par session)"
+                .to_string(),
+        )
+    }
+}
+
 // « 3 cr » ou « 6–12 cr » — showing the interval whole is the UI's choice
 // for a stage the student weights himself (plan § Source)
 pub fn credits_label(credits: &ulaval_scheduler_core::Credits) -> String {
@@ -1880,6 +1918,39 @@ mod tests {
             "sections forcées - sans conflit ✓",
             "a hand-pinned section must not claim « automatique »"
         );
+    }
+
+    #[test]
+    fn grid_status_leads_with_recalculating_while_a_search_runs() {
+        assert_eq!(
+            grid_status_label(
+                "combinaison automatique - sans conflit ✓",
+                false
+            ),
+            "combinaison automatique - sans conflit ✓"
+        );
+        assert_eq!(
+            grid_status_label(
+                "combinaison automatique - sans conflit ✓",
+                true
+            ),
+            "⟳ recalcul en cours… — combinaison automatique - sans \
+             conflit ✓"
+        );
+    }
+
+    #[test]
+    fn verification_verdict_never_shows_a_checkmark_while_searching() {
+        let (class, label) = verification_verdict(false);
+        assert_eq!(class, "panel-verdict panel-verdict--ok");
+        assert!(label.contains('✓'));
+        let (class, label) = verification_verdict(true);
+        assert_eq!(class, "panel-verdict panel-verdict--pending");
+        assert!(
+            !label.contains('✓'),
+            "no checkmark next to a provisional state"
+        );
+        assert!(label.contains("recalcul en cours"));
     }
 
     #[test]

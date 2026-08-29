@@ -1053,6 +1053,11 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
     let summers_open = plan.read().summers_open;
     let concomitant = plan.read().concomitant;
     let left_out = solver.read().left_out.clone();
+    // jamais un ✓ à côté d'un état provisoire (rapport directeur-gci
+    // 2026-08-29 ; ADR `2026-08-recalcul-visible-sur-la-grille`)
+    let searching = solver.read().running.is_some();
+    let (verdict_class, verdict_label) =
+        crate::present::verification_verdict(searching);
     let verification = solver.read().verification.clone();
     let credit_shortfalls = solver.read().credit_shortfalls.clone();
     let shortfall_messages: Vec<String> = credit_shortfalls
@@ -1332,11 +1337,7 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                         // un cheminement complet ne dit plus rien : seuls les
                         // manques parlent (décision d'Antoine, 2026-08-26)
                         if rules_missing > 0 || !credit_shortfalls.is_empty() {
-                            p { class: "panel-verdict panel-verdict--ok",
-                                "Placement vérifié ✓ (préalables, \
-                                 plafond, une combinaison d'horaire \
-                                 possible par session)"
-                            }
+                            p { class: "{verdict_class}", "{verdict_label}" }
                             p { class: "panel-verdict panel-verdict--bad",
                                 "⚠ mais {rules_missing} sections de règles \
                                  restent à combler ci-dessous — le bac n'est \

@@ -71,7 +71,15 @@ pub fn WeeklyGrid() -> Element {
         .is_some_and(|chosen| !chosen.is_empty());
     let history = use_context::<Signal<History>>();
     let print_target = use_context::<super::PrintTarget>().0;
-    let status = present::schedule_status(&schedule.read(), forced);
+    // ADR `2026-08-recalcul-visible-sur-la-grille` : un état transitoire
+    // plausible ne doit jamais se lire comme le résultat final (rapport
+    // directeur-gci 2026-08-29)
+    let solver = use_context::<Signal<super::SolverState>>();
+    let searching = solver.read().running.is_some();
+    let status = present::grid_status_label(
+        &present::schedule_status(&schedule.read(), forced),
+        searching,
+    );
     // what is not drawn must be announced where the eyes are, not only
     // under the fold
     let off_grid = schedule.read().excluded.len();
@@ -96,6 +104,7 @@ pub fn WeeklyGrid() -> Element {
                 span {
                     class: "grid-status",
                     class: if grid.conflict { "grid-status--conflict" },
+                    class: if searching { "grid-status--searching" },
                     title: "{status}",
                     "{status}"
                 }
@@ -164,6 +173,10 @@ pub fn WeeklyGrid() -> Element {
             } else {
                 div {
                     class: "grid",
+                    // voile discret, jamais un blocage : l'opacité seule
+                    // change, `pointer-events` reste par défaut (les
+                    // blocs restent cliquables pendant le recalcul)
+                    class: if searching { "grid--searching" },
                     style: "grid-template-columns: 3rem repeat({grid.days.len()}, 1fr);",
                     div { class: "grid-axis",
                         for hour in grid.hours.iter() {

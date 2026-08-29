@@ -1197,6 +1197,13 @@ code {
   font-weight: 600;
 }
 
+/* jamais un ✓ à côté d'un état provisoire (ADR
+   2026-08-recalcul-visible-sur-la-grille) */
+.panel-verdict--pending {
+  color: var(--muted);
+  font-style: italic;
+}
+
 /* puces de sessions (9a) */
 .panel-chips {
   display: flex;
@@ -1565,6 +1572,24 @@ code {
 .grid-status--conflict {
   color: var(--accent);
   font-weight: 600;
+}
+
+/* ADR 2026-08-recalcul-visible-sur-la-grille : le résultat affiché peut
+   n'être qu'une étape transitoire tant que le solveur cherche encore */
+.grid-status--searching {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* voile discret sur la grille pendant le recalcul — jamais un blocage :
+   seule l'opacité change, les blocs restent cliquables (`pointer-events`
+   par défaut, non modifié) */
+.grid--searching {
+  opacity: 0.55;
+}
+
+.ribbon--searching {
+  opacity: 0.55;
 }
 
 .grid-empty {
