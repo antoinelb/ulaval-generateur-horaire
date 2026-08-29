@@ -1121,15 +1121,42 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                 label { class: "panel-knob",
                     "Début"
                     select {
+                        // le placement affiché ne survit pas à la saison
+                        // qui l'invalide, et ce qu'il perd est nommé (ADR
+                        // `2026-08-le-debut-n-herite-pas-d-un-placement-hors-saison`)
                         onchange: move |event| {
                             let value = event.value();
                             if let Ok(semester) = value.parse() {
+                                let offerings = {
+                                    let read = snapshot.read();
+                                    read.as_ref()
+                                        .map(|snapshot| {
+                                            solve::placed_offerings(
+                                                snapshot,
+                                                &plan.read(),
+                                            )
+                                        })
+                                        .unwrap_or_default()
+                                };
+                                let mut evicted = Vec::new();
                                 edit_plan(
                                     plan,
                                     history,
                                     &format!("Début déplacé à {value}"),
-                                    |plan| plan.start = semester,
+                                    |plan| {
+                                        evicted = state::set_start(
+                                            plan, semester, &offerings,
+                                        );
+                                    },
                                 );
+                                if let Some(note) =
+                                    crate::present::start_move_note(&evicted)
+                                {
+                                    super::push_alert(
+                                        alerts,
+                                        super::AlertBody::Note(note),
+                                    );
+                                }
                             }
                         },
                         for year in year_lo..=year_hi {
