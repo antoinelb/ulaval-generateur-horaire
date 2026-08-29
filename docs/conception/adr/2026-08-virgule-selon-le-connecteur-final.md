@@ -43,6 +43,9 @@ Sur les 44 cours dont un opérande brut portait une virgule entre deux sigles, 2
 Toutes les feuilles ainsi rendues vérifiables sont des cours préuniversitaires (`0xxx`) : aucun code universitaire n'était pris dans une énumération à virgules, donc la re-dérivation ne rend aucun préalable soudainement contraignant pour le solveur.
 Elle rend en revanche ces `0xxx` nommables un par un — le bandeau des acquis présumés les liste déjà individuellement — et un relevé qui les a réussis les satisfait maintenant feuille par feuille.
 
+Un effet aval reste à venir : la règle « Scolarité préparatoire » (ADR `2026-08-regle-scolarite-preparatoire`) marche les arbres et ignore les feuilles brutes, si bien que le prochain `ulaval-scraper program` ajoutera MAT-0130 à B-GCI et MAT-0250 à la famille B-GIN (par MAT-1900 et STT-1000).
+Les instantanés de programme déjà écrits ne sont pas recalculés : un millésime est gelé à sa date de scrape, c'est la version sous laquelle l'étudiant s'est inscrit (ADR `2026-08-millesime-de-programme-en-semestre`).
+
 ## Alternatives rejetées
 
 - **Laisser la virgule brute et ne défendre que l'affichage** (le statu quo) : les faux doublons disparaissaient de l'écran, mais l'énumération restait une feuille présumée, hors de portée du solveur comme des messages de refus.
