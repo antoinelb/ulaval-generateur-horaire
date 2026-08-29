@@ -2,14 +2,6 @@
 
 [Introduction](introduction.md)
 
-# Guide du consommateur JavaScript
-
-- [Charger le module](guide/chargement.md)
-- [Horaire hebdomadaire](guide/horaire.md)
-- [Organigramme](guide/organigramme.md)
-- [Schémas d'entrée et de sortie](guide/schemas.md)
-- [Erreurs et budgets](guide/erreurs-et-budgets.md)
-
 # Architecture
 
 - [Vue d'ensemble du workspace](architecture/workspace.md)

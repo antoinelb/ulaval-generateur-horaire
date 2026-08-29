@@ -125,8 +125,7 @@ pub enum PrereqTree {
     Course(String),
     // the répertoire's `*` : « peut être suivi en concomitance », so the
     // same session counts as « before ». Serialized as an object beside the
-    // bare-string leaf, which keeps every existing reader — the JS
-    // grille-de-cheminement included — right about strings meaning strict
+    // bare-string leaf, so a bare string keeps its one meaning: strict
     // precedence (ADR `2026-08-etoile-de-concomitance-au-parsing`).
     Concomitant { concomitant: String },
     // an operand no rule can check automatically — an examination

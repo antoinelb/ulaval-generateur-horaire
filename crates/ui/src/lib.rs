@@ -6,6 +6,7 @@
 
 pub mod alerts;
 pub mod capsule;
+pub mod cheminement;
 pub mod data;
 pub mod export;
 pub mod import;

@@ -4909,7 +4909,7 @@ mod tests {
             && weekly_ok
     }
 
-    // The JSON names are the contract the WASM boundary hands to JS (ADR
+    // The JSON names are the contract the WASM boundary publishes (ADR
     // `2026-08-module-wasm-quatre-fonctions-js`) — pinned here so a rename
     // breaks a test rather than a caller.
     #[test]

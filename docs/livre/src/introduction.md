@@ -11,15 +11,14 @@ Quatre morceaux sont publiés sur GitHub Pages, à la même origine :
 | Emplacement | Contenu |
 |---|---|
 | [`/`](https://antoinelb.github.io/ulaval-generateur-horaire/) | l'application : le générateur d'horaire et de cheminement |
-| [`/pkg`](https://antoinelb.github.io/ulaval-generateur-horaire/pkg/) | le module WASM (`ulaval_scheduler_wasm.js` + `.wasm` + `.d.ts`), importable par URL depuis n'importe quel HTML |
+| [`/pkg`](https://antoinelb.github.io/ulaval-generateur-horaire/pkg/) | le module WASM (`ulaval_scheduler_wasm.js` + `.wasm` + `.d.ts`), gelé et servi au mieux : plus une surface suivie (ADR `2026-08-surface-javascript-plus-une-contrainte`) |
 | [`/data`](https://antoinelb.github.io/ulaval-generateur-horaire/data/cours.json) | les snapshots de données (cours et programmes), rafraîchis par un cron de scraping |
 | `/docs` | ce livre |
 
 ## À qui s'adresse ce livre
 
-- **Au consommateur JavaScript** du module WASM : la première partie (guide) montre comment charger le module, appeler les quatre fonctions et interpréter leurs rapports.
-- **À qui veut comprendre ou modifier le code** : la deuxième partie décrit l'architecture du workspace Rust.
-- **À qui doit interpréter les données** : la troisième partie explique le vocabulaire du domaine — sessions, options, préalables, règles — et les décisions qui le structurent.
+- **À qui veut comprendre ou modifier le code** : la première partie décrit l'architecture du workspace Rust.
+- **À qui doit interpréter les données** : la deuxième partie explique le vocabulaire du domaine — sessions, options, préalables, règles — et les décisions qui le structurent.
 
 ## Conventions
 

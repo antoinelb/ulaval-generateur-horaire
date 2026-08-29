@@ -1,7 +1,7 @@
 use std::fs;
 
 use ulaval_scheduler_core::{
-    parse_prereq_tree, CourseManual, ProgramManual, Semester,
+    parse_prereq_tree, Cheminement, CourseManual, Semester,
 };
 
 // The hand-maintained files the scraper never writes still have to parse
@@ -79,43 +79,39 @@ fn every_vintage_correction_names_a_semester_and_parses() {
 }
 
 #[test]
-fn every_manual_program_file_parses_with_the_core_type() {
-    let dir = format!("{DATA_DIR}/programmes");
+fn every_cheminement_file_parses_with_the_core_type() {
+    let dir = format!("{DATA_DIR}/cheminements");
     let mut seen = 0;
     let entries = fs::read_dir(&dir)
-        .expect("data/programmes is readable")
+        .expect("data/cheminements is readable")
         .flatten();
     for entry in entries {
         let name = entry.file_name().to_string_lossy().to_string();
-        if !name.ends_with(".manuel.json") {
-            continue;
-        }
         let raw = fs::read_to_string(entry.path())
             .unwrap_or_else(|error| panic!("{name} is readable: {error}"));
-        let manual: ProgramManual = serde_json::from_str(&raw)
+        let cheminement: Cheminement = serde_json::from_str(&raw)
             .unwrap_or_else(|error| panic!("{name} parses: {error}"));
-        // the vintage now lives in the file name, exactly as it does on the
-        // scraped snapshot beside it (ADR
-        // `2026-08-fichier-manuel-de-programme-millesime`)
+        // `{code}-{semester}[-{concentration}].json` : the code takes the
+        // first two segments, so the vintage is always the third (ADR
+        // `2026-08-un-cheminement-par-fichier`)
         let admission: Semester = name
-            .trim_end_matches(".manuel.json")
-            .rsplit('-')
-            .next()
+            .split('-')
+            .nth(2)
             .unwrap_or_default()
+            .trim_end_matches(".json")
             .parse()
             .unwrap_or_else(|error| panic!("{name} names a vintage: {error}"));
-        for cheminement in &manual.cheminements_types {
-            assert!(
-                cheminement.sessions.iter().any(|s| s.semester == admission),
-                "{name}: « {} » must place its admission {admission} in the \
-                 timeline",
-                cheminement.label,
-            );
-        }
+        assert!(
+            cheminement
+                .sessions
+                .iter()
+                .any(|session| session.semester == admission),
+            "{name}: the admission {admission} must appear in the timeline",
+        );
         seen += 1;
     }
     assert!(
-        seen >= 19,
-        "expected one file per converted vintage, saw {seen}"
+        seen >= 26,
+        "expected one file per converted cheminement, saw {seen}"
     );
 }

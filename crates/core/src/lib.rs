@@ -1,6 +1,7 @@
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 pub mod catalogue;
+pub mod cheminement;
 pub mod common;
 pub mod course;
 pub mod course_manual;
@@ -14,13 +15,13 @@ pub mod preparatory;
 pub mod prereq_override;
 pub mod prereq_parse;
 pub mod program;
-pub mod program_manual;
 pub mod rules;
 pub mod transcript;
 pub mod week;
 pub mod weekly;
 
 pub use catalogue::*;
+pub use cheminement::*;
 pub use common::*;
 pub use course::*;
 pub use course_manual::*;
@@ -34,7 +35,6 @@ pub use preparatory::*;
 pub use prereq_override::*;
 pub use prereq_parse::*;
 pub use program::*;
-pub use program_manual::*;
 pub use rules::*;
 pub use transcript::*;
 pub use week::*;

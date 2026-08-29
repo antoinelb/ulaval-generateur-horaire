@@ -5,14 +5,26 @@ Le crate `wasm` est le crate de frontière : une seule orchestration au-dessus d
 Il reste délibérément mince : chaque export est une conversion en entrée et une en sortie, et tout ce qui vaut la peine d'être testé vit de l'autre côté de ces appels, en Rust natif.
 
 ```text
-JS ──(objet)──▶ serde_wasm_bindgen::from_value ──▶ fonction pure de core
-JS ◀─(objet)── Serializer::json_compatible()  ◀── rapport sérialisable
+worker Dioxus ──(chaîne JSON)──▶ protocol::handle ──▶ fonction pure de core
+worker Dioxus ◀─(chaîne JSON)── protocol::Response ◀── rapport sérialisable
 
-worker Dioxus ──(chaîne JSON)──▶ protocol::handle ──▶ les mêmes fonctions
-worker Dioxus ◀─(chaîne JSON)── protocol::Response ◀──
+JS ──(objet)──▶ serde_wasm_bindgen::from_value ──▶ les mêmes fonctions
+JS ◀─(objet)── Serializer::json_compatible()  ◀──
 ```
 
-## Les huit fonctions de la surface JavaScript
+## La surface du worker Dioxus
+
+C'est la surface vivante, celle que l'application appelle.
+
+`init_snapshot` puis `handle_message` : des chaînes JSON dans les deux sens, une requête (`place`, `verify`, `admissible-sessions`) sous son `id`, **toujours** une réponse — une requête illisible, ou un worker interrogé avant d'avoir reçu son catalogue, répond sous l'id réservé 0 plutôt que de disparaître (ADR `2026-08-crate-ui-calculations-et-worker`).
+
+`protocol.rs` n'est qu'un aiguillage : il appelle `organigramme::generate/verify/admissible`, les fonctions pures testées en natif.
+
+Vérifier un organigramme suppose une question complète : un cours laissé sans session épinglée est une **erreur** nommant les coupables, jamais un faux verdict (ADR `2026-08-module-wasm-quatre-fonctions-js`).
+
+## La surface JavaScript, gelée
+
+Huit exports `#[wasm_bindgen]` prennent et rendent des objets JS ordinaires. Ils existent, ils compilent, ils sont lintés sur la cible wasm — mais ils ne sont plus une surface suivie : aucune décision de format ne se plie plus à ce qu'un consommateur JavaScript en lirait (ADR `2026-08-surface-javascript-plus-une-contrainte`).
 
 | Export | Cœur | Rôle |
 |---|---|---|
@@ -25,13 +37,7 @@ worker Dioxus ◀─(chaîne JSON)── protocol::Response ◀──
 | `coverage_report` | `questions::coverage` | le bilan des règles sur une grille même partielle |
 | `horizon_sessions` | `questions::horizon` | l'horizon en codes de millésime |
 
-Les deux `verify` partagent le même principe : vérifier avec un cours laissé sans choix est une **erreur**, jamais un faux verdict (ADR `2026-08-module-wasm-quatre-fonctions-js`, `2026-08-surface-wasm-etendue-a-huit-fonctions`).
-
-## La surface du worker Dioxus
-
-`init_snapshot` puis `handle_message` : des chaînes JSON dans les deux sens, une requête (`place`, `verify`, `admissible-sessions`) sous son `id`, **toujours** une réponse — une requête illisible, ou un worker interrogé avant d'avoir reçu son catalogue, répond sous l'id réservé 0 plutôt que de disparaître (ADR `2026-08-crate-ui-calculations-et-worker`).
-
-`protocol.rs` n'est qu'un aiguillage : il appelle les mêmes `organigramme::generate/verify/admissible` que la surface JavaScript.
+`schedule.rs` et `questions.rs` ne servent qu'à ces exports : l'app Dioxus construit son horaire et juge ses préalables en appelant `core` directement.
 
 ## Le catalogue, chargé une fois
 
@@ -45,7 +51,7 @@ C'est aussi pourquoi `courses` est un **paramètre** des fonctions pures et jama
 ## Choix de sérialisation
 
 - `Serializer::json_compatible()` en sortie : une carte devient un objet nu, pas un `Map` JavaScript — ce qu'attend un appelant qui écrit `solution.placement["GEX-1000"]`.
-- `deny_unknown_fields` sur les entrées : une faute de frappe dans l'objet JS est refusée, pas lue comme une valeur par défaut.
+- `deny_unknown_fields` sur les entrées : une faute de frappe dans l'objet reçu est refusée, pas lue comme une valeur par défaut.
 - La glue `#[wasm_bindgen]` vit dans `boundary.rs`, compilé sous `cfg(all(target_arch = "wasm32", feature = "boundary"))` seulement : un `cargo test` natif ne compile ni la glue ni ses dépendances, et `make static` la linte sur la cible wasm.
   La feature est active par défaut — un drapeau oublié ne peut pas publier un paquet sans exports — et le crate `ui`, qui ne lie ce crate que pour ses modules purs, s'en désabonne (`default-features = false`) : porter une glue qu'il n'appelle jamais lui coûtait ~800 Ko de wasm.
 
@@ -58,4 +64,4 @@ Les déclarations du `.d.ts` sont **dérivées des structures Rust** par `tsify`
 - dans `core`, les derives sont derrière la feature `tsify`, activée par le build navigateur seul — `core` reste pur et sans dépendance wasm en natif ;
 - les types à serde manuel (`Time`, `Semester`, les cycles) et les formes que le derive déclarerait mal (`Rule` et son union aplatie, les `valid` absentes-quand-vraies) sont déclarés à la main dans une `typescript_custom_section` de `boundary.rs`.
 
-Les commentaires rustdoc des exports sont propagés par wasm-pack en JSDoc : la documentation vue par l'éditeur du consommateur est écrite dans le code Rust, une seule source de vérité.
+Ces déclarations suivent le code par construction ; elles ne sont plus une promesse envers un consommateur.

@@ -182,9 +182,8 @@ fn ProgramPicker() -> Element {
                                     else {
                                         return;
                                     };
-                                    // défaut expert-sûr (AIR LAY-3, parité
-                                    // avec la version JS) : la première
-                                    // concentration du millésime choisi,
+                                    // défaut expert-sûr (AIR LAY-3) : la
+                                    // première concentration du millésime,
                                     // jamais de profil imposé — l'instantané
                                     // de l'étagère, s'il existe, garde son
                                     // propre choix
@@ -724,9 +723,8 @@ fn ImportDrawer() -> Element {
 
 // Les deux menus du cheminement (décision 2026-08-19) : la concentration
 // et le profil se changent ici, à tout moment — les sections en dessous et
-// le bilan recomposent, la grille placée ne bouge pas (parité avec la
-// version JS). Un menu sans choix réel n'est pas rendu (B-GEX n'a pas de
-// concentrations); un programme qui n'offre ni l'un ni l'autre n'a pas la
+// le bilan recomposent, la grille placée ne bouge pas. Un menu sans choix
+// réel n'est pas rendu (B-GEX n'a pas de concentrations); un programme qui n'offre ni l'un ni l'autre n'a pas la
 // rangée (M-GEX).
 #[component]
 fn CheminementKnobs() -> Element {
@@ -1222,6 +1220,7 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                 }
             }
             CapsuleDrawer {}
+            CheminementLoader {}
             label { class: "panel-fit",
                 input {
                     r#type: "checkbox",
@@ -1356,6 +1355,203 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                         p { class: "warning",
                             "⚠ {crate::solve::blocked_note(blocked)}"
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// « Charger depuis JSON » : le bouton *est* le sélecteur de fichier — un
+// clic, la boîte de dialogue du système, et l'organigramme est rempli. Ni
+// tiroir ni second bouton « Charger », parce qu'il n'y a rien à choisir
+// entre le fichier et son application (ADR
+// `2026-08-un-cheminement-par-fichier`). Le « ? » déplie le format attendu
+// en place, jamais en surcouche (LAY-4). Toute la logique vit dans
+// `crate::cheminement`, déjà testée nativement ; ce composant ne fait que
+// lire le fichier et afficher ce qu'elle renvoie (AP-5).
+const CHEMINEMENT_LABEL: &str = "Cheminement chargé";
+
+#[component]
+fn CheminementLoader() -> Element {
+    let plan = use_context::<Signal<Plan>>();
+    let history = use_context::<Signal<History>>();
+    let alerts = use_context::<Signal<super::AlertStack>>();
+    let snapshot = use_context::<Signal<Option<Snapshot>>>();
+
+    let mut help_open = use_signal(|| false);
+    let mut error = use_signal(|| None::<crate::present::UiError>);
+    let mut summary =
+        use_signal(|| None::<crate::cheminement::CheminementSummary>);
+    // le champ fichier est remonté après chaque lecture : sans cela,
+    // rechoisir le même fichier ne déclenche aucun `onchange` et le
+    // rechargement — la façon la plus simple d'annuler ses propres
+    // retouches — resterait sans effet
+    let mut picker_epoch = use_signal(|| 0u64);
+
+    // même discipline que le tiroir Capsule : le bilan ne décrit le plan
+    // que tant que son propre acte est au sommet de la pile d'annulation ;
+    // un ctrl-z, ou une édition par-dessus, le rend caduc
+    use_effect(move || {
+        let current_top = history.read().undo_label().map(str::to_string);
+        if current_top.as_deref() != Some(CHEMINEMENT_LABEL) {
+            summary.set(None);
+        }
+    });
+
+    let load = move |file: dioxus::html::FileData| {
+        spawn(async move {
+            picker_epoch += 1;
+            // la porte du catalogue : `load` refuse tout sigle que
+            // l'instantané ne porte pas, si bien que le plan écrit est un
+            // plan que chaque requête au solveur sait résoudre
+            let known = snapshot.peek().as_ref().map(|snapshot| {
+                snapshot
+                    .by_code
+                    .keys()
+                    .cloned()
+                    .collect::<std::collections::BTreeSet<String>>()
+            });
+            let Some(known) = known else {
+                summary.set(None);
+                error.set(Some(crate::present::present_cheminement_error(
+                    &crate::cheminement::CheminementError::CatalogueUnavailable,
+                )));
+                return;
+            };
+            let text = match crate::browser::read_file_text(&file).await {
+                Ok(text) => text,
+                Err(why) => {
+                    summary.set(None);
+                    error
+                        .set(Some(crate::present::present_import_error(&why)));
+                    return;
+                }
+            };
+            match crate::cheminement::load(&text, &known) {
+                Err(why) => {
+                    summary.set(None);
+                    error.set(Some(
+                        crate::present::present_cheminement_error(&why),
+                    ));
+                }
+                Ok(loaded) => {
+                    error.set(None);
+                    // un seul acte étiqueté et réversible (ACT-2) : un
+                    // ctrl-z rend l'organigramme précédent en entier
+                    edit_plan(plan, history, CHEMINEMENT_LABEL, |plan| {
+                        crate::cheminement::apply_to_plan(
+                            plan,
+                            &loaded.application,
+                        );
+                    });
+                    super::push_caused_alert(
+                        alerts,
+                        super::AlertBody::Success(
+                            loaded.summary.headline.clone(),
+                        ),
+                        super::AlertCause::Document,
+                    );
+                    summary.set(Some(loaded.summary));
+                }
+            }
+        });
+    };
+
+    rsx! {
+        div { class: "panel-cheminement",
+            div { class: "panel-cheminement-row",
+                div { class: "panel-import-file",
+                    input {
+                        // remonté après chaque lecture, pour que le même
+                        // fichier puisse être rechargé
+                        key: "cheminement-{picker_epoch}",
+                        id: "panel-cheminement-file",
+                        class: "panel-import-file-input",
+                        r#type: "file",
+                        accept: ".json,application/json",
+                        aria_label: "Charger un cheminement depuis un \
+                                     fichier JSON",
+                        onchange: move |event: Event<FormData>| {
+                            if let Some(file) =
+                                event.files().into_iter().next()
+                            {
+                                load(file);
+                            }
+                        },
+                    }
+                    span { class: "panel-import-file-button",
+                        "Charger depuis JSON…"
+                    }
+                }
+                button {
+                    class: "panel-cheminement-help-toggle",
+                    r#type: "button",
+                    aria_expanded: help_open(),
+                    aria_label: "Format du fichier de cheminement attendu",
+                    title: "Format attendu",
+                    onclick: move |_| {
+                        let open = !help_open();
+                        help_open.set(open);
+                    },
+                    "?"
+                }
+            }
+            if help_open() {
+                div { class: "panel-cheminement-help",
+                    p {
+                        "Un objet avec "
+                        code { "completed" }
+                        " — les cours crédités à l'admission — et "
+                        code { "sessions" }
+                        ", chacune portant son "
+                        code { "semester" }
+                        " (A26, H27, E27) et ses "
+                        code { "courses" }
+                        ". C'est le format qu'écrit « Exporter → \
+                         Organigramme → JSON »."
+                    }
+                    pre { class: "panel-cheminement-gabarit",
+                        "{crate::cheminement::TEMPLATE}"
+                    }
+                    button {
+                        class: "panel-import-submit",
+                        r#type: "button",
+                        onclick: move |_| {
+                            crate::browser::clipboard_write(
+                                crate::cheminement::TEMPLATE,
+                            );
+                            super::push_alert(
+                                alerts,
+                                super::AlertBody::Success(
+                                    "Gabarit copié.".to_string(),
+                                ),
+                            );
+                        },
+                        "Copier le gabarit"
+                    }
+                }
+            }
+            if let Some(summary) = summary() {
+                div { class: "panel-cheminement-bilan",
+                    p { class: "panel-cheminement-headline",
+                        "✓ {summary.headline}"
+                    }
+                    if !summary.ignored.is_empty() {
+                        ul { class: "panel-cheminement-ignored",
+                            for line in summary.ignored.iter() {
+                                li { key: "{line}", "{line}" }
+                            }
+                        }
+                    }
+                }
+            }
+            if let Some(error) = error() {
+                div { class: "panel-import-error", role: "alert",
+                    p { class: "panel-import-error-what", "{error.what}" }
+                    p { class: "panel-import-error-what", "{error.action}" }
+                    pre { class: "panel-import-error-detail",
+                        "{error.id} — {error.detail}"
                     }
                 }
             }

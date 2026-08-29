@@ -4,11 +4,11 @@ use ulaval_scheduler_core::{
     schedule_intake, schedule_report, Course, ScheduleReport,
 };
 
-// What JS hands the two weekly functions: the snapshot it loaded, the
-// session, the codes the student typed, and the options he pinned — one
-// sorted NRC set per course, an option having no identifier of its own (ADR
+// What the two weekly functions take: the catalogue, the session, the
+// codes the student typed, and the options he pinned — one sorted NRC set
+// per course, an option having no identifier of its own (ADR
 // `2026-07-contrat-horaire-hebdomadaire-vers-ui`). Unknown fields are
-// refused rather than ignored: a typo in the JS object must not be read as
+// refused rather than ignored: a typo in the object must not be read as
 // a default (« never lose input silently »).
 #[derive(Debug, Clone, serde::Deserialize)]
 #[cfg_attr(

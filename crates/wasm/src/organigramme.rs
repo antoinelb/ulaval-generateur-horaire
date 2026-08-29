@@ -6,17 +6,17 @@ use ulaval_scheduler_core::{
     PlacementError, PlacementIntake, PlacementRequest, Program, Season,
 };
 
-// Browser-sized budgets: the search runs on the JS thread, so the defaults
+// Browser-sized budgets: the search runs in the browser, so the defaults
 // stop long before a tab freezes. Truncation is never silent — the
 // report's `completion` says which bound was hit — and a caller who knows
 // better raises them (ADR `2026-07-budget-de-b-en-double-borne`).
 const DEFAULT_MAX_NODES: u64 = 1_000_000;
 const DEFAULT_MAX_SOLUTIONS: usize = 100;
 
-// What JS hands the two organigramme functions. The horizon is described,
-// never listed: `start` and `study_sessions` go through
-// `horizon_sessions`, so the été-after-each-hiver rule stays in core and
-// out of the view. Unknown fields are refused rather than ignored.
+// What the two organigramme functions take, over either surface. The
+// horizon is described, never listed: `start` and `study_sessions` go
+// through `horizon_sessions`, so the été-after-each-hiver rule stays in
+// core and out of the view. Unknown fields are refused rather than ignored.
 #[derive(Debug, Clone, serde::Deserialize)]
 #[cfg_attr(
     all(target_arch = "wasm32", feature = "boundary"),
@@ -74,7 +74,7 @@ pub struct OrganigrammeInput {
 }
 
 // The horizon is returned with the placement: the session numbers only mean
-// something next to the seasons they index, and JS never computed them.
+// something next to the seasons they index, and no caller recomputes them.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(
     all(target_arch = "wasm32", feature = "boundary"),
@@ -312,10 +312,9 @@ pub fn verify(
     })
 }
 
-// The sessions that could host `code` — what the JS interface needs for its
-// « + H28 » chips (CORRECTIFS-AMONT item 12): one `place` probe per session,
-// pin semantics answering the very question the click asks. 1-based numbers,
-// the shape `pinned` speaks.
+// The sessions that could host `code` — what the « + H28 » chips ask: one
+// `place` probe per session, pin semantics answering the very question the
+// click asks. 1-based numbers, the shape `pinned` speaks.
 pub fn admissible(
     input: &OrganigrammeInput,
     courses: &[Course],
@@ -866,7 +865,7 @@ mod tests {
         );
     }
 
-    // the JSON names are what JS reads off the returned object
+    // the JSON names are the wire contract of the returned object
     #[test]
     fn the_report_serializes_under_its_published_names() {
         let generated =

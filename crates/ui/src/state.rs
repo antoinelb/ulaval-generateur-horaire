@@ -184,8 +184,8 @@ impl Default for View {
 
 // --- the session identity walk -------------------------------------------
 
-// the calendar arithmetic moved to core so the wasm surface serves the same
-// walk to the JS interface (ADR `2026-08-surface-wasm-etendue-a-huit-fonctions`)
+// the calendar arithmetic lives in core, so every surface — the worker, the
+// view — walks the sessions the same way, none of it in the view
 pub use ulaval_scheduler_core::session_semesters;
 
 // the `schedule_intake` naming — « a2026 », « h2027 », « e2027 »

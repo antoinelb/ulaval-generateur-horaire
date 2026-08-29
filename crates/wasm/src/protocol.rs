@@ -6,9 +6,8 @@ use crate::organigramme::{self, OrganigrammeInput, OrganigrammeReport};
 // always one `Response` out — an unreadable request answers under the
 // reserved id 0 instead of vanishing. The snapshot never rides in a message:
 // the worker holds it (see `boundary`), so a request carries only the
-// student's state, and `query` is the very `OrganigrammeInput` the
-// JavaScript interface sends, minus its `courses` (ADR
-// `2026-08-fusion-des-crates-wasm-et-ui-calculations`).
+// student's state — `query` is an `OrganigrammeInput` minus its `courses`
+// (ADR `2026-08-fusion-des-crates-wasm-et-ui-calculations`).
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Request {
