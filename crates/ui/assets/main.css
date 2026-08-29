@@ -2042,3 +2042,22 @@ p.footer-contact {
   color: var(--accent);
   border-color: var(--accent);
 }
+
+/* Les deux moitiés d'une règle linguistique élargie : l'anglais, ouvert, et
+   les langues modernes que le score au test débloque, repliées. `details`
+   natif — l'ouverture ne déplace rien au-dessus d'elle (LAY-2) et l'état
+   appartient au navigateur, jamais au plan. */
+.panel-rule-group {
+  margin-top: 0.25rem;
+  /* le contenu déplié défile jusqu'ici (F2) */
+  scroll-margin-top: 2.25rem;
+}
+
+.panel-rule-group summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--muted);
+  /* INP-1 : la cible reste attrapable au pouce malgré la petite fonte */
+  padding: 0.25rem 0;
+  min-height: 1.5rem;
+}

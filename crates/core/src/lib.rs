@@ -6,6 +6,7 @@ pub mod course;
 pub mod course_manual;
 pub mod feasibility;
 pub mod intake;
+pub mod language;
 pub mod organigramme;
 #[cfg(feature = "parser")]
 pub mod parser;
@@ -25,6 +26,7 @@ pub use course::*;
 pub use course_manual::*;
 pub use feasibility::*;
 pub use intake::*;
+pub use language::*;
 pub use organigramme::*;
 #[cfg(feature = "parser")]
 pub use parser::ParseError;

@@ -51,6 +51,10 @@ Cet ADR amende partiellement `2026-07-notes-en-prose-conservees` : l'exigence li
 Le trou de numérotation disparaît du même coup pour les pages concernées (B-GMC, B-GIN, B-GPH) : la règle réoccupe la place qu'elle numérotait déjà.
 Le champ `language_requirement` continue d'être rempli exactement comme décrit ici ; seul le sort de la règle source change.
 
+**Amendement du 2026-08-29** (ADR `2026-08-regle-linguistique-elargie-au-catalogue`) :
+la règle réécrite ne porte plus un cours mais la liste de ceux que sa propre phrase autorise.
+Le champ `language_requirement` reste rempli exactement comme décrit ici — il dit la porte de diplômation ; la règle, elle, dit le choix.
+
 ## Alternatives rejetées
 
 - **La garder en `notes`, non interprétée** (état antérieur) : un seuil de test noyé dans une phrase n'est pas comparable au score d'un étudiant ; l'interface ne pourrait jamais décider si le cours est requis.

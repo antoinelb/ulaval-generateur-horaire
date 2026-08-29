@@ -1689,6 +1689,9 @@ fn SectionView(section: Section) -> Element {
                                 .await;
                         });
                     },
+                    if let Some(requirement) = section.requirement.as_ref() {
+                        p { class: "panel-note", b { "{requirement}" } }
+                    }
                     if let Some(lead) = section.lead.as_ref() {
                         p { class: "panel-empty", "{lead}" }
                     }
@@ -1727,11 +1730,41 @@ fn SectionView(section: Section) -> Element {
                             "Aucun cours ne correspond — effacez le filtre."
                         }
                     }
-                    // a free section lists what its ententes attached,
-                    // then keeps browsing — the browse is how a course
-                    // gets attached in the first place
-                    for row in filtered_rows.iter().cloned() {
-                        RowView { key: "{row.code}", row, origin }
+                    // The widened language rule (ADR
+                    // `2026-08-regle-linguistique-elargie-au-catalogue`)
+                    // lists close to eighty courses: the six English ones
+                    // the requirement is about stay open, the modern
+                    // languages the test score unlocks fold away. Native
+                    // `details`, so opening one moves nothing above it
+                    // (LAY-2) and the state is the browser's, never
+                    // persisted. Neither summary names a VEPT threshold:
+                    // the 63 tier lives in the prose above and in no
+                    // parsed field, so nothing here would be reading it
+                    // (TRU-1).
+                    if let Some((english, modern))
+                        = panel::language_row_groups(&filtered_rows)
+                    {
+                        details { class: "panel-rule-group", open: true,
+                            summary { "Anglais — {english.len()} cours" }
+                            for row in english.iter().cloned() {
+                                RowView { key: "{row.code}", row, origin }
+                            }
+                        }
+                        details { class: "panel-rule-group",
+                            summary {
+                                "Autre langue moderne — {modern.len()} cours"
+                            }
+                            for row in modern.iter().cloned() {
+                                RowView { key: "{row.code}", row, origin }
+                            }
+                        }
+                    } else {
+                        // a free section lists what its ententes attached,
+                        // then keeps browsing — the browse is how a course
+                        // gets attached in the first place
+                        for row in filtered_rows.iter().cloned() {
+                            RowView { key: "{row.code}", row, origin }
+                        }
                     }
                     if section.free {
                         FreeBrowse { grant_key: section.key.clone() }

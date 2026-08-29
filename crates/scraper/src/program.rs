@@ -238,6 +238,25 @@ pub(crate) mod tests {
         )
     }
 
+    // the same page whose one accordion is the prose language rule the
+    // génie bacs write — what `core::widen_language_rules` acts on
+    pub(crate) fn language_rule_html(slug: &str, code: &str) -> String {
+        program_page(
+            slug,
+            code,
+            "Règle 1 – 3 crédits",
+            concat!(
+                r#"<p class="fe-bloc-regle--ligne">"#,
+                "Réussir le cours ANL-2020 Intermediate English II. ",
+                "L'étudiant qui démontre qu'il a acquis ce niveau ",
+                "(VEPT : 53) lors du test administré par l'École de langues ",
+                "peut choisir un cours d'anglais de niveau supérieur ou un ",
+                "cours d'une autre langue moderne.",
+                "</p>",
+            ),
+        )
+    }
+
     fn program_page(
         slug: &str,
         code: &str,

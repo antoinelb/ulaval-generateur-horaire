@@ -20,6 +20,11 @@ Le même retrait touche B-GIN et B-GPH.
   `B-GCI.json`, `B-GEX.json`, `M-GEX.json` sont inchangées (forme deux-encadrés ou pas de règle de langue).
 - Millésimes antérieurs (A22 à H27) laissés **intacts** : ils continuent de totaliser sans cette règle, seul le millésime A26 est re-scrapé par ce lot.
 
+**Amendement du 2026-08-29** (ADR `2026-08-regle-linguistique-elargie-au-catalogue`) :
+la règle n'est plus réécrite avec le seul sigle extrait de la prose.
+Une passe d'élargissement, hors du parseur parce qu'elle a besoin du catalogue, y ajoute les cours d'anglais au-dessus du plancher que la phrase nomme et les cours des huit matières de langue moderne — la phrase dit « peut choisir », la règle offre enfin ce choix.
+Les millésimes A22 à H27, laissés intacts ci-dessus, sont réparés hors ligne par `ulaval-scraper reparse --programs` : leurs pages ont disparu de ulaval.ca et ne peuvent pas être re-scrapées.
+
 ## Effet de bord voulu
 
 ANL-2020 devient un cours ordinaire d'une règle `List`, donc visible et plaçable par le solveur d'organigramme — auparavant la prose retirée ne référençait aucun cours nulle part dans les règles.

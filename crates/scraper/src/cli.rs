@@ -7,7 +7,8 @@ use crate::course::{self, CourseError, Snapshot};
 use crate::program::{self, ProgramError};
 use crate::{catalogue, fetch::Fetcher, parser::ParseError, print};
 use ulaval_scheduler_core::{
-    civil_from_days, parse_prereq_tree, preparatory_rule, semester_after,
+    civil_from_days, parse_prereq_tree, preparatory_rule,
+    restore_stripped_language_prose, semester_after, widen_language_rules,
     Catalogue, CatalogueEntry, Course, PrereqParseError, Prerequisites,
     Program, Semester,
 };
@@ -58,12 +59,20 @@ enum Command {
         #[arg(long)]
         force: bool,
     },
-    // Re-derives every préalable tree from the `raw` the snapshot already
-    // holds, so a grammar change reaches the data without a single request
-    // (ADR `2026-08-virgule-selon-le-connecteur-final`)
+    // Re-derives what the stored `raw` already contains, without a single
+    // request: préalable trees by default, so a grammar change reaches the
+    // data (ADR `2026-08-virgule-selon-le-connecteur-final`), and the
+    // language rules of `data/programmes/` under `--programs`.
     Reparse {
         #[arg(long, default_value = "data")]
         output_dir: String,
+        // Vintages before A26 cannot be re-scraped — their pages are gone
+        // from ulaval.ca, and refetching would overwrite a frozen snapshot
+        // with today's programme — so their language rule is repaired and
+        // widened in place (ADR
+        // `2026-08-regle-linguistique-elargie-au-catalogue`).
+        #[arg(long)]
+        programs: bool,
     },
     Program {
         #[arg(long, default_value = "data")]
@@ -131,7 +140,16 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
                 std::time::SystemTime::now(),
             )
         }
-        Command::Reparse { output_dir } => reparse_courses(&output_dir),
+        Command::Reparse {
+            output_dir,
+            programs,
+        } => {
+            if programs {
+                reparse_programs(&output_dir)
+            } else {
+                reparse_courses(&output_dir)
+            }
+        }
         Command::Program {
             output_dir,
             semester,
@@ -151,6 +169,8 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
             };
             let (programs, anomalies) = get_programs(&urls, semester).await;
             let programs = add_preparatory_rules(programs, &snapshot.courses)?;
+            let programs =
+                widen_language_rules_of(programs, &snapshot.courses)?;
             write_programs(programs, anomalies, &output_dir)
         }
     }
@@ -531,18 +551,7 @@ fn refresh_urls(
 fn program_slugs(
     dir: &Path,
 ) -> anyhow::Result<std::collections::BTreeSet<String>> {
-    std::fs::read_dir(dir)
-        .into_iter()
-        .flatten()
-        .flatten()
-        .filter_map(|entry| {
-            let name = entry.file_name();
-            let name = name.to_string_lossy();
-            if name.ends_with(".manuel.json") || !name.ends_with(".json") {
-                return None;
-            }
-            Some(entry.path())
-        })
+    program_paths(dir)
         .map(|path| {
             let content =
                 std::fs::read_to_string(&path).map_err(|source| {
@@ -558,6 +567,22 @@ fn program_slugs(
             Ok(program.slug)
         })
         .collect()
+}
+
+// every scraped snapshot of the directory, hand-maintained files excluded
+fn program_paths(dir: &Path) -> impl Iterator<Item = std::path::PathBuf> {
+    std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if name.ends_with(".manuel.json") || !name.ends_with(".json") {
+                return None;
+            }
+            Some(entry.path())
+        })
 }
 
 async fn get_programs(
@@ -588,6 +613,70 @@ fn add_preparatory_rules(
         }
     }
     Ok(programs)
+}
+
+// The prose language rule widened to the courses its own sentence permits:
+// « un cours d'anglais de niveau supérieur ou … une autre langue moderne »
+// names a choice no page enumerates, so the walk over the course snapshot
+// supplies it (ADR `2026-08-regle-linguistique-elargie-au-catalogue`)
+fn widen_language_rules_of(
+    mut programs: Vec<Program>,
+    courses: &[Course],
+) -> anyhow::Result<Vec<Program>> {
+    for program in &mut programs {
+        widen_language_rules(program, courses)
+            .map_err(|error| anyhow::anyhow!("{}: {error}", program.code))?;
+    }
+    Ok(programs)
+}
+
+// The offline counterpart of the scrape's widening, for the vintages no
+// scrape can reach: each stored program gets the prose the pre-2026-08-28
+// extraction stripped from its rule put back, then the same widening. No
+// network, exactly as `reparse_courses` re-derives trees from stored `raw`.
+fn reparse_programs(output_dir: &str) -> anyhow::Result<()> {
+    let dir = Path::new(output_dir);
+    let programs_dir = dir.join("programmes");
+    let task = print::task(
+        &format!("Reparsing language rules in {}...", programs_dir.display()),
+        &format!("Reparsed language rules in {}.", programs_dir.display()),
+    );
+
+    let courses = read_snapshot(dir)?.courses;
+    let mut changed = 0;
+    let mut repaired = 0;
+    for path in program_paths(&programs_dir) {
+        let content = std::fs::read_to_string(&path).map_err(|source| {
+            anyhow::anyhow!("Reading {}: {source}", path.display())
+        })?;
+        let mut program: Program =
+            serde_json::from_str(&content).map_err(|source| {
+                anyhow::anyhow!("Reading {}: {source}", path.display())
+            })?;
+
+        repaired += restore_stripped_language_prose(&mut program).len();
+        widen_language_rules(&mut program, &courses)
+            .map_err(|error| anyhow::anyhow!("{}: {error}", program.code))?;
+
+        // expect over `?`: serializing strings, vecs and options provably
+        // cannot fail
+        let json = serde_json::to_string_pretty(&program)
+            .expect("Program serialization always succeeds")
+            + "\n";
+        // an unchanged program keeps its file untouched: the run reports
+        // what it actually did, and `git diff` names only real changes
+        if json != content {
+            write_atomic(&path, &json)?;
+            changed += 1;
+        }
+    }
+
+    task.done_with(&format!(
+        "Reparsed language rules in {}: {changed} program(s) rewritten, \
+         {repaired} stripped rule(s) restored.",
+        programs_dir.display()
+    ));
+    Ok(())
 }
 
 // One file per program rather than one snapshot holding them all: a run is
@@ -1078,6 +1167,288 @@ mod tests {
         assert!(
             !dir.join("cours_reparse_errors.log").exists(),
             "a clean reparse leaves no error log"
+        );
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn a_scraped_prose_language_rule_is_widened_to_the_catalogue() {
+        // the scrape applies the same widening the offline pass does, so a
+        // freshly scraped vintage never offers a narrower choice than a
+        // repaired one (ADR `2026-08-regle-linguistique-elargie-au-catalogue`)
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        mount_language_program(&server, "genie-des-eaux", "B-GEX").await;
+        let dir = test_dir("programs-language-widened");
+        plant_snapshot_with_prereqs(
+            &dir,
+            &[("ANL-2020", None), ("ANL-3010", None), ("RUS-1010", None)],
+        );
+
+        run(programs_args(
+            &dir,
+            &[&program_url(&server, "genie-des-eaux")],
+        ))
+        .await
+        .unwrap_or_else(|e| panic!("scrape the program: {e}"));
+
+        let semester = semester_after(now_secs());
+        let written = std::fs::read_to_string(
+            dir.join("programmes")
+                .join(format!("B-GEX-{semester}.json")),
+        )
+        .unwrap_or_else(|e| panic!("read the program file: {e}"));
+        let program: serde_json::Value = serde_json::from_str(&written)
+            .unwrap_or_else(|e| panic!("parse the program file: {e}"));
+        let courses: Vec<&str> = program["rules"][0]["courses"]
+            .as_array()
+            .unwrap_or_else(|| panic!("a widened list: {written}"))
+            .iter()
+            .filter_map(|code| code.as_str())
+            .collect();
+        assert!(courses.contains(&"ANL-3010"), "{courses:?}");
+        assert!(courses.contains(&"RUS-1010"), "{courses:?}");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn a_scraped_language_rule_over_the_cap_fails_the_run() {
+        let _guard = lock_print();
+        let server = MockServer::start().await;
+        mount_language_program(&server, "genie-des-eaux", "B-GEX").await;
+        let dir = test_dir("programs-language-overflow");
+        let flood: Vec<String> =
+            (0..=300).map(|n| format!("RUS-{:04}", 1000 + n)).collect();
+        let planted: Vec<(&str, Option<&str>)> =
+            flood.iter().map(|code| (code.as_str(), None)).collect();
+        plant_snapshot_with_prereqs(&dir, &planted);
+
+        let error = run(programs_args(
+            &dir,
+            &[&program_url(&server, "genie-des-eaux")],
+        ))
+        .await
+        .expect_err("a rule over the cap fails the run");
+        assert!(
+            error.to_string().contains("B-GEX"),
+            "the error names the program: {error}"
+        );
+        cleanup(&dir);
+    }
+
+    // --- reparse --programs ------------------------------------------------
+
+    // the prose the pre-2026-08-28 extraction stripped out, as
+    // `language_requirement.francophone.raw` still holds it
+    const STRIPPED_PROSE: &str = "Réussir le cours ANL-2020 Intermediate \
+         English II. L'étudiant qui démontre qu'il a acquis ce niveau \
+         (VEPT : 53) lors du test administré par l'École de langues peut \
+         choisir un cours d'anglais de niveau supérieur ou, s'il a acquis le \
+         niveau Advanced English II (VEPT : 63), un cours d'une autre langue \
+         moderne.";
+
+    fn plant_program(dir: &Path, name: &str, json: &str) {
+        let programs = dir.join("programmes");
+        std::fs::create_dir_all(&programs)
+            .unwrap_or_else(|e| panic!("plant the programmes dir: {e}"));
+        std::fs::write(programs.join(name), json)
+            .unwrap_or_else(|e| panic!("plant {name}: {e}"));
+    }
+
+    fn stripped_program_json() -> String {
+        let prose = serde_json::to_string(STRIPPED_PROSE)
+            .unwrap_or_else(|e| panic!("quote the prose: {e}"));
+        format!(
+            r#"{{"code":"B-GMC","slug":"genie-mecanique","semester":"A25",
+            "title":"Génie mécanique","cycle":1,"credits_required":120,
+            "mandatory":[],"rules":[
+              {{"title":"Règle 2",
+                "constraint":{{"type":"credits","min":3,"max":3}},
+                "courses":["LAN-GUES"]}},
+              {{"title":"Règle 3",
+                "constraint":{{"type":"credits","min":3,"max":3}},
+                "courses":["OPT-GMC1"]}}],
+            "concentrations":[],"profiles":[],
+            "language_requirement":{{"francophone":{{"course":"ANL-2020",
+              "tests":[{{"name":"VEPT","score":53}}],"raw":{prose}}}}}}}"#
+        )
+    }
+
+    fn reparse_programs_args(dir: &Path) -> Vec<String> {
+        vec![
+            "reparse".to_string(),
+            "--programs".to_string(),
+            "--output-dir".to_string(),
+            dir.display().to_string(),
+        ]
+    }
+
+    fn rule_courses(program: &serde_json::Value, index: usize) -> Vec<String> {
+        program["rules"][index]["courses"]
+            .as_array()
+            .unwrap_or_else(|| panic!("rule {index} lists courses"))
+            .iter()
+            .map(|code| code.as_str().unwrap_or_default().to_string())
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn reparse_programs_restores_the_stripped_prose_and_widens_it() {
+        // the vintages before A26 cannot be re-scraped — their pages are
+        // gone from ulaval.ca — so the prose comes back from the field it
+        // was moved into, and the rule widens with no request at all (ADR
+        // `2026-08-regle-linguistique-elargie-au-catalogue`)
+        let _guard = lock_print();
+        let dir = test_dir("reparse-programs");
+        plant_snapshot_with_prereqs(
+            &dir,
+            &[("ANL-2020", None), ("ANL-3010", None), ("RUS-1010", None)],
+        );
+        plant_program(&dir, "B-GMC-A25.json", &stripped_program_json());
+
+        run(reparse_programs_args(&dir))
+            .await
+            .unwrap_or_else(|e| panic!("reparse the programs: {e}"));
+
+        let written = std::fs::read_to_string(
+            dir.join("programmes").join("B-GMC-A25.json"),
+        )
+        .unwrap_or_else(|e| panic!("read the program file: {e}"));
+        let program: serde_json::Value = serde_json::from_str(&written)
+            .unwrap_or_else(|e| panic!("parse the program file: {e}"));
+
+        assert_eq!(
+            rule_courses(&program, 0),
+            [
+                "ANL-2020".to_string(),
+                "ANL-3010".to_string(),
+                "LAN-GUES".to_string(),
+                "RUS-1010".to_string(),
+            ],
+            "the language slot survives beside the courses it stood for"
+        );
+        assert_eq!(
+            program["rules"][0]["notes"][0].as_str(),
+            Some(STRIPPED_PROSE),
+            "the prose is displayable again"
+        );
+        assert_eq!(
+            rule_courses(&program, 1),
+            ["OPT-GMC1".to_string()],
+            "another template sigle is not a language rule"
+        );
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn reparse_programs_leaves_a_file_it_changes_nothing_in_alone() {
+        // running twice must rewrite nothing the second time: the widening
+        // is idempotent, and `git diff` names only real changes
+        let _guard = lock_print();
+        let dir = test_dir("reparse-programs-unchanged");
+        plant_snapshot_with_prereqs(
+            &dir,
+            &[("ANL-2020", None), ("RUS-1010", None)],
+        );
+        plant_program(&dir, "B-GMC-A25.json", &stripped_program_json());
+        // hand-maintained files are never read as snapshots
+        plant_program(&dir, "B-GMC-A25.manuel.json", "pas du json");
+
+        let path = dir.join("programmes").join("B-GMC-A25.json");
+        run(reparse_programs_args(&dir))
+            .await
+            .unwrap_or_else(|e| panic!("first reparse: {e}"));
+        let once = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read the program file: {e}"));
+
+        run(reparse_programs_args(&dir))
+            .await
+            .unwrap_or_else(|e| panic!("second reparse: {e}"));
+        let twice = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read the program file: {e}"));
+
+        assert_eq!(twice, once, "a second run changes nothing");
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn reparse_programs_names_the_file_it_cannot_read_or_parse() {
+        let _guard = lock_print();
+        let dir = test_dir("reparse-programs-unreadable");
+        plant_snapshot_with_prereqs(&dir, &[("ANL-2020", None)]);
+        plant_program(&dir, "B-GEX-A26.json", "{ pas du json");
+
+        let error = run(reparse_programs_args(&dir))
+            .await
+            .expect_err("a snapshot that cannot be parsed fails the run");
+        assert!(
+            error.to_string().contains("B-GEX-A26.json"),
+            "the error names the file: {error}"
+        );
+
+        // a path `read_dir` lists but `read_to_string` cannot open — a
+        // directory wearing a snapshot's name
+        std::fs::remove_file(dir.join("programmes").join("B-GEX-A26.json"))
+            .unwrap_or_else(|e| panic!("remove the planted file: {e}"));
+        std::fs::create_dir(dir.join("programmes").join("B-GEX-A26.json"))
+            .unwrap_or_else(|e| panic!("plant the directory: {e}"));
+
+        let error = run(reparse_programs_args(&dir))
+            .await
+            .expect_err("a path that cannot be read fails the run");
+        assert!(
+            error.to_string().contains("B-GEX-A26.json"),
+            "the error names the file: {error}"
+        );
+        cleanup(&dir);
+    }
+
+    #[tokio::test]
+    async fn reparse_programs_needs_the_course_snapshot_and_a_writable_file() {
+        // the two IO ways the offline pass can fail: no `cours.json` to
+        // widen against, and a snapshot whose atomic write is blocked
+        let _guard = lock_print();
+        for (name, blocked) in
+            [("no-snapshot", false), ("blocked-write", true)]
+        {
+            let dir = test_dir(&format!("reparse-programs-{name}"));
+            if blocked {
+                plant_snapshot_with_prereqs(&dir, &[("ANL-2020", None)]);
+            }
+            plant_program(&dir, "B-GMC-A25.json", &stripped_program_json());
+            if blocked {
+                // a directory where the atomic write puts its temp file
+                std::fs::create_dir_all(
+                    dir.join("programmes").join("B-GMC-A25.tmp"),
+                )
+                .unwrap_or_else(|e| panic!("block {name}: {e}"));
+            }
+
+            let result = run(reparse_programs_args(&dir)).await;
+            assert!(result.is_err(), "{name} must fail the run");
+            cleanup(&dir);
+        }
+    }
+
+    #[tokio::test]
+    async fn reparse_programs_names_the_program_whose_widening_overflows() {
+        let _guard = lock_print();
+        let dir = test_dir("reparse-programs-overflow");
+        // a catalogue with more modern-language courses than a rule may
+        // list: refused loudly, never silently truncated
+        let flood: Vec<String> =
+            (0..=300).map(|n| format!("RUS-{:04}", 1000 + n)).collect();
+        let planted: Vec<(&str, Option<&str>)> =
+            flood.iter().map(|code| (code.as_str(), None)).collect();
+        plant_snapshot_with_prereqs(&dir, &planted);
+        plant_program(&dir, "B-GMC-A25.json", &stripped_program_json());
+
+        let error = run(reparse_programs_args(&dir))
+            .await
+            .expect_err("a rule over the cap fails the run");
+        assert!(
+            error.to_string().contains("B-GMC"),
+            "the error names the program: {error}"
         );
         cleanup(&dir);
     }
@@ -1846,6 +2217,20 @@ mod tests {
             .and(wiremock::matchers::path(format!("/{slug}")))
             .respond_with(ResponseTemplate::new(200).set_body_string(
                 crate::program::tests::program_html(slug, code),
+            ))
+            .mount(server)
+            .await;
+    }
+
+    async fn mount_language_program(
+        server: &MockServer,
+        slug: &str,
+        code: &str,
+    ) {
+        Mock::given(method("GET"))
+            .and(wiremock::matchers::path(format!("/{slug}")))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                crate::program::tests::language_rule_html(slug, code),
             ))
             .mount(server)
             .await;

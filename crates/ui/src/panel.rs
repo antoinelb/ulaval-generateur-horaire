@@ -81,6 +81,11 @@ pub struct Section {
     pub notes: Vec<String>,
     // a « tous les cours » rule: the rows come from a catalogue browse
     pub free: bool,
+    // « Exigence linguistique - ANL-2020 ou VEPT ≥ 53 » on the rule that
+    // carries it: the same line the panel closes with, repeated where the
+    // choice is actually made — the panel scrolls internally, so its foot
+    // is usually off-screen while a rule is open
+    pub requirement: Option<String>,
 }
 
 // never colour alone: the badge text itself carries the state (INP-3)
@@ -354,6 +359,7 @@ fn uncounted_panel(
         raw: None,
         notes: Vec::new(),
         free: false,
+        requirement: None,
     };
     let original = |scope: Scope, title: &str| {
         find_rule(chosen, concentration, profile, scope, title)
@@ -486,6 +492,7 @@ fn uncounted_scope_group(
             raw: None,
             notes: Vec::new(),
             free: false,
+            requirement: None,
         })
     };
     let sections = mandatory_section
@@ -649,6 +656,7 @@ fn scoped_mandatory_section(
         raw: None,
         notes: Vec::new(),
         free: false,
+        requirement: None,
     })
 }
 
@@ -716,6 +724,7 @@ fn bare_section(
         raw: rule_raw(rule).or_else(|| original.and_then(rule_raw)),
         notes: rule.notes.clone(),
         free: browses_catalogue(original.unwrap_or(rule)),
+        requirement: None,
     }
 }
 
@@ -1471,6 +1480,7 @@ fn mandatory_section(
         raw: None,
         notes: Vec::new(),
         free: false,
+        requirement: None,
     }
 }
 
@@ -1495,6 +1505,16 @@ fn rule_section(
         .map(|courses| unique_rows(snapshot, plan, courses.iter()))
         .unwrap_or_default();
     let rows = mark_counted_elsewhere(rows, report, all);
+    // the widened language rule (ADR
+    // `2026-08-regle-linguistique-elargie-au-catalogue`) lists close to
+    // eighty courses: it says which one the requirement names, and repeats
+    // the requirement itself above the list
+    let language = rule.is_some_and(is_language_rule);
+    let rows = if language {
+        mark_required_language_course(rows, program)
+    } else {
+        rows
+    };
     let scope_prefix = match report.scope {
         Scope::Program => "p",
         Scope::Concentration => "c",
@@ -1526,7 +1546,51 @@ fn rule_section(
         raw: report.raw.clone().or_else(|| original.and_then(rule_raw)),
         notes: rule.map(|rule| rule.notes.clone()).unwrap_or_default(),
         free: original.or(rule).is_some_and(browses_catalogue),
+        requirement: language.then(|| language_parts(program)).flatten(),
     }
+}
+
+// the rule whose own prose states the language requirement — the same
+// predicate `core` widens on, so the view never groups a rule core did not
+// touch
+fn is_language_rule(rule: &Rule) -> bool {
+    rule.notes
+        .iter()
+        .any(|note| ulaval_scheduler_core::is_language_prose(note))
+}
+
+// The course the requirement names is one row among seventy-odd: it says so
+// in its own text, never by position or colour alone (AIR INP-3), exactly
+// as `mark_counted_elsewhere` marks its own.
+fn mark_required_language_course(
+    mut rows: Vec<Row>,
+    program: &Program,
+) -> Vec<Row> {
+    let Some(requirement) = program.language_requirement.as_ref() else {
+        return rows;
+    };
+    for row in &mut rows {
+        if row.code == requirement.francophone.course {
+            row.sub = format!("{} - exigé par défaut", row.sub);
+        }
+    }
+    rows
+}
+
+// The two halves of a widened language rule: the English courses the
+// requirement is about, then the modern languages the test score unlocks.
+// `None` when the split would leave a half empty — a rule with nothing to
+// fold away is better shown flat than behind a disclosure.
+pub fn language_row_groups(rows: &[Row]) -> Option<(Vec<Row>, Vec<Row>)> {
+    let (modern, english): (Vec<Row>, Vec<Row>) =
+        rows.iter().cloned().partition(is_modern_language_row);
+    (!modern.is_empty() && !english.is_empty()).then_some((english, modern))
+}
+
+fn is_modern_language_row(row: &Row) -> bool {
+    row.code.split_once('-').is_some_and(|(subject, _)| {
+        ulaval_scheduler_core::MODERN_LANGUAGE_SUBJECTS.contains(&subject)
+    })
 }
 
 // A row `report.elsewhere` names is already counted by an earlier rule of
@@ -4473,6 +4537,158 @@ mod tests {
             "Règle P1"
         )
         .is_none());
+    }
+
+    // --- the widened language rule -----------------------------------------
+
+    const LANGUAGE_PROSE: &str = "Réussir le cours ANL-2020 Intermediate \
+         English II. L'étudiant qui démontre qu'il a acquis ce niveau \
+         (VEPT : 53) lors du test administré par l'École de langues peut \
+         choisir un cours d'anglais de niveau supérieur ou un cours d'une \
+         autre langue moderne.";
+
+    const LANGUAGE_COURSES: &str = r#"{"courses":[
+      {"code":"ANL-2020","title":"Intermediate English II","credits":3,
+       "cycle":1,"prerequisites":null,"equivalents":[],
+       "seasons":{"fall":{"last_offered":2026,"options":null}}},
+      {"code":"ANL-3010","title":"Advanced English I","credits":3,
+       "cycle":1,"prerequisites":null,"equivalents":[],
+       "seasons":{"fall":{"last_offered":2026,"options":null}}},
+      {"code":"RUS-1010","title":"Russe élémentaire I","credits":3,
+       "cycle":1,"prerequisites":null,"equivalents":[],
+       "seasons":{"fall":{"last_offered":2026,"options":null}}},
+      {"code":"ITL-1010","title":"Italien élémentaire I","credits":3,
+       "cycle":1,"prerequisites":null,"equivalents":[],
+       "seasons":{"fall":{"last_offered":2026,"options":null}}}
+    ]}"#;
+
+    fn language_snapshot() -> Snapshot {
+        let program = format!(
+            r#"{{"code":"B-GMC","slug":"gmc","semester":"A26",
+            "title":"Génie mécanique","cycle":1,"credits_required":120,
+            "mandatory":[],"rules":[
+              {{"title":"Règle 2",
+                "constraint":{{"type":"credits","min":3,"max":3}},
+                "courses":["ANL-2020","ANL-3010","ITL-1010","RUS-1010"],
+                "notes":[{prose}]}}],
+            "concentrations":[],"profiles":[],
+            "language_requirement":{{"francophone":{{"course":"ANL-2020",
+              "tests":[{{"name":"VEPT","score":53}}],"raw":{prose}}}}}}}"#,
+            prose = serde_json::to_string(LANGUAGE_PROSE)
+                .unwrap_or_else(|e| panic!("quote the prose: {e}")),
+        );
+        parse_data(
+            &RawData {
+                courses: LANGUAGE_COURSES.to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
+                programs: vec![("B-GMC-A26.json".to_string(), program)],
+            },
+            Vec::new(),
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    fn language_plan() -> Plan {
+        Plan {
+            program: Some(ProgramChoice {
+                code: "B-GMC".to_string(),
+                semester: "A26".to_string(),
+                concentration: None,
+                profile: None,
+            }),
+            ..Plan::default()
+        }
+    }
+
+    #[test]
+    fn the_language_rule_heads_with_its_requirement_and_names_the_default() {
+        let model = panel_model(&language_snapshot(), &language_plan());
+        let section = model
+            .rules
+            .iter()
+            .find(|section| section.title == "Règle 2")
+            .unwrap_or_else(|| panic!("{:?}", model.rules));
+
+        // the panel scrolls internally, so the requirement is repeated
+        // where the choice is actually made
+        assert_eq!(
+            section.requirement.as_deref(),
+            Some("Exigence linguistique - ANL-2020 ou VEPT ≥ 53")
+        );
+        // the required course says so in its own text, never by position
+        // alone (INP-3)
+        let required = section
+            .rows
+            .iter()
+            .find(|row| row.code == "ANL-2020")
+            .unwrap_or_else(|| panic!("{:?}", section.rows));
+        assert!(
+            required.sub.contains("exigé par défaut"),
+            "{}",
+            required.sub
+        );
+        assert!(section
+            .rows
+            .iter()
+            .filter(|row| row.code != "ANL-2020")
+            .all(|row| !row.sub.contains("exigé par défaut")));
+    }
+
+    #[test]
+    fn a_rule_without_language_prose_carries_no_requirement_line() {
+        let model = panel_model(&snapshot(), &plan());
+        assert!(
+            model
+                .rules
+                .iter()
+                .all(|section| section.requirement.is_none()),
+            "no rule of the B-GEX fixture states the requirement in prose"
+        );
+    }
+
+    #[test]
+    fn the_language_rule_splits_english_from_the_modern_languages() {
+        let model = panel_model(&language_snapshot(), &language_plan());
+        let section = model
+            .rules
+            .iter()
+            .find(|section| section.title == "Règle 2")
+            .unwrap_or_else(|| panic!("{:?}", model.rules));
+
+        let (english, modern) = language_row_groups(&section.rows)
+            .unwrap_or_else(|| panic!("{:?}", section.rows));
+        assert_eq!(
+            english.iter().map(|row| &row.code).collect::<Vec<_>>(),
+            ["ANL-2020", "ANL-3010"]
+        );
+        assert_eq!(
+            modern.iter().map(|row| &row.code).collect::<Vec<_>>(),
+            ["ITL-1010", "RUS-1010"]
+        );
+    }
+
+    #[test]
+    fn a_rule_with_nothing_to_fold_away_stays_flat() {
+        // one half empty: a disclosure would hide everything or nothing
+        let english_only =
+            vec![row(&language_snapshot(), &Plan::default(), "ANL-2020")];
+        assert!(language_row_groups(&english_only).is_none());
+        let modern_only =
+            vec![row(&language_snapshot(), &Plan::default(), "RUS-1010")];
+        assert!(language_row_groups(&modern_only).is_none());
+        assert!(language_row_groups(&[]).is_none());
+    }
+
+    #[test]
+    fn a_program_without_a_requirement_marks_no_default_course() {
+        let rows =
+            vec![row(&language_snapshot(), &Plan::default(), "ANL-2020")];
+        let mut program = language_snapshot().programs[0].clone();
+        program.language_requirement = None;
+        let marked = mark_required_language_course(rows.clone(), &program);
+        assert_eq!(marked, rows);
     }
 
     #[test]

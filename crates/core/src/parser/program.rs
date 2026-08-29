@@ -1,9 +1,10 @@
 use std::sync::LazyLock;
 
 use crate::{
-    Concentration, Constraint, Cycle, Keyword, LanguageQualification,
-    LanguageRequirement, PlacementTest, Profile, Program, Rule, RuleCourses,
-    RuleReference, Season, Semester, STAGES_RULE_TITLE,
+    course_codes, first_course_code, is_language_prose, Concentration,
+    Constraint, Cycle, Keyword, LanguageQualification, LanguageRequirement,
+    PlacementTest, Profile, Program, Rule, RuleCourses, RuleReference, Season,
+    Semester, STAGES_RULE_TITLE,
 };
 use scraper::{ElementRef, Html, Selector};
 
@@ -939,12 +940,6 @@ fn language_qualification(raw: String) -> LanguageQualification {
     }
 }
 
-// the English requirement always names the École de langues test that
-// dispenses from the course; the two-box notes name it in parentheses
-fn is_language_prose(raw: &str) -> bool {
-    raw.contains("VEPT") || raw.contains("École de langues")
-}
-
 // A graduation stage hides in the prose of its block on the génie bacs:
 // promoted into an ordinary rule appended after the scraped ones, so the
 // solver can count it (ADR
@@ -996,36 +991,6 @@ fn is_negotiated_prose(raw: &str) -> bool {
 // none is prose, not markup drift
 fn has_constraint_shape(text: &str) -> bool {
     text.chars().any(|c| c.is_ascii_digit())
-}
-
-// the first « LLL-DDDD » sigle in the sentence — the course to pass
-fn first_course_code(text: &str) -> Option<String> {
-    text.split_whitespace()
-        .map(|token| token.trim_matches(|c: char| !c.is_ascii_alphanumeric()))
-        .find(|token| is_course_code(token))
-        .map(str::to_string)
-}
-
-// every sigle of the sentence, in the order it names them — in the stage
-// prose the mandatory stage comes first, the optional ones after
-fn course_codes(text: &str) -> Vec<String> {
-    text.split_whitespace()
-        .map(|token| token.trim_matches(|c: char| !c.is_ascii_alphanumeric()))
-        .filter(|token| is_course_code(token))
-        .map(str::to_string)
-        .collect()
-}
-
-fn is_course_code(token: &str) -> bool {
-    match token.split_once('-') {
-        Some((prefix, number)) => {
-            prefix.len() == 3
-                && prefix.chars().all(|c| c.is_ascii_uppercase())
-                && number.len() == 4
-                && number.chars().all(|c| c.is_ascii_digit())
-        }
-        None => false,
-    }
 }
 
 // the thresholds inside the first parenthetical: « (VEPT : 53) » → one,
@@ -1989,22 +1954,6 @@ mod tests {
                 "for {degenerate:?}"
             );
         }
-    }
-
-    #[test]
-    fn first_course_code_finds_the_sigle_or_nothing() {
-        assert_eq!(
-            first_course_code("Réussir le cours ANL-2020 Intermediate"),
-            Some("ANL-2020".to_string())
-        );
-        // trailing punctuation is trimmed off the token
-        assert_eq!(
-            first_course_code("… du cours FLS-2093, requis."),
-            Some("FLS-2093".to_string())
-        );
-        // a dash alone is not a LLL-DDDD sigle
-        assert_eq!(first_course_code("(TCF-TP/ÉÉ: 14)"), None);
-        assert_eq!(first_course_code("aucun sigle ici"), None);
     }
 
     #[test]

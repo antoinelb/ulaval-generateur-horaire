@@ -94,6 +94,14 @@ pub fn present_import_error(error: &ImportError) -> UiError {
              programme n'a pas été ajouté."
                 .to_string(),
         ),
+        ImportError::Language { .. } => (
+            "La règle d'exigence linguistique de ce programme n'a pas pu \
+             être élargie aux cours de langue."
+                .to_string(),
+            "Signalez l'erreur avec l'identifiant ci-dessous; le \
+             programme n'a pas été ajouté."
+                .to_string(),
+        ),
         ImportError::Cancelled => (
             "L'import a été annulé.".to_string(),
             "Recollez l'adresse pour réessayer quand vous le \
@@ -1244,6 +1252,9 @@ mod tests {
             ImportError::Preparatory {
                 detail: "the prerequisite graph exceeds 10000 nodes"
                     .to_string(),
+            },
+            ImportError::Language {
+                detail: "the language rule would list 300 courses".to_string(),
             },
             ImportError::Cancelled,
             ImportError::BrowserApi {

@@ -30,6 +30,8 @@ pub enum ImportError {
     Parse { detail: String },
     #[error("computing scolarité préparatoire : {detail}")]
     Preparatory { detail: String },
+    #[error("widening the language rule : {detail}")]
+    Language { detail: String },
     #[error("import cancelled")]
     Cancelled,
     #[error("browser could not prepare the request : {detail}")]
@@ -192,7 +194,8 @@ pub fn classify_response(
 // program ready to store: parse, dated by the caller's clock with the same
 // vintage rule the scrape uses (`core::semester_after`), then append the
 // « Scolarité préparatoire » rule exactly as `cli.rs::add_preparatory_rules`
-// does — this is the only place that applies it, so it never rides twice.
+// does — this is the only place that applies it, so it never rides twice —
+// then widen the prose language rule the same way the scrape does.
 // Anomalies are kept as worded strings, surfaced on the card rather than
 // dropped; a parsing or préparatoire failure comes back typed so the caller
 // shows it as an import error without touching anything else in the app
@@ -223,6 +226,15 @@ pub fn build_local_program(
             })
         }
     }
+
+    // and the prose language rule widened to the courses its own sentence
+    // permits, exactly as `cli.rs::widen_language_rules_of` does after the
+    // scrape — an imported program must not offer a narrower choice than a
+    // shipped one (ADR `2026-08-regle-linguistique-elargie-au-catalogue`)
+    ulaval_scheduler_core::widen_language_rules(&mut program, courses)
+        .map_err(|error| ImportError::Language {
+            detail: error.to_string(),
+        })?;
 
     Ok(LocalProgram {
         program,
@@ -768,6 +780,79 @@ mod tests {
         assert_eq!(local.imported_at, imported_at);
         assert_eq!(local.proxy, PROXY_HOST);
         assert_eq!(local.origin, ProgramOrigin::Url);
+    }
+
+    // the same page plus one accordion holding the prose language rule the
+    // génie bacs write — what `core::widen_language_rules` acts on
+    fn program_html_with_language_rule() -> String {
+        let rule = concat!(
+            r#"<div class="toggle-section">"#,
+            r#"<p class="toggle-section--header">"#,
+            r#"<span class="item">Règle 1 – 3 crédits</span></p>"#,
+            r#"<div class="toggle-section--content">"#,
+            r#"<p class="fe-bloc-regle--ligne">"#,
+            "Réussir le cours ANL-2020 Intermediate English II. ",
+            "L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) ",
+            "lors du test administré par l'École de langues peut choisir ",
+            "un cours d'anglais de niveau supérieur ou un cours d'une ",
+            "autre langue moderne.",
+            "</p></div></div>",
+        );
+        program_html("genie-des-eaux", "B-GEX", true).replace(
+            "</div></div></div></div></section>",
+            &format!("</div></div>{rule}</div></div></section>"),
+        )
+    }
+
+    #[test]
+    fn the_language_rule_is_widened_like_the_scrape_does() {
+        let courses = vec![
+            course("ANL-2020", None),
+            course("ANL-3010", None),
+            course("RUS-1010", None),
+        ];
+        let local = build_local_program(
+            &program_html_with_language_rule(),
+            "https://www.ulaval.ca/etudes/programmes/genie-des-eaux",
+            "2026-08-29T00:00:00Z".to_string(),
+            1_772_000_000,
+            &courses,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+
+        let rule = local
+            .program
+            .rules
+            .iter()
+            .find(|rule| rule.title == "Règle 1")
+            .unwrap_or_else(|| panic!("{:?}", local.program.rules));
+        let ulaval_scheduler_core::RuleCourses::List { courses } =
+            &rule.courses
+        else {
+            panic!("the widened rule is a list: {rule:?}");
+        };
+        assert!(courses.contains(&"ANL-3010".to_string()));
+        assert!(courses.contains(&"RUS-1010".to_string()));
+    }
+
+    #[test]
+    fn a_language_rule_over_budget_is_a_typed_language_error() {
+        // mirrors `core::language::tests::a_catalogue_over_the_cap_…`: a
+        // catalogue with more modern-language courses than a rule may list
+        // must come back typed, never panic and never a truncated rule
+        let courses: Vec<Course> = (0..=300)
+            .map(|n| course(&format!("RUS-{:04}", 1000 + n), None))
+            .collect();
+
+        let error = build_local_program(
+            &program_html_with_language_rule(),
+            "https://www.ulaval.ca/etudes/programmes/genie-des-eaux",
+            "2026-08-29T00:00:00Z".to_string(),
+            1_772_000_000,
+            &courses,
+        )
+        .expect_err("a rule over the cap must error");
+        assert!(matches!(error, ImportError::Language { .. }));
     }
 
     #[test]
