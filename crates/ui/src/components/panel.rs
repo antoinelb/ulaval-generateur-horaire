@@ -182,9 +182,8 @@ fn ProgramPicker() -> Element {
                                     else {
                                         return;
                                     };
-                                    // défaut expert-sûr (AIR LAY-3, parité
-                                    // avec la version JS) : la première
-                                    // concentration du millésime choisi,
+                                    // défaut expert-sûr (AIR LAY-3) : la
+                                    // première concentration du millésime,
                                     // jamais de profil imposé — l'instantané
                                     // de l'étagère, s'il existe, garde son
                                     // propre choix
@@ -724,9 +723,8 @@ fn ImportDrawer() -> Element {
 
 // Les deux menus du cheminement (décision 2026-08-19) : la concentration
 // et le profil se changent ici, à tout moment — les sections en dessous et
-// le bilan recomposent, la grille placée ne bouge pas (parité avec la
-// version JS). Un menu sans choix réel n'est pas rendu (B-GEX n'a pas de
-// concentrations); un programme qui n'offre ni l'un ni l'autre n'a pas la
+// le bilan recomposent, la grille placée ne bouge pas. Un menu sans choix
+// réel n'est pas rendu (B-GEX n'a pas de concentrations); un programme qui n'offre ni l'un ni l'autre n'a pas la
 // rangée (M-GEX).
 #[component]
 fn CheminementKnobs() -> Element {

@@ -1370,8 +1370,8 @@ fn listed_codes<'a>(
     }
 }
 
-// The expert-safe default (AIR LAY-3, parité avec la version JS) : the
-// page's first concentration when the program has any — never a profile.
+// The expert-safe default (AIR LAY-3) : the page's first concentration
+// when the program has any — never a profile.
 // An explicit « Aucune » afterwards is the student's and persists.
 pub fn default_concentration(
     snapshot: &Snapshot,
@@ -1405,8 +1405,8 @@ pub fn program_credits_required(
         .map(|program| program.credits_required)
 }
 
-// the header's subtitle, the choice named whole (parité avec la version
-// JS) : « Titre (CODE version A26) — Concentration — Profil »
+// the header's subtitle, the choice named whole :
+// « Titre (CODE version A26) — Concentration — Profil »
 pub fn program_subtitle(snapshot: &Snapshot, plan: &Plan) -> Option<String> {
     let program = chosen_program(snapshot, plan)?;
     let (concentration, profile) = scope_of(plan);

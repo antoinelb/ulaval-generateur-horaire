@@ -122,8 +122,8 @@ jobs:
           cp -r data/programmes _site/data/programmes
           cp -r docs/livre/book _site/docs
       # Pages serves no directory listing; generate one at assembly time —
-      # index.json (a flat array of file names) is the machine-readable one
-      # the JS interface reads, index.html the human-readable one
+      # index.json (a flat array of file names) is the machine-readable one,
+      # index.html the human-readable one
       - name: Index the data directories
         run: |
           ls -1 --color=never _site/data/programmes |

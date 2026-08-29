@@ -20,15 +20,17 @@ use crate::questions::{
 use crate::schedule::{self, ScheduleInput};
 
 // The whole browser surface, and the only code in the crate that is not
-// plain Rust. Two consumers share it (ADR
+// plain Rust. Two surfaces share it (ADR
 // `2026-08-fusion-des-crates-wasm-et-ui-calculations`):
 //
-// - the plain-JavaScript interface calls the eight exports below, one
-//   conversion in and one out (ADRs `2026-08-module-wasm-quatre-fonctions-js`,
-//   `2026-08-surface-wasm-etendue-a-huit-fonctions`);
-// - the Dioxus app's Web Worker calls `init_snapshot` once, then funnels
-//   every request through `handle_message` (ADR
-//   `2026-08-crate-ui-calculations-et-worker`).
+// - the live one: the Dioxus app's Web Worker calls `init_snapshot` once,
+//   then funnels every request through `handle_message` (ADR
+//   `2026-08-crate-ui-calculations-et-worker`);
+// - a frozen one: the eight exports below, one conversion in and one out,
+//   kept building and published but designed around by nobody (ADRs
+//   `2026-08-module-wasm-quatre-fonctions-js`,
+//   `2026-08-surface-wasm-etendue-a-huit-fonctions`,
+//   `2026-08-surface-javascript-plus-une-contrainte`).
 //
 // Everything worth testing lives on the other side of these calls. The
 // `unchecked_*` attributes and the Tsify derives only decorate the generated

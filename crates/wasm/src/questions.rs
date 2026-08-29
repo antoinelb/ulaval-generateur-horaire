@@ -5,11 +5,13 @@ use ulaval_scheduler_core::{
     CoverageReport, PrereqStatus, Program, Semester,
 };
 
-// The request-free half of the surface (ADR
-// `2026-08-surface-wasm-etendue-a-huit-fonctions`): static questions the JS
-// interface asks per row or per grid, with no placement search behind them.
+// The request-free half of the frozen JavaScript surface (ADRs
+// `2026-08-surface-wasm-etendue-a-huit-fonctions`,
+// `2026-08-surface-javascript-plus-une-contrainte`): static questions asked
+// per row or per grid, with no placement search behind them. The app itself
+// asks core directly.
 
-// What JS hands `prerequisites_met`. Unknown fields are refused rather than
+// What `prerequisites_met` takes. Unknown fields are refused rather than
 // ignored, like every input of the crate.
 #[derive(Debug, Clone, serde::Deserialize)]
 #[cfg_attr(
@@ -30,8 +32,9 @@ pub struct PrerequisitesInput {
     pub credits: u32,
 }
 
-// `PrereqStatus` flattened for JS: `met` plus the operands the verdict had
-// to presume (raw text, préuniversitaire codes) — surfaced, never imposed.
+// `PrereqStatus` flattened for the wire: `met` plus the operands the
+// verdict had to presume (raw text, préuniversitaire codes) — surfaced,
+// never imposed.
 #[derive(Debug, PartialEq, serde::Serialize)]
 #[cfg_attr(
     all(target_arch = "wasm32", feature = "boundary"),
@@ -71,9 +74,9 @@ pub fn prerequisites(
     })
 }
 
-// What JS hands `coverage_report`: the rules question alone, on whatever
+// What `coverage_report` takes: the rules question alone, on whatever
 // partial grid the student has — `verify_organigramme` keeps demanding a
-// complete placement, this does not (CORRECTIFS-AMONT item 12).
+// complete placement, this does not.
 #[derive(Debug, Clone, serde::Deserialize)]
 #[cfg_attr(
     all(target_arch = "wasm32", feature = "boundary"),
@@ -111,7 +114,7 @@ pub fn coverage(
     .map_err(|e| e.to_string())
 }
 
-// What JS hands `horizon_sessions`: the described horizon, answered as the
+// What `horizon_sessions` takes: the described horizon, answered as the
 // semester codes (« A26 », « H27 », « E27 », …) so the été-after-each-hiver
 // rule and the calendar arithmetic both stay out of the view.
 #[derive(Debug, Clone, serde::Deserialize)]
