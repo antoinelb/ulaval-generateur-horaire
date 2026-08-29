@@ -14,6 +14,9 @@ Deux causes : les toasts ⚠ n'avaient aucun mécanisme de péremption (seuls le
 - **Le bogue d'auto-effacement ne revient pas** : les codes qu'une réponse vient de rapporter ne figurent pas dans le `displayed_placement` qu'elle écrit — ils flottent toujours, `stale_left_out` les garde. Ceci supersède la clause « l'effet ne l'efface plus » de `2026-08-organigramme-en-continu-sans-bouton` : la péremption revient, mais par cause, jamais en bloc au changement de plan.
 - `apply_proposal` réécrit `left_out` sur **toute** réponse, y compris sans solution (il restait figé).
 
+*Étendu le 2026-08-29 par `2026-08-peremption-de-toute-alerte-jugeable` : l'effet s'appelle désormais `retire_stale_alerts`, juge en plus la concentration choisie par défaut et délègue le verdict au pur `alerts::expired`.
+Les avis de `apply_proposal` quittent `Document` pour une cause `Answer`, que la réponse suivante périme dès qu'elle ne les répète plus ; `Document` ne garde que les actes passés.*
+
 ## Alternatives rejetées
 
 - **Affichage dérivé de `left_out` au lieu de toasts poussés** : l'ADR toasts a arbitré le push, et le panneau porte déjà le verdict dérivé (« N cours sans session »).

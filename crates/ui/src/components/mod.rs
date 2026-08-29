@@ -93,7 +93,7 @@ pub struct SolverState {
     // an organigramme he has just proposed (ADR
     // `2026-08-placement-au-mieux-en-repli`). Overwritten whole by every
     // propose answer, purged code by code once a course stops floating
-    // (`retire_stale_left_out`, ADR
+    // (`retire_stale_alerts`, ADR
     // `2026-08-peremption-des-toasts-par-cause`)
     pub left_out: std::collections::BTreeSet<String>,
     // Derived from the latest proposal or verification report. Never
@@ -281,12 +281,17 @@ fn apply_proposal(
     // them at every answer, so a wording that shifted by one code used to
     // stack a second banner on the same subject (rapport étudiante
     // 2026-08-27, G3) — one per subject now, ADR
-    // `2026-08-toasts-un-par-sujet-et-rejet-memorise`
+    // `2026-08-toasts-un-par-sujet-et-rejet-memorise`. `said` collects
+    // them so `retire_unsaid` below can drop the subjects this answer has
+    // stopped speaking about (ADR
+    // `2026-08-peremption-de-toute-alerte-jugeable`).
+    let mut said: Vec<AlertTopic> = Vec::new();
     if let Some(note) = crate::solve::completion_note(&report.placement) {
-        push_topic_alert(
+        say(
             alerts,
+            &mut said,
             AlertBody::Note(note),
-            AlertCause::Document,
+            AlertCause::Answer,
             AlertTopic::Completion,
         );
     }
@@ -298,8 +303,9 @@ fn apply_proposal(
                 // one aggregate verdict, not one toast per code: the
                 // whole grid failing is a single fact — and never said
                 // over a grid the refusal above is about to keep
-                push_topic_alert(
+                say(
                     alerts,
+                    &mut said,
                     AlertBody::Note(crate::solve::empty_grid_note()),
                     AlertCause::EmptyGrid,
                     AlertTopic::EmptyGrid,
@@ -318,8 +324,9 @@ fn apply_proposal(
                         .blocked
                         .iter()
                         .find(|blocked| &blocked.code == code);
-                    push_topic_alert(
+                    say(
                         alerts,
+                        &mut said,
                         AlertBody::Note(crate::solve::left_out_line(
                             code,
                             blocked,
@@ -334,8 +341,9 @@ fn apply_proposal(
         }
         _ => {
             for blocked in &report.placement.blocked {
-                push_topic_alert(
+                say(
                     alerts,
+                    &mut said,
                     AlertBody::Note(crate::solve::blocked_note(blocked)),
                     AlertCause::LeftOut(blocked.code.clone()),
                     AlertTopic::LeftOut(blocked.code.clone()),
@@ -344,30 +352,32 @@ fn apply_proposal(
         }
     }
     for code in &report.set_aside {
-        push_topic_alert(
+        say(
             alerts,
+            &mut said,
             AlertBody::Note(format!(
                 "{code} : au programme mais absent du catalogue — mis de \
                  côté, à suivre à la main."
             )),
-            AlertCause::Document,
+            AlertCause::Answer,
             AlertTopic::SetAside(code.clone()),
         );
     }
     if !report.summers_forced.is_empty() {
-        push_topic_alert(
+        say(
             alerts,
+            &mut said,
             AlertBody::Note(crate::solve::summers_forced_note(
                 &report.summers_forced,
             )),
-            AlertCause::Document,
+            AlertCause::Answer,
             AlertTopic::SummersForced,
         );
     }
     // Every answer overwrites `left_out` whole — an answer with no
     // solution at all must clear it, not leave the previous one frozen.
     // Only what really floats goes in: a code the refusal below leaves
-    // seated would make `retire_stale_left_out` and the panel contradict
+    // seated would make `retire_stale_alerts` and the panel contradict
     // the grid.
     let floating: std::collections::BTreeSet<String> = report
         .placement
@@ -391,24 +401,29 @@ fn apply_proposal(
     // proposal at all (the convergence still holds — the `proposed`
     // fingerprint was recorded at send, so the same query never reruns)
     if !regressions.is_empty() {
-        push_topic_alert(
+        // no retirement on this path: the answer was refused whole, so the
+        // grid on screen — and everything the previous answer said about
+        // it — still stands
+        say(
             alerts,
+            &mut said,
             AlertBody::Note(crate::solve::proposal_kept_note(&regressions)),
-            AlertCause::Document,
+            AlertCause::Answer,
             AlertTopic::ProposalKept,
         );
         return;
     }
     if !solution.assumed.is_empty() {
-        push_topic_alert(
+        say(
             alerts,
+            &mut said,
             AlertBody::Note(format!(
                 "Le cheminement présume ces acquis (préalables que \
                  l'outil ne peut pas vérifier) : {}. Assurez-vous que \
                  cela vous décrit.",
                 crate::solve::assumed_line(&solution.assumed)
             )),
-            AlertCause::Document,
+            AlertCause::Answer,
             AlertTopic::Assumed,
         );
     }
@@ -422,13 +437,21 @@ fn apply_proposal(
             "ajoutés aux cours à option : des cours obligatoires les \
              exigent comme préalables"
         };
-        push_topic_alert(
+        say(
             alerts,
+            &mut said,
             AlertBody::Note(format!("{} {added}.", injected.join(", "))),
-            AlertCause::Document,
+            AlertCause::Answer,
             AlertTopic::Injected,
         );
     }
+    // This answer settles the grid, so it has spoken about everything it
+    // has to say: a subject it no longer names stopped being true with the
+    // grid it replaced (ADR `2026-08-peremption-de-toute-alerte-jugeable`).
+    // Placed here, past both early returns above — a refused or
+    // solution-less answer changes nothing and retires nothing.
+    let mut alerts = alerts;
+    alerts.write().retire_unsaid(&said);
     let mut placement = solution.placement.clone();
     // a stale answer (solved before the latest pins) must not evict them
     // from the grid — `displayed ⊇ pinned`, always
@@ -575,7 +598,7 @@ pub fn App() -> Element {
         });
     });
     // a plan change stales the verify answer — `left_out` has its own
-    // retirement: `retire_stale_left_out` purges entry and toast together
+    // retirement: `retire_stale_alerts` purges entry and toast together
     // when the cause disappears, and keeps what an answer just reported
     // (its codes still float)
     use_effect(move || {
@@ -585,7 +608,7 @@ pub fn App() -> Element {
         state.verification = None;
         state.verify_failed = false;
     });
-    retire_stale_left_out(plan, snapshot, manual, solver_state, alerts);
+    retire_stale_alerts(plan, snapshot, manual, solver_state, alerts);
     apply_corrections(
         plan,
         snapshot,
@@ -679,6 +702,19 @@ pub fn push_topic_alert(
     alerts.write().push_topic(body, cause, topic);
 }
 
+// The same door for a proposal answer, which also records what it just
+// said: `AlertStack::retire_unsaid` drops the subjects it fell silent on.
+fn say(
+    alerts: Signal<AlertStack>,
+    said: &mut Vec<AlertTopic>,
+    body: AlertBody,
+    cause: AlertCause,
+    topic: AlertTopic,
+) {
+    said.push(topic.clone());
+    push_topic_alert(alerts, body, cause, topic);
+}
+
 // ACT-2: the one door every Plan mutation walks through — labelled,
 // reversible, no confirmation dialog anywhere
 pub fn edit_plan(
@@ -747,6 +783,17 @@ pub fn swap_document(
     // the memory of what was dismissed about it goes too
     let mut alerts = alerts;
     alerts.write().purge_document();
+    // announced *after* the purge — it belongs to the document just
+    // entered, and retires as soon as the student picks another
+    // concentration himself (ADR
+    // `2026-08-peremption-de-toute-alerte-jugeable`)
+    if let Some(title) = &swap.default_concentration {
+        push_caused_alert(
+            alerts,
+            AlertBody::Note(persist::default_concentration_note(title)),
+            AlertCause::DefaultConcentration(title.clone()),
+        );
+    }
 }
 
 // Suppression d'un programme importé par URL (plan item 9, pattern ACT) :
@@ -967,15 +1014,18 @@ fn heal_acquired(
     });
 }
 
-// A left-out warning retires with its cause: a code seated since (by a
-// later answer or by hand) or gone from the plan stops floating, and its
-// toast and `SolverState.left_out` entry go together. `solver_state` and
-// `alerts` are read by peek — the effect must not re-run on its own
-// purges — and the codes an answer has *just* reported still float by
-// construction (its auto-application writes them nowhere), so they
-// survive: the bug this replaces was the answer erasing its own report
-// (ADR `2026-08-peremption-des-toasts-par-cause`).
-fn retire_stale_left_out(
+// Every warning whose cause the *plan* can judge retires here: a left-out
+// code seated since (by a later answer or by hand) or gone from the plan
+// stops floating — its toast and `SolverState.left_out` entry go together
+// — and a default concentration the student has since replaced stops
+// describing his document. `solver_state` and `alerts` are read by peek —
+// the effect must not re-run on its own purges — and the codes an answer
+// has *just* reported still float by construction (its auto-application
+// writes them nowhere), so they survive: the bug this replaces was the
+// answer erasing its own report (ADRs
+// `2026-08-peremption-des-toasts-par-cause`,
+// `2026-08-peremption-de-toute-alerte-jugeable`).
+fn retire_stale_alerts(
     plan: Signal<Plan>,
     snapshot: Signal<Option<Snapshot>>,
     manual: Signal<Vec<ulaval_scheduler_core::Course>>,
@@ -986,45 +1036,43 @@ fn retire_stale_left_out(
         let plan_read = plan.read();
         let read = snapshot.read();
         let _ = manual.read();
-        let Some(snapshot_ref) = read.as_ref() else {
-            return;
-        };
-        let program =
-            crate::panel::effective_program(snapshot_ref, &plan_read);
-        let Ok(floating) = crate::solve::unplaced_codes(
-            snapshot_ref,
-            &plan_read,
-            program.as_ref(),
-        ) else {
-            return;
-        };
-        let stale = crate::solve::stale_left_out(
-            &solver_state.peek().left_out,
-            &floating,
-        );
-        if !stale.is_empty() {
-            let mut solver_state = solver_state;
-            solver_state
-                .write()
-                .left_out
-                .retain(|code| !stale.contains(code));
+        // `None` while nothing can be judged (catalogue not loaded, or an
+        // intake the query refuses): the left-out verdicts then stand —
+        // the concentration below is judged all the same, on the plan
+        // alone
+        let floating = read.as_ref().and_then(|snapshot_ref| {
+            let program =
+                crate::panel::effective_program(snapshot_ref, &plan_read);
+            crate::solve::unplaced_codes(
+                snapshot_ref,
+                &plan_read,
+                program.as_ref(),
+            )
+            .ok()
+        });
+        if let Some(floating) = floating.as_ref() {
+            let stale = crate::solve::stale_left_out(
+                &solver_state.peek().left_out,
+                floating,
+            );
+            if !stale.is_empty() {
+                let mut solver_state = solver_state;
+                solver_state
+                    .write()
+                    .left_out
+                    .retain(|code| !stale.contains(code));
+            }
         }
-        let something_placed = !plan_read.displayed_placement.is_empty()
-            || plan_read.manual.values().any(|codes| !codes.is_empty());
         // judged against what floats *now*, never against `left_out`: a
         // document swap clears `left_out` first, and the old document's
         // toasts would otherwise never match anything again
-        let expired = |alert: &Alert| match &alert.cause {
-            AlertCause::Sticky => false,
-            AlertCause::LeftOut(code) => {
-                !floating.iter().any(|float| float == code)
-            }
-            AlertCause::EmptyGrid => something_placed || floating.is_empty(),
-            // retired by the next worker answer, not by the plan
-            AlertCause::SolverError => false,
-            // retired by the document swap, not by the plan
-            AlertCause::Document => false,
+        let standing = crate::alerts::Standing {
+            floating: floating.as_deref(),
+            something_placed: !plan_read.displayed_placement.is_empty()
+                || plan_read.manual.values().any(|codes| !codes.is_empty()),
+            concentration: crate::panel::scope_of(&plan_read).0,
         };
+        let expired = |alert: &Alert| crate::alerts::expired(alert, &standing);
         // a retirement, never a dismissal: the student said nothing, so
         // the same warning may speak again if its cause comes back
         if alerts.peek().alerts().iter().any(expired) {
