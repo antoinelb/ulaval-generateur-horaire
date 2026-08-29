@@ -139,6 +139,17 @@ pub fn HeaderBar() -> Element {
                     onclick: {
                         let handle = handle.clone();
                         move |_| {
+                            // « Annuler » goes dark with the history: the
+                            // way back is the shelf, so the swap says so
+                            // on screen and not only in a hover title
+                            let kept = plan.peek().program.as_ref().map(
+                                |choice| {
+                                    crate::present::shelved_note(
+                                        &choice.code,
+                                        &choice.semester,
+                                    )
+                                },
+                            );
                             // the document goes to its shelf whole; the
                             // picker takes over with an empty grid (US-10)
                             let swap = crate::persist::leave_document(
@@ -155,6 +166,12 @@ pub fn HeaderBar() -> Element {
                                 snapshot_signal,
                                 swap,
                             );
+                            if let Some(note) = kept {
+                                super::push_alert(
+                                    alerts,
+                                    AlertBody::Success(note),
+                                );
+                            }
                         }
                     },
                     "changer"
@@ -196,8 +213,12 @@ pub fn HeaderBar() -> Element {
 }
 
 // « Réinitialiser » : one click, undoable — never a confirmation (ACT-2).
-// The current document goes back to zero through the history, and its
-// shelf copy goes with it — re-choosing the program must not resurrect the
+// The document empties *without leaving its program* — dropping the choice
+// dumped the student in the picker, and the click that got him out of it
+// (`swap_document`) cleared `History`, so the undo the reset had just
+// armed died before it could be used (ADR
+// `2026-08-reinitialiser-reste-dans-le-programme`). Its shelf copy goes
+// with the content — re-choosing the program must not resurrect the
 // pre-reset grid; the other programs' shelves survive (ADR
 // `2026-08-reinitialiser-le-document-courant-et-son-etagere`). The
 // hand-entered course fiches stay, they extend the catalogue, not the
@@ -229,24 +250,39 @@ fn ResetButton() -> Element {
                 // a shared link left in the address bar would reimport
                 // everything at the next reload
                 crate::browser::strip_query();
-                // materialized before the edit erases the program: the
-                // shelf copy must go too, or re-choosing the program
-                // would resurrect the pre-reset grid
-                let shelf = plan
-                    .peek()
-                    .program
-                    .as_ref()
-                    .map(crate::persist::snapshot_key);
+                // the horizon a brand-new document of this program would
+                // get, exactly as « Choisir » computes it
+                let study_sessions = {
+                    let plan_read = plan.peek();
+                    let read = snapshot.peek();
+                    plan_read
+                        .program
+                        .as_ref()
+                        .zip(read.as_ref())
+                        .and_then(|(choice, snapshot)| {
+                            crate::panel::program_credits_required(
+                                snapshot,
+                                &choice.code,
+                                &choice.semester,
+                            )
+                        })
+                        .map(crate::state::default_study_sessions)
+                        .unwrap_or(crate::state::DEFAULT_STUDY_SESSIONS)
+                };
                 // repartir de zéro, mais jamais dans le passé : le
                 // « Début » d'usine est un A26 en dur (ADR
                 // `2026-08-debut-ancre-sur-lhorloge`)
-                let start = crate::state::next_admission_semester(
+                let reset = crate::persist::reset_document(
+                    &plan.peek(),
+                    study_sessions,
                     crate::state::semester_of_epoch_ms(
                         crate::browser::now_epoch_ms(),
                     ),
                 );
+                let shelf = reset.shelf;
+                let next = reset.next;
                 super::edit_plan(plan, history, "Réinitialisation", |plan| {
-                    *plan = Plan { start, ..Plan::default() };
+                    *plan = next;
                 });
                 if let Some(key) = shelf {
                     crate::browser::local_remove(&key);

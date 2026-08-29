@@ -10,7 +10,8 @@ ACT-2 : chaque mutation est réversible et étiquetée, aucune confirmation null
 ## Décisions
 
 - Bouton « Réinitialiser » dans l'en-tête (`header::ResetButton`) : **un seul clic**, qui passe par `edit_plan` (étiquette « Réinitialisation ») — « Annuler » restaure l'organigramme entier. Un toast le rappelle : « Tout a été réinitialisé — « Annuler » restaure votre organigramme. »
-- **Portée : le document.** Le `Plan` revient à `Plan::default()` et la vue à `View::default()` (la vue n'est jamais annulable, par conception). Le fragment d'URL est retiré (`strip_query`) et une recherche en vol est annulée d'abord, pour qu'une proposition tardive n'atterrisse pas dans le plan neuf.
+- **Portée : le document.** Le `Plan` revient à `Plan::default()` et la vue à `View::default()` (la vue n'est jamais annulable, par conception).
+  *Amendé le 2026-08-29* : le programme, son millésime et sa portée survivent, seul le contenu repart à zéro — sinon le sélecteur s'interpose et son « Choisir » efface l'annulation (ADR `2026-08-reinitialiser-reste-dans-le-programme`). Le fragment d'URL est retiré (`strip_query`) et une recherche en vol est annulée d'abord, pour qu'une proposition tardive n'atterrisse pas dans le plan neuf.
 - **Les fiches de cours manuels survivent** : elles prolongent le *catalogue*, pas le document (persistées à part, ADR `2026-07-contribution-de-cours-manuels`), et une annulation peut restaurer un plan qui les référence — les effacer rendrait l'annulation mensongère. Plus aucun placement ne les référence après la réinitialisation ; leur retrait individuel reste un besoin séparé s'il se présente.
 
 ## Alternatives rejetées

@@ -407,6 +407,18 @@ fn notable_operands(
     (concomitant, presumed)
 }
 
+// « changer » is not undoable through `History` — the history leaves with
+// the document — but the shelf makes it reversible all the same (ADR
+// `2026-08-historique-par-document-vide-a-la-bascule`). Only the button's
+// `title` said so, and a hover-only affordance is none: the swap now says
+// it on screen, naming the exact gesture that brings the work back.
+pub fn shelved_note(code: &str, semester: &str) -> String {
+    format!(
+        "Cheminement {code} ({semester}) conservé — rechoisissez ce \
+         programme pour le retrouver tel quel."
+    )
+}
+
 pub fn error_id(detail: &str) -> String {
     let hash = fnv1a_64(0xcbf2_9ce4_8422_2325, detail.as_bytes());
     format!("GH-{:08X}", (hash >> 32) as u32 ^ hash as u32)
@@ -1213,6 +1225,16 @@ mod tests {
             assert!(error.id.starts_with("GH-"));
             assert!(!error.detail.is_empty());
         }
+    }
+
+    // « changer » leaves « Annuler » dark: the note must name the gesture
+    // that brings the work back, and the document it is talking about
+    #[test]
+    fn the_shelved_note_names_the_document_and_the_way_back() {
+        let note = shelved_note("B-GEX", "A26");
+        assert!(note.contains("B-GEX"), "{note}");
+        assert!(note.contains("A26"), "{note}");
+        assert!(note.contains("rechoisissez"), "{note}");
     }
 
     #[test]
