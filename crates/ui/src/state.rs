@@ -461,16 +461,84 @@ pub fn set_horizon(plan: &mut Plan, requested: usize) -> usize {
 // the catalogue cannot judge, and it keeps its seat (unknown stays
 // unknown). Explicit acts are sovereign: a pinned course is the student's
 // own and is never un-seated in silence; the vérification refuses it out
-// loud, as it always did. Returns the evicted codes, for the caller's
+// loud, as it always did. Returns what the move cost, for the caller's
 // bilan.
+//
+// The frozen sessions travel by *semester*, not by index: a freeze marks a
+// real session (« A26 est réglée »), and renaming the slots must not slide
+// it onto another semester — the same trap this function already closes
+// for the seats. A frozen semester the new timeline still reaches (up to
+// MAX_STUDY_SESSIONS: the floor re-grows the horizon over it) keeps its
+// freeze at its new index; one that falls off is unfrozen and named (ADR
+// `2026-08-le-gel-suit-le-semestre-au-changement-de-debut`).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct StartMove {
+    // codes un-seated because their renamed session no longer offers them
+    pub evicted: Vec<String>,
+    // display labels of the freezes the new timeline cannot hold
+    pub unfrozen: Vec<String>,
+}
+
 pub fn set_start(
     plan: &mut Plan,
     start: Semester,
     offerings: &BTreeMap<String, BTreeSet<Season>>,
-) -> Vec<String> {
+) -> StartMove {
     let before: BTreeSet<String> =
         plan.displayed_placement.keys().cloned().collect();
+    let held_before = session_semesters(
+        plan.start,
+        &ulaval_scheduler_core::horizon_sessions(
+            plan.start.season,
+            plan.study_sessions,
+        ),
+    );
     plan.start = start;
+    // the farthest timeline the new start can reach: a frozen semester the
+    // current span misses but MAX still holds keeps its freeze — the floor
+    // below re-grows the horizon over it, exactly as it does for a pin
+    let reach = session_semesters(
+        start,
+        &ulaval_scheduler_core::horizon_sessions(
+            start.season,
+            MAX_STUDY_SESSIONS,
+        ),
+    );
+    let mut unfrozen = Vec::new();
+    let mut moves: BTreeMap<usize, usize> = BTreeMap::new();
+    for &slot in &plan.frozen {
+        let held = slot
+            .checked_sub(1)
+            .and_then(|offset| held_before.get(offset));
+        let Some(semester) = held else {
+            // a slot no timeline ever held (a corrupt save): dropped,
+            // but still named — never in silence
+            unfrozen.push(format!("session {slot}"));
+            continue;
+        };
+        match reach.iter().position(|reached| reached == semester) {
+            Some(offset) => {
+                moves.insert(slot, offset + 1);
+            }
+            None => unfrozen.push(semester.to_string()),
+        }
+    }
+    plan.frozen = moves.values().copied().collect();
+    // the settled past travels whole: the seats and pins of a surviving
+    // frozen session keep their *semester*, never their index — moving the
+    // freeze without its content would empty the very session it guards.
+    // `chosen`/`manual`/`special` stay keyed as before, the documented
+    // boundary of this move (ADR
+    // `2026-08-le-gel-suit-le-semestre-au-changement-de-debut`)
+    for seat in plan
+        .displayed_placement
+        .values_mut()
+        .chain(plan.pinned_sessions.values_mut())
+    {
+        if let Some(&moved) = moves.get(seat) {
+            *seat = moved;
+        }
+    }
     let seasons = ulaval_scheduler_core::horizon_sessions(
         start.season,
         plan.study_sessions,
@@ -490,15 +558,20 @@ pub fn set_start(
     // flipping the start season changes how many slots the same count of
     // study sessions spans (an odd horizon gains or loses its last été),
     // so the horizon is re-asserted: `set_horizon` is the self-heal for
-    // the seats the new span no longer holds
+    // the seats the new span no longer holds — and its floor, read off the
+    // remapped freezes, re-grows the horizon over a frozen semester the
+    // old span held further out
     let horizon = plan.study_sessions;
     set_horizon(plan, horizon);
     // the bilan is the diff, not one of the two causes: whichever of the
     // season and the span dropped a seat, the student is told
-    before
-        .into_iter()
-        .filter(|code| !plan.displayed_placement.contains_key(code))
-        .collect()
+    StartMove {
+        evicted: before
+            .into_iter()
+            .filter(|code| !plan.displayed_placement.contains_key(code))
+            .collect(),
+        unfrozen,
+    }
 }
 
 // Why the horizon refuses to shrink below its floor, the binding fact
@@ -815,13 +888,14 @@ mod tests {
             ("GCI-1011", &[Season::Fall, Season::Winter]),
             ("GLG-1000", &[Season::Fall, Season::Winter]),
         ]);
-        let evicted = set_start(&mut plan, semester("H27"), &offerings);
+        let moved = set_start(&mut plan, semester("H27"), &offerings);
         assert_eq!(plan.start, semester("H27"));
         assert_eq!(
-            evicted,
+            moved.evicted,
             vec!["GCI-1000".to_string(), "GCI-1001".to_string()],
             "les cours que l'hiver n'offre pas quittent le placement"
         );
+        assert!(moved.unfrozen.is_empty(), "aucun gel en jeu ici");
         assert_eq!(
             plan.displayed_placement,
             BTreeMap::from([
@@ -848,11 +922,12 @@ mod tests {
         // `OPT-ION1` n'est pas au catalogue : absent de la table, donc
         // rien à juger — et rien à retirer
         let offerings = offered(&[("GCI-1000", &[Season::Fall])]);
-        let evicted = set_start(&mut plan, semester("H27"), &offerings);
+        let moved = set_start(&mut plan, semester("H27"), &offerings);
         assert!(
-            evicted.is_empty(),
+            moved.evicted.is_empty(),
             "un geste explicite n'est jamais défait en silence, et un code \
-             que le catalogue ne connaît pas n'est jamais jugé : {evicted:?}"
+             que le catalogue ne connaît pas n'est jamais jugé : {:?}",
+            moved.evicted
         );
         assert_eq!(plan.displayed_placement.len(), 2);
     }
@@ -869,9 +944,72 @@ mod tests {
         };
         plan.displayed_placement =
             BTreeMap::from([("GCI-4000".to_string(), 11)]);
-        let evicted = set_start(&mut plan, semester("A26"), &offered(&[]));
-        assert_eq!(evicted, vec!["GCI-4000".to_string()]);
+        let moved = set_start(&mut plan, semester("A26"), &offered(&[]));
+        assert_eq!(moved.evicted, vec!["GCI-4000".to_string()]);
         assert!(plan.displayed_placement.is_empty());
+    }
+
+    // --- le gel suit le semestre (ADR
+    // `2026-08-le-gel-suit-le-semestre-au-changement-de-debut`) ------------
+
+    #[test]
+    fn a_freeze_follows_its_semester_with_its_seats_and_pins() {
+        // départ A26, H27 gelée en 2 avec son contenu ; nouveau départ
+        // H27 : le même semestre devient le créneau 1 — gel, siège et
+        // épingle y déménagent ensemble, rien n'est retiré
+        let mut plan = Plan {
+            start: semester("A26"),
+            study_sessions: 4,
+            ..Plan::default()
+        };
+        plan.frozen.insert(2);
+        plan.displayed_placement.insert("GCI-1011".to_string(), 2);
+        plan.pinned_sessions.insert("GCI-1011".to_string(), 2);
+        let offerings = offered(&[("GCI-1011", &[Season::Winter])]);
+        let moved = set_start(&mut plan, semester("H27"), &offerings);
+        assert!(moved.evicted.is_empty(), "{:?}", moved.evicted);
+        assert!(moved.unfrozen.is_empty(), "{:?}", moved.unfrozen);
+        assert_eq!(plan.frozen, BTreeSet::from([1]));
+        assert_eq!(plan.displayed_placement["GCI-1011"], 1);
+        assert_eq!(plan.pinned_sessions["GCI-1011"], 1);
+    }
+
+    #[test]
+    fn a_freeze_the_new_timeline_cannot_hold_is_dropped_and_named() {
+        // A26 gelée, puis départ avancé à A27 : A26 n'existe plus sur la
+        // nouvelle ligne du temps — le gel part, nommé ; un indice qu'aucune
+        // ligne du temps n'a jamais tenu (sauvegarde corrompue) part aussi,
+        // nommé par son numéro
+        let mut plan = Plan {
+            start: semester("A26"),
+            study_sessions: 4,
+            ..Plan::default()
+        };
+        plan.frozen.insert(1);
+        plan.frozen.insert(99);
+        let moved = set_start(&mut plan, semester("A27"), &offered(&[]));
+        assert!(plan.frozen.is_empty());
+        assert_eq!(
+            moved.unfrozen,
+            vec!["A26".to_string(), "session 99".to_string()]
+        );
+    }
+
+    #[test]
+    fn a_frozen_semester_past_the_span_regrows_the_horizon_over_itself() {
+        // départ H27 sur 2 sessions (H27, É27, A27) avec A27 gelée en 3 ;
+        // nouveau départ A27 : le semestre gelé devient le créneau 1 —
+        // même au bord du parcours, le gel tient et le plancher garde une
+        // session ouverte derrière lui
+        let mut plan = Plan {
+            start: semester("H27"),
+            study_sessions: 2,
+            ..Plan::default()
+        };
+        plan.frozen.insert(3);
+        let moved = set_start(&mut plan, semester("A27"), &offered(&[]));
+        assert!(moved.unfrozen.is_empty(), "{:?}", moved.unfrozen);
+        assert_eq!(plan.frozen, BTreeSet::from([1]));
     }
 
     #[test]

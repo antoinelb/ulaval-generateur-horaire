@@ -1031,12 +1031,13 @@ pub fn verification_verdict(searching: bool) -> (&'static str, String) {
 }
 
 // Le bilan du changement de Début : un siège retiré parce que sa nouvelle
-// saison n'offre pas le cours ne disparaît jamais en silence (ADR
-// `2026-08-le-debut-n-herite-pas-d-un-placement-hors-saison`). `None`
-// quand la nouvelle saison tenait tous les sièges — pas de bandeau pour
-// rien (ALR-3).
-pub fn start_move_note(evicted: &[String]) -> Option<String> {
-    match evicted {
+// saison n'offre pas le cours, ou un gel que la nouvelle ligne du temps ne
+// peut plus tenir, ne disparaît jamais en silence (ADRs
+// `2026-08-le-debut-n-herite-pas-d-un-placement-hors-saison`,
+// `2026-08-le-gel-suit-le-semestre-au-changement-de-debut`). `None` quand
+// le changement n'a rien coûté — pas de bandeau pour rien (ALR-3).
+pub fn start_move_note(moved: &crate::state::StartMove) -> Option<String> {
+    let seats = match moved.evicted.as_slice() {
         [] => None,
         [code] => Some(format!(
             "{code} est retiré du placement : sa session ne l'accueille \
@@ -1050,6 +1051,23 @@ pub fn start_move_note(evicted: &[String]) -> Option<String> {
              place.",
             codes.join(", ")
         )),
+    };
+    let freezes = match moved.unfrozen.as_slice() {
+        [] => None,
+        [label] => Some(format!(
+            "Le gel de {label} est retiré : la nouvelle ligne du temps ne \
+             tient plus cette session."
+        )),
+        labels => Some(format!(
+            "Les gels de {} sont retirés : la nouvelle ligne du temps ne \
+             tient plus ces sessions.",
+            labels.join(", ")
+        )),
+    };
+    match (seats, freezes) {
+        (None, None) => None,
+        (Some(note), None) | (None, Some(note)) => Some(note),
+        (Some(seats), Some(freezes)) => Some(format!("{seats} {freezes}")),
     }
 }
 
@@ -2235,16 +2253,41 @@ mod tests {
 
     #[test]
     fn a_seat_the_new_start_dropped_is_never_dropped_in_silence() {
-        assert_eq!(start_move_note(&[]), None, "rien à dire, rien à dire");
+        let moved =
+            |evicted: &[&str], unfrozen: &[&str]| crate::state::StartMove {
+                evicted: evicted.iter().map(|s| s.to_string()).collect(),
+                unfrozen: unfrozen.iter().map(|s| s.to_string()).collect(),
+            };
+        assert_eq!(
+            start_move_note(&moved(&[], &[])),
+            None,
+            "rien à dire, rien à dire"
+        );
         let one =
-            start_move_note(&["GCI-1000".to_string()]).unwrap_or_default();
+            start_move_note(&moved(&["GCI-1000"], &[])).unwrap_or_default();
         assert!(one.contains("GCI-1000 est retiré"), "{one}");
         assert!(one.contains("à planifier"), "{one}");
-        let many =
-            start_move_note(&["GCI-1000".to_string(), "GLG-1000".to_string()])
-                .unwrap_or_default();
+        let many = start_move_note(&moved(&["GCI-1000", "GLG-1000"], &[]))
+            .unwrap_or_default();
         assert!(many.contains("GCI-1000, GLG-1000 sont retirés"), "{many}");
         assert!(many.contains("placement automatique"), "{many}");
+    }
+
+    #[test]
+    fn a_freeze_the_new_start_dropped_is_named_alone_or_with_the_seats() {
+        let one = start_move_note(&crate::state::StartMove {
+            evicted: Vec::new(),
+            unfrozen: vec!["A26".to_string()],
+        })
+        .unwrap_or_default();
+        assert!(one.contains("Le gel de A26 est retiré"), "{one}");
+        let both = start_move_note(&crate::state::StartMove {
+            evicted: vec!["GCI-1000".to_string()],
+            unfrozen: vec!["A26".to_string(), "H27".to_string()],
+        })
+        .unwrap_or_default();
+        assert!(both.contains("GCI-1000 est retiré"), "{both}");
+        assert!(both.contains("Les gels de A26, H27 sont retirés"), "{both}");
     }
 
     #[test]

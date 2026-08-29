@@ -1143,19 +1143,19 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                                         })
                                         .unwrap_or_default()
                                 };
-                                let mut evicted = Vec::new();
+                                let mut moved = state::StartMove::default();
                                 edit_plan(
                                     plan,
                                     history,
                                     &format!("Début déplacé à {value}"),
                                     |plan| {
-                                        evicted = state::set_start(
+                                        moved = state::set_start(
                                             plan, semester, &offerings,
                                         );
                                     },
                                 );
                                 if let Some(note) =
-                                    crate::present::start_move_note(&evicted)
+                                    crate::present::start_move_note(&moved)
                                 {
                                     super::push_alert(
                                         alerts,
