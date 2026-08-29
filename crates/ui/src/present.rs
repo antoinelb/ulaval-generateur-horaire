@@ -476,6 +476,12 @@ pub struct Block {
     // reveal as ghosts — 0 on a ghost itself, it never advertises its own
     // siblings (ADR 2026-08-jeton-de-plages-alternatives-sur-le-bloc)
     pub alternatives: usize,
+    // full accessible name for a ghost's button — the visible `title`
+    // stays the compact letter/NRC, but a screen reader needs the course
+    // code back (régression relevée : rapport étudiante-gex 2026-08-29,
+    // « seulement B, C au lieu de MAT-1900 - B »). Empty on a real block,
+    // whose visible content already names the course in full.
+    pub full_label: String,
 }
 
 pub fn grid_model(
@@ -534,6 +540,7 @@ pub fn grid_model(
                             clash: false,
                             nrcs: nrcs.clone(),
                             alternatives,
+                            full_label: String::new(),
                         },
                     },
                 ));
@@ -594,6 +601,10 @@ pub fn grid_model(
                                     clash: false,
                                     nrcs: nrcs.clone(),
                                     alternatives: 0,
+                                    full_label: ghost_full_label(
+                                        &course.code,
+                                        section,
+                                    ),
                                 },
                             },
                         ));
@@ -678,6 +689,13 @@ fn ghost_label(section: &Section) -> String {
         }
     }
     parts.join(" - ")
+}
+
+// « MAT-1900 - B », « GEX-4008 - Z1 - à distance » — the full identity a
+// ghost's compact visible label (`ghost_label`) leaves out, for the
+// button's `aria_label` only (accessible name, régression du 2026-08-29)
+fn ghost_full_label(code: &str, section: &Section) -> String {
+    format!("{code} - {}", ghost_label(section))
 }
 
 fn option_nrcs(sections: &[Section]) -> Vec<String> {
@@ -1534,6 +1552,10 @@ mod tests {
         );
         assert_eq!(ghost.title, "B", "compact label, not the course title");
         assert_eq!(ghost.detail, "", "no duplicate line under a narrow ghost");
+        assert_eq!(
+            ghost.full_label, "GEX-1000 - B",
+            "the aria label carries the course code the compact title drops"
+        );
     }
 
     #[test]

@@ -275,6 +275,11 @@ fn GridBlock(
             class: if block.clash { "grid-block--conflict" },
             style: "{style}",
             title: "{label}",
+            // AP-5: the visible letter/NRC stays compact (`block.title`,
+            // `ghost_label`) — the full name is pure data from `present`,
+            // this component only wires it to the attribute a screen
+            // reader reads (régression du 2026-08-29)
+            aria_label: if ghost { "{block.full_label}" },
             onclick: move |_| {
                 if ghost {
                     // clicking a ghost is the swap the report promised:
