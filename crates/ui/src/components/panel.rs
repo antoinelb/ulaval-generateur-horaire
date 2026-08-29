@@ -2370,15 +2370,26 @@ fn CourseChoice(
     let SelectedCourse(mut selected) = use_context::<SelectedCourse>();
     let choice = strip.choice;
     let auto = choice == panel::Choice::Auto;
+    // a chip that already carries the choice is a state marker, not an
+    // action: it refuses the click, so it says so and names the ways out
+    // (ADR `2026-08-puce-deja-choisie-parle-au-lieu-de-refuser-en-silence`)
+    let removable = !strip.mandatory;
+    let auto_title = if auto {
+        crate::present::chosen_chip_title(&code, None, removable)
+    } else {
+        format!(
+            "Prendre {code} et laisser le solveur choisir sa session (le \
+             cours occupe une session, au contraire d'un cours crédité)"
+        )
+    };
     rsx! {
         div { class: "panel-course-choice",
             button {
                 class: "panel-chip",
                 class: if auto { "panel-chip--chosen" },
                 aria_pressed: "{auto}",
-                title: "Prendre {code} et laisser le solveur choisir sa \
-                        session (le cours occupe une session, au \
-                        contraire d'un cours crédité)",
+                aria_disabled: "{auto}",
+                title: "{auto_title}",
                 onclick: {
                     let code = code.clone();
                     let grant_key = grant_key.clone();
@@ -2437,13 +2448,21 @@ fn CourseChoice(
             for (session, label) in strip.sessions.clone() {
                 {
                     let here = choice == panel::Choice::Pinned(session);
+                    let title = if here {
+                        crate::present::chosen_chip_title(
+                            &code, Some(&label), removable,
+                        )
+                    } else {
+                        format!("Prendre {code} et le geler en {label}")
+                    };
                     rsx! {
                         button {
                             key: "{session}",
                             class: "panel-chip",
                             class: if here { "panel-chip--chosen" },
                             aria_pressed: "{here}",
-                            title: "Prendre {code} et le geler en {label}",
+                            aria_disabled: "{here}",
+                            title: "{title}",
                             onclick: {
                                 let code = code.clone();
                                 let label = label.clone();

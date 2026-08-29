@@ -486,6 +486,48 @@ pub fn bac_credit_label(
     BacCreditLabel { text, over }
 }
 
+// --- the choice strip's already-chosen chip -------------------------------
+
+// The chip that already carries the choice does nothing when clicked: the
+// handler returns at once (`if auto { return; }`, `if here { return; }`),
+// and the inverted fill was the only thing saying why. A pressed chip on a
+// mandatory course reads as an ordinary button that died (rapport persona
+// 2026-08-29). It stays a chip — `aria-disabled`, never `disabled`, so it
+// keeps its place in the tab order and its `aria-pressed` state — and its
+// title names the ways out instead of only the refusal (ERR-1).
+// `removable` is false for a course the program imposes: it has no « ✕ »
+// to offer, so it must not be told to use one.
+pub fn chosen_chip_title(
+    code: &str,
+    session: Option<&str>,
+    removable: bool,
+) -> String {
+    let (held, mut ways) = match session {
+        Some(label) => (
+            format!("{code} est déjà gelé en {label}"),
+            vec![
+                "choisissez une autre session pour le déplacer",
+                "« automatique » pour rendre sa session au solveur",
+            ],
+        ),
+        None => (
+            format!("{code} est déjà pris, sa session laissée au solveur"),
+            vec!["choisissez une session pour le geler"],
+        ),
+    };
+    if removable {
+        ways.push("« ✕ » pour le retirer");
+    }
+    // an imposed course has no « ✕ » : rather than send the student to a
+    // control the row refuses him, the title says why there is none
+    let imposed = if removable {
+        ""
+    } else {
+        " Le programme l'impose : rien ne peut le retirer."
+    };
+    format!("{held} — {}.{imposed}", ways.join(", "))
+}
+
 // --- the weekly grid geometry ---------------------------------------------
 
 use ulaval_scheduler_core::{Day, Section, Time};
@@ -1292,6 +1334,49 @@ mod tests {
             "⚠ 129/120 cr au bac (+9 cr en sus) — au-delà des 120 cr du \
              programme",
             "the suffix survives, it is never overwritten"
+        );
+    }
+
+    // The click on a chip that already carries the choice returns in
+    // silence — the title is the only thing that can say why and what to do
+    // instead (ADR `2026-08-puce-deja-choisie-parle-au-lieu-de-refuser-en-
+    // silence`).
+    #[test]
+    fn an_already_chosen_chip_names_the_state_and_every_way_out() {
+        let auto = chosen_chip_title("FOR-2020", None, true);
+        assert_eq!(
+            auto,
+            "FOR-2020 est déjà pris, sa session laissée au solveur — \
+             choisissez une session pour le geler, « ✕ » pour le retirer."
+        );
+        let pinned = chosen_chip_title("FOR-2020", Some("A1-A26"), true);
+        assert_eq!(
+            pinned,
+            "FOR-2020 est déjà gelé en A1-A26 — choisissez une autre \
+             session pour le déplacer, « automatique » pour rendre sa \
+             session au solveur, « ✕ » pour le retirer."
+        );
+        // a mandatory course has no ✕ : the title must not send the
+        // student to a control the row refuses him
+        let imposed = chosen_chip_title("GCI-1000", None, false);
+        assert_eq!(
+            imposed,
+            "GCI-1000 est déjà pris, sa session laissée au solveur — \
+             choisissez une session pour le geler. Le programme l'impose : \
+             rien ne peut le retirer."
+        );
+        assert!(
+            !imposed.contains('✕'),
+            "no removal to offer on an imposed course: {imposed}"
+        );
+        let imposed_pinned =
+            chosen_chip_title("GCI-1000", Some("H2-H27"), false);
+        assert!(!imposed_pinned.contains('✕'), "{imposed_pinned}");
+        assert!(
+            imposed_pinned.contains("déjà gelé en H2-H27")
+                && imposed_pinned.contains("automatique")
+                && imposed_pinned.contains("Le programme l'impose"),
+            "{imposed_pinned}"
         );
     }
 

@@ -1408,9 +1408,13 @@ code {
   color: var(--card);
 }
 
+/* la puce retenue ne fait rien de plus quand on la clique : le curseur
+   cesse de promettre une action, l'infobulle dit par où passer */
+.panel-chip--chosen,
 .panel-chip--chosen:hover {
-  border-color: var(--accent);
-  background: var(--accent);
+  cursor: default;
+  border-color: var(--ink);
+  background: var(--ink);
 }
 
 /* cibles de dépôt pendant un glissement (note 16) — jamais couleur seule :
