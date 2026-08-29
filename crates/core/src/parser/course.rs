@@ -1382,9 +1382,9 @@ mod tests {
     fn a_remarque_prefix_does_not_swallow_the_expression() {
         // bio-1003: « REMARQUE : » carries its own colon before the marker's,
         // so the expression starts at the colon *after* « nécessaires ». The
-        // comma list is outside the grammar and survives as a Raw operand;
-        // the « ou » alternative that follows it stays checkable — the old
-        // walk dropped CHM-0170 without a trace.
+        // comma run closes on « ou », which governs it whole (ADR
+        // `2026-08-virgule-selon-le-connecteur-final`) — the old walk
+        // dropped CHM-0170 without a trace.
         let doc = document(
             r#"<div class="fe--message"><p>REMARQUE : Préalables préuniversitaires nécessaires s'il y a lieu : BIO-0150, CHM-0150, CHM-0160 ou CHM-0170.</p></div>"#,
         );
@@ -1395,9 +1395,9 @@ mod tests {
             Some(Prerequisites::Parsed {
                 raw: "BIO-0150, CHM-0150, CHM-0160 OU CHM-0170".to_string(),
                 tree: any(vec![
-                    PrereqTree::Raw {
-                        raw: "BIO-0150, CHM-0150, CHM-0160".to_string()
-                    },
+                    course("BIO-0150"),
+                    course("CHM-0150"),
+                    course("CHM-0160"),
                     course("CHM-0170"),
                 ]),
             })
@@ -1407,9 +1407,9 @@ mod tests {
 
     #[test]
     fn distinct_preuniversitaire_messages_all_fold_in() {
-        // bio-1003 again: its sections carry two *different* messages — an
-        // ambiguous comma list and a fully parenthesized expression. Repeats
-        // dedupe; the distinct survivors are ET-joined so neither is lost.
+        // bio-1003 again: its sections carry two *different* messages — a
+        // comma run and a fully parenthesized expression. Repeats dedupe;
+        // the distinct survivors are ET-joined so neither is lost.
         let doc = document(
             r#"<div class="fe--message"><p>REMARQUE : Préalables préuniversitaires nécessaires s'il y a lieu : BIO-0150, CHM-0150, CHM-0160 ou CHM-0170.</p></div><div class="fe--message"><p>REMARQUE : Préalables préuniversitaires nécessaires s'il y a lieu : BIO-0150, CHM-0150, CHM-0160 ou CHM-0170.</p></div><div class="fe--message"><p>Préalables préuniversitaires nécessaires : (BIO-0150 ou BIO-NYA ou équivalent) ET (CHM-0160 ou CHM-0170 ou CHM-NYB ou équivalent).</p></div>"#,
         );
@@ -1424,9 +1424,9 @@ mod tests {
                     .to_string(),
                 tree: all(vec![
                     any(vec![
-                        PrereqTree::Raw {
-                            raw: "BIO-0150, CHM-0150, CHM-0160".to_string()
-                        },
+                        course("BIO-0150"),
+                        course("CHM-0150"),
+                        course("CHM-0160"),
                         course("CHM-0170"),
                     ]),
                     all(vec![

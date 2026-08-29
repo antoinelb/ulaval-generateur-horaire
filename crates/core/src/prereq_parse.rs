@@ -115,10 +115,12 @@ pub fn parse_prereq_tree(raw: &str) -> Result<PrereqTree, PrereqParseError> {
 // glued, it is the operand's own mark of concomitance.
 fn tokenize_prereq_raw(raw: &str) -> Vec<PrereqToken> {
     let padded = raw.replace('(', " ( ").replace(')', " ) ");
+    let words: Vec<&str> = padded.split_whitespace().collect();
+    let words = group_enumerated_sigles(&words);
     let mut tokens: Vec<PrereqToken> = Vec::new();
     let mut operand: Vec<&str> = Vec::new();
 
-    for word in padded.split_whitespace() {
+    for word in words {
         let separator = match word {
             "(" => PrereqToken::Open,
             ")" => PrereqToken::Close,
@@ -135,6 +137,118 @@ fn tokenize_prereq_raw(raw: &str) -> Vec<PrereqToken> {
     flush_operand(&mut operand, &mut tokens);
 
     tokens
+}
+
+// The répertoire enumerates sigles with commas and closes the run with a
+// single connector — « MAT-0130, MAT-0150 ET MAT-0260 » (MAT-1900),
+// « CHM-0150, CHM-0160 OU CHM-0170 » (CHM-1003) — and that last connector
+// governs the whole enumeration (ADR
+// `2026-08-virgule-selon-le-connecteur-final`). The run is rewritten into
+// the group it means — « ( MAT-0130 ET MAT-0150 ET MAT-0260 ) » — before a
+// single operand is classified: the parenthesis already says exactly what
+// the décision asks, that the enumeration is *one* operand of the
+// surrounding ET/OU precedence (CHM-1901's « CHM-0150, CHM-0160 OU
+// CHM-0170 ET PHY-0150 » is a OU of three, and *then* ET PHY-0150).
+fn group_enumerated_sigles<'a>(words: &[&'a str]) -> Vec<&'a str> {
+    let mut grouped: Vec<&'a str> = Vec::with_capacity(words.len());
+    let mut index = 0;
+
+    // one pass per word at most: each turn consumes at least one word
+    for _ in 0..words.len() {
+        let Some(word) = words.get(index) else {
+            break;
+        };
+        match enumeration_at(words, index) {
+            Some(enumeration) => {
+                index += enumeration.consumed;
+                grouped.extend(enumeration.words);
+            }
+            None => {
+                index += 1;
+                grouped.push(word);
+            }
+        }
+    }
+
+    grouped
+}
+
+// the words a recognized enumeration becomes, and how many it replaces
+struct Enumeration<'a> {
+    words: Vec<&'a str>,
+    consumed: usize,
+}
+
+// A comma is read only in the one shape the décision covers: a run of
+// sigles each closed by a comma, then the sigle the last comma introduces,
+// then the connector that fixes the run's meaning, then the operand it
+// joins. Anything else keeps its commas in the operand's own text —
+// « Réussir 2 parmi CTB-6112, CTB-6116 » (CTB-6113) enumerates behind prose
+// no grammar reads, and « BIO-0150, CHM-0150, CHM-0160 » (BCM-1903) closes
+// on no connector at all, so neither is interpreted.
+fn enumeration_at<'a>(
+    words: &[&'a str],
+    start: usize,
+) -> Option<Enumeration<'a>> {
+    // an enumeration is a whole operand, so it starts where one can: at the
+    // beginning of the expression, or right after a separator
+    if start > 0 && !is_separator(words[start - 1]) {
+        return None;
+    }
+    let listed: Vec<&'a str> = words[start..]
+        .iter()
+        .map_while(|word| word.strip_suffix(',').filter(|w| is_sigle(w)))
+        .collect();
+    if listed.is_empty() {
+        return None;
+    }
+    let last = words
+        .get(start + listed.len())
+        .copied()
+        .filter(|word| is_sigle(word))?;
+    let connector = words
+        .get(start + listed.len() + 1)
+        .copied()
+        .filter(|word| matches!(*word, "ET" | "OU"))?;
+    // the operand the connector joins to the enumeration, read to the next
+    // separator like any other. An empty run — the connector opening a
+    // group, or ending the text — leaves the enumeration unclosed, hence
+    // uninterpreted.
+    let joined_at = start + listed.len() + 2;
+    let joined: Vec<&'a str> = words
+        .get(joined_at..)
+        .unwrap_or_default()
+        .iter()
+        .copied()
+        .take_while(|word| !is_separator(word))
+        .collect();
+    if joined.is_empty() {
+        return None;
+    }
+
+    let mut grouped = Vec::with_capacity(2 * listed.len() + joined.len() + 5);
+    grouped.push("(");
+    for item in listed.iter().copied().chain(std::iter::once(last)) {
+        grouped.push(item);
+        grouped.push(connector);
+    }
+    grouped.extend(joined.iter().copied());
+    grouped.push(")");
+
+    Some(Enumeration {
+        consumed: joined_at + joined.len() - start,
+        words: grouped,
+    })
+}
+
+// « MAT-0260 » or « MAT-0260* » : one sigle, star included, and nothing
+// else — the star is left glued for `checkable_operand` to read
+fn is_sigle(word: &str) -> bool {
+    is_course_code(word.strip_suffix('*').unwrap_or(word))
+}
+
+fn is_separator(word: &str) -> bool {
+    matches!(word, "(" | ")" | "ET" | "OU")
 }
 
 // Two separators in a row enclose no operand at all — « A ET OU B » — and
@@ -403,6 +517,196 @@ mod tests {
         // starred: nothing is stripped on a guess, the operand keeps the
         // star the student has to judge
         assert_kept_as_text("IFT 10426*");
+    }
+
+    fn concomitant(code: &str) -> PrereqTree {
+        PrereqTree::Concomitant {
+            concomitant: code.to_string(),
+        }
+    }
+
+    #[test]
+    fn a_comma_enumeration_takes_the_meaning_of_its_closing_connector() {
+        // the décision of 2026-08-29: the last separator governs the whole
+        // run (ADR `2026-08-virgule-selon-le-connecteur-final`)
+        assert_eq!(
+            parse_prereq_tree("MAT-0130, MAT-0150 ET MAT-0260")
+                .unwrap_or_else(|e| panic!("parse: {e}")),
+            all(vec![
+                course("MAT-0130"),
+                course("MAT-0150"),
+                course("MAT-0260"),
+            ]),
+            "MAT-1900"
+        );
+        assert_eq!(
+            parse_prereq_tree(
+                "MAT-0130, MAT-0150, MAT-0260, PHY-0150 ET PHY-0250"
+            )
+            .unwrap_or_else(|e| panic!("parse: {e}")),
+            all(vec![
+                course("MAT-0130"),
+                course("MAT-0150"),
+                course("MAT-0260"),
+                course("PHY-0150"),
+                course("PHY-0250"),
+            ]),
+            "GMN-2000"
+        );
+        assert_eq!(
+            parse_prereq_tree("BIO-0150, CHM-0150, CHM-0160 OU CHM-0170")
+                .unwrap_or_else(|e| panic!("parse: {e}")),
+            any(vec![
+                course("BIO-0150"),
+                course("CHM-0150"),
+                course("CHM-0160"),
+                course("CHM-0170"),
+            ]),
+            "BCM-1001"
+        );
+    }
+
+    #[test]
+    fn an_enumeration_is_one_operand_of_the_surrounding_precedence() {
+        // CHM-1901: the run closes on OU, and the group it forms is what
+        // « ET PHY-0150 » then binds to — not the last sigle alone
+        assert_eq!(
+            parse_prereq_tree("CHM-0150, CHM-0160 OU CHM-0170 ET PHY-0150")
+                .unwrap_or_else(|e| panic!("parse: {e}")),
+            all(vec![
+                any(vec![
+                    course("CHM-0150"),
+                    course("CHM-0160"),
+                    course("CHM-0170"),
+                ]),
+                course("PHY-0150"),
+            ])
+        );
+    }
+
+    #[test]
+    fn an_enumerated_sigle_keeps_its_own_star() {
+        // GMC-1001 stars the third item of the run: the enumeration groups
+        // the operands, it does not rewrite them
+        assert_eq!(
+            parse_prereq_tree("MAT-0130, MAT-0150, MAT-0260* ET PHY-0150")
+                .unwrap_or_else(|e| panic!("parse: {e}")),
+            all(vec![
+                course("MAT-0130"),
+                course("MAT-0150"),
+                concomitant("MAT-0260"),
+                course("PHY-0150"),
+            ])
+        );
+    }
+
+    #[test]
+    fn an_enumeration_reads_the_same_inside_a_group() {
+        // GEL-1000 and BIO-1003 both parenthesize the run
+        assert_eq!(
+            parse_prereq_tree(
+                "(MAT-1900* OU PHY-1002*) ET (MAT-0130, MAT-0150, MAT-0260 ET PHY-0250)"
+            )
+            .unwrap_or_else(|e| panic!("parse: {e}")),
+            all(vec![
+                any(vec![
+                    concomitant("MAT-1900"),
+                    concomitant("PHY-1002"),
+                ]),
+                all(vec![
+                    course("MAT-0130"),
+                    course("MAT-0150"),
+                    course("MAT-0260"),
+                    course("PHY-0250"),
+                ]),
+            ]),
+            "GEL-1000"
+        );
+        assert_eq!(
+            parse_prereq_tree(
+                "(BIO-0150, CHM-0150, CHM-0160 OU CHM-0170) ET GCI-1000"
+            )
+            .unwrap_or_else(|e| panic!("parse: {e}")),
+            all(vec![
+                any(vec![
+                    course("BIO-0150"),
+                    course("CHM-0150"),
+                    course("CHM-0160"),
+                    course("CHM-0170"),
+                ]),
+                course("GCI-1000"),
+            ]),
+            "BIO-1003"
+        );
+    }
+
+    #[test]
+    fn an_enumeration_no_connector_closes_stays_verbatim() {
+        // BCM-1903 and CHM-1001 stop on the last sigle: « A, B, C » alone
+        // says neither ET nor OU, and guessing one would invent a
+        // requirement the répertoire never wrote
+        assert_kept_as_text("BIO-0150, CHM-0150, CHM-0160");
+        assert_kept_as_text("CHM-0150, CHM-0160");
+        // a run the text ends on, and one a group follows: neither closes
+        assert!(parse_prereq_tree("MAT-0130, MAT-0150 ET").is_err());
+        assert_eq!(
+            parse_prereq_tree("MAT-0130, MAT-0150 ET (GCI-1000 OU GCI-2000)")
+                .unwrap_or_else(|e| panic!("parse: {e}")),
+            all(vec![
+                PrereqTree::Raw {
+                    raw: "MAT-0130, MAT-0150".to_string()
+                },
+                any(vec![course("GCI-1000"), course("GCI-2000")]),
+            ])
+        );
+    }
+
+    #[test]
+    fn a_comma_inside_prose_is_never_read_as_an_enumeration() {
+        // CTB-6113 reads « Réussir 2 parmi CTB-6112, CTB-6116, … »: the
+        // commas sit behind prose no grammar covers, so the operand keeps
+        // them — the « N parmi » form is not the décision's subject
+        assert_kept_as_text("Réussir 2 parmi CTB-6112, CTB-6116");
+        assert_eq!(
+            parse_prereq_tree(
+                "Réussir 2 parmi CTB-6112, CTB-6116 ET GCI-1000"
+            )
+            .unwrap_or_else(|e| panic!("parse: {e}")),
+            all(vec![
+                PrereqTree::Raw {
+                    raw: "Réussir 2 parmi CTB-6112, CTB-6116".to_string()
+                },
+                course("GCI-1000"),
+            ])
+        );
+        // a run whose last item is not a sigle is not an enumeration
+        // either, comma or no comma
+        assert_kept_as_text("MAT-0130, Examen de langue");
+        assert_kept_as_text("MAT-0130,");
+        assert_kept_as_text("MAT-0130, MAT-0150 MAT-0260");
+    }
+
+    #[test]
+    fn the_operand_an_enumeration_joins_is_read_whole() {
+        // the connector closes the run on whatever operand follows it, read
+        // to the next separator like any other — a credits requirement
+        // here, five words long
+        assert_eq!(
+            parse_prereq_tree(
+                "MAT-0130, MAT-0150 ET GEX, Crédits exigés : 45"
+            )
+            .unwrap_or_else(|e| panic!("parse: {e}")),
+            all(vec![
+                course("MAT-0130"),
+                course("MAT-0150"),
+                PrereqTree::ProgramCredits {
+                    program_credits: ProgramCredits {
+                        program: Some("GEX".to_string()),
+                        credits: 45,
+                    }
+                },
+            ])
+        );
     }
 
     #[test]
