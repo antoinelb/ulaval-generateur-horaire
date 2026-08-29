@@ -27,3 +27,12 @@ Forme (jeton textuel) et texte portent le sens, jamais une couleur seule ; le su
 Le flottant droit décrit ci-dessus ne fonctionne pas : `.grid-block-title` a `overflow: hidden` sans `text-overflow`, donc sur deux lignes de titre le dernier élément du flux — le `.grid-block-detail` (sigle + section) — déborde du bouton, que le bloc absolu suivant peint par-dessus (rapport étudiante cégep 2026-08-27, rapport étudiante GEX 2026-08-27).
 Le jeton et le titre sont donc regroupés dans une rangée `.grid-block-top` (flex) au lieu d'un flottant : le titre se comprime en premier (`-webkit-line-clamp: 2`), le jeton garde une largeur fixe à sa droite, et `.grid-block-detail` suit toujours en dessous, tronqué proprement (`white-space: nowrap` + ellipse) plutôt que débordant.
 `.grid-block:focus-visible { z-index: 1 }` évite qu'un bloc voisin peint par-dessus masque l'anneau de focus clavier.
+
+## Conséquence (2026-08-29)
+
+Le texte du bloc est désormais centré verticalement dans la hauteur de la plage, et le jeton demandé au coin haut-droit du bloc : les deux ne peuvent plus partager une rangée.
+`.grid-block` devient une grille à deux colonnes, `minmax(0, 1fr) auto` — le texte (`.grid-block-text`, une colonne flex qui centre titre et sigle) à gauche, le jeton à droite en `align-self: start`.
+
+La colonne `auto` est ce qui remplace la rangée flex : **elle réserve d'elle-même la largeur du jeton**, donc le titre se comprime en premier (`-webkit-line-clamp: 2`) au lieu de passer dessous, exactement la garantie que la conséquence du 2026-08-28 avait établie.
+Une réserve écrite à la main (`padding-right` fixe) a été essayée puis abandonnée : dimensionnée pour « ⇄ 4 » elle laissait « ⇄ 12 » chevaucher le titre de 3 px, et de 7 px au zoom texte 200 %, la largeur rendue du jeton ne suivant pas le `rem` linéairement.
+Mesuré après coup : jeton à 0 px du coin haut-droit, écart de 4 px avec le texte (8 px à 200 %), aucun chevauchement, de 900 à 1440 px de large et au zoom 200 %.

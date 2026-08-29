@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::{edit_plan, print, SelectedCourse};
+use super::{edit_plan, SelectedCourse};
 use crate::data::Snapshot;
 use crate::present::{self, Block};
 use crate::solve;
@@ -70,7 +70,6 @@ pub fn WeeklyGrid() -> Element {
         .get(&session)
         .is_some_and(|chosen| !chosen.is_empty());
     let history = use_context::<Signal<History>>();
-    let print_target = use_context::<super::PrintTarget>().0;
     let status = present::schedule_status(&schedule.read(), forced);
     // what is not drawn must be announced where the eyes are, not only
     // under the fold
@@ -98,30 +97,6 @@ pub fn WeeklyGrid() -> Element {
                     class: if grid.conflict { "grid-status--conflict" },
                     title: "{status}",
                     "{status}"
-                }
-                button {
-                    class: "grid-share",
-                    title: "Ouvre l'aperçu d'impression — choisissez \
-                            « Enregistrer en PDF »",
-                    onclick: move |_| {
-                        print::start_print(
-                            print_target,
-                            print::PrintKind::Organigramme,
-                        );
-                    },
-                    "Exporter l'organigramme"
-                }
-                button {
-                    class: "grid-share",
-                    title: "Ouvre l'aperçu d'impression — choisissez \
-                            « Enregistrer en PDF »",
-                    onclick: move |_| {
-                        print::start_print(
-                            print_target,
-                            print::PrintKind::Horaire,
-                        );
-                    },
-                    "Exporter l'horaire"
                 }
                 if forced {
                     button {
@@ -153,50 +128,54 @@ pub fn WeeklyGrid() -> Element {
                  refermer) - hachuré = conflit - ⇄ N = N horaires \
                  alternatifs (cliquer le bloc pour les voir)"
             }
-            if grid.days.iter().all(|day| day.blocks.is_empty())
-                && grid.unplaced.is_empty()
-                && schedule.read().excluded.is_empty()
-            {
-                p { class: "grid-empty",
-                    "Aucun cours avec horaire publié pour cette session. \
-                     Ajoutez des cours par code dans le panneau de gauche."
-                }
-            } else {
-                div {
-                    class: "grid",
-                    style: "grid-template-columns: 3rem repeat({grid.days.len()}, 1fr);",
-                    div { class: "grid-axis",
-                        for hour in grid.hours.iter() {
-                            span { "{hour}" }
-                        }
+            // seule la grille défile : l'entête de session, ses statuts et
+            // la légende restent en vue quelle que soit l'heure regardée
+            div { class: "grid-scroll",
+                if grid.days.iter().all(|day| day.blocks.is_empty())
+                    && grid.unplaced.is_empty()
+                    && schedule.read().excluded.is_empty()
+                {
+                    p { class: "grid-empty",
+                        "Aucun cours avec horaire publié pour cette session. \
+                         Ajoutez des cours par code dans le panneau de gauche."
                     }
-                    for day in grid.days.iter() {
-                        div { class: "grid-day",
-                            div {
-                                class: "grid-day-head",
-                                class: if day.conflict { "grid-day-head--conflict" },
-                                if day.conflict {
-                                    "{day.label} ⚠"
-                                } else {
-                                    "{day.label}"
-                                }
+                } else {
+                    div {
+                        class: "grid",
+                        style: "grid-template-columns: 3rem repeat({grid.days.len()}, 1fr);",
+                        div { class: "grid-axis",
+                            for hour in grid.hours.iter() {
+                                span { "{hour}" }
                             }
-                            div { class: "grid-day-col",
-                                for block in day.blocks.iter().cloned() {
-                                    GridBlock {
-                                        block,
-                                        session,
-                                        selections: current_selections(
-                                            &schedule.read(),
-                                        ),
+                        }
+                        for day in grid.days.iter() {
+                            div { class: "grid-day",
+                                div {
+                                    class: "grid-day-head",
+                                    class: if day.conflict { "grid-day-head--conflict" },
+                                    if day.conflict {
+                                        "{day.label} ⚠"
+                                    } else {
+                                        "{day.label}"
+                                    }
+                                }
+                                div { class: "grid-day-col",
+                                    for block in day.blocks.iter().cloned() {
+                                        GridBlock {
+                                            block,
+                                            session,
+                                            selections: current_selections(
+                                                &schedule.read(),
+                                            ),
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+                GridFootnotes { schedule: schedule.read().clone(), unplaced: grid.unplaced.clone() }
             }
-            GridFootnotes { schedule: schedule.read().clone(), unplaced: grid.unplaced.clone() }
         }
     }
 }
@@ -314,24 +293,29 @@ fn GridBlock(
                 dragged.set(None);
                 hover.set(None);
             },
-            div { class: "grid-block-top",
+            // le texte se centre dans la hauteur de la plage ; le jeton,
+            // lui, tient le coin haut-droit du bloc — d'où deux colonnes
+            // plutôt qu'une rangée, la colonne du jeton réservant d'elle
+            // même sa largeur quel que soit le compte affiché (ADR
+            // `2026-08-jeton-de-plages-alternatives-sur-le-bloc`)
+            div { class: "grid-block-text",
                 div { class: "grid-block-title", "{block.title}" }
-                if !ghost && alternatives > 0 {
-                    span {
-                        class: "grid-block-alts",
-                        aria_label: if alternatives == 1 {
-                            "1 horaire alternatif".to_string()
-                        } else {
-                            format!("{alternatives} horaires alternatifs")
-                        },
-                        "⇄ {alternatives}"
+                div { class: "grid-block-detail",
+                    "{block.detail}"
+                    if block.clash {
+                        span { class: "grid-block-warn", " ⚠ conflit" }
                     }
                 }
             }
-            div { class: "grid-block-detail",
-                "{block.detail}"
-                if block.clash {
-                    span { class: "grid-block-warn", " ⚠ conflit" }
+            if !ghost && alternatives > 0 {
+                span {
+                    class: "grid-block-alts",
+                    aria_label: if alternatives == 1 {
+                        "1 horaire alternatif".to_string()
+                    } else {
+                        format!("{alternatives} horaires alternatifs")
+                    },
+                    "⇄ {alternatives}"
                 }
             }
         }

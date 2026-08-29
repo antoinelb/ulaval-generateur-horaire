@@ -20,6 +20,12 @@ La Partie 2 du même document propose le patron P1 (« raccourci imprimé sur le
 - **Raccourci seulement dans le `title` existant** : c'est déjà le cas aujourd'hui et c'est précisément ce qui vaut la cote « caché » — une affordance au survol seul est explicitement rejetée par AIR (règle cœur, INP).
 - **Étendre le patron à d'autres raccourcis** : hors mandat — Ctrl+Z, Ctrl+Y et Échap sont les trois seuls raccourcis de l'application (`crates/ui/src/components/shell.rs`).
 
+## Conséquence (2026-08-29)
+
+Le libellé et son `kbd` s'alignaient sur la ligne de base du bouton : le jeton, plus petit mais bordé et rembourré, retombait sous le centre optique du libellé.
+`.status-undo` passe en `display: inline-flex; align-items: center` — les deux se centrent l'un sur l'autre.
+La contrainte « pas de hauteur de bouton modifiée » tient toujours, vérifiée en mesurant les deux formes côte à côte : 35 px avant comme après, sur les quatre boutons portant la classe, avec ou sans `kbd`. Décentrage résiduel du jeton : 0,01 px.
+
 ## Conséquences
 
 - Le bouton « ↶ Annuler » des toasts (retrait d'un cours/programme) n'est pas concerné : c'est un geste transitoire sans raccourci clavier associé, pas le même contrôle que la bande d'état.

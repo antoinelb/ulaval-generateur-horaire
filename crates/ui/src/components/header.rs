@@ -287,6 +287,7 @@ pub fn StatusStrip() -> Element {
         .unwrap_or_else(|| "Rien à rétablir".to_string());
     let can_undo = history.read().undo_label().is_some();
     let can_redo = history.read().redo_label().is_some();
+    let print_target = use_context::<super::PrintTarget>().0;
     rsx! {
         div { class: "status-strip", role: "status",
             button {
@@ -314,6 +315,34 @@ pub fn StatusStrip() -> Element {
                 kbd { "Ctrl+Y" }
             }
             SolverStatus {}
+            // les deux exports se rangent à droite de la bande, figés avec
+            // elle : la grille défile sous eux sans les emporter
+            div { class: "status-exports",
+                button {
+                    class: "grid-share",
+                    title: "Ouvre l'aperçu d'impression — choisissez \
+                            « Enregistrer en PDF »",
+                    onclick: move |_| {
+                        super::print::start_print(
+                            print_target,
+                            super::print::PrintKind::Organigramme,
+                        );
+                    },
+                    "Exporter l'organigramme"
+                }
+                button {
+                    class: "grid-share",
+                    title: "Ouvre l'aperçu d'impression — choisissez \
+                            « Enregistrer en PDF »",
+                    onclick: move |_| {
+                        super::print::start_print(
+                            print_target,
+                            super::print::PrintKind::Horaire,
+                        );
+                    },
+                    "Exporter l'horaire"
+                }
+            }
         }
     }
 }
