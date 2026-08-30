@@ -988,6 +988,14 @@ fn import_organigramme(
                 "Organigramme partagé importé",
                 |plan| {
                     *plan = shared;
+                    // Un lien rouvre l'organigramme tel que l'expéditeur
+                    // l'a envoyé : tout l'horizon arrive gelé, donc le
+                    // solveur n'y déplace rien. Dans la *même* fermeture
+                    // que le remplacement — « Annuler » doit rendre le
+                    // document de l'étudiante, jamais un état
+                    // intermédiaire qui n'a existé pour personne (ACT-2,
+                    // ADR `2026-08-un-lien-rouvre-un-organigramme-gele`).
+                    plan.frozen = crate::present::whole_horizon(plan);
                 },
             );
             view.write().session = 1;
@@ -995,8 +1003,10 @@ fn import_organigramme(
             push_alert(
                 alerts,
                 AlertBody::Success(
-                    "Organigramme partagé importé — « Annuler » restaure \
-                     le vôtre."
+                    "Organigramme partagé importé, toutes ses sessions \
+                     gelées : il rouvre tel que l'expéditeur l'a envoyé. \
+                     « Tout dégeler » rend la main au solveur, \
+                     « Annuler » restaure le vôtre."
                         .to_string(),
                 ),
             );

@@ -482,18 +482,10 @@ pub struct FreezeAll {
 }
 
 pub fn freeze_all(plan: &Plan) -> FreezeAll {
-    // the sessions are numbered as the ribbon numbers them: 1-based over
-    // the *expanded* horizon, étés included. `study_sessions` counts only
-    // the A/H alternation and would leave every été unfrozen.
-    let sessions = ulaval_scheduler_core::horizon_sessions(
-        plan.start.season,
-        plan.study_sessions,
-    )
-    .len();
-    let whole: std::collections::BTreeSet<usize> = (1..=sessions).collect();
+    let whole = whole_horizon(plan);
     // an empty horizon holds no freeze: `is_subset` of an empty set is
     // vacuously true and would offer to dégeler what was never gelé
-    let all_frozen = sessions > 0 && whole.is_subset(&plan.frozen);
+    let all_frozen = !whole.is_empty() && whole.is_subset(&plan.frozen);
     if all_frozen {
         FreezeAll {
             label: "Tout dégeler",
@@ -514,6 +506,23 @@ pub fn freeze_all(plan: &Plan) -> FreezeAll {
             frozen: plan.frozen.union(&whole).copied().collect(),
         }
     }
+}
+
+// Toutes les sessions de l'horizon, numérotées comme le ruban les
+// numérote : 1-based sur l'horizon *déplié*, étés inclus.
+// `study_sessions` ne compte que l'alternance A/H et laisserait chaque
+// été dehors. Deux lecteurs : la bascule « Tout geler » ci-dessus, et le
+// gel d'office d'un organigramme reçu par lien (ADR
+// `2026-08-un-lien-rouvre-un-organigramme-gele`) — ce dernier appelle
+// bien cette fonction-ci et non `freeze_all`, qui est une bascule et
+// rendrait un ensemble vide sur un plan déjà gelé.
+pub fn whole_horizon(plan: &Plan) -> std::collections::BTreeSet<usize> {
+    let sessions = ulaval_scheduler_core::horizon_sessions(
+        plan.start.season,
+        plan.study_sessions,
+    )
+    .len();
+    (1..=sessions).collect()
 }
 
 // « Partager » writes the fragment *and* the clipboard; only the first of
@@ -1798,6 +1807,37 @@ mod tests {
         };
         assert_eq!(freeze_all(&empty).label, "Tout geler");
         assert!(freeze_all(&empty).frozen.is_empty());
+    }
+
+    // ce que l'import d'un lien écrit dans `plan.frozen` : tout l'horizon
+    // déplié, étés compris — sans quoi le solveur replacerait par un été
+    // resté ouvert un cours que l'expéditeur avait posé ailleurs (ADR
+    // `2026-08-un-lien-rouvre-un-organigramme-gele`)
+    #[test]
+    fn an_imported_link_freezes_every_session_summers_included() {
+        use std::collections::BTreeSet;
+
+        let plan = Plan {
+            study_sessions: 8,
+            ..Plan::default()
+        };
+        // huit sessions d'étude, c'est douze cases sur l'horizon déplié
+        assert_eq!(whole_horizon(&plan), (1..=12).collect::<BTreeSet<_>>());
+
+        // et le gel forfaitaire rend bien l'horizon *entier*, donc le
+        // bouton de la barre du haut bascule aussitôt vers « dégeler »
+        let imported = Plan {
+            frozen: whole_horizon(&plan),
+            ..plan
+        };
+        assert_eq!(freeze_all(&imported).label, "Tout dégeler");
+
+        // un horizon vide ne gèle rien plutôt que de geler la session 1
+        let empty = Plan {
+            study_sessions: 0,
+            ..Plan::default()
+        };
+        assert!(whole_horizon(&empty).is_empty());
     }
 
     // ERR-2: a refused clipboard never gets a « copié ✓ », and the refusal
