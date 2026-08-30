@@ -372,10 +372,13 @@ code {
    `.ribbon-card--landing` appuie sur la carte survolée */
 .status-drop--landing {
   border-style: solid;
-  /* --accent-dark plutôt que --accent : le blanc y tient 9,6:1, contre
-     5,9:1 sur le rouge vif */
-  background: var(--accent-dark);
-  color: var(--card);
+  /* mi-chemin exact entre --accent-bg (#fdeaec) et --accent-dark
+     (#8f0410), canal par canal : le fond plein marque le survol sans
+     l'assombrir autant qu'un rouge appuyé (Antoine, 2026-08-30). Le
+     libellé passe à l'encre : le blanc n'y tiendrait que 3,3:1, sous le
+     plancher AA, alors que --ink y tient 5,1:1. */
+  background: #c6777e;
+  color: var(--ink);
 }
 
 /* un obligatoire : la bande refuse et dit pourquoi avant même le dépôt —
