@@ -119,7 +119,22 @@ pub enum AlertBody {
     // a confirmation, styled apart from the warnings (INP-3: the glyph
     // carries the difference, not the colour alone)
     Success(String),
+    // the same ✓, but it never clears itself: ALR-4 allows an automatic
+    // dismissal only at the lowest priority, and this one still has
+    // something for the student to act on — where the work went, and what
+    // gesture brings it back. « Lien copié » may vanish after five
+    // seconds; « votre cheminement est conservé » may not (ADR
+    // `2026-08-la-bascule-dit-ou-va-le-travail-et-pourquoi-annuler-est-eteint`)
+    Standing(String),
     Error(UiError),
+    // « Réinitialiser » : destructive, no dialog (ACT-2), undoable from the
+    // toast itself. Like `LocalProgramRemoved` it carries what it destroyed
+    // — the document exactly as it stood — rather than already-worded text:
+    // the undo then works whatever the student did since, and the alert
+    // must outlive the 5 s ✓ timer or the way back would vanish with it
+    // (ADR `2026-08-reinitialiser-annulable-depuis-son-avis`). Boxed for
+    // the same reason as the program below.
+    DocumentReset(Box<crate::state::Plan>),
     // a destructive act with no confirmation dialog, undoable from the
     // toast itself (pattern ACT, plan item 9) — not a `Success`: it must
     // outlive the 5 s auto-clear or the undo would vanish with it, so it
@@ -604,6 +619,8 @@ mod tests {
         let bodies = [
             AlertBody::Note("n".to_string()),
             AlertBody::Success("s".to_string()),
+            AlertBody::Standing("t".to_string()),
+            AlertBody::DocumentReset(Box::default()),
             AlertBody::Error(UiError {
                 what: "quoi".to_string(),
                 reaction: "réaction".to_string(),

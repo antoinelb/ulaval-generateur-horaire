@@ -145,6 +145,28 @@ code {
   color: var(--ink);
 }
 
+/* ACT-5 : un contrôle destructeur n'est jamais collé à un contrôle
+   fréquent. « Réinitialiser » suivait « Partager » dans la même foulée ;
+   le trait et l'écart le mettent visiblement à part, sans le cacher
+   derrière un menu (LAY-7). */
+.header-sep {
+  width: 0.0625rem;
+  align-self: stretch;
+  background: var(--border-strong);
+  flex: none;
+  /* `gap: 1rem` de part et d'autre, plus celui-ci : l'écart total passe à
+     3 rem, largement au-delà d'un clic de travers */
+  margin: 0 0.5rem;
+}
+
+/* le même bouton que les autres, mais teinté de l'accent : la couleur ne
+   porte pas seule la différence (INP-3) — l'écart et le trait le disent
+   déjà */
+.header-reset {
+  color: var(--accent-dark);
+  border-color: var(--accent-dark);
+}
+
 /* --- ruban des sessions --- */
 .ribbon {
   display: flex;

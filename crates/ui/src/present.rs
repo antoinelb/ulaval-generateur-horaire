@@ -412,11 +412,89 @@ fn notable_operands(
 // `2026-08-historique-par-document-vide-a-la-bascule`). Only the button's
 // `title` said so, and a hover-only affordance is none: the swap now says
 // it on screen, naming the exact gesture that brings the work back.
+// The second sentence answers the complaint the first one left open: the
+// screen goes dark everywhere at once (« aucun programme choisi », eight
+// sessions « à planifier », « Annuler » greyed out), which reads as a
+// total loss. Naming *why* the button is dark is the difference between a
+// screen that is merely terse and one that lies (ADR
+// `2026-08-la-bascule-dit-ou-va-le-travail-et-pourquoi-annuler-est-eteint`).
 pub fn shelved_note(code: &str, semester: &str) -> String {
     format!(
         "Cheminement {code} ({semester}) conservé — rechoisissez ce \
-         programme pour le retrouver tel quel."
+         programme pour le retrouver tel quel. « Annuler » est éteint \
+         parce que l'historique appartient à chaque programme, pas parce \
+         que votre travail a été perdu."
     )
+}
+
+// The two history buttons' titles. « Annuler » goes dark at every
+// document swap, which the student reads as « mon travail est perdu et
+// je ne peux rien y faire » — so the dark state names the real reason
+// (ADR
+// `2026-08-la-bascule-dit-ou-va-le-travail-et-pourquoi-annuler-est-eteint`).
+pub fn undo_title(label: Option<&str>) -> String {
+    match label {
+        Some(label) => format!("Annuler : {label}"),
+        None => "Rien à annuler dans ce programme. L'historique repart à \
+                 zéro à chaque changement de programme, mais le cheminement \
+                 de chacun reste conservé."
+            .to_string(),
+    }
+}
+
+pub fn redo_title(label: Option<&str>) -> String {
+    match label {
+        Some(label) => format!("Rétablir : {label}"),
+        None => "Rien à rétablir dans ce programme.".to_string(),
+    }
+}
+
+// The same honesty for the other « Copier » buttons (gabarit, fiche de
+// cours), which also claimed success before knowing: the wording is
+// gender-neutral so one sentence serves every subject.
+pub fn copied_note(what: &str, copied: bool) -> String {
+    if copied {
+        format!("Copié dans le presse-papiers : {what}.")
+    } else {
+        format!(
+            "Le navigateur a refusé le presse-papiers — {what} n'est pas \
+             copié. Sélectionnez le texte affiché et copiez-le à la main \
+             (Ctrl+C)."
+        )
+    }
+}
+
+// « Réinitialiser » says what it emptied, and its toast carries the undo
+// (ADR `2026-08-reinitialiser-annulable-depuis-son-avis`). Resetting from
+// the picker empties nothing — there is no document open — so it says so
+// rather than claiming a loss that did not happen (TRU-1).
+pub fn reset_note(program: Option<(&str, &str)>) -> String {
+    match program {
+        Some((code, semester)) => format!(
+            "Organigramme de {code} ({semester}) réinitialisé — placements, \
+             cours à option et réglages de sessions repartent à zéro."
+        ),
+        None => "Réinitialisé — aucun programme n'était ouvert, seuls les \
+                 réglages de sessions repartent à zéro."
+            .to_string(),
+    }
+}
+
+// « Partager » writes the fragment *and* the clipboard; only the first of
+// the two always succeeds. A browser that refuses the clipboard must never
+// get a « copié ✓ » anyway (ERR-2), and the refusal names the way out —
+// the address bar already holds the very same link (ERR-1).
+pub fn share_note(copied: bool) -> String {
+    if copied {
+        "Lien copié — il rouvre tout l'organigramme tel quel, et il est \
+         aussi dans la barre d'adresse."
+            .to_string()
+    } else {
+        "Le navigateur a refusé le presse-papiers : le lien n'a pas été \
+         copié. Il est dans la barre d'adresse — sélectionnez-la (Ctrl+L) \
+         puis copiez (Ctrl+C)."
+            .to_string()
+    }
 }
 
 pub fn error_id(detail: &str) -> String {
@@ -1322,6 +1400,56 @@ mod tests {
         assert!(note.contains("B-GEX"), "{note}");
         assert!(note.contains("A26"), "{note}");
         assert!(note.contains("rechoisissez"), "{note}");
+        // and why the button is dark — the screen must not read as a loss
+        assert!(note.contains("« Annuler »"), "{note}");
+        assert!(note.contains("historique"), "{note}");
+    }
+
+    // the dark « Annuler » must not read as a loss
+    #[test]
+    fn the_history_titles_name_the_act_or_the_reason_they_are_dark() {
+        assert_eq!(
+            undo_title(Some("Ajout de GCI-1007")),
+            "Annuler : Ajout de GCI-1007"
+        );
+        assert_eq!(
+            redo_title(Some("Ajout de GCI-1007")),
+            "Rétablir : Ajout de GCI-1007"
+        );
+        let dark = undo_title(None);
+        assert!(dark.contains("ce programme"), "{dark}");
+        assert!(dark.contains("conservé"), "{dark}");
+        assert!(redo_title(None).contains("Rien à rétablir"));
+    }
+
+    // the reset toast names what it emptied; from the picker it empties
+    // nothing and says that instead of claiming a loss
+    #[test]
+    fn the_reset_note_names_the_document_it_emptied() {
+        let note = reset_note(Some(("B-GEX", "A26")));
+        assert!(note.contains("B-GEX"), "{note}");
+        assert!(note.contains("A26"), "{note}");
+        let picker = reset_note(None);
+        assert!(picker.contains("aucun programme"), "{picker}");
+    }
+
+    // ERR-2: a refused clipboard never gets a « copié ✓ », and the refusal
+    // names the way out
+    #[test]
+    fn a_refused_clipboard_says_so_and_says_what_to_do() {
+        let copied = share_note(true);
+        assert!(copied.contains("copié"), "{copied}");
+        let refused = share_note(false);
+        assert!(refused.contains("refusé"), "{refused}");
+        assert!(refused.contains("barre d'adresse"), "{refused}");
+        assert!(refused.contains("Ctrl+C"), "{refused}");
+        // the other « Copier » buttons say the same thing about their own
+        // subject, in a wording no gender agreement can break
+        let ok = copied_note("le gabarit", true);
+        assert_eq!(ok, "Copié dans le presse-papiers : le gabarit.");
+        let ko = copied_note("la fiche du cours", false);
+        assert!(ko.contains("refusé"), "{ko}");
+        assert!(ko.contains("la fiche du cours"), "{ko}");
     }
 
     #[test]

@@ -223,12 +223,16 @@ pub fn share_url(payload: &str) -> String {
     format!("{base}#{payload}")
 }
 
-pub fn clipboard_write(text: &str) {
-    if let Some(window) = web_sys::window() {
-        // fire-and-forget: the UI also shows the link, so a blocked
-        // clipboard loses nothing
-        let _ = window.navigator().clipboard().write_text(text);
-    }
+// Awaited, not fire-and-forget: the promise is how a browser says
+// « permission refusée », and the caller has to know before it claims
+// « Lien copié ✓ » (ERR-2 — nothing fails silently). `false` means the
+// student still has the link in the address bar, nothing more.
+pub async fn clipboard_write(text: &str) -> bool {
+    let Some(window) = web_sys::window() else {
+        return false;
+    };
+    let promise = window.navigator().clipboard().write_text(text);
+    wasm_bindgen_futures::JsFuture::from(promise).await.is_ok()
 }
 
 // --- print (EXP-4) ---------------------------------------------------------

@@ -3913,6 +3913,7 @@ dependencies = [
  "ulaval-scheduler-core",
  "ulaval-scheduler-wasm",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
  "web-time",
 ]
