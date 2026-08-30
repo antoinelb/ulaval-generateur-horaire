@@ -21,6 +21,9 @@ En surface : une bascule « Geler cette session » dans l'en-tête de l'horaire 
 
 Le partage par URL ne porte pas le gel — même arbitrage que l'ADR des sessions complétées (commentaire `ponytail:` déjà posé dans `persist.rs`).
 
+**Suite (2026-08-30, ADR `2026-08-un-lien-rouvre-un-organigramme-gele`)** : le codec ne le porte toujours pas, mais pour une raison inverse — l'import gèle désormais **tout** l'horizon d'office, ce qui est plus fort que de transporter l'ensemble de l'expéditeur.
+Un organigramme partagé ne rouvre donc plus « entièrement éditable » : il rouvre entièrement gelé, l'avis le dit, et « Tout dégeler » rend la main au solveur.
+
 ## Alternatives rejetées
 
 - **Marques « réussi »/« échoué » par cours** : redondantes — placé dans une session gelée = fait ; retiré = à refaire. Déjà tranché une fois par l'ADR du retrait.

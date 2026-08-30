@@ -611,9 +611,12 @@ fn share_into(
             year: state.start_year,
         },
         study_sessions: state.study_sessions as usize,
-        // ponytail: the share URL does not carry the frozen sessions — a
-        // shared organigramme reopens fully editable; add the field to the
-        // share state if that ever misleads
+        // The share frame carries no freeze because it needs none: the
+        // import freezes the *whole* horizon on arrival
+        // (`components::import_organigramme`), which is stronger than
+        // carrying the sender's set — a sender frozen halfway would
+        // otherwise send a link the recipient's solver may still reshuffle
+        // (ADR `2026-08-un-lien-rouvre-un-organigramme-gele`).
         frozen: BTreeSet::new(),
         summers_open: state.summers_open,
         credit_cap: state.credit_cap,
@@ -1308,6 +1311,33 @@ mod tests {
         )
         .unwrap_or_else(|e| panic!("{e}"));
         (plan, vec![course])
+    }
+
+    // « le même url donne toujours le même cheminement » : le lien ne
+    // porte pas le gel, l'import le pose. La propriété qui fait tenir la
+    // promesse est celle-ci — chaque siège reçu se retrouve dans une
+    // session gelée, seule condition sous laquelle
+    // `wasm::organigramme::with_request` l'épingle avant d'appeler le
+    // solveur (ADR `2026-08-un-lien-rouvre-un-organigramme-gele`)
+    #[test]
+    fn an_imported_link_seats_everything_inside_a_frozen_session() {
+        let (plan, courses) = shared_plan();
+        let encoded = encode_organigramme(&plan, &courses);
+        let (mut back, _) =
+            decode_organigramme(&encoded).unwrap_or_else(|e| panic!("{e}"));
+        assert!(back.frozen.is_empty(), "la trame ne porte pas le gel");
+
+        back.frozen = crate::present::whole_horizon(&back);
+        assert!(
+            !back.displayed_placement.is_empty(),
+            "le cas de test assoit bien des cours"
+        );
+        for (code, session) in &back.displayed_placement {
+            assert!(
+                back.frozen.contains(session),
+                "{code} est assis en session {session}, restée dégelée"
+            );
+        }
     }
 
     #[test]
