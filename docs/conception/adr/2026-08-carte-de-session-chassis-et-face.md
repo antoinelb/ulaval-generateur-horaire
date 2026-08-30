@@ -4,6 +4,8 @@ Date : 2026-08-30
 
 Précise l'ADR `2026-08-carte-de-session-tronquee-en-lignes-entieres` (le budget de lignes et la hauteur qui en découle).
 
+Le châssis et la face décidés ici restent ; l'ADR `2026-08-case-de-gel-en-pied-de-carte` y ajoute le même jour un `div.ribbon-card-foot` sous la face, où descend la case du gel, ce qui porte la hauteur de `10.75rem` à `12rem`. Le calcul ci-dessous est celui d'avant cet ajout et n'est pas modifié.
+
 ## Contexte
 
 Deux demandes d'Antoine du 2026-08-30 tombent sur la même carte.

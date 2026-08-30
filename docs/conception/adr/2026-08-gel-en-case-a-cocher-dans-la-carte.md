@@ -4,6 +4,8 @@ Date : 2026-08-30
 
 Déplace la commande décidée par l'ADR `2026-08-sessions-gelees-generalisent-les-completees`; s'appuie sur `2026-08-carte-de-session-chassis-et-face`.
 
+Révisé le jour même par l'ADR `2026-08-case-de-gel-en-pied-de-carte` : la case descend en pied de carte, le mot « Gelé » remplace le glyphe ❄, et l'été vide n'en porte plus. Le texte ci-dessous décrit l'état intermédiaire et n'est pas modifié.
+
 ## Contexte
 
 Antoine, 2026-08-30 : « Geler dans les sessions d'organigramme devrait être entre le titre (H2-H27) et le nombre de crédits et ça devrait un checkbox là plutôt qu'un bouton sur l'horaire. »
