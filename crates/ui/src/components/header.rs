@@ -662,17 +662,6 @@ pub fn Toasts() -> Element {
                     ) {
                         "toast--success"
                     },
-                    // note 12: the whole message is its own dismiss —
-                    // any link inside would stop the propagation. A real
-                    // rejection: its subject stays silent until its
-                    // wording changes (ADR
-                    // `2026-08-toasts-un-par-sujet-et-rejet-memorise`)
-                    onclick: {
-                        let key = alert.key;
-                        move |_| {
-                            alerts.write().dismiss(key);
-                        }
-                    },
                     match &alert.body {
                         AlertBody::Note(note) => rsx! {
                             span { "⚠ {note}" }
@@ -697,12 +686,6 @@ pub fn Toasts() -> Element {
                                 }
                                 details {
                                     class: "toast-detail",
-                                    // le message entier est son propre
-                                    // rejet (note 12) : déplier ne doit
-                                    // pas le fermer
-                                    onclick: move |event: Event<MouseData>| {
-                                        event.stop_propagation();
-                                    },
                                     summary { "Détail technique" }
                                     pre { "{error.id} — {error.detail}" }
                                 }
@@ -727,11 +710,7 @@ pub fn Toasts() -> Element {
                                 span { class: "status-alert-ok", "✓ {note}" }
                                 button {
                                     class: "toast-undo",
-                                    onclick: move |event: Event<MouseData>| {
-                                        // the toast is its own dismiss
-                                        // (note 12) — it must not fire
-                                        // before the undo has read `before`
-                                        event.stop_propagation();
+                                    onclick: move |_| {
                                         super::restore_document(
                                             plan,
                                             history,
@@ -755,12 +734,7 @@ pub fn Toasts() -> Element {
                                 }
                                 button {
                                     class: "toast-undo",
-                                    onclick: move |event: Event<MouseData>| {
-                                        // the toast is its own dismiss
-                                        // (note 12) — undo must not also
-                                        // trigger it before it has had a
-                                        // chance to read `local`
-                                        event.stop_propagation();
+                                    onclick: move |_| {
                                         super::restore_local_program(
                                             snapshot,
                                             local_programs,
@@ -778,9 +752,16 @@ pub fn Toasts() -> Element {
                             }
                         }
                     }
+                    // Le seul rejet du message (ADR
+                    // `2026-08-le-x-seul-ferme-le-message`) : un vrai
+                    // bouton, donc atteignable au clavier, et le sujet
+                    // reste muet jusqu'à ce que son libellé change (ADR
+                    // `2026-08-toasts-un-par-sujet-et-rejet-memorise`).
                     button {
                         class: "status-dismiss",
+                        r#type: "button",
                         aria_label: "Rejeter ce message",
+                        title: "Rejeter ce message",
                         onclick: move |_| {
                             alerts.write().dismiss(alert.key);
                         },

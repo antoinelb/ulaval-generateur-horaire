@@ -410,7 +410,6 @@ code {
   border-radius: 0.375rem;
   padding: 0.375rem 0.5rem;
   box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 15%);
-  cursor: pointer; /* cliquer n'importe où ferme le message (note 12) */
 }
 
 .toast--success {
@@ -489,16 +488,22 @@ code {
   margin-bottom: 0;
 }
 
+/* Seule sortie du message depuis que le clic n'importe où ne le ferme plus
+   (ADR 2026-08-le-x-seul-ferme-le-message) : la cible passe donc à 48 px,
+   comme le « Annuler » qui la jouxte — un toast flotte, il ne vole de la
+   hauteur à personne (INP-1). `align-self` parce que la carte aligne ses
+   enfants sur la ligne de base du texte. */
 .status-dismiss {
   margin-left: auto;
+  align-self: center;
   font: inherit;
   border: none;
   background: none;
   cursor: pointer;
   color: var(--muted);
   padding: 0 0.375rem;
-  min-width: 2rem;
-  min-height: 1.5rem;
+  min-width: 3rem;
+  min-height: 3rem;
 }
 
 /* --- partage panneau | grille --- */
