@@ -156,6 +156,7 @@ fn SessionCard(card: RibbonCard) -> Element {
             div { class: "ribbon-card-head",
                 span { class: "ribbon-card-label", "{card.label}" }
                 span { class: "ribbon-card-credits",
+                    title: if !card.credits_detail.is_empty() { "{card.credits_detail}" },
                     "{credits}{range_mark}"
                 }
             }

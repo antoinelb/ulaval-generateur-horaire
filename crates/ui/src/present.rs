@@ -1473,6 +1473,10 @@ pub struct RibbonCard {
     // above the student's own cap — marked, never silent
     pub over_cap: bool,
     pub has_range: bool,
+    // the sum spelled out course by course, empty for an empty session —
+    // a 9-credit stage makes a five-course session read « 21 ⚠ », which
+    // is unreadable without the breakdown (constat Antoine 2026-08-30)
+    pub credits_detail: String,
     // the sigles the card actually shows — truncated to a whole number of
     // lines by `ribbon_body`, the rest counted in `more`
     pub codes: Vec<String>,
@@ -1532,6 +1536,12 @@ pub fn ribbon_model(
                 credits: credits.total,
                 over_cap: credits.total > plan.credit_cap,
                 has_range: credits.has_range,
+                credits_detail: credits_detail(
+                    snapshot,
+                    &codes,
+                    &credits,
+                    plan.credit_cap,
+                ),
                 passed: state::semester_precedes(semester, today),
                 frozen,
                 conflict,
@@ -1542,6 +1552,49 @@ pub fn ribbon_model(
             }
         })
         .collect()
+}
+
+// D'où vient le nombre de la carte, une ligne par cours. Le total d'une
+// session ne se vérifie pas de tête dès qu'un stage y siège (GMC-2580 en
+// pèse 9 à lui seul), et la carte ne peut pas afficher le poids de chaque
+// sigle sans manger son budget de lignes (LAY-1) : le détail va donc dans
+// l'infobulle du nombre. Il porte la liste *entière*, pas les sigles
+// rognés par `ribbon_body`, et nomme le cours hors catalogue qui pèse
+// zéro plutôt que de le taire (« jamais rien perdre »). Ce n'est pas la
+// seule voie vers l'information — le panneau de la session donne les
+// crédits de chaque cours (INP-5).
+fn credits_detail(
+    snapshot: &Snapshot,
+    codes: &[String],
+    credits: &crate::solve::SessionCredits,
+    cap: u32,
+) -> String {
+    if codes.is_empty() {
+        return String::new();
+    }
+    let lines: Vec<String> = codes
+        .iter()
+        .map(|code| match snapshot.by_code.get(code) {
+            Some(&index) => format!(
+                "{code} : {}",
+                credits_label(&snapshot.courses[index].credits)
+            ),
+            None => format!("{code} : hors catalogue, 0 cr"),
+        })
+        .collect();
+    // « au minimum » dit pourquoi la somme des lignes peut dépasser le
+    // total : un stage à intervalle y entre par son plancher (TRU-1)
+    let floor = if credits.has_range { " au minimum" } else { "" };
+    let verdict = if credits.total > cap {
+        format!(", au-dessus de votre plafond de {cap} cr")
+    } else {
+        String::new()
+    };
+    format!(
+        "{}\nTotal : {} cr{floor}{verdict}",
+        lines.join("\n"),
+        credits.total
+    )
 }
 
 // Les trois textes de la case « Gelé » d'une carte. Le nom accessible ne
@@ -3084,12 +3137,66 @@ mod tests {
         assert!(ribbon[0].passed, "A26 precedes today's H27");
         assert!(!ribbon[0].conflict, "no drawable clash here");
         assert_eq!(ribbon[0].credits, 3);
+        assert_eq!(ribbon[0].credits_detail, "GEX-1000 : 3 cr\nTotal : 3 cr");
         assert_eq!(ribbon[1].codes, ["GEX-2000"]);
         assert!(ribbon[1].current);
         assert!(!ribbon[1].passed, "the running semester is not past");
         assert!(ribbon[2].summer);
         assert_eq!(ribbon[2].special.as_deref(), Some("à l'étranger"));
         assert!(!ribbon[3].passed, "the future is not past either");
+        assert!(
+            ribbon[3].credits_detail.is_empty(),
+            "an empty session has no sum to spell out"
+        );
+    }
+
+    #[test]
+    fn the_credits_tooltip_spells_out_the_stage_the_floor_and_the_cap() {
+        let snapshot = parse_data(
+            &RawData {
+                courses: r#"{"courses":[
+                  {"code":"GEX-1000","title":"T","credits":3,"cycle":1,
+                   "prerequisites":null,"equivalents":[],"seasons":{}},
+                  {"code":"STA-1000","title":"Stage",
+                   "credits":{"min":6,"max":12},"cycle":1,
+                   "prerequisites":null,"equivalents":[],"seasons":{}}
+                ]}"#
+                .to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
+                programs: Vec::new(),
+            },
+            Vec::new(),
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let plan = Plan {
+            study_sessions: 1,
+            credit_cap: 5,
+            displayed_placement: std::collections::BTreeMap::from([
+                ("GEX-1000".to_string(), 1),
+                ("STA-1000".to_string(), 1),
+                ("ZZZ-9999".to_string(), 1),
+            ]),
+            ..Plan::default()
+        };
+        let ribbon = ribbon_model(
+            &snapshot,
+            &plan,
+            1,
+            "A26"
+                .parse::<ulaval_scheduler_core::Semester>()
+                .unwrap_or_else(|e| panic!("{e}")),
+        );
+        assert_eq!(
+            ribbon[0].credits_detail,
+            "GEX-1000 : 3 cr\n\
+             STA-1000 : 6–12 cr\n\
+             ZZZ-9999 : hors catalogue, 0 cr\n\
+             Total : 9 cr au minimum, au-dessus de votre plafond de 5 cr",
+            "the floor, the cap and the course that weighs nothing are \
+             all named"
+        );
     }
 
     #[test]
