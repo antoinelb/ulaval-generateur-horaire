@@ -1,13 +1,18 @@
 use dioxus::prelude::*;
 
-use super::SelectedCourse;
+use super::{edit_plan, SelectedCourse};
 use crate::data::Snapshot;
 use crate::present::{self, RibbonCard};
 use crate::state::{Plan, View};
 
 // The A1→H8 ribbon: one card per study session, narrow strips for the
-// étés. A whole card is one button (INP-1) that displays that session;
-// states are carried by glyphs and wording, never colour alone (INP-3).
+// étés. A card is a chassis carrying two controls — the freeze checkbox
+// in its head and a face button, everything under it, that displays the
+// session (INP-1: the face is the large target). It stopped being one
+// single button the day the gel moved in: a checkbox inside a `<button>`
+// is invalid HTML and its clicks would go to the button (ADR
+// `2026-08-carte-de-session-chassis-et-face`). States are carried by
+// glyphs and wording, never colour alone (INP-3).
 #[component]
 pub fn SessionRibbon() -> Element {
     let plan = use_context::<Signal<Plan>>();
@@ -98,7 +103,7 @@ fn SessionCard(card: RibbonCard) -> Element {
     };
     let range_mark = if card.has_range { " (min.)" } else { "" };
     rsx! {
-        button {
+        div {
             class: "ribbon-card",
             class: if card.current { "ribbon-card--current" },
             class: if card.passed { "ribbon-card--passed" },
@@ -108,14 +113,10 @@ fn SessionCard(card: RibbonCard) -> Element {
             class: if target == Some(true) { "ribbon-card--target" },
             class: if target == Some(false) { "ribbon-card--barred" },
             class: if landing { "ribbon-card--landing" },
-            aria_current: if card.current { "true" },
-            onclick: move |_| {
-                view.write().session = index;
-                selected.set(None);
-            },
             // note 16: a dragged course lands here — non-offered cards
             // refuse. Everything is read live: the render-time capture may
-            // predate this drag.
+            // predate this drag. Handlers sit on the chassis so the head
+            // is a landing zone too, not a dead strip.
             ondragover: move |event| {
                 let code = dragged.read().clone();
                 let refused = drop_state(
@@ -152,52 +153,54 @@ fn SessionCard(card: RibbonCard) -> Element {
                     plan, history, &code, index, &drop_label, None, None,
                 );
             },
+            // hors du bouton : une case à cocher dans un `<button>` est du
+            // HTML invalide et son clic partirait au bouton
             div { class: "ribbon-card-head",
                 span { class: "ribbon-card-label", "{card.label}" }
+                FreezeBox { index, label: card.label.clone(),
+                            frozen: card.frozen }
                 span { class: "ribbon-card-credits",
                     "{credits}{range_mark}"
                 }
             }
-            if card.conflict {
-                div {
-                    class: "ribbon-card-special header-credits--over",
-                    title: "Conflit d'horaire dans cette session — plages \
-                            hachurées dans sa grille",
-                    "⚠ conflit d'horaire"
-                }
-            }
-            // glyphe + mot, jamais couleur seule (INP-3) ; la bascule vit
-            // dans l'en-tête de l'horaire, la carte ne fait qu'annoncer
-            if card.frozen {
-                div {
-                    class: "ribbon-card-special",
-                    title: "Session gelée — le solveur n'y ajoute ni n'en \
-                            déplace rien ; vous pouvez toujours la modifier",
-                    "❄ gelée"
-                }
-            }
-            if card.codes.is_empty() {
-                div { class: "ribbon-card-empty", "à planifier" }
-            } else {
-                div { class: "ribbon-card-codes",
-                    for code in card.codes.iter() {
-                        RibbonCode { key: "{code}", code: code.clone() }
+            button {
+                class: "ribbon-card-face",
+                aria_current: if card.current { "true" },
+                onclick: move |_| {
+                    view.write().session = index;
+                    selected.set(None);
+                },
+                if card.conflict {
+                    div {
+                        class: "ribbon-card-special header-credits--over",
+                        title: "Conflit d'horaire dans cette session — \
+                                plages hachurées dans sa grille",
+                        "⚠ conflit d'horaire"
                     }
-                    // ce que la carte ne montre pas est compté, jamais
-                    // coupé à mi-glyphe (LAY-1) ; le clic sur la carte —
-                    // déjà l'affordance visible — affiche la session
-                    // entière
-                    if let Some(more) = card.more.as_ref() {
-                        span {
-                            class: "ribbon-card-more",
-                            title: "{more.title}",
-                            "{more.label}"
+                }
+                if card.codes.is_empty() {
+                    div { class: "ribbon-card-empty", "à planifier" }
+                } else {
+                    div { class: "ribbon-card-codes",
+                        for code in card.codes.iter() {
+                            RibbonCode { key: "{code}", code: code.clone() }
+                        }
+                        // ce que la carte ne montre pas est compté, jamais
+                        // coupé à mi-glyphe (LAY-1) ; le clic sur la carte
+                        // — déjà l'affordance visible — affiche la session
+                        // entière
+                        if let Some(more) = card.more.as_ref() {
+                            span {
+                                class: "ribbon-card-more",
+                                title: "{more.title}",
+                                "{more.label}"
+                            }
                         }
                     }
                 }
-            }
-            if let Some(special) = card.special.as_ref() {
-                div { class: "ribbon-card-special", "{special}" }
+                if let Some(special) = card.special.as_ref() {
+                    div { class: "ribbon-card-special", "{special}" }
+                }
             }
         }
     }
@@ -224,33 +227,25 @@ fn SummerStrip(card: RibbonCard) -> Element {
         .clone()
         .or_else(|| (!card.codes.is_empty()).then(|| card.codes.join(" ")))
         .unwrap_or_else(|| "—".to_string());
-    // la bande étroite n'a pas de place pour un insigne : le glyphe
-    // préfixe le contenu, le `title` porte le mot
+    // la bande étroite n'a pas de place pour un insigne à côté de la
+    // case : le glyphe préfixe le contenu, le `title` porte le mot
     let content = if card.frozen {
         format!("❄ {content}")
     } else {
         content
     };
+    let freeze = present::freeze_toggle(&card.label, card.frozen);
     rsx! {
-        button {
+        div {
             class: "ribbon-summer",
             class: if card.current { "ribbon-summer--current" },
             class: if card.frozen { "ribbon-card--frozen" },
             class: if !card.codes.is_empty() || card.special.is_some() {
                 "ribbon-summer--busy"
             },
-            title: if card.frozen {
-                "Session gelée — le solveur n'y ajoute ni n'en déplace \
-                 rien ; vous pouvez toujours la modifier"
-            },
             class: if target == Some(true) { "ribbon-card--target" },
             class: if target == Some(false) { "ribbon-card--barred" },
             class: if landing { "ribbon-card--landing" },
-            aria_current: if card.current { "true" },
-            onclick: move |_| {
-                view.write().session = index;
-                selected.set(None);
-            },
             ondragover: move |event| {
                 let code = dragged.read().clone();
                 let refused = drop_state(
@@ -285,7 +280,53 @@ fn SummerStrip(card: RibbonCard) -> Element {
                     plan, history, &code, index, &drop_label, None, None,
                 );
             },
-            span { "{card.label} - {content}" }
+            // même case que sur une carte : sans elle un été vide n'aurait
+            // plus aucune affordance de gel depuis que l'horaire n'en
+            // porte plus (ADR `2026-08-gel-en-case-a-cocher-dans-la-carte`)
+            FreezeBox { index, label: card.label.clone(),
+                        frozen: card.frozen }
+            button {
+                class: "ribbon-summer-face",
+                title: if card.frozen { "{freeze.title}" },
+                aria_current: if card.current { "true" },
+                onclick: move |_| {
+                    view.write().session = index;
+                    selected.set(None);
+                },
+                span { "{card.label} - {content}" }
+            }
+        }
+    }
+}
+
+// ACT-2 : une bascule annulable et étiquetée, jamais de confirmation
+// (ADR `2026-08-sessions-gelees-generalisent-les-completees`). Le glyphe
+// ❄ accompagne la case : cochée seule elle ne dirait pas de quoi il
+// s'agit, et l'état ne tient jamais à la seule couleur (INP-3).
+#[component]
+fn FreezeBox(index: usize, label: String, frozen: bool) -> Element {
+    let plan = use_context::<Signal<Plan>>();
+    let history = use_context::<Signal<crate::state::History>>();
+    let freeze = present::freeze_toggle(&label, frozen);
+    let act = freeze.act;
+    rsx! {
+        label {
+            class: "ribbon-card-freeze",
+            title: "{freeze.title}",
+            input {
+                r#type: "checkbox",
+                checked: frozen,
+                aria_label: "{freeze.label}",
+                onchange: move |_| {
+                    edit_plan(plan, history, act, |plan| {
+                        let thawed = plan.frozen.remove(&index);
+                        if !thawed {
+                            plan.frozen.insert(index);
+                        }
+                    });
+                },
+            }
+            span { aria_hidden: "true", "❄" }
         }
     }
 }

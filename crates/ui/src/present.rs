@@ -1363,11 +1363,16 @@ pub fn credits_label(credits: &ulaval_scheduler_core::Credits) -> String {
 
 // LAY-1 : la rangée des sessions garde la même hauteur quoi qu'elle
 // porte. Le corps d'une carte vaut un nombre fixe de lignes de texte; les
-// lignes d'annonce (conflit d'horaire, gel, annotation libre) se prennent
+// lignes d'annonce (conflit d'horaire, annotation libre) se prennent
 // dessus, et les sigles qui ne tiennent plus sont *comptés*, jamais
 // coupés à mi-glyphe (constat étudiante-cegep 2026-08-29, ADR
 // `2026-08-carte-de-session-tronquee-en-lignes-entieres`).
-pub const CARD_BODY_LINES: usize = 5;
+// Sept lignes : une session chargée en porte sept, et une carte qui
+// comptait « +2 » sur un cheminement type ordinaire ne montrait pas ce
+// qu'on lui demandait de montrer (retour d'Antoine 2026-08-30). La
+// hauteur CSS de `.ribbon-card` est dérivée de cette constante — les deux
+// se changent ensemble.
+pub const CARD_BODY_LINES: usize = 7;
 
 // Ce que la carte ne montre pas, nommé plutôt que caché. `label` tient
 // dans la largeur d'une carte; `title` nomme les sigles absents et le
@@ -1469,10 +1474,11 @@ pub fn ribbon_model(
                     .valid;
             // the announcement lines the card already owes: they eat into
             // the same fixed budget as the sigles, so a card with
-            // something to say shows fewer of them rather than growing
-            let notes = usize::from(conflict)
-                + usize::from(frozen)
-                + usize::from(special.is_some());
+            // something to say shows fewer of them rather than growing.
+            // `frozen` no longer counts: the gel is a checkbox in the
+            // head, which costs the body nothing (ADR
+            // `2026-08-gel-en-case-a-cocher-dans-la-carte`)
+            let notes = usize::from(conflict) + usize::from(special.is_some());
             let body = ribbon_body(&codes, notes);
             RibbonCard {
                 index,
@@ -1492,6 +1498,37 @@ pub fn ribbon_model(
             }
         })
         .collect()
+}
+
+// Les trois textes de la case « geler » d'une carte. Le nom accessible ne
+// bouge pas avec l'état — c'est la case cochée qui dit si la session est
+// gelée, pas son étiquette (une étiquette qui bascule ferait lire
+// « Dégeler » à une case décochée). Le `title` explique ce que geler
+// veut dire dans l'état où l'on est, et `act` nomme l'acte que
+// l'historique retiendra (ACT-2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FreezeToggle {
+    pub label: String,
+    pub title: &'static str,
+    pub act: &'static str,
+}
+
+pub fn freeze_toggle(session_label: &str, frozen: bool) -> FreezeToggle {
+    FreezeToggle {
+        label: format!("Geler la session {session_label}"),
+        title: if frozen {
+            "Session gelée — le solveur n'y ajoute ni n'en déplace rien; \
+             vous pouvez toujours la modifier vous-même"
+        } else {
+            "Geler : le solveur n'ajoutera ni ne déplacera plus rien dans \
+             cette session — vous pourrez toujours la modifier vous-même"
+        },
+        act: if frozen {
+            "Session dégelée"
+        } else {
+            "Session gelée"
+        },
+    }
 }
 
 #[cfg(test)]
@@ -1857,9 +1894,10 @@ mod tests {
     }
 
     #[test]
-    fn a_session_that_overflows_is_counted_never_cut() {
-        // A1 de B-GPH : 6 cours pour 5 lignes de corps (constat
-        // étudiante-cegep 2026-08-29)
+    fn the_busiest_ordinary_session_now_fits_whole() {
+        // A1 de B-GPH : 6 cours — comptés « +2 » quand le corps valait 5
+        // lignes (constat étudiante-cegep 2026-08-29), montrés en entier
+        // depuis qu'il en vaut 7 (retour d'Antoine 2026-08-30)
         let codes: Vec<String> = [
             "PHY-1000", "PHY-1001", "PHY-1002", "PHY-1003", "MAT-1900",
             "GLG-1000",
@@ -1868,11 +1906,20 @@ mod tests {
         .map(|code| code.to_string())
         .collect();
         let body = ribbon_body(&codes, 0);
-        assert_eq!(body.codes.len(), CARD_BODY_LINES - 1);
-        assert_eq!(body.codes, codes[..4]);
-        let more = body.more.expect("the two left over are counted");
-        assert_eq!(more.label, "+2");
-        assert!(more.title.contains("MAT-1900, GLG-1000"), "{}", more.title);
+        assert_eq!(body.codes, codes);
+        assert_eq!(body.more, None);
+    }
+
+    #[test]
+    fn a_session_that_overflows_is_counted_never_cut() {
+        let codes: Vec<String> = (0..CARD_BODY_LINES + 2)
+            .map(|i| format!("GEX-100{i}"))
+            .collect();
+        let body = ribbon_body(&codes, 0);
+        assert_eq!(body.codes, codes[..CARD_BODY_LINES - 1]);
+        let more = body.more.expect("the three left over are counted");
+        assert_eq!(more.label, "+3");
+        assert!(more.title.contains("GEX-1006, GEX-1007, GEX-1008"));
         assert!(more.title.contains("cliquez la carte"), "{}", more.title);
         // le corps fait toujours le même nombre de lignes : la rangée ne
         // change pas de hauteur (LAY-1)
@@ -1882,15 +1929,33 @@ mod tests {
     #[test]
     fn an_announcing_card_spends_its_budget_on_the_announcements() {
         let codes: Vec<String> =
-            (0..6).map(|i| format!("GEX-100{i}")).collect();
-        // conflit + gel : deux lignes de moins pour les sigles
+            (0..8).map(|i| format!("GEX-100{i}")).collect();
+        // conflit + annotation, le maximum qu'une carte puisse devoir
+        // depuis que le gel vit dans l'en-tête : deux lignes de moins
         let body = ribbon_body(&codes, 2);
-        assert_eq!(body.codes.len(), 2);
+        assert_eq!(body.codes.len(), 4);
         assert_eq!(body.more.map(|more| more.label), Some("+4".to_string()));
-        // conflit + gel + annotation : le plancher garde un sigle visible
-        let body = ribbon_body(&codes, 3);
+        // garde-fou : quel que soit le nombre d'annonces, le corps garde
+        // un sigle et son compte — une carte qui n'annoncerait que « +8 »
+        // ne dirait plus rien
+        let body = ribbon_body(&codes, CARD_BODY_LINES);
         assert_eq!(body.codes.len(), 1, "never a card that shows no sigle");
-        assert_eq!(body.more.map(|more| more.label), Some("+5".to_string()));
+        assert_eq!(body.more.map(|more| more.label), Some("+7".to_string()));
+    }
+
+    #[test]
+    fn the_freeze_checkbox_is_named_by_its_session_not_by_its_state() {
+        let thawed = freeze_toggle("A1-A26", false);
+        let frozen = freeze_toggle("A1-A26", true);
+        assert_eq!(thawed.label, "Geler la session A1-A26");
+        assert_eq!(
+            thawed.label, frozen.label,
+            "la case cochée dit l'état, jamais son étiquette"
+        );
+        assert_eq!(thawed.act, "Session gelée");
+        assert_eq!(frozen.act, "Session dégelée");
+        assert!(thawed.title.starts_with("Geler"), "{}", thawed.title);
+        assert!(frozen.title.contains("gelée"), "{}", frozen.title);
     }
 
     #[test]
