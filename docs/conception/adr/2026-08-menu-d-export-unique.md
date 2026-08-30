@@ -2,6 +2,9 @@
 
 Date : 2026-08-29
 
+> Dépassé en partie le 2026-08-30 par l'ADR `2026-08-retrait-de-l-aller-retour-json-du-cheminement` : l'entrée « JSON » et les entêtes de groupe ont disparu.
+> Le menu ne porte plus que deux entrées, « Organigramme » et « Horaire ». Tout le reste — un seul contrôle, table pure, ouverture au clic, fermeture différée, surcouche ancrée — tient toujours.
+
 ## Contexte
 
 La bande de statut portait deux boutons — « Exporter l'organigramme » et « Exporter l'horaire » — qui ouvraient tous deux l'aperçu d'impression.

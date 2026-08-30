@@ -2,6 +2,8 @@
 
 Date : 2026-08-29
 
+> Caduc depuis le 2026-08-30 (ADR `2026-08-retrait-de-l-aller-retour-json-du-cheminement`) : le lecteur de fichier de cheminement n'existe plus.
+
 ## Contexte
 
 Une évaluation persona du 2026-08-29 a déposé dans « Charger depuis JSON… » un fichier de la forme

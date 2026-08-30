@@ -1,5 +1,4 @@
 use crate::capsule::CapsuleError;
-use crate::cheminement::CheminementError;
 use crate::data::{fnv1a_64, DataError};
 use crate::import::ImportError;
 
@@ -197,67 +196,6 @@ pub fn present_capsule_error(error: &CapsuleError) -> UiError {
                    de fonctionner normalement."
             .to_string(),
         affected: "Le chargement de ce relevé seulement.".to_string(),
-        action,
-        id: error_id(&error.to_string()),
-        detail: error.to_string(),
-    }
-}
-
-// A cheminement file the student chose that the app would not read. The
-// load is a non-critical path (BLD-1) and refuses whole: the organigramme
-// open before the click is untouched in every branch, which is what the
-// « rien n'a bougé » of each action can honestly claim (ADR
-// `2026-08-un-cheminement-par-fichier`).
-pub fn present_cheminement_error(error: &CheminementError) -> UiError {
-    let (what, action) = match error {
-        CheminementError::Unreadable { detail } => (
-            "Ce fichier n'est pas un cheminement lisible.".to_string(),
-            format!(
-                "Le lecteur s'est arrêté sur : {detail}. Le format attendu \
-                 est celui du bouton « ? » à côté : « completed » et « \
-                 sessions », chaque session portant « semester » (A26, H27, \
-                 E27) et « courses »."
-            ),
-        ),
-        CheminementError::NoAdmission => (
-            "Ce cheminement ne nomme aucune session d'admission.".to_string(),
-            "La première entrée de « sessions » doit être un automne ou un \
-             hiver — c'est elle qui donne sa session de départ à \
-             l'organigramme."
-                .to_string(),
-        ),
-        CheminementError::TooLong {
-            study_sessions,
-            max,
-        } => (
-            format!(
-                "Ce cheminement compte {study_sessions} sessions d'études, \
-                 et l'outil en accepte {max} au plus."
-            ),
-            "Retirez les sessions en trop du fichier, ou répartissez le \
-             cheminement sur deux fichiers."
-                .to_string(),
-        ),
-        CheminementError::Empty => (
-            "Aucun cours de ce cheminement n'existe au catalogue.".to_string(),
-            "Les grilles officielles emploient des jetons — OPT-ION1, \
-             AUC-HOIX, LAN-GUES — qui ne sont pas des cours : remplacez-les \
-             par les sigles réellement choisis, puis rechargez le fichier."
-                .to_string(),
-        ),
-        CheminementError::CatalogueUnavailable => (
-            "Le catalogue des cours n'est pas encore chargé.".to_string(),
-            "Attendez que les données de l'application finissent de \
-             charger, puis réessayez."
-                .to_string(),
-        ),
-    };
-    UiError {
-        what,
-        reaction: "L'organigramme n'a pas bougé; le reste de l'application \
-                   continue de fonctionner normalement."
-            .to_string(),
-        affected: "Le chargement de ce fichier seulement.".to_string(),
         action,
         id: error_id(&error.to_string()),
         detail: error.to_string(),
@@ -2303,57 +2241,6 @@ mod tests {
         assert_ne!(a.id, b.id);
         let repeat =
             present_import_error(&ImportError::NotFound { status: 404 });
-        assert_eq!(a.id, repeat.id, "the same failure keeps the same id");
-    }
-
-    // --- present_cheminement_error ---
-
-    #[test]
-    fn every_cheminement_refusal_states_the_five_parts() {
-        let variants = [
-            CheminementError::Unreadable {
-                detail: "expected value at line 1 column 1".to_string(),
-            },
-            CheminementError::NoAdmission,
-            CheminementError::TooLong {
-                study_sessions: 20,
-                max: 16,
-            },
-            CheminementError::Empty,
-            CheminementError::CatalogueUnavailable,
-        ];
-        for error in &variants {
-            let presented = present_cheminement_error(error);
-            assert!(!presented.what.is_empty(), "{error}");
-            assert!(
-                presented.reaction.contains("n'a pas bougé"),
-                "the untouched organigramme is the reassurance: {}",
-                presented.reaction
-            );
-            assert_eq!(
-                presented.affected,
-                "Le chargement de ce fichier seulement."
-            );
-            assert!(!presented.action.is_empty(), "{error}");
-            assert!(presented.id.starts_with("GH-"), "{error}");
-            assert_eq!(presented.detail, error.to_string());
-        }
-        // the parser's own words reach the student, never a shrug
-        assert!(present_cheminement_error(&variants[0])
-            .action
-            .contains("expected value"));
-        // the placeholders are named: they are why this refusal happens
-        assert!(present_cheminement_error(&variants[3])
-            .action
-            .contains("OPT-ION1"));
-    }
-
-    #[test]
-    fn two_different_cheminement_errors_carry_two_different_ids() {
-        let a = present_cheminement_error(&CheminementError::NoAdmission);
-        let b = present_cheminement_error(&CheminementError::Empty);
-        assert_ne!(a.id, b.id);
-        let repeat = present_cheminement_error(&CheminementError::NoAdmission);
         assert_eq!(a.id, repeat.id, "the same failure keeps the same id");
     }
 
