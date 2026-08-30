@@ -1146,7 +1146,7 @@ pub fn schedule_status(schedule: &WeeklySchedule, forced: bool) -> String {
             "combinaison automatique - sans conflit ✓".to_string()
         }
     } else {
-        "⚠ conflit d'horaire — plages en cause hachurées".to_string()
+        "⚠ conflit d'horaire, plages en cause hachurées".to_string()
     }
 }
 
@@ -2592,7 +2592,7 @@ mod tests {
         assert!(grid.conflict);
         assert_eq!(
             schedule_status(&schedule, false),
-            "⚠ conflit d'horaire — plages en cause hachurées"
+            "⚠ conflit d'horaire, plages en cause hachurées"
         );
     }
 
