@@ -1661,22 +1661,6 @@ code {
   min-height: 3.375rem;
 }
 
-/* LAT-4 + LAY-1 (ADR 2026-08-etat-d-attente-du-solveur-visible) : la ligne
-   d'attente est toujours montée et occupe toujours la même hauteur — deux
-   lignes de texte à la largeur du panneau — pour que son apparition et sa
-   disparition ne déplacent jamais les règles sous le curseur. Elle est la
-   seule exception réservée du bloc, dont le reste assume LAY-2 (ADR
-   2026-08-verdicts-du-panneau-sans-hauteur-reservee). */
-.panel-recalc {
-  /* exactement les deux lignes du message, mesurées à 12 px (plancher
-     abaissé le 2026-08-30) : c'est la bande vide qu'on voit au repos, et
-     elle est vide *exprès* — la ligne est toujours montée pour que son
-     apparition ne déplace jamais les règles sous le curseur */
-  min-height: 2.25rem;
-  color: var(--muted);
-  font-style: italic;
-}
-
 /* puces de sessions (9a) */
 .panel-chips {
   display: flex;

@@ -120,11 +120,9 @@ pub struct Running {
     pub started_ms: u64,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum QueryKind {
-    Propose,
-    Verify,
-}
+// défini dans `crate::solve`, avec le reste du protocole du worker :
+// `present::solver_status` le nomme à l'écran et doit rester pur (AP-7)
+pub use crate::solve::QueryKind;
 
 // the worker handle: one live worker, replaced whole on cancel
 #[derive(Clone)]

@@ -1091,6 +1091,17 @@ pub fn propose_needed(
 
 // --- « une réponse est attendue » ------------------------------------------
 
+// Which of the two queries the worker is running. It lives here, with the
+// rest of the worker's protocol, and not in `components`, because the
+// sentence that names it on screen is decided by `present::solver_status`
+// — a pure function, tested natively, and the pure modules never depend on
+// the view (AP-7).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum QueryKind {
+    Propose,
+    Verify,
+}
+
 // Both automatic effects wait this long after the last plan change before
 // sending anything (`auto_propose`, `auto_verify`): a burst of edits costs
 // one query. Nothing used to be said during that window, so the screen
