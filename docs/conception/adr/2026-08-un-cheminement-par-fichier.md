@@ -2,6 +2,9 @@
 
 Date : 2026-08-29
 
+> Dépassé en partie le 2026-08-30 par l'ADR `2026-08-retrait-de-l-aller-retour-json-du-cheminement` : l'interface ne lit ni n'écrit plus ce fichier.
+> Le format un-cheminement-par-fichier reste celui de `data/cheminements/`, écrit et vérifié à la main.
+
 ## Contexte
 
 Le format `{code}-{semester}.manuel.json` (ADR `2026-08-fichier-manuel-de-programme-millesime`) portait un tableau `cheminements_types`, chaque entrée étiquetée par son `label` : « Sciences de la nature », « Technique de génie mécanique - Scolarité préparatoire complétée ».

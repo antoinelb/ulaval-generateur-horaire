@@ -335,47 +335,6 @@ pub fn encode_uri(text: &str) -> String {
     String::from(js_sys::encode_uri_component(text))
 }
 
-// --- saving a document to disk (EXP-1) -------------------------------------
-
-// The one way the app hands a file to the student: a Blob, an anchor
-// carrying `download`, one synthetic click, and the object URL released
-// straight after — holding it would leak the whole document for the life
-// of the tab. Returns whether the browser took it, so the caller can say
-// so rather than claim a save that never happened (ERR-5); every step is
-// best-effort, none of them may take the app down.
-pub fn download_text(file_name: &str, mime: &str, text: &str) -> bool {
-    use wasm_bindgen::JsCast;
-
-    let Some(document) =
-        web_sys::window().and_then(|window| window.document())
-    else {
-        return false;
-    };
-    let parts = js_sys::Array::of1(&wasm_bindgen::JsValue::from_str(text));
-    let options = web_sys::BlobPropertyBag::new();
-    options.set_type(mime);
-    let Ok(blob) =
-        web_sys::Blob::new_with_str_sequence_and_options(&parts, &options)
-    else {
-        return false;
-    };
-    let Ok(url) = web_sys::Url::create_object_url_with_blob(&blob) else {
-        return false;
-    };
-    let anchor = document.create_element("a").ok().and_then(|element| {
-        element.dyn_into::<web_sys::HtmlAnchorElement>().ok()
-    });
-    let Some(anchor) = anchor else {
-        let _ = web_sys::Url::revoke_object_url(&url);
-        return false;
-    };
-    anchor.set_href(&url);
-    anchor.set_download(file_name);
-    anchor.click();
-    let _ = web_sys::Url::revoke_object_url(&url);
-    true
-}
-
 // --- offline (DEG-3) -------------------------------------------------------
 
 // A service worker's scope is the directory it is served from, and

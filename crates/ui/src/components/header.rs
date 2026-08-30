@@ -357,7 +357,6 @@ pub fn StatusStrip() -> Element {
     let can_undo = history.read().undo_label().is_some();
     let can_redo = history.read().redo_label().is_some();
     let print_target = use_context::<super::PrintTarget>().0;
-    let snapshot = use_context::<Signal<Option<Snapshot>>>();
     let alerts = use_context::<Signal<AlertStack>>();
     let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
     let mut export_open = use_signal(|| false);
@@ -410,60 +409,20 @@ pub fn StatusStrip() -> Element {
         });
     };
 
-    // The two print paths are unchanged; the JSON one writes the very file
-    // « Charger depuis JSON » reads back (ADR
-    // `2026-08-un-cheminement-par-fichier`). Nothing here decides anything:
-    // the document is built by `cheminement::export`, the sentence by
-    // `export::download_note`, both tested natively.
+    // Chaque entrée du menu ouvre l'impression du document qu'elle nomme —
+    // la seule sortie de fichier qui reste (ADR
+    // `2026-08-retrait-de-l-aller-retour-json-du-cheminement`). Rien ici ne
+    // décide : la table des entrées vient du module pur.
     let run_export = move |choice: crate::export::menu::ExportChoice| {
-        match choice {
-            crate::export::menu::ExportChoice::OrganigrammePdf => {
-                super::print::start_print(
-                    print_target,
-                    super::print::PrintKind::Organigramme,
-                );
+        let kind = match choice {
+            crate::export::menu::ExportChoice::Organigramme => {
+                super::print::PrintKind::Organigramme
             }
-            crate::export::menu::ExportChoice::HorairePdf => {
-                super::print::start_print(
-                    print_target,
-                    super::print::PrintKind::Horaire,
-                );
+            crate::export::menu::ExportChoice::Horaire => {
+                super::print::PrintKind::Horaire
             }
-            crate::export::menu::ExportChoice::OrganigrammeJson => {
-                let generated_at = crate::browser::now_iso();
-                let scraped_at =
-                    snapshot.peek().as_ref().and_then(|snapshot| {
-                        snapshot.provenance.scraped_at.clone()
-                    });
-                let provenance = crate::export::provenance::export_provenance(
-                    &generated_at,
-                    scraped_at.as_deref(),
-                );
-                let document = plan.peek().clone();
-                let file_name =
-                    crate::cheminement::export_file_name(&document);
-                let body = crate::cheminement::export(
-                    &document,
-                    &generated_at,
-                    &provenance,
-                );
-                let taken = crate::browser::download_text(
-                    &file_name,
-                    "application/json",
-                    &body,
-                );
-                let note =
-                    crate::export::menu::download_note(&file_name, taken);
-                // a refused download is a note that stays, never a ✓ that
-                // clears itself after five seconds (TRU-1, ALR-4)
-                let alert = if taken {
-                    AlertBody::Success(note)
-                } else {
-                    AlertBody::Note(note)
-                };
-                super::push_alert(alerts, alert);
-            }
-        }
+        };
+        super::print::start_print(print_target, kind);
     };
 
     rsx! {
@@ -535,8 +494,8 @@ pub fn StatusStrip() -> Element {
                     r#type: "button",
                     aria_haspopup: "menu",
                     aria_expanded: export_open(),
-                    title: "PDF ou JSON pour l'organigramme, PDF pour \
-                            l'horaire",
+                    title: "Sortir l'organigramme ou l'horaire en document \
+                            imprimable",
                     onclick: move |_| {
                         let open = !export_open();
                         export_open.set(open);
@@ -549,19 +508,8 @@ pub fn StatusStrip() -> Element {
                             p { class: "status-export-pending", "{pending}" }
                         }
                         for entry in export_entries.iter().cloned() {
-                            // one keyed root per row (AP-8): the group
-                            // heading rides inside it, so the key still
-                            // sits on the first node of the block
-                            div {
-                                key: "{entry.key}",
-                                class: "status-export-row",
-                            if let Some(group) = entry.group {
-                                p {
-                                    class: "status-export-group",
-                                    "{group}"
-                                }
-                            }
                             button {
+                                key: "{entry.key}",
                                 class: "status-export-item",
                                 r#type: "button",
                                 role: "menuitem",
@@ -569,10 +517,7 @@ pub fn StatusStrip() -> Element {
                                     export_open.set(false);
                                     run_export(entry.choice);
                                 },
-                                span { class: "status-export-label",
-                                    "{entry.label}"
-                                }
-                            }
+                                "{entry.label}"
                             }
                         }
                     }
