@@ -114,7 +114,7 @@ pub fn WeeklyGrid() -> Element {
                     button {
                         class: "grid-share",
                         title: "Retirer les sections forcées de cette \
-                                session — l'horaire rechoisit tout seul",
+                                session, l'horaire rechoisit tout seul",
                         onclick: move |_| {
                             edit_plan(
                                 plan,
@@ -249,9 +249,9 @@ fn GridBlock(
         format!("Forcer la section {} de {}", nrcs.join("+"), block.code)
     } else {
         match alternatives {
-            0 => format!("{} — aucun horaire alternatif", block.code),
-            1 => "1 horaire alternatif — cliquer pour le voir".to_string(),
-            n => format!("{n} horaires alternatifs — cliquer pour les voir"),
+            0 => format!("{}, aucun horaire alternatif", block.code),
+            1 => "1 horaire alternatif, cliquer pour le voir".to_string(),
+            n => format!("{n} horaires alternatifs, cliquer pour les voir"),
         }
     };
     rsx! {
