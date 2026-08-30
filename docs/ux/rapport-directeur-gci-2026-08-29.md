@@ -1,115 +1,207 @@
-# Rapport de contre-vérification — directeur du B-GCI (Bernard)
+# Rapport d'exploration — Directeur du programme de baccalauréat en génie civil (B-GCI)
 
-Date : 2026-08-29.
-Session agent-browser : `directeur-gci`.
-Serveur testé : `http://localhost:8001` (comme demandé).
-Objectif : rejouer les reproductions exactes du rapport du 2026-08-27 (`docs/ux/rapport-directeur-gci-2026-08-27.md`) après correctifs, puis balayer le reste de ma procédure habituelle pour détecter des régressions.
-Captures dans `/tmp/claude-1000/-home-antoine-documents-universite-ulaval-generateur-horaire-generateur-horaire/07141d69-919b-4129-8679-333a9b9566ad/scratchpad/shots2/`.
+Date : 2026-08-29
+Persona : Bernard, professeur et directeur de programme, B-GCI (Université Laval)
+Session agent-browser : `directeur-gci`
 
-**Avertissement sur les conditions de test** : au milieu de cette session, l'outil `Bash` sous-jacent a cessé de répondre pendant plusieurs minutes (toute commande, même `echo`, retournait un code d'erreur sans exécuter quoi que ce soit — vraisemblablement une contention de ressources due à d'autres personas explorant l'application en parallèle) puis le répertoire temporaire de captures a été vidé par le système pendant cette même fenêtre. Les captures des trois premiers scénarios (`01` à `09`) ont donc été perdues ; seules `10`, `11` et `12` ont survécu. Ceci n'a rien à voir avec l'application testée — je le mentionne pour la transparence des preuves, et je documente chaque constat ci-dessous avec les données lues en direct dans le DOM au moment du test, pas seulement les captures.
+## Portée de l'exploration
+
+J'ai construit le cheminement type du B-GCI (version A26) sans concentration, à l'automne, puis testé la bascule
+entre les trois concentrations (Eau et environnement, Géotechnique, Structures et matériaux), un départ à l'hiver,
+et cinq scénarios d'échec de cours (préalable lourd en première session, cours terminal, cours à une seule saison,
+deux échecs simultanés, rallongement de l'horizon). J'ai rechargé la page en cours de route et répété certaines
+manipulations pour vérifier la stabilité du comportement.
+
+Je n'ai **pas** testé : le partage par URL (« Partager »), les trois destinations d'« Exporter », le chargement
+depuis Capsule ou depuis un fichier JSON, ni les autres programmes (B-GEX, B-GIN, B-GMC, B-GPH) — hors du mandat
+d'un directeur de B-GCI. Ces zones ne sont donc couvertes par aucun constat ci-dessous.
 
 ---
 
-## Constat principal : le bogue de redistribution non localisée semble corrigé
+## Constats
 
-### Scénario 1 (échec d'un cours de première session lourd en préalables) — replacement maintenant localisé
-- **Gravité** : (ancien majeur, maintenant résolu)
-- **Type** : bogue corrigé
-- **Reproduction** : B-GCI A26 sans concentration ; créditer GCI-1000, GCI-1010, GCI-1011, GLG-1000 ; geler GCI-1001 en A3-A27 ; comparer au cheminement de référence (A1=12, H2=12, É27=9, A3=15, H4=12, A5=15, H6=10, A7=12, H8=9, soit 106 cr).
-- **Attendu** : seuls les cours réellement dépendants de GCI-1001 se déplacent.
-- **Observé** : le nouveau cheminement est A1=3 (GCI-1007), H2=9, É27=9 (inchangé), A3=12 (GCI-1001+3 autres), H4=12, A5=15, H6=13, A7=12, H8=9 (inchangé). J'ai vérifié un par un, en lisant le champ « Préalables » réel de chaque cours déplacé (valeur brute affichée dans l'encart, pas ma mémoire du rapport précédent) :
-  - GCI-1007 déplacé A3→A1 : son préalable réel est `GGL-2600 OU GLG-1900 OU GLG-1000`, satisfait dès le crédit de GLG-1000. Justifié.
-  - GCI-2000 déplacé H2→H4 : son préalable réel est **`GCI-1001`** — une chaîne réelle que j'avais mal évaluée dans mon rapport précédent (je n'avais vérifié que GCI-2001, pas GCI-2000). Justifié.
-  - GCI-2001 déplacé A3→A5 : son préalable est `GCI-2000 OU GMC-2001` ; comme GCI-2000 est maintenant en H4, GCI-2001 ne peut plus se faire avant A5. Justifié (chaîne transitive GCI-1001→GCI-2000→GCI-2001, que j'avais manquée le 27 août).
-  - GCI-2007 déplacé H4→H6 : son préalable est `(GCI-1000 OU GML-1001) ET (GCI-2001 OU GMC-2001)` ; GCI-2001 étant en A5, H6 est la première session valide. Justifié.
-  - GCI-3000 déplacé A5→A7 : son préalable est `GCI-2006` (inchangé, resté en H4) ; le déplacement vient d'une collision de plafond (A5 est passée à 15/17 cr avec l'arrivée de GCI-2001, ne laissant plus de place pour un cours de 3 cr de plus) ; le solveur l'a rebasculé à la **prochaine session automne disponible**, pas ailleurs au hasard. Défendable.
-  - PHI-2910, GCI-2004, GCI-2006 : **inchangés** — alors que mon rapport du 27 août les listait comme déplacés sans justification. Ce n'est plus le cas.
-- J'ai rejoué la séquence une seconde fois de zéro (Réinitialiser, resélection du programme, mêmes clics) : résultat identique au chiffre près. Reproductible.
-- **Capture** : `shots2/11-scenario1-rerun-identical.png` (deuxième passage). Aucune erreur console.
-- **Conclusion** : sur cette reproduction précise, le bogue rapporté le 27 août ne se manifeste plus. Une partie de mon diagnostic initial (« GCI-2001 n'a aucun lien avec GCI-1001 ») était elle-même incomplète — je n'avais pas remonté la chaîne transitive via GCI-2000. Le comportement actuel est défendable devant un comité de programme : chaque déplacement a une cause traçable (préalable direct, ou collision de plafond résolue par la session automne suivante).
+### Les avertissements s'empilent indéfiniment et finissent par couvrir l'horaire
+- **Gravité** : majeur
+- **Type** : bogue
+- **Reproduction** :
+  1. Choisir B-GCI, sans concentration, départ A26.
+  2. Changer « Début » à H27 puis revenir à A26 (ou répéter l'aller-retour une seconde fois).
+  3. Observer la zone de statut en bas de l'écran.
+- **Attendu** : un message explique le changement en cours ; une fois la situation comprise ou dépassée par une
+  nouvelle action, les anciens messages n'encombrent plus l'écran (ou au moins se distinguent clairement du
+  message pertinent au moment présent).
+- **Observé** : après deux ou trois changements de « Début », cinq à six avertissements quasi identiques
+  (« … sont retirés du placement… ») s'empilent dans le coin, dont plusieurs redondants au mot près, sans jamais
+  se nettoyer automatiquement ; un bouton « +N autres messages » apparaît et le bloc de texte recouvre une partie
+  de la grille horaire. Rien ne les distingue comme périmés. J'ai dû les fermer un par un (bouton « ✕ ») pour
+  retrouver un écran lisible. Reproduit deux fois de façon identique.
+  Capture : `08-messages-empiles.png`, `07-etat-bizarre.png`. Erreur console : aucune.
 
-### Scénario 2 (ajout d'un seul électif) — maintenant minimal
-- **Gravité** : (ancien majeur, maintenant résolu)
-- **Type** : bogue corrigé
-- **Reproduction** : B-GCI A26, concentration Structures et matériaux, cliquer « automatique » sur FOR-2020 (premier cours de la Règle 1, 12 cr).
-- **Attendu** : déplacement minimal.
-- **Observé** : FOR-2020 (3 cr, offert à l'automne) atterrit dans A1-A26 (12→15 cr, sous le plafond de 17). **Aucune autre session ne change** : H2 à H8 sont identiques cr-pour-cr et cours-pour-cours à la référence sans concentration. Une seule session touchée sur huit, contre cinq sur huit le 27 août.
-- **Capture** : `shots2/07-scenario2-elective-minimal.png` (perdue dans l'incident `/tmp`, revérifiée en direct via le DOM avant la perte — voir le journal des sessions dans le corps du test ; je n'ai pas pu re-capturer une image après coup car j'étais passé à d'autres scénarios). Aucune erreur console.
-- **Conclusion** : résolu sur cette reproduction précise.
+### Un message d'erreur mêle de l'anglais technique brut dans une interface française
+- **Gravité** : mineur
+- **Type** : bogue
+- **Reproduction** :
+  1. Sur la concentration Eau et environnement, ajouter un cours (ex. FOR-2020) qui satisfait à la fois la
+     Règle 1 (12 cr) et la Règle 2 (3 cr, « tous les cours de la Règle 1 du cheminement sans concentration ») de
+     la concentration, sans lui assigner explicitement une règle via « Rattacher … à une règle ».
+  2. Observer le message d'erreur affiché en bas de l'écran.
+- **Attendu** : un message entièrement en français, cohérent avec le reste de l'interface (le standard du
+  produit, y compris pour ses messages techniques).
+- **Observé** : « ⚠ Le solveur n'a pas pu répondre — détail technique : Règle 1 (concentration scope) : the
+  selection sums 15 credits, above the max 12 — semantics await the director's ruling ». Le message est
+  compréhensible mais bascule sans prévenir en anglais interne (jargon de développeur : « scope », « semantics »,
+  « the director's ruling »). Le problème lui-même — un cours éligible à deux règles à la fois nécessite un
+  arbitrage — est légitime et bien détecté ; c'est la présentation qui trahit le code sous-jacent.
+  Capture : `02-conflit-regle.png`. Erreur console : aucune.
 
-### Scénario 3 (cours terminal GCI-3333 gelé en H10) — toujours minimal, aucune régression
-- **Gravité** : n/a (vérification de non-régression)
-- **Type** : comportement confirmé correct
-- **Reproduction** : Sessions=10, GCI-3333 gelé en H10-H31.
-- **Observé** : A1 à A7 restent identiques cr-pour-cr à la référence ; seule H8 (perd GCI-3333, ne garde que STT-1900, 9→3 cr) et H10 (nouvelle, 6 cr) changent. Comportement inchangé par rapport au 27 août — toujours défendable.
-
-### Scénario 4 (cohorte hiver) — réordonnancement toujours correct, dernière session un peu mieux garnie
-- **Gravité** : mineur (résiduel)
+### Aucune façon évidente de « faire échouer » un cours — il faut deviner la combinaison Geler + déplacement manuel
+- **Gravité** : majeur
 - **Type** : friction
-- **Reproduction** : B-GCI sans concentration, Début=H27, Sessions=8.
-- **Attendu** : vérifier si la dernière session est mieux équilibrée qu'un seul cours de 3 cr (constat du 27 août).
-- **Observé** : **piège méthodologique que je signale explicitement** — juste après avoir changé le Début, l'interface affiche un statut « recherche d'un organigramme - N s » avec un bouton « Annuler la recherche » ; si on lit le cheminement **pendant** cette recherche, on voit une image transitoire qui ressemble à un simple décalage naïf des étiquettes de session (les mêmes cours que la référence automne, juste renommés H1/É/A2/H3... au lieu de A1/H2/É27/A3...). J'ai d'abord cru, sur cette base, à une régression du réordonnancement hiver. En attendant la fin de la recherche (statut disparu) et en relisant, le cheminement réel est bien recalculé et respecte les saisons d'offre (ex. GCI-2000, hiver seulement, se retrouve en H3-H28, pas dans une session été). La dernière session (A8-A30) contient maintenant GCI-1010 + GCI-2012 (6 cr) contre un seul cours de 3 cr le 27 août — une amélioration modeste, mais la charge reste nettement sous une session pleine (12-17 cr habituels).
-- **Pourquoi je le signale quand même** : l'état transitoire pendant la recherche est visuellement complet et plausible — rien n'indique dans la grille elle-même (seulement dans une ligne de statut, sous le panneau de gauche, facile à manquer si on regarde la grille à droite) qu'elle n'est pas encore la version finale. Un directeur pressé qui prend une capture d'écran juste après avoir changé le Début pourrait publier un cheminement obsolète sans le savoir. Je recommande un marquage visuel plus visible sur la grille elle-même (griser, bandeau) pendant la recherche, pas seulement un texte dans le panneau de gauche.
-- **Capture** : `shots2/09-hiver-final.png` (état final, correct).
+- **Reproduction** :
+  1. Charger B-GCI sans concentration, chercher comment marquer « GCI-1001 réussi en A1, mais pas GCI-1000 ».
+  2. Chercher un bouton, une case à cocher ou un menu « réussi »/« échoué » sur un cours placé — aucun n'existe.
+  3. Consulter l'aide « Format du fichier de cheminement attendu » : le seul champ apparenté est `completed`,
+     documenté comme « les cours crédités à l'admission » (donc pour la reconnaissance des acquis, pas pour un
+     échec en cours de programme).
+- **Attendu** : une action directe et documentée pour ce cas d'usage extrêmement fréquent en tâche de directeur
+  (« un étudiant coule un cours, que se passe-t-il ? »), par exemple un menu contextuel sur le cours dans la grille.
+- **Observé** : la seule façon que j'ai trouvée, par essai-erreur, est : geler les sessions déjà « réussies »
+  (bouton « Geler », qui empêche le solveur d'y toucher mais reste modifiable à la main), puis chercher le cours
+  coulé dans la recherche du catalogue et le réassigner manuellement à une session future via ses boutons de
+  session (il n'y a pas de bouton « retirer/échouer » direct pour un cours obligatoire — seulement pour les cours
+  de règles à option, via un « ✕ »). Une fois compris, le mécanisme fonctionne bien (voir constats positifs
+  ci-dessous), mais rien dans l'interface ne suggère cette procédure ; un directeur pressé ou une étudiante en
+  détresse n'aurait aucune chance de la deviner sans expérimenter comme je l'ai fait. Aucune capture unique ne
+  documente une « absence » ; voir la démarche dans les captures `03-conflit-resolu.png` à `04-programme-complet.png`.
 
-### Scénario 5 (profil développement durable) — jauge et note maintenant présentes, total resté sous 120 dans tous mes essais
-- **Gravité** : (ancien majeur, maintenant substantiellement amélioré)
-- **Type** : bogue corrigé / partiellement non testé
-- **Reproduction** : B-GCI sans concentration, activer Profil = « Profil développement durable ».
-- **Observé** :
-  - Une nouvelle section « Profil — Profil développement durable » apparaît avec une jauge dédiée (`X/12 cr`) et une note explicite : « Crédits pris à même les cours à option des autres blocs — ils n'ajoutent rien au total du bac. »
-  - Activer le profil seul (avec son unique cours obligatoire DDU-1000, 3 cr) fait passer le total de 97/120 à 100/120 — logique, DDU-1000 est un vrai cours additionnel non partagé.
-  - Placer un électif du profil (GBO-2040, Règle 1) en mode « sans concentration » fait passer le total à 103/120 (+3, non partagé avec un autre bloc puisqu'aucune concentration compatible n'est active) ; en resélectionnant la concentration Structures et matériaux (qui partage GBO-2040 dans sa propre liste), le total **reste à 103/120** alors que la jauge de la concentration se remplit aussi (`3/15 cr`) — la mutualisation fonctionne bien quand un bloc compatible existe, et le total ne re-gonfle pas.
-  - Dans les deux configurations testées, le total est resté loin de 120 (103/120 au maximum atteint) : je n'ai **pas réussi à provoquer un dépassement réel de 120 cr** pour vérifier si l'en-tête le signalerait comme demandé. Je note ce point comme **non testé**, pas comme confirmé.
-- **Capture** : `shots2/10-profil-gauge.png`. Aucune erreur console.
-- **Conclusion** : la jauge et la note demandées sont bien là et se comportent de façon cohérente (mutualisation correcte quand un bloc compatible existe, addition légitime sinon). Je n'ai pas pu vérifier le signalement d'un dépassement de 120 cr en en-tête faute d'avoir réussi à provoquer ce dépassement via l'interface — à revérifier avec un scénario que je n'ai pas trouvé (peut-être en combinant profil + une concentration incompatible + toutes les règles à crédits libres remplies par des cours non partagés).
+### Les cours de concentration peuvent être placés avant les cours de base, sans égard à la séquence pédagogique habituelle
+- **Gravité** : moyen
+- **Type** : friction / limite du modèle
+- **Reproduction** :
+  1. Choisir B-GCI, concentration Eau et environnement, départ A26.
+  2. Ajouter GGL-2600 (Hydrogéologie, cours de concentration) via « automatique ».
+  3. Observer sa session de placement.
+- **Attendu** : un cours de concentration typiquement enseigné en 3e ou 4e année se retrouve après l'essentiel du
+  tronc commun, même en l'absence de préalable formel qui l'imposerait — c'est ainsi que je le présenterais à un
+  comité de programme.
+- **Observé** : GGL-2600 a été placé en **H2-H27**, la toute deuxième session du programme, avant même Statique
+  ou Résistance des matériaux, simplement parce qu'aucun préalable formel ne l'en empêche et qu'il restait de la
+  place sous le plafond de crédits. Le placement automatique suit une logique de faisabilité pure, pas de bon
+  sens curriculaire implicite. Publier un tel cheminement comme « programme type officiel » sans le revoir à la
+  main induirait en erreur un comité de programme. Capture : voir la grille finale `04-programme-complet.png`
+  (H2-H27 contient GGL-2600).
+
+### Construire un cheminement complet par concentration exige beaucoup de manipulation manuelle, sans être signalé comme un choix de conception avant de s'y engager
+- **Gravité** : mineur
+- **Type** : friction (comportement clairement annoncé une fois rencontré, mais coûteux)
+- **Reproduction** :
+  1. Choisir une concentration.
+  2. Constater que « 97/120 cr » ou « 105/120 cr » restent placés (le tronc commun seulement) et que les sections
+     de règles (« 0/12 cr », « 0/3 cr », etc.) sont vides.
+  3. Dérouler chaque règle et cliquer « automatique » cours par cours (environ 6 à 9 clics par concentration) pour
+     atteindre 120/120 cr.
+- **Attendu** : je m'attendais à ce qu'un « programme type » propose déjà une combinaison représentative
+  d'électifs par défaut, quitte à la modifier — c'est ce qu'un document de programme type publié montre
+  normalement (des exemples de cours, pas des cases vides).
+- **Observé** : le texte « rien n'est pris automatiquement » est bien présent et honnête, donc ce n'est pas un
+  bogue, mais produire les quatre cheminements types (un par concentration) exige de refaire manuellement cette
+  sélection à chaque fois — rien n'est mémorisé d'une concentration à l'autre au-delà du tronc commun et des
+  choix de niveau « Programme ». Pour un usage répété (comme le mien), c'est un frein réel.
+
+### Chevauchement de règles : un cours éligible à deux règles à la fois est difficile à réconcilier
+- **Gravité** : moyen
+- **Type** : friction
+- **Reproduction** : voir le scénario du bogue « anglais technique » ci-dessus.
+- **Attendu** : quand un cours (ex. FOR-2020) apparaît dans deux listes de règles à la fois, je m'attendais à ce
+  que l'outil choisisse une règle par défaut (la moins généreuse, ou celle où il manque le plus), ou du moins à
+  ce que le retrait du cours d'une des deux listes soit visible et univoque.
+- **Observé** : il faut d'abord comprendre qu'un même cours apparaît deux fois dans l'arborescence (une fois sous
+  chaque règle qui l'accepte), retirer l'exemplaire fautif via son propre bouton « ✕ » (et non via le menu
+  « Rattacher … à une règle », qui déplace le comptage mais ne résout pas le double-compte tant que le cours
+  reste listé ailleurs), puis rajouter un cours différent qui n'apparaît que dans une seule règle. La récupération
+  a exigé plusieurs allers-retours de ma part avant de comprendre le mécanisme. Une fois résolu, l'état se
+  stabilise correctement (`03-conflit-resolu.png`).
+
+### Aucun indicateur de chargement pendant le recalcul du solveur après un changement de Début ou de concentration
+- **Gravité** : mineur
+- **Type** : friction
+- **Reproduction** :
+  1. Charger B-GCI sans concentration, départ A26, cheminement complet (120/120 cr).
+  2. Changer « Début » à H27.
+  3. Prendre une capture d'écran immédiatement après le changement (avant que l'utilisateur ne clique ailleurs).
+- **Attendu** : un signe visuel (spinner, texte « calcul en cours… », grisé temporaire) distinguant un état
+  transitoire d'un état final.
+- **Observé** : l'écran affiche transitoirement un total de crédits erroné (ex. « 30/120 cr » au lieu du 105/120
+  final) et plusieurs sessions marquées « à planifier », sans aucun signe que ce n'est pas l'état définitif ; il
+  faut attendre quelques centaines de millisecondes et rafraîchir la lecture pour voir l'état stable. Une
+  utilisatrice qui regarde l'écran à ce moment précis croirait le cheminement brisé. Capture :
+  `06-recalcul-transitoire.png` (état transitoire) à comparer avec `05-hiver-depart.png` (état stable, quelques
+  instants plus tard, mêmes entrées).
+
+### Aucune vue comparative entre les quatre concentrations
+- **Gravité** : mineur
+- **Type** : friction / pas encore construit
+- **Reproduction** : basculer entre les concentrations dans le menu déroulant « Concentration ».
+- **Attendu** : pouvoir comparer visuellement (côte à côte, ou par onglets conservés) les quatre cheminements
+  types que je suis censé publier ensemble dans un même document.
+- **Observé** : la bascule change proprement le contenu (aucun résidu de la concentration précédente n'est resté
+  dans les sessions lors de mes essais — bon point, voir plus bas), mais un seul cheminement est visible à la
+  fois ; pour comparer, il faut noter manuellement ou exporter chacun séparément. Étant donné que « Partager » et
+  l'export ne sont pas dans le périmètre que j'ai testé, je ne peux pas confirmer s'il existe un contournement
+  raisonnable (par ex. ouvrir plusieurs onglets avec des URL différentes) — je ne l'ai pas essayé.
 
 ---
 
-## Constats additionnels (régressions et non-régressions observées en explorant plus largement)
+## Constats positifs (à ne pas passer sous silence)
 
-### Double échec simultané (GCI-1000 + GCI-1001 gelés en A3) — cheminement recalculé toujours défendable
-- **Gravité** : n/a (vérification de non-régression, avec une mise en garde méthodologique)
-- **Type** : comportement confirmé correct, sous réserve d'attendre la fin de la recherche
-- **Reproduction** : B-GCI sans concentration, geler GCI-1000 et GCI-1001 tous deux en A3-A27, rien d'autre crédité.
-- **Observé** : **piège identique à celui du scénario 4** — juste après le second gel, une lecture immédiate montrait A3-A27 à 18 cr (au-dessus du plafond 17) avec un badge « ⚠ conflit d'horaire », et GCI-2000 semblait placé en H2-H27, soit **avant** son préalable réel GCI-1001 (maintenant en A3) — une violation apparente de préalable malgré le texte « Placement vérifié ✓ (préalables, plafond...) » affiché à côté. En relisant après la fin de la recherche (quelques secondes plus tard, statut de recherche disparu), le cheminement s'était stabilisé correctement : GCI-2000 était bien passé en H4-H28 (après A3), aucune session ne dépassait 17 cr, et la mention « Placement vérifié ✓ » correspondait à cet état final. J'ai vérifié les principales chaînes de causalité (GCI-1000/1001 → GCI-2000 → GCI-2001 → GCI-2007/GCI-3000) et elles sont cohérentes avec les préalables réels affichés, de la même façon que le scénario 1.
-- **Pourquoi je le signale** : ce n'est pas un bogue de calcul (le résultat final est correct), mais un **deuxième cas concret** où l'état transitoire affiché pendant la recherche peut faire croire à une violation de préalable ou de plafond — situation particulièrement trompeuse ici puisque le texte « Placement vérifié ✓ » reste affiché sans distinction visible entre « vérifié pour l'état affiché actuellement » et « vérifié pour la solution qui vient d'être trouvée, en cours d'application ». Je recommande que ce texte (ou la grille) indique explicitement un état « en recalcul » tant que la recherche n'est pas terminée, plutôt que de laisser un « ✓ » affiché à côté d'un tableau provisoirement incohérent.
-- **Capture** : `shots2/12-double-fail-final.png` (état final, correct).
-
-### Le plafond de crédits est maintenant expliqué dans l'interface
-- **Gravité** : (ancien mineur, maintenant résolu)
-- **Type** : friction corrigée
-- **Observé** : l'info-bulle du champ « Plafond (cr) » indique désormais explicitement : « Nombre maximal de crédits par session. Le placement automatique ne dépasse jamais ce plafond ; un placement à la main peut le dépasser et l'outil l'avertit. 17 cr est la charge pleine usuelle — ajustable. » Cela répond directement à la question que je posais le 27 août, et le comportement observé (le double-échec manuel dépasse effectivement 17 cr et est signalé, l'automatique ne le fait jamais) est cohérent avec ce texte.
-
-### Persistance après rechargement — toujours fiable
-- **Gravité** : n/a
-- **Type** : comportement confirmé correct
-- **Observé** : rechargement en plein scénario 5 (profil actif, concentration, 103/120 cr) restaure exactement le même état. Aucune régression.
-
-### Fragilité des accordéons de règles face aux clics automatisés (friction déjà connue, inchangée)
-- **Gravité** : mineur
-- **Type** : friction (inchangé depuis le 27 août)
-- **Reproduction** : cliquer un en-tête d'accordéon (« Cours obligatoires », « Règle 1 » d'une concentration) via une référence d'élément capturée par un instantané précédent.
-- **Observé** : plusieurs clics sur la même référence d'élément n'ont parfois aucun effet visible dans l'instantané suivant, y compris après une pause d'une seconde ; il a fallu retrouver l'élément par son contenu textuel exact au moment du clic pour que l'ouverture prenne effet de façon fiable. Je ne peux pas affirmer avec certitude que ceci affecterait un vrai clic de souris humain (les références de mon outil de test peuvent devenir périmées après un rendu, ce qui est un artefact de test et non forcément un bogue applicatif) — je le signale par prudence, comme le 27 août, sans le requalifier en bogue confirmé.
-
-### Aucun marquage dédié « cours réussi » — inchangé, assumé par ADR
-- **Gravité** : mineur
-- **Type** : pas encore construit / friction (inchangé)
-- **Observé** : toujours seulement « créditer » comme contournement pour simuler un cours réussi ; comportement identique et assumé (ADR `2026-08-retrait-de-la-notion-de-cours-reussi`), sans changement depuis le 27 août.
-
-### Non testé — à mentionner explicitement
-- Le dépassement réel de 120 cr et son signalement en en-tête (scénario 5, deuxième partie) — je n'ai pas réussi à le provoquer.
-- Le partage par URL, le tiroir Capsule, et l'allongement du cheminement au milieu (spinbutton Sessions pour un échec situé en cours de cheminement, pas seulement en H10 terminal) n'ont pas été retestés dans cette session de contre-vérification, faute de temps disponible après l'incident d'infrastructure — ils avaient déjà été notés comme non testés le 27 août et le restent.
-- Un audit exhaustif de **chaque** cours déplacé dans le scénario de double-échec (j'ai vérifié la chaîne causale principale mais pas les six mouvements secondaires un par un, comme GCI-1003, GCI-1004, MAT-1900, MAT-1910, GCI-2009, GCI-2006) — ceux que j'ai vérifiés étaient tous justifiés, et la structure d'ensemble (redistribution proportionnée à la gravité de l'échec, deux cours de base retardés d'un an) semblait raisonnable, mais je ne l'affirme pas avec la même certitude que pour le scénario 1.
+- **La chaîne de préalables est correctement propagée.** En gelant les sessions A1 à H4 et en déplaçant GCI-1001
+  (Statique, cours à forte chaîne de dépendances) de A1 vers A3-A27 pour simuler un échec, le stage GCI-2580 —
+  qui dépend indirectement de cette chaîne — a automatiquement glissé de É27 à É28, et l'ensemble du reste du
+  cheminement s'est réajusté sans qu'aucun cours ne devienne « à planifier » : le programme est resté complet en
+  8 sessions grâce à la marge sous le plafond de crédits. C'est exactement le raisonnement que je fais moi-même
+  en comité de cas particuliers.
+- **Un cours terminal (PHI-3900, dernière session, rien n'en dépend) a un impact minimal** quand on le déplace :
+  seul son propre déplacement se produit, rien d'autre ne bouge.
+- **Un cours à une seule saison (GCI-2006, offert seulement à l'hiver) coûte bien une année complète** une fois
+  retiré de sa session : repoussé de H6-H29 à H8-H30 (aucune session d'automne ne lui est proposée), conforme à
+  l'attente.
+- **Deux échecs simultanés dans la même session** (GCI-2004 et GCI-2010, tous deux offerts seulement à l'hiver)
+  ont été relocalisés ensemble à la session H suivante, dans le respect du plafond de crédits (15 cr sur 17),
+  sans rien perdre du reste du programme.
+- **Rallonger l'horizon fonctionne et le dit clairement.** Augmenter « Sessions » de 8 à 9 a ajouté une session
+  A9-A30 exploitable immédiatement ; en essayant de revenir à 8, l'outil a refusé et expliqué pourquoi : « L'horizon
+  reste à 9 sessions : PHI-3900 est épinglé en A9-A30 — dépinglez pour réduire davantage. » C'est précisément le
+  type de message que je pourrais montrer telle quelle à une étudiante.
+- **Un départ à l'hiver est vraiment recalculé, pas simplement décalé.** Les cours offerts uniquement à l'automne
+  ont bien été redistribués dans le bon ordre (H1, A2, H3, É28-stage, A4…), avec un message explicite listant les
+  cours « retirés du placement » par le changement de Début.
+- **L'exigence linguistique et les préalables non vérifiables sont bien signalés** : « Exigence linguistique -
+  ANL-2020 ou VEPT ≥ 53 ✓ » et un avertissement dédié pour le score TOEFL présumé acquis derrière ANL-2020 — utile
+  pour rappeler à une étudiante de vérifier elle-même ce que l'outil ne peut pas valider.
+- **L'état complet (programme, concentration, Début, sessions gelées, cours déplacés, 105/120 cr) a survécu à un
+  rechargement complet de la page**, aussi bien avant qu'après les manipulations d'échec — testé deux fois.
+- Aucune erreur JavaScript n'est apparue dans la console pendant toute la session, malgré des manipulations assez
+  poussées (double échec, chevauchement de règles, changement répété de Début, rallongement de l'horizon).
 
 ---
 
 ## Impression générale
 
-Le correctif cible bien le problème que j'avais signalé le 27 août : sur mes trois reproductions exactes (un cours retardé, un ajout d'électif, et un nouveau test à deux échecs simultanés), le replacement est maintenant localisé et chaque déplacement que j'ai vérifié a une cause traçable — un vrai préalable ou une collision de plafond résolue par la session suivante de la même saison. J'ai même dû corriger mon propre diagnostic du 27 août : une partie de ce que je croyais injustifié (GCI-2001 déplacé « sans lien » avec GCI-1001) tenait en réalité à une chaîne de préalables transitive que je n'avais pas remontée jusqu'au bout.
+Le cœur du solveur m'inspire confiance : la propagation des préalables après un échec, le coût réel d'un cours à
+une seule saison, la gestion honnête d'un rallongement d'horizon et la persistance de l'état sont exactement ce
+que j'attends d'un outil que je montrerais à un comité de programme ou à une étudiante en échec. Je ferais
+confiance au moteur de calcul.
 
-Le profil développement durable affiche maintenant une jauge claire avec une note explicite, et je n'ai pas réussi à faire dépasser 120 crédits dans mes essais — un point positif, même si je n'ai pas pu vérifier le signalement d'un dépassement faute d'avoir trouvé comment le provoquer.
+Je ne confierais **pas encore** la production des programmes types officiels à cet outil tel quel, pour deux
+raisons concrètes observées à l'écran : (1) rien ne garantit que le placement automatique respecte le bon sens
+pédagogique implicite (un cours de concentration de fin de programme peut atterrir en deuxième session, faute de
+préalable formel qui l'en empêche) — je devrais réviser chaque cheminement à la main avant publication ; et (2) la
+façon de simuler un échec — le scénario que je répète le plus souvent avec les étudiants — n'est documentée nulle
+part dans l'interface ; je l'ai reconstituée par essai-erreur (geler + déplacer manuellement), ce qui n'est pas
+un exercice que je peux demander à une étudiante en détresse de refaire seule. Les messages qui s'empilent sans
+jamais se nettoyer aggravent cette impression : au moment où je voudrais montrer un résultat propre en comité, la
+zone de statut est encombrée de mises en garde périmées, certaines encore en partie en anglais technique.
 
-Ma seule réserve sérieuse, découverte deux fois indépendamment pendant cette contre-vérification (une fois sur le départ hiver, une fois sur le double-échec), est méthodologique mais mérite d'être corrigée dans l'interface elle-même : pendant que le solveur cherche une nouvelle solution (statut « recherche d'un organigramme - N s »), l'écran peut afficher un état transitoire qui ressemble à un décalage naïf de session, ou à une violation apparente de préalable/plafond, alors que le résultat final (quelques secondes plus tard) est correct. Le seul indice de cet état provisoire est une ligne de texte dans le panneau de gauche, facile à manquer si on regarde la grille à droite — et le texte « Placement vérifié ✓ » reste affiché sans distinction claire entre « vérifié pour maintenant » et « en cours de recalcul ». C'est exactement le genre de piège qui pourrait me faire annoncer un mauvais cheminement à un étudiant si je clique et je lis trop vite.
-
-Sous cette réserve, je suis prêt à recommander l'outil pour la production de mes programmes types et pour répondre aux étudiants en échec — à condition de prendre l'habitude d'attendre la disparition du statut de recherche avant de lire le résultat, et idéalement que l'interface rende cet état transitoire plus visible directement sur la grille plutôt que dans une ligne de texte discrète.
+Rien de ce que j'ai vu n'est un bogue qui invalide un résultat (aucune perte silencieuse de crédits, aucune
+incohérence de calcul détectée), mais l'outil demande encore, dans son état actuel, un directeur qui sait déjà
+la réponse pour vérifier que le cheminement produit est publiable tel quel.
