@@ -1,18 +1,18 @@
 use crate::capsule::CapsuleError;
-use crate::data::{fnv1a_64, DataError};
+use crate::data::DataError;
 use crate::import::ImportError;
 
-// ERR-1: every user-facing error states five things, in French — what
-// happened, what the app did about it, what is affected, what to do now,
-// and a copyable id. `detail` is the technical text one click away (ERR-3).
+// Four parts, in French: what happened, what the app did about it, what is
+// affected, what to do now. No diagnostic id and no text lifted from the
+// source — a student reports what he read, not a hash (décision d'Antoine
+// 2026-08-30, ADR `2026-08-messages-d-erreur-sans-detail-technique`, a
+// GOV-2 waiver on AIR ERR-1 and ERR-3).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UiError {
     pub what: String,
     pub reaction: String,
     pub affected: String,
     pub action: String,
-    pub id: String,
-    pub detail: String,
 }
 
 pub fn present_data_error(error: &DataError) -> UiError {
@@ -34,12 +34,7 @@ pub fn present_data_error(error: &DataError) -> UiError {
         affected: "Tout l'affichage — aucun cours ni programme n'est \
                    disponible."
             .to_string(),
-        action: "Vérifiez votre connexion puis rechargez la page; si \
-                 l'erreur persiste, signalez-la avec l'identifiant \
-                 ci-dessous."
-            .to_string(),
-        id: error_id(&error.to_string()),
-        detail: error.to_string(),
+        action: "Vérifiez votre connexion puis rechargez la page.".to_string(),
     }
 }
 
@@ -63,7 +58,7 @@ pub fn present_import_error(error: &ImportError) -> UiError {
              récupérer la page, n'a pas répondu correctement."
                 .to_string(),
             "Réessayez dans quelques minutes; si l'erreur persiste, \
-             signalez-la avec l'identifiant ci-dessous."
+             importez le programme depuis un fichier JSON."
                 .to_string(),
         ),
         ImportError::NotFound { .. } => (
@@ -76,30 +71,30 @@ pub fn present_import_error(error: &ImportError) -> UiError {
             "Le service intermédiaire corsproxy.io a renvoyé un \
              contenu qui n'est pas une page web."
                 .to_string(),
-            "Réessayez; si l'erreur persiste, signalez-la avec \
-             l'identifiant ci-dessous."
+            "Réessayez; si l'erreur persiste, importez le programme \
+             depuis un fichier JSON."
                 .to_string(),
         ),
         ImportError::Parse { .. } => (
             "La page de programme n'a pas pu être analysée.".to_string(),
-            "Signalez l'erreur avec l'identifiant ci-dessous; le \
-             programme n'a pas été ajouté."
+            "Le programme n'a pas été ajouté; vérifiez qu'il s'agit \
+             bien d'une page de programme, puis réessayez."
                 .to_string(),
         ),
         ImportError::Preparatory { .. } => (
             "Le calcul de la scolarité préparatoire de ce programme a \
              échoué."
                 .to_string(),
-            "Signalez l'erreur avec l'identifiant ci-dessous; le \
-             programme n'a pas été ajouté."
+            "Le programme n'a pas été ajouté; vérifiez qu'il s'agit \
+             bien d'une page de programme, puis réessayez."
                 .to_string(),
         ),
         ImportError::Language { .. } => (
             "La règle d'exigence linguistique de ce programme n'a pas pu \
              être élargie aux cours de langue."
                 .to_string(),
-            "Signalez l'erreur avec l'identifiant ci-dessous; le \
-             programme n'a pas été ajouté."
+            "Le programme n'a pas été ajouté; vérifiez qu'il s'agit \
+             bien d'une page de programme, puis réessayez."
                 .to_string(),
         ),
         ImportError::Cancelled => (
@@ -136,8 +131,6 @@ pub fn present_import_error(error: &ImportError) -> UiError {
             .to_string(),
         affected: "L'import de ce programme seulement.".to_string(),
         action,
-        id: error_id(&error.to_string()),
-        detail: error.to_string(),
     }
 }
 
@@ -157,8 +150,6 @@ pub fn present_local_program_conflict(detail: &str) -> UiError {
         action: "Choisissez directement ce programme dans la liste \
                  ci-dessus."
             .to_string(),
-        id: error_id(detail),
-        detail: detail.to_string(),
     }
 }
 
@@ -197,8 +188,6 @@ pub fn present_capsule_error(error: &CapsuleError) -> UiError {
             .to_string(),
         affected: "Le chargement de ce relevé seulement.".to_string(),
         action,
-        id: error_id(&error.to_string()),
-        detail: error.to_string(),
     }
 }
 
@@ -216,65 +205,12 @@ pub fn scope_origin(scope: ulaval_scheduler_core::Scope) -> &'static str {
     }
 }
 
-// A rule whose selection went past its maximum. Core refuses to decide
-// whether the surplus is a fault or uncounted extra credits (ADR
-// `2026-07-somme-au-dessus-du-max-en-erreur-typee`), so the arbitration is
-// the student's — which is exactly what `action` asks of him. The same
-// value is built from the typed `CoverageError` the panel counts with and
-// from the raw string the organigramme worker sends back, so both doors
-// say one thing (ADR `2026-08-refus-du-solveur-en-francais`).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OverMax {
-    pub rule: String,
-    pub scope: ulaval_scheduler_core::Scope,
-    pub total: i64,
-    pub max: i64,
-    // credits summed, as opposed to a count of courses
-    pub credits: bool,
-}
-
-pub fn present_over_max(over: &OverMax, detail: &str) -> UiError {
-    let origin = scope_origin(over.scope);
-    let (rule, total, max) = (&over.rule, over.total, over.max);
-    let what = if over.credits {
-        format!(
-            "{rule}{origin} : les cours sélectionnés y totalisent {total} \
-             crédits, au-dessus de son maximum de {max}."
-        )
-    } else {
-        format!(
-            "{rule}{origin} : {total} cours sélectionnés y comptent, \
-             au-dessus de son maximum de {max}."
-        )
-    };
-    UiError {
-        what,
-        reaction: "Le comptage de cette règle est suspendu; ni votre \
-                   organigramme ni vos choix n'ont bougé."
-            .to_string(),
-        affected: "Cette règle seulement : les autres continuent d'être \
-                   comptées."
-            .to_string(),
-        action: "Retirez un cours de cette règle, ou rattachez-le à une \
-                 autre règle avec le menu « entente avec la direction… » de \
-                 sa ligne — un cours qu'admettent deux règles demande votre \
-                 arbitrage."
-            .to_string(),
-        id: error_id(detail),
-        detail: detail.to_string(),
-    }
-}
-
 // The organigramme worker answers in JSON strings, and its refusals are
-// core's own — English, written for whoever reads a stack trace
-// (« semantics await the director's ruling »). That text used to ride
-// whole into the primary message (constat Bernard 2026-08-29); it now
-// stays behind the fold as the technical detail, and the student reads a
-// French sentence with a way out (ERR-1/ERR-3).
+// core's own — English, written for whoever reads a stack trace. None of
+// that text ever reaches the screen: the one refusal a student can provoke
+// is recognized by its prefix and said in French, and anything else gets
+// the generic wrapper below.
 pub fn present_solver_error(message: &str) -> UiError {
-    if let Some(over) = parse_over_max(message) {
-        return present_over_max(&over, message);
-    }
     if let Some(codes) = message.strip_prefix(VERIFY_UNPLACED) {
         return UiError {
             what: format!(
@@ -289,8 +225,6 @@ pub fn present_solver_error(message: &str) -> UiError {
                      le placement automatique, puis relancez la \
                      vérification."
                 .to_string(),
-            id: error_id(message),
-            detail: message.to_string(),
         };
     }
     UiError {
@@ -303,12 +237,8 @@ pub fn present_solver_error(message: &str) -> UiError {
                    votre prochaine modification."
             .to_string(),
         action: "Modifiez le cheminement — retirez un cours, changez une \
-                 session, allongez l'horizon — puis relancez; si l'erreur \
-                 persiste, signalez-la avec l'identifiant et le détail \
-                 technique ci-dessous."
+                 session, allongez l'horizon — puis relancez."
             .to_string(),
-        id: error_id(message),
-        detail: message.to_string(),
     }
 }
 
@@ -318,50 +248,6 @@ pub fn present_solver_error(message: &str) -> UiError {
 const VERIFY_UNPLACED: &str =
     "verification needs a session for every course left to place : ";
 
-// The tail every over-max message of `CoverageError` carries. Reading the
-// wire back into a typed value is coupling, and it is a *checked* one: the
-// test `an_over_max_from_the_worker_is_read_back_into_french` feeds this
-// parser the real `CoverageError` Display, so a reworded core breaks CI
-// instead of silently falling back to the generic wrapper.
-const OVER_MAX_TAIL: &str = " — semantics await the director's ruling";
-
-fn parse_over_max(message: &str) -> Option<OverMax> {
-    use ulaval_scheduler_core::Scope;
-    let body = message.strip_suffix(OVER_MAX_TAIL)?;
-    let (head, tail) = body.split_once(" scope) : the selection ")?;
-    let (rule, scope) = head.rsplit_once(" (")?;
-    let scope = match scope {
-        "program" => Scope::Program,
-        "concentration" => Scope::Concentration,
-        "profile" => Scope::Profile,
-        // an unrecognized shape falls back to the generic French wrapper
-        // rather than inventing a scope: the raw text still rides in the
-        // detail, nothing is dropped
-        _ => return None,
-    };
-    let (counted, max) = tail.split_once(", above the max ")?;
-    let sums = counted
-        .strip_prefix("sums ")
-        .and_then(|rest| rest.strip_suffix(" credits"));
-    let counts = counted
-        .strip_prefix("counts ")
-        .and_then(|rest| rest.strip_suffix(" courses"));
-    let (total, credits) = match (sums, counts) {
-        (Some(total), _) => (total, true),
-        (_, Some(total)) => (total, false),
-        _ => return None,
-    };
-    Some(OverMax {
-        rule: rule.to_string(),
-        scope,
-        total: total.parse().ok()?,
-        max: max.parse().ok()?,
-        credits,
-    })
-}
-
-// deterministic (fnv of the message): the same failure always carries the
-// same id, so two reports of it can be recognized as one
 // A correction the catalogue could not honour, said in French. Every case
 // names the course and what the student can do about it — a correction that
 // quietly did nothing would be worse than none at all.
@@ -680,11 +566,6 @@ pub fn removal_band(
         barred: mandatory,
         label,
     })
-}
-
-pub fn error_id(detail: &str) -> String {
-    let hash = fnv1a_64(0xcbf2_9ce4_8422_2325, detail.as_bytes());
-    format!("GH-{:08X}", (hash >> 32) as u32 ^ hash as u32)
 }
 
 // --- the bac credit total, explained ---------------------------------------
@@ -1817,8 +1698,6 @@ mod tests {
             assert!(!error.reaction.is_empty());
             assert!(!error.affected.is_empty());
             assert!(!error.action.is_empty());
-            assert!(error.id.starts_with("GH-"));
-            assert!(!error.detail.is_empty());
         }
     }
 
@@ -1940,13 +1819,6 @@ mod tests {
         assert!(ko.contains("la fiche du cours"), "{ko}");
     }
 
-    #[test]
-    fn the_id_is_deterministic_and_separates_distinct_failures() {
-        assert_eq!(error_id("same"), error_id("same"));
-        assert_ne!(error_id("same"), error_id("other"));
-        assert_eq!(error_id("x").len(), "GH-".len() + 8);
-    }
-
     fn credit_summary(
         in_addition: u32,
         preparatory: u32,
@@ -1962,90 +1834,36 @@ mod tests {
 
     // --- solver refusals -------------------------------------------------
 
-    // The coupling this test exists for: the parser reads back the very
-    // string `CoverageError` prints, so a reworded core fails here instead
-    // of silently degrading every over-max into the generic wrapper.
+    // The guarantee that replaced the over-max parser: whatever English a
+    // worker sends back, no fragment of it reaches any of the four parts.
+    // An over-max no longer travels this road at all — core reports it on
+    // its own rule (ADR `2026-08-depassement-de-regle-en-statut-rouge`).
     #[test]
-    fn an_over_max_from_the_worker_is_read_back_into_french() {
-        use ulaval_scheduler_core::{CoverageError, Scope};
-        let credits = CoverageError::CreditsOverMax {
-            rule: "Règle 1".to_string(),
-            scope: Scope::Concentration,
-            total: 15,
-            max: 12,
-        }
-        .to_string();
-        let error = present_solver_error(&credits);
-        assert_eq!(
-            error.what,
-            "Règle 1 de la concentration : les cours sélectionnés y \
-             totalisent 15 crédits, au-dessus de son maximum de 12."
-        );
-        assert!(
-            error.action.contains("Retirez un cours de cette règle")
-                && error.action.contains("entente avec la direction"),
-            "the way out names both moves: {}",
-            error.action
-        );
-        for part in [&error.what, &error.reaction, &error.affected] {
-            assert!(!part.contains("scope"), "no English up front: {part}");
-            assert!(!part.contains("semantics"), "{part}");
-        }
-        assert_eq!(error.detail, credits, "the raw text is kept whole");
-        assert!(error.id.starts_with("GH-"));
-
-        // the course-count twin, and the two other scopes
-        let counted = CoverageError::CountOverMax {
-            rule: "Règle 3".to_string(),
-            scope: Scope::Profile,
-            total: 2,
-            max: 1,
-        }
-        .to_string();
-        assert_eq!(
-            present_solver_error(&counted).what,
-            "Règle 3 du profil : 2 cours sélectionnés y comptent, au-dessus \
-             de son maximum de 1."
-        );
-        let program = CoverageError::CountOverMax {
-            rule: "Règle 1".to_string(),
-            scope: Scope::Program,
-            total: 2,
-            max: 1,
-        }
-        .to_string();
-        assert!(present_solver_error(&program)
-            .what
-            .starts_with("Règle 1 : 2 cours"));
-    }
-
-    #[test]
-    fn a_refusal_the_parser_cannot_read_still_speaks_french() {
-        // every near-miss of the over-max shape falls back rather than
-        // inventing a rule, a scope or a number — and the raw text always
-        // survives in the detail (never dropped silently)
-        let tail = " — semantics await the director's ruling";
+    fn a_solver_refusal_speaks_french_and_leaks_no_english() {
         for message in [
             "GEX-1001 is pinned to session 9, outside 1..=8",
-            "Règle 1 (faculty scope) : the selection sums 15 credits, \
-             above the max 12 — semantics await the director's ruling",
-            &format!("Règle 1 (program scope) : the selection sums 15 credits, above the max 12{tail} and more"),
-            &format!("Règle 1 : the selection sums 15 credits, above the max 12{tail}"),
-            &format!("Règle 1 scope) : the selection sums 15 credits, above the max 12{tail}"),
-            &format!("Règle 1 (program scope) : the selection weighs 15 credits, above the max 12{tail}"),
-            &format!("Règle 1 (program scope) : the selection sums 15 credits, at the max 12{tail}"),
-            &format!("Règle 1 (program scope) : the selection sums quinze credits, above the max 12{tail}"),
-            &format!("Règle 1 (program scope) : the selection sums 15 credits, above the max douze{tail}"),
+            "Règle 1 (concentration scope) : the selection sums 15 credits, \
+             above the max 12",
+            "the selection counts 2 courses, above the max 1",
         ] {
             let error = present_solver_error(message);
             assert_eq!(
-                error.what,
-                "Le solveur n'a pas pu répondre à cette demande.",
+                error.what, "Le solveur n'a pas pu répondre à cette demande.",
                 "{message}"
             );
-            assert_eq!(error.detail, message);
             assert!(!error.action.is_empty(), "{message}");
-            assert!(error.id.starts_with("GH-"), "{message}");
+            for part in
+                [&error.what, &error.reaction, &error.affected, &error.action]
+            {
+                for english in
+                    ["scope", "selection", "above the max", "pinned"]
+                {
+                    assert!(
+                        !part.contains(english),
+                        "« {english} » reached the screen: {part}"
+                    );
+                }
+            }
         }
     }
 
@@ -2063,7 +1881,6 @@ mod tests {
         );
         assert!(error.action.contains("placement automatique"));
         assert_eq!(error.affected, "Le verdict de vérification seulement.");
-        assert_eq!(error.detail, message);
     }
 
     // --- ribbon truncation -----------------------------------------------
@@ -2284,8 +2101,6 @@ mod tests {
                 "L'import de ce programme seulement."
             );
             assert!(!presented.action.is_empty(), "{error}");
-            assert!(presented.id.starts_with("GH-"), "{error}");
-            assert_eq!(presented.detail, error.to_string());
         }
         for error in [&variants[1], &variants[3]] {
             let presented = present_import_error(error);
@@ -2295,16 +2110,6 @@ mod tests {
                 presented.what
             );
         }
-    }
-
-    #[test]
-    fn two_different_import_errors_carry_two_different_ids() {
-        let a = present_import_error(&ImportError::NotFound { status: 404 });
-        let b = present_import_error(&ImportError::NotFound { status: 410 });
-        assert_ne!(a.id, b.id);
-        let repeat =
-            present_import_error(&ImportError::NotFound { status: 404 });
-        assert_eq!(a.id, repeat.id, "the same failure keeps the same id");
     }
 
     // --- present_local_program_conflict ---
@@ -2318,15 +2123,6 @@ mod tests {
         assert!(!presented.reaction.is_empty());
         assert_eq!(presented.affected, "L'import de ce programme seulement.");
         assert!(!presented.action.is_empty());
-        assert!(presented.id.starts_with("GH-"));
-        assert_eq!(presented.detail, detail);
-    }
-
-    #[test]
-    fn two_different_local_program_conflicts_carry_two_different_ids() {
-        let a = present_local_program_conflict("B-GEX A26 existe déjà.");
-        let b = present_local_program_conflict("B-GLO A26 existe déjà.");
-        assert_ne!(a.id, b.id);
     }
 
     // --- present_capsule_error ---
@@ -2350,8 +2146,6 @@ mod tests {
             "Le chargement de ce relevé seulement."
         );
         assert!(!presented.reaction.is_empty());
-        assert!(presented.id.starts_with("GH-"));
-        assert_eq!(presented.detail, error.to_string());
     }
 
     #[test]
@@ -2366,8 +2160,6 @@ mod tests {
             presented.affected,
             "Le chargement de ce relevé seulement."
         );
-        assert!(presented.id.starts_with("GH-"));
-        assert_eq!(presented.detail, error.to_string());
     }
 
     #[test]
@@ -2380,8 +2172,6 @@ mod tests {
             presented.affected,
             "Le chargement de ce relevé seulement."
         );
-        assert!(presented.id.starts_with("GH-"));
-        assert_eq!(presented.detail, error.to_string());
     }
 
     // --- grid geometry ---
@@ -2458,7 +2248,6 @@ mod tests {
         assert_eq!(grid.hours.last().map(String::as_str), Some("22:30"));
         let block = &grid.days[0].blocks[0];
         assert_eq!(block.title, "Hydrologie", "title read off the snapshot");
-        assert_eq!(block.detail, "GEX-1000 - A");
         assert_eq!(block.hue, 0.0);
         assert!((block.top - 0.0).abs() < f32::EPSILON);
         assert!((block.height - 170.0 / 840.0 * 100.0).abs() < 0.01);
@@ -2572,7 +2361,6 @@ mod tests {
             "a ghost never advertises its own siblings"
         );
         assert_eq!(ghost.title, "B", "compact label, not the course title");
-        assert_eq!(ghost.detail, "", "no duplicate line under a narrow ghost");
         assert_eq!(
             ghost.full_label, "GEX-1000 - B",
             "the aria label carries the course code the compact title drops"
@@ -2657,10 +2445,6 @@ mod tests {
         assert_eq!(
             ghost.title, "Z2 - à distance",
             "compact label, not the course title"
-        );
-        assert_eq!(
-            ghost.detail, "",
-            "no duplicate detail line on a narrow ghost"
         );
     }
 

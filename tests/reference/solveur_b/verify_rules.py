@@ -5,7 +5,11 @@ courses split satisfied/missing, and each rule reported as satisfied /
 incomplete / reported per ADR
 `2026-07-schema-du-rapport-de-couverture-en-fixtures`. Rule lists have set
 semantics; references resolve to their target list; a credits sum or course
-count above max is a hard error (semantics undecided, fixtures stay within).
+count above max is that rule's own verdict, `over_max` — a violation the
+student can undo, never a refusal of the whole report (ADR
+`2026-08-depassement-de-regle-en-statut-rouge`, which arbitrated ADR
+`2026-07-somme-au-dessus-du-max-en-erreur-typee`). A rule whose own data
+defeats the count reports `uncounted` and names its `defect`.
 Within a scope, a selected course is claimed by the first evaluated rule
 that lists it; later rules of the same scope report it as `elsewhere`
 instead of counting it again (ADR
@@ -121,7 +125,19 @@ def rule_report(scope, rule, program, selection, credits, claimed):
     courses = rule.get("courses")
     constraint = rule.get("constraint")
     if isinstance(courses, dict):
-        courses = resolve_reference(courses, program)
+        try:
+            courses = resolve_reference(courses, program)
+        except BrokenReference as broken:
+            # this rule alone loses its verdict; every other one stands
+            entry = {
+                "scope": scope,
+                "title": rule["title"],
+                "status": "uncounted",
+            }
+            if "raw" in rule:
+                entry["raw"] = rule["raw"]
+            entry["defect"] = broken.defect
+            return entry
     if not isinstance(courses, list):
         # Keyword (any/negotiated) or raw-only: surfaced to the student,
         # never invented
@@ -152,7 +168,7 @@ def rule_report(scope, rule, program, selection, credits, claimed):
     # `2026-08-un-cours-compte-dans-une-seule-regle-par-portee`)
     counted = sorted((listed & selection) - claimed)
     elsewhere = sorted(listed & selection & claimed)
-    status, missing = evaluate(constraint, counted, credits, rule)
+    status, missing, defect = evaluate(constraint, counted, credits, rule)
     entry = {
         "scope": scope,
         "title": rule["title"],
@@ -164,7 +180,24 @@ def rule_report(scope, rule, program, selection, credits, claimed):
     if missing is not None:
         entry["missing"] = missing
     entry["candidates"] = sorted(listed - selection)
+    # a credits rule whose codes carry no Course keeps its rows — the
+    # student still sees the list — but says why no sum was possible
+    if defect is not None:
+        entry["defect"] = defect
     return entry
+
+
+class BrokenReference(Exception):
+    """The chase failed; the rule alone is uncounted, the report stands."""
+
+    def __init__(self, reference):
+        super().__init__(reference["rule"])
+        self.defect = {
+            "broken_reference": {
+                "concentration": reference["concentration"],
+                "target": reference["rule"],
+            }
+        }
 
 
 def resolve_reference(reference, program):
@@ -177,7 +210,7 @@ def resolve_reference(reference, program):
         None,
     )
     if concentration is None:
-        raise ValueError(f"reference to unknown {reference['concentration']}")
+        raise BrokenReference(reference)
     target = next(
         (
             r
@@ -187,44 +220,38 @@ def resolve_reference(reference, program):
         None,
     )
     if target is None:
-        raise ValueError(f"reference to unknown rule {reference['rule']}")
+        raise BrokenReference(reference)
     resolved = target.get("courses")
     if not isinstance(resolved, list):
-        raise ValueError(
-            f"{reference['rule']} of {reference['concentration']} is not a "
-            "course list — a reference chase is an error"
-        )
+        raise BrokenReference(reference)
     return resolved
 
 
 def evaluate(constraint, counted, credits, rule):
+    """Returns (status, missing, defect) — and never raises."""
     if constraint["type"] == "course":
         total = len(counted)
-        if total > constraint["max"]:
-            raise ValueError(
-                f"{rule['title']}: {total} courses exceed max "
-                f"{constraint['max']} — semantics undecided, fixtures stay "
-                "within"
-            )
-        if total >= constraint["min"]:
-            return "satisfied", None
-        return "incomplete", {"count": constraint["min"] - total}
+        status, missing = over_or(
+            total, constraint, {"count": constraint["min"] - total}
+        )
+        return status, missing, None
     total = 0
     for code in counted:
         if code not in credits:
-            raise ValueError(
-                f"{rule['title']}: {code} counts credits but has no Course "
-                "object in the fixture"
-            )
+            return "uncounted", None, {"missing_course": {"code": code}}
         total += credits[code]
+    status, missing = over_or(
+        total, constraint, {"credits": constraint["min"] - total}
+    )
+    return status, missing, None
+
+
+def over_or(total, constraint, shortfall):
     if total > constraint["max"]:
-        raise ValueError(
-            f"{rule['title']}: sum {total} exceeds max {constraint['max']} "
-            "— semantics undecided, fixtures stay within"
-        )
+        return "over_max", None
     if total >= constraint["min"]:
         return "satisfied", None
-    return "incomplete", {"credits": constraint["min"] - total}
+    return "incomplete", shortfall
 
 
 def language_report(requirement, selection):

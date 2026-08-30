@@ -1,5 +1,7 @@
 # La contrainte de règle étiquetée : {type, min, max}
 
+> **Amendé le 2026-08-30.** Le total au-dessus du `max` n'est plus une erreur typée `CountOverMax` mais le statut `RuleStatus::OverMax` de la règle seule (ADR `2026-08-depassement-de-regle-en-statut-rouge`). L'étiquetage `min`/`max` lui-même est inchangé.
+
 Date : 2026-08-02
 
 ## Contexte

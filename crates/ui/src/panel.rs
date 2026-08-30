@@ -24,8 +24,10 @@ pub fn subject_of(code: &str) -> &str {
 // so every badge, row and reason is testable without a browser.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PanelModel {
-    // ERR-5: a coverage error degrades this region alone, named in French
-    // in five parts, its English detail one click away (ERR-1/ERR-3)
+    // The last thing that can degrade the whole panel: a concentration or
+    // profile title naming no block. Every per-rule fault is on its own
+    // rule instead (ERR-5, ADR
+    // `2026-08-depassement-de-regle-en-statut-rouge`).
     pub coverage_error: Option<crate::present::UiError>,
     pub mandatory: Option<Section>,
     pub rules: Vec<Section>,
@@ -297,59 +299,36 @@ fn preparatory_badge(rules: &mut [Section], plan: &Plan) {
     }
 }
 
-// The two reachable-by-clicking errors get the shared over-max wording and
-// its way out; the rest (data defects) a generic French wrapper. Neither
-// puts core's English in the primary message — it rides in `detail`, one
-// click away (ERR-3, ADR `2026-08-refus-du-solveur-en-francais`).
+// What is left once every per-rule defect counts itself: a concentration or
+// a profile whose title names no block, which leaves no scope to report on
+// at all. A rule in fault never reaches here — it is red on its own line
+// (ADR `2026-08-depassement-de-regle-en-statut-rouge`).
 fn coverage_error_message(
     error: &ulaval_scheduler_core::CoverageError,
 ) -> crate::present::UiError {
-    use crate::present::{present_over_max, OverMax};
     use ulaval_scheduler_core::CoverageError;
-    let detail = error.to_string();
-    let over = match error {
-        CoverageError::CreditsOverMax {
-            rule,
-            scope,
-            total,
-            max,
-        } => Some((rule, scope, total, max, true)),
-        CoverageError::CountOverMax {
-            rule,
-            scope,
-            total,
-            max,
-        } => Some((rule, scope, total, max, false)),
-        _ => None,
+    let block = match error {
+        CoverageError::UnknownConcentration { title } => {
+            format!("La concentration « {title} »")
+        }
+        CoverageError::UnknownProfile { title } => {
+            format!("Le profil « {title} »")
+        }
     };
-    if let Some((rule, scope, total, max, credits)) = over {
-        return present_over_max(
-            &OverMax {
-                rule: rule.clone(),
-                scope: *scope,
-                total: *total,
-                max: *max,
-                credits,
-            },
-            &detail,
-        );
-    }
     crate::present::UiError {
-        what: "Les règles de ce programme ne peuvent pas être comptées \
-               pour l'instant."
-            .to_string(),
+        what: format!(
+            "{block} ne fait pas partie de cette version du programme, \
+             alors les règles ne peuvent pas être comptées."
+        ),
         reaction: "Elles s'affichent quand même, sans comptage; rien n'a \
                    été perdu et l'organigramme n'a pas bougé."
             .to_string(),
         affected: "Les insignes et les verdicts des règles, dans ce \
                    panneau seulement."
             .to_string(),
-        action: "Vérifiez la concentration et le profil choisis \
-                 ci-dessous; si l'erreur persiste, signalez-la avec \
-                 l'identifiant et le détail technique."
+        action: "Choisissez de nouveau la concentration et le profil \
+                 ci-dessous."
             .to_string(),
-        id: crate::present::error_id(&detail),
-        detail,
     }
 }
 
@@ -1630,13 +1609,23 @@ fn rule_section(
     } else {
         badge
     };
-    // only an unsatisfied choice needs the explanation — a rule already
-    // filled explains itself, a raw-only rule has no list to pick from
-    let lead = (!rows.is_empty()
-        && matches!(badge, Badge::Missing(_) | Badge::Partial(_)))
-    .then(|| {
-        rule_lead(report.scope, rule.and_then(|rule| rule.constraint.as_ref()))
-    });
+    // a rule in fault explains itself before anything else: it is the one
+    // line telling the student what to undo (ADR
+    // `2026-08-depassement-de-regle-en-statut-rouge`). Otherwise only an
+    // unsatisfied choice needs the explanation — a rule already filled
+    // explains itself, a raw-only rule has no list to pick from
+    let lead = match report.status {
+        RuleStatus::OverMax => Some(over_max_lead(report.scope)),
+        RuleStatus::Uncounted => report.defect.as_ref().map(defect_lead),
+        _ => (!rows.is_empty()
+            && matches!(badge, Badge::Missing(_) | Badge::Partial(_)))
+        .then(|| {
+            rule_lead(
+                report.scope,
+                rule.and_then(|rule| rule.constraint.as_ref()),
+            )
+        }),
+    };
     Section {
         key: format!("{scope_prefix}/{}", report.title),
         title: report.title.clone(),
@@ -1736,6 +1725,40 @@ fn mark_counted_elsewhere(
 // said so — the very gesture the comparison session repeats (« qu'est-ce
 // que cette concentration change ? ») showed an unchanged grid and a rule
 // at 0 without a word of explanation.
+// A rule holding more than its maximum. The way out is the same one the
+// panel's error banner used to offer before the over-max stopped being an
+// error, so the student reads the same advice in a calmer place.
+fn over_max_lead(scope: Scope) -> String {
+    let origin = scope_origin(scope);
+    format!(
+        "Cette règle{origin} contient plus de cours qu'elle n'en admet. \
+         Retirez-en un, ou rattachez-le à une autre règle avec le menu \
+         « entente avec la direction… » de sa ligne."
+    )
+}
+
+// A rule its own data defeated. The student cannot fix either case, so the
+// sentence says plainly that the rest of the panel is unaffected rather
+// than asking him for something he cannot do.
+fn defect_lead(defect: &ulaval_scheduler_core::RuleDefect) -> String {
+    use ulaval_scheduler_core::RuleDefect;
+    match defect {
+        RuleDefect::MissingCourse { code } => format!(
+            "Cette règle ne peut pas être comptée : les crédits de {code} \
+             sont introuvables au catalogue. Les autres règles restent \
+             comptées."
+        ),
+        RuleDefect::BrokenReference {
+            concentration,
+            target,
+        } => format!(
+            "Cette règle renvoie à « {target} » de la concentration \
+             « {concentration} », qui est introuvable : elle ne peut pas \
+             être comptée. Les autres règles restent comptées."
+        ),
+    }
+}
+
 fn rule_lead(scope: Scope, constraint: Option<&Constraint>) -> String {
     let pick = match constraint {
         Some(Constraint::Course { min, max }) if min == max => {
@@ -1825,6 +1848,27 @@ fn rule_badge(
         }
         RuleStatus::Reported => Badge::Neutral("—".to_string()),
         RuleStatus::Incomplete => incomplete_badge(snapshot, report, rule),
+        // « 15/12 cr » : the fraction is already unbounded on the
+        // numerator, so the excess shows itself. `Missing` is what paints
+        // the rule's outline red (`.panel-rule--missing`) — the fault must
+        // be visible without opening anything (ADR
+        // `2026-08-depassement-de-regle-en-statut-rouge`).
+        RuleStatus::OverMax => {
+            match rule.and_then(|rule| rule.constraint.as_ref()) {
+                Some(constraint) => Badge::Missing(
+                    constraint_fraction(
+                        snapshot,
+                        report.counted.as_deref().unwrap_or_default(),
+                        constraint,
+                    )
+                    .0,
+                ),
+                // unreachable in practice — core only rules OverMax on a
+                // constrained rule — but a silent « — » would hide a fault
+                None => Badge::Missing("trop de cours".to_string()),
+            }
+        }
+        RuleStatus::Uncounted => Badge::Missing("non comptée".to_string()),
     }
 }
 
@@ -3164,9 +3208,6 @@ mod tests {
             error.what
         );
         assert!(error.reaction.contains("sans comptage"), "{error:?}");
-        // the English is kept, one click away, and names the culprit
-        assert!(error.detail.contains("Aucune"), "{}", error.detail);
-        assert!(error.id.starts_with("GH-"), "{}", error.id);
         // the sections still render, badges neutral — never a blank panel
         let mandatory = model.mandatory.expect("still shown");
         assert_eq!(mandatory.rows.len(), 2);
@@ -3198,10 +3239,103 @@ mod tests {
     }
 
     #[test]
-    fn an_overfilled_rule_speaks_french_and_keeps_the_sections() {
-        // two courses counted in a « 1 parmi » rule: core refuses to count
-        // (semantics await the director) — the message must be French and
-        // actionable, the panel intact (rapport étudiante 2026-08-13)
+    fn a_degraded_panel_still_renders_the_scope_that_is_valid() {
+        // an unknown *profile* must not cost the concentration its group,
+        // nor the reverse: ERR-5 degrades the region that failed, alone
+        let mut plan = plan();
+        if let Some(choice) = plan.program.as_mut() {
+            choice.concentration = Some("Génie urbain".to_string());
+            choice.profile = Some("Aucun".to_string());
+        }
+        let model = panel_model(&snapshot(), &plan);
+        assert!(model.coverage_error.is_some(), "the profile is unknown");
+        let titles: Vec<&str> =
+            model.groups.iter().map(|g| g.title.as_str()).collect();
+        assert!(
+            titles.iter().any(|title| title.contains("Génie urbain")),
+            "{titles:?}"
+        );
+
+        if let Some(choice) = plan.program.as_mut() {
+            choice.concentration = Some("Aucune".to_string());
+            choice.profile = Some("Profil international".to_string());
+        }
+        let model = panel_model(&snapshot(), &plan);
+        assert!(
+            model.coverage_error.is_some(),
+            "the concentration is unknown"
+        );
+        let titles: Vec<&str> =
+            model.groups.iter().map(|g| g.title.as_str()).collect();
+        assert!(
+            titles
+                .iter()
+                .any(|title| title.contains("Profil international")),
+            "{titles:?}"
+        );
+    }
+
+    #[test]
+    fn a_rule_its_own_data_defeated_says_so_on_its_own_line() {
+        // « Règle 2 » lists GHOST-1, a code the catalogue does not carry:
+        // its credits cannot be summed, so that rule alone goes uncounted
+        let mut plan = plan();
+        plan.displayed_placement.insert("GHOST-1".to_string(), 1);
+        let model = panel_model(&snapshot(), &plan);
+        assert!(model.coverage_error.is_none(), "the panel still counts");
+        let rule = model
+            .rules
+            .iter()
+            .find(|section| section.title == "Règle 2")
+            .expect("Règle 2 renders");
+        assert_eq!(rule.badge, Badge::Missing("non comptée".to_string()));
+        let lead = rule.lead.as_deref().expect("the reason");
+        assert!(lead.contains("GHOST-1"), "{lead}");
+        assert!(
+            lead.contains("Les autres règles restent comptées"),
+            "{lead}"
+        );
+    }
+
+    #[test]
+    fn a_broken_reference_and_a_ruleless_over_max_still_name_themselves() {
+        // neither shape is reachable from the fixture program, but a
+        // silent « — » on either would hide a fault, so both are frozen
+        let broken =
+            defect_lead(&ulaval_scheduler_core::RuleDefect::BrokenReference {
+                concentration: "Géotechnique".to_string(),
+                target: "Règle 1".to_string(),
+            });
+        assert!(broken.contains("Géotechnique"), "{broken}");
+        assert!(broken.contains("Règle 1"), "{broken}");
+
+        // an over-max on a rule the view cannot resolve (an entente can
+        // name one core counted but `find_rule` misses)
+        let report = ulaval_scheduler_core::RuleReport {
+            scope: Scope::Program,
+            title: "Règle 1".to_string(),
+            status: RuleStatus::OverMax,
+            counted: Some(vec!["GMN-1000".to_string()]),
+            elsewhere: Vec::new(),
+            missing: None,
+            candidates: None,
+            raw: None,
+            defect: None,
+        };
+        assert_eq!(
+            rule_badge(&snapshot(), &report, None),
+            Badge::Missing("trop de cours".to_string())
+        );
+    }
+
+    #[test]
+    fn an_overfilled_rule_goes_red_alone_and_counts_nothing_down() {
+        // two courses counted in a « 1 parmi » rule. The regression this
+        // guards: it used to abort the whole report, blanking every scope
+        // (« progression indisponible »). Now the rule alone is in fault —
+        // red, « 2/1 », with the way out on its own line — and every other
+        // rule keeps its count (ADR
+        // `2026-08-depassement-de-regle-en-statut-rouge`).
         let snapshot = snapshot();
         let mut plan = plan();
         plan.displayed_placement.insert("GMN-1000".to_string(), 1);
@@ -3210,18 +3344,36 @@ mod tests {
             "p/Règle 1".to_string(),
         )]);
         let model = panel_model(&snapshot, &plan);
-        let error = model.coverage_error.expect("over-max must be named");
-        assert!(error.what.contains("Règle 1"), "{}", error.what);
         assert!(
-            error.what.contains("au-dessus de son maximum de 1"),
-            "{}",
-            error.what
+            model.coverage_error.is_none(),
+            "an over-max is no longer an error: {:?}",
+            model.coverage_error
         );
-        assert!(
-            error.action.contains("Retirez un cours"),
-            "{}",
-            error.action
+        assert_eq!(
+            model.rules[0].badge,
+            Badge::Missing("2/1".to_string()),
+            "the excess shows itself, and Missing paints the outline red"
         );
+        let lead = model.rules[0].lead.as_deref().expect("the way out");
+        assert!(lead.contains("Retirez-en un"), "{lead}");
+        assert!(lead.contains("entente avec la direction"), "{lead}");
+        // the point of the whole change: the rules beside it still count.
+        // A degraded panel shows each constraint as a bare label
+        // (« 6–9 cr ») — a counted one shows a fraction, so the slash is
+        // the proof that counting actually ran.
+        for section in &model.rules[1..3] {
+            let (Badge::Missing(text)
+            | Badge::Partial(text)
+            | Badge::Ok(text)) = &section.badge
+            else {
+                panic!("« {} » fell back to no count", section.title)
+            };
+            assert!(
+                text.contains('/'),
+                "« {} » shows « {text} », not a count",
+                section.title
+            );
+        }
         assert!(model.mandatory.is_some(), "panel never blank");
         // the chosen concentration's rules join the fallback sections
         if let Some(choice) = plan.program.as_mut() {
@@ -3239,54 +3391,35 @@ mod tests {
     }
 
     #[test]
-    fn coverage_error_messages_speak_french_for_both_over_max_shapes() {
-        let credits = coverage_error_message(
-            &ulaval_scheduler_core::CoverageError::CreditsOverMax {
-                rule: "Règle 2".to_string(),
-                scope: Scope::Concentration,
-                total: 12,
-                max: 9,
-            },
-        );
+    fn an_unknown_scope_is_the_only_thing_left_that_degrades_the_panel() {
+        use ulaval_scheduler_core::CoverageError;
+        let concentration =
+            coverage_error_message(&CoverageError::UnknownConcentration {
+                title: "Robotique".to_string(),
+            });
         assert!(
-            credits.what.starts_with("Règle 2 de la concentration"),
+            concentration
+                .what
+                .starts_with("La concentration « Robotique »"),
             "{}",
-            credits.what
+            concentration.what
         );
-        assert!(credits.what.contains("12 crédits"), "{}", credits.what);
-        assert!(credits.what.contains("maximum de 9"), "{}", credits.what);
-
-        let count = coverage_error_message(
-            &ulaval_scheduler_core::CoverageError::CountOverMax {
-                rule: "Règle 3".to_string(),
-                scope: Scope::Profile,
-                total: 2,
-                max: 1,
-            },
+        let profile = coverage_error_message(&CoverageError::UnknownProfile {
+            title: "International".to_string(),
+        });
+        assert!(
+            profile.what.starts_with("Le profil « International »"),
+            "{}",
+            profile.what
         );
-        assert!(count.what.contains("du profil"), "{}", count.what);
-
-        let program = coverage_error_message(
-            &ulaval_scheduler_core::CoverageError::CountOverMax {
-                rule: "Règle 1".to_string(),
-                scope: Scope::Program,
-                total: 2,
-                max: 1,
-            },
-        );
-        assert!(program.what.starts_with("Règle 1 :"), "{}", program.what);
-        // whichever shape, core's English stays behind the fold (ERR-3)
-        for error in [&credits, &count, &program] {
-            assert!(
-                !error.what.contains("semantics"),
-                "no English up front: {}",
-                error.what
-            );
-            assert!(
-                error.detail.contains("semantics await"),
-                "the raw text is kept whole: {}",
-                error.detail
-            );
+        // no English, and nothing to copy down: the sentence is the report
+        for error in [&concentration, &profile] {
+            for part in
+                [&error.what, &error.reaction, &error.affected, &error.action]
+            {
+                assert!(!part.contains("titled"), "{part}");
+                assert!(!part.contains("GH-"), "{part}");
+            }
         }
     }
 
@@ -3444,6 +3577,7 @@ mod tests {
                 missing: None,
                 candidates: Some(Vec::new()),
                 raw: None,
+                defect: None,
             }],
             language_requirement: None,
         };
@@ -4062,6 +4196,7 @@ mod tests {
                 missing,
                 candidates: None,
                 raw: None,
+                defect: None,
             }
         };
         let snapshot = snapshot();
@@ -4110,6 +4245,7 @@ mod tests {
                 missing: None,
                 candidates: None,
                 raw: None,
+                defect: None,
             };
         let snapshot = snapshot();
 
@@ -4155,6 +4291,7 @@ mod tests {
             missing: None,
             candidates: None,
             raw: None,
+            defect: None,
         };
         assert_eq!(
             rule_badge(&snapshot, &report, None),
@@ -4174,6 +4311,7 @@ mod tests {
             missing: None,
             candidates: None,
             raw: None,
+            defect: None,
         };
         let credits_rule: Rule = serde_json::from_str(
             r#"{"title":"R","constraint":{"type":"credits","min":1,"max":8},
@@ -4232,6 +4370,7 @@ mod tests {
             missing: None,
             candidates: None,
             raw: None,
+            defect: None,
         };
         assert_eq!(
             rule_badge(&snapshot, &report, Some(&rule)),
@@ -4543,6 +4682,7 @@ mod tests {
             missing: None,
             candidates: None,
             raw: None,
+            defect: None,
         };
         // no other report of this scope claims GEX-1000 in `counted`
         let all = vec![report.clone()];
@@ -4578,6 +4718,7 @@ mod tests {
             missing: None,
             candidates: None,
             raw: None,
+            defect: None,
         };
         let report = ulaval_scheduler_core::RuleReport {
             scope: Scope::Program,
@@ -4588,6 +4729,7 @@ mod tests {
             missing: None,
             candidates: None,
             raw: None,
+            defect: None,
         };
         let all = vec![owner, report.clone()];
         let rows =

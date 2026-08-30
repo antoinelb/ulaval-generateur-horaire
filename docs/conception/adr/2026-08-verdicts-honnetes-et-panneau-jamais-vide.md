@@ -1,5 +1,7 @@
 # Verdicts honnêtes et panneau jamais vide (corrections post-essai)
 
+> **Amendé le 2026-08-30.** Deux points de cette page ont changé. Le repli `uncounted_panel` ne sert plus qu'aux deux erreurs de portée (concentration ou profil inconnu) : un dépassement marque sa seule règle, en rouge (ADR `2026-08-depassement-de-regle-en-statut-rouge`). Et plus aucun message ne porte de détail technique ni d'identifiant (ADR `2026-08-messages-d-erreur-sans-detail-technique`).
+
 Date : 2026-08-13
 
 ## Contexte

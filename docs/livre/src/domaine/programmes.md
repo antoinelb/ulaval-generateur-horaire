@@ -54,7 +54,7 @@ Le cours d'anglais (ou de français) exigé pour diplômer, dont un score de tes
 ```
 
 - `scope` : d'où vient l'exigence — `program`, `concentration` ou `profile` (la concentration et le profil choisis seulement).
-- `status` : `satisfied`, `incomplete` (avec `missing`, le manque en cours ou en crédits, et `candidates`, la liste moins la sélection), ou `reported` — la règle n'a pas pu être comptée (pas de contrainte, mot-clé négocié, texte brut) et son `raw` est montré.
+- `status` : `satisfied`, `incomplete` (avec `missing`, le manque en cours ou en crédits, et `candidates`, la liste moins la sélection), `reported` — la règle n'a pas pu être comptée (pas de contrainte, mot-clé négocié, texte brut) et son `raw` est montré —, `over_max` (la sélection dépasse le maximum de la règle : une violation, montrée en rouge sur cette règle seule, `counted` gardant tous les codes pour que l'interface écrive « 15/12 cr »), ou `uncounted` (les données de la règle empêchent tout comptage ; `defect` dit laquelle — `missing_course` ou `broken_reference`). Aucun de ces deux derniers n'interrompt le rapport : les autres règles restent comptées (ADR `2026-08-depassement-de-regle-en-statut-rouge`).
 - `elsewhere` : les sigles que cette règle liste aussi, mais qu'une règle *précédente de la même portée* compte déjà — ici `GGL-2601`, réclamé par la Règle 1 — montrés pour que le cours ne semble pas oublié, mais absents de `counted` et de `candidates` : il ne compte jamais deux fois dans une même portée.
   Le champ est omis quand il est vide.
   Les portées restent indépendantes : le même cours peut être `counted` par une règle de la concentration et par une règle du profil à la fois.

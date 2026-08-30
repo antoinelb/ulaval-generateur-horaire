@@ -768,10 +768,9 @@ pub fn Toasts() -> Element {
                         | AlertBody::Standing(note) => rsx! {
                             span { class: "status-alert-ok", "✓ {note}" }
                         },
-                        // ERR-1 : les cinq parties, toutes en français ;
-                        // ERR-3 : le texte technique (anglais, celui du
-                        // solveur ou du navigateur) reste derrière le
-                        // repli, jamais dans le message principal
+                        // les quatre parties, toutes en français : aucun
+                        // texte du code source ne monte jusqu'ici (ADR
+                        // `2026-08-messages-d-erreur-sans-detail-technique`)
                         AlertBody::Error(error) => rsx! {
                             div { class: "toast-error",
                                 span { class: "status-alert-error",
@@ -781,11 +780,6 @@ pub fn Toasts() -> Element {
                                 span { "{error.affected}" }
                                 span { class: "toast-error-action",
                                     "{error.action}"
-                                }
-                                details {
-                                    class: "toast-detail",
-                                    summary { "Détail technique" }
-                                    pre { "{error.id} — {error.detail}" }
                                 }
                             }
                         },

@@ -307,7 +307,11 @@ pub fn verify(
             )
         })
         .transpose()
-        .map_err(|e| e.to_string())?;
+        // `intake` above resolves the same concentration and profile, with
+        // the same two refusals, so nothing is left here for coverage to
+        // fail on — every per-rule defect now rides inside the report (ADR
+        // `2026-08-depassement-de-regle-en-statut-rouge`)
+        .expect("the intake already validated the concentration and profile");
     Ok(OrganigrammeReport {
         sessions,
         placement,
@@ -1101,25 +1105,31 @@ mod tests {
     }
 
     #[test]
-    fn verification_surfaces_every_coverage_error() {
-        // an unknown title now dies at the intake (the solver reads the
-        // scope too), so the coverage half is proven by a counting error:
-        // the two pinned courses sum 6 credits over the rule's max of 3
+    fn an_overfilled_rule_no_longer_costs_the_whole_verdict() {
+        // the two pinned courses sum 6 credits over the rule's max of 3.
+        // That used to abort `verify` through `.transpose()?`, throwing
+        // away a placement the solver had already proven; now the excess
+        // rides in the report as one rule's status (ADR
+        // `2026-08-depassement-de-regle-en-statut-rouge`).
         let program = PROGRAM.replace(
             r#""rules":[]"#,
             r#""rules":[{"title":"Règle 1",
                          "constraint":{"type":"credits","min":3,"max":3},
                          "courses":["GEX-1000","GEX-1001"]}]"#,
         );
-        let error = verify(
+        let report = verify(
             &input(&format!(
                 r#""program":{program},
                    "pinned":{{"GEX-1000":1,"GEX-1001":2}}"#
             )),
             &courses(),
         )
-        .expect_err("6 credits over the max of 3");
-        assert!(error.contains("above the max"), "{error}");
+        .unwrap_or_else(|error| panic!("{error}"));
+        let coverage = report.coverage.expect("the report still comes back");
+        assert_eq!(
+            coverage.rules[0].status,
+            ulaval_scheduler_core::RuleStatus::OverMax
+        );
     }
 
     #[test]

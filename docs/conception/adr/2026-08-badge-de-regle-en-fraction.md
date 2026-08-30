@@ -1,5 +1,7 @@
 # Le badge d'une règle affiche une fraction, la puce de contrainte disparaît
 
+> **Amendé le 2026-08-30.** Le dépassement n'est plus refusé en amont : un badge « 15/12 cr » est désormais un état observable, en rouge, et c'est exactement ce que le numérateur non borné de `constraint_fraction` rendait déjà possible (ADR `2026-08-depassement-de-regle-en-statut-rouge`).
+
 Date : 2026-08-24
 
 ## Contexte

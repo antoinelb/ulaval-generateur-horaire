@@ -656,28 +656,6 @@ code {
   font-weight: 600;
 }
 
-/* au plancher, comme le texte qu'il complète : à 0.8125rem il était plus
-   petit que le corps à 14 px, il serait plus *gros* que lui à 12 px */
-.toast-detail,
-.panel-error-detail {
-  font-size: 0.75rem;
-}
-
-.toast-detail summary,
-.panel-error-detail summary {
-  cursor: pointer;
-  min-height: 1.5rem;
-}
-
-.toast-detail pre,
-.panel-error-detail pre {
-  margin: 0.25rem 0 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-family: var(--font-mono);
-  color: var(--muted);
-}
-
 /* les quatre parties françaises d'une erreur de comptage, dans le
    panneau : des paragraphes serrés, pas les marges par défaut */
 .warning p {
@@ -1178,7 +1156,7 @@ code {
   border-color: var(--accent);
 }
 
-/* erreur ERR-1 (cinq parties), calquée sur .error-screen */
+/* erreur en quatre parties, calquée sur .error-screen */
 .panel-import-error {
   margin-top: 0.5rem;
   padding: 0.5rem 0.625rem;
@@ -1198,33 +1176,6 @@ code {
 
 .panel-import-error-action {
   color: var(--muted);
-}
-
-.panel-import-error-id code {
-  background: var(--active-bg);
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  user-select: all;
-}
-
-/* encore utilisé par le tiroir Capsule, dont le message garde ses cinq
-   parties */
-.panel-import-error details {
-  margin-top: 0.375rem;
-  color: var(--muted);
-}
-
-.panel-capsule-error-detail {
-  /* le contenu déplié défile jusqu'ici (F2) */
-  scroll-margin-top: 2.25rem;
-}
-
-.panel-import-error pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  background: var(--active-bg);
-  padding: 0.5rem;
-  border-radius: 0.25rem;
 }
 
 /* tiroir « Charger depuis Capsule » (plan item 5) : même armature que
@@ -2367,26 +2318,6 @@ p.footer-contact {
 
 .error-action {
   color: var(--muted);
-}
-
-.error-id code {
-  background: var(--active-bg);
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  user-select: all;
-}
-
-.error-screen details {
-  margin-top: 0.75rem;
-  color: var(--muted);
-}
-
-.error-screen pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  background: var(--active-bg);
-  padding: 0.5rem;
-  border-radius: 0.25rem;
 }
 
 /* --- la correction des préalables (millésime) ------------------------- */

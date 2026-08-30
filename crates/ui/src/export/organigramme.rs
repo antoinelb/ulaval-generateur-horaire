@@ -2479,6 +2479,7 @@ mod tests {
             missing: None,
             candidates: None,
             raw: None,
+            defect: None,
         };
         let report = CoverageReport {
             mandatory: Vec::new(),
@@ -2692,6 +2693,7 @@ mod tests {
                 missing: None,
                 candidates: None,
                 raw: None,
+                defect: None,
             }],
             language_requirement: None,
         };
@@ -2812,6 +2814,7 @@ mod tests {
             missing: None,
             candidates: None,
             raw: None,
+            defect: None,
         };
         assert_eq!(
             chosen_text(&report, &["OPT-A"], false),
@@ -2980,6 +2983,7 @@ mod tests {
                     missing: None,
                     candidates: None,
                     raw: None,
+                    defect: None,
                 })
                 .collect(),
             language_requirement: None,

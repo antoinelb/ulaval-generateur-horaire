@@ -668,8 +668,6 @@ mod tests {
                 reaction: "réaction".to_string(),
                 affected: "quoi".to_string(),
                 action: "quoi faire".to_string(),
-                id: "ERR-1".to_string(),
-                detail: "détail".to_string(),
             }),
             AlertBody::LocalProgramRemoved(Box::new(local)),
         ];

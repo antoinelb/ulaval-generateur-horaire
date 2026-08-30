@@ -1,5 +1,7 @@
 # Le refus du solveur se dit en français, l'anglais reste derrière le repli
 
+> **Amendé le 2026-08-30.** Le principe — l'anglais de `core` ne monte jamais à l'écran — est maintenu et même durci : le détail technique et l'identifiant `GH-XXXXXXXX` ont disparu de toutes les erreurs (ADR `2026-08-messages-d-erreur-sans-detail-technique`), et `parse_over_max` a disparu avec son sujet, un dépassement ne voyageant plus comme une chaîne (ADR `2026-08-depassement-de-regle-en-statut-rouge`).
+
 Date : 2026-08-30
 
 ## Contexte

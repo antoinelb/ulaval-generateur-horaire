@@ -1,7 +1,7 @@
 # Une somme au-dessus du `max` d'une règle à crédits est une erreur typée
 
 **Date :** 2026-07-30
-**Statut :** accepté (décision Antoine) ; ferme « somme au-dessus du `max` d'une règle à crédits » de `docs/next_steps.md` pour le vérificateur, en attendant l'arbitrage du directeur.
+**Statut :** **remplacé le 2026-08-30 par `2026-08-depassement-de-regle-en-statut-rouge`** — l'arbitrage annoncé ci-dessous a eu lieu : le dépassement est une violation, portée par le statut `RuleStatus::OverMax` de la règle seule. `CoverageError::CreditsOverMax`/`CountOverMax` n'existent plus. Le reste de cette page décrit l'état intermédiaire, gardé pour l'historique.
 
 ## Contexte
 

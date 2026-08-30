@@ -20,6 +20,8 @@ const FIXTURES: &[&str] = &[
     "gex-rule1-count-satisfied",
     "gex-rule2-credits-missing",
     "gex-rule3-credits-satisfied",
+    "gex-rule4-credits-over-max",
+    "gex-rule4-credits-uncounted",
     "gex-rule4-min-equals-max",
     "gex-rule5-any-reported",
     "language-requirement-reported",

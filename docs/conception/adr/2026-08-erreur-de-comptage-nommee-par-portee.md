@@ -1,5 +1,7 @@
 # L'erreur de dépassement nomme la portée de la règle
 
+> **Amendé le 2026-08-30.** Les deux variantes que cette page nomme par portée n'existent plus : un dépassement est le statut `RuleStatus::OverMax` d'une règle, et le `RuleReport` porte déjà sa portée (ADR `2026-08-depassement-de-regle-en-statut-rouge`). `present::scope_origin`, qui suffixe la phrase en français, reste et sert la nouvelle explication de règle.
+
 Date : 2026-08-23
 
 Amende `2026-07-somme-au-dessus-du-max-en-erreur-typee`.

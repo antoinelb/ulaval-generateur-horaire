@@ -57,14 +57,6 @@ fn Failure(error: UiError) -> Element {
             p { "{error.reaction}" }
             p { "{error.affected}" }
             p { class: "error-action", "{error.action}" }
-            p { class: "error-id",
-                "Identifiant : "
-                code { "{error.id}" }
-            }
-            details {
-                summary { "Détail technique" }
-                pre { "{error.detail}" }
-            }
         }
     }
 }

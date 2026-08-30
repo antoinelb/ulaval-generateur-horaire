@@ -55,6 +55,31 @@ pub struct RuleReport {
     pub candidates: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raw: Option<String>,
+    // why this rule alone could not be counted — `Uncounted` carries one,
+    // every other status none (ADR `2026-08-depassement-de-regle-en-statut-rouge`)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub defect: Option<RuleDefect>,
+}
+
+// A defect that stops *one* rule from being counted, and stops nothing
+// else. It rides in the report rather than aborting it: a rule the data
+// broke must not blank the nineteen rules beside it (AIR ERR-5).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
+#[serde(rename_all = "snake_case")]
+pub enum RuleDefect {
+    // a credits rule counted a code no `Course` carries: the sum is
+    // unknowable, and inventing one would misreport a graduation
+    MissingCourse {
+        code: String,
+    },
+    // « tous les cours de la Règle N du cheminement X » where the chase
+    // fails — unknown concentration, unknown rule, or a target that is not
+    // a plain list. All three read the same to a student, so they are one.
+    BrokenReference {
+        concentration: String,
+        target: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
@@ -66,24 +91,24 @@ pub enum Scope {
     Profile,
 }
 
-// same words as serde's `rename_all = "lowercase"`, used in error text
-impl std::fmt::Display for Scope {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Scope::Program => "program",
-            Scope::Concentration => "concentration",
-            Scope::Profile => "profile",
-        })
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 #[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
-#[serde(rename_all = "lowercase")]
+// snake_case, not lowercase: the three original one-word variants
+// serialize identically either way, and `OverMax` needs the underscore
+#[serde(rename_all = "snake_case")]
 pub enum RuleStatus {
     Satisfied,
     Incomplete,
     Reported,
+    // more courses than the rule's maximum admits. A violation, not a
+    // surplus: the arbitration the ADR
+    // `2026-07-somme-au-dessus-du-max-en-erreur-typee` was waiting for came
+    // down on 2026-08-30 (ADR
+    // `2026-08-depassement-de-regle-en-statut-rouge`). `counted` keeps every
+    // code, so the view can say « 15/12 cr » — the excess is the point.
+    OverMax,
+    // the rule carries a `RuleDefect`: no verdict is possible for it alone
+    Uncounted,
 }
 
 // mirror of `Constraint`: what remains to reach the count or the minimum
@@ -115,62 +140,16 @@ pub enum LanguageStatus {
 // one scope's block: its mandatory list and its rules
 type ScopeBlock<'a> = (Scope, &'a [String], &'a [Rule]);
 
-// Inputs the report refuses to guess about — surfaced, never patched over.
+// The only inputs that leave *no* scope to report on. Everything a single
+// rule can get wrong is a `RuleDefect` inside the report instead, so one
+// broken rule never costs the student the other nineteen (AIR ERR-5, ADR
+// `2026-08-depassement-de-regle-en-statut-rouge`).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum CoverageError {
     #[error("no concentration titled « {title} » in the program")]
     UnknownConcentration { title: String },
     #[error("no profile titled « {title} » in the program")]
     UnknownProfile { title: String },
-    #[error(
-        "{rule} references concentration « {concentration} », \
-         which the program does not have"
-    )]
-    ReferenceUnknownConcentration { rule: String, concentration: String },
-    #[error(
-        "{rule} references « {target} » of « {concentration} », \
-         which has no such rule"
-    )]
-    ReferenceUnknownRule {
-        rule: String,
-        concentration: String,
-        target: String,
-    },
-    #[error(
-        "{rule} references « {target} » of « {concentration} », \
-         which is not a course list — a reference chase is an error"
-    )]
-    ReferenceNotAList {
-        rule: String,
-        concentration: String,
-        target: String,
-    },
-    #[error("{rule} : {code} counts credits but no Course carries them")]
-    MissingCourse { rule: String, code: String },
-    // semantics undecided — violation or uncounted surplus — so no verdict
-    // is invented (ADR `2026-07-somme-au-dessus-du-max-en-erreur-typee`)
-    #[error(
-        "{rule} ({scope} scope) : the selection sums {total} credits, \
-         above the max {max} — semantics await the director's ruling"
-    )]
-    CreditsOverMax {
-        rule: String,
-        scope: Scope,
-        total: i64,
-        max: i64,
-    },
-    // the course-count twin of `CreditsOverMax`, same undecided semantics
-    // (ADR `2026-08-contrainte-etiquetee-min-max`)
-    #[error(
-        "{rule} ({scope} scope) : the selection counts {total} courses, \
-         above the max {max} — semantics await the director's ruling"
-    )]
-    CountOverMax {
-        rule: String,
-        scope: Scope,
-        total: i64,
-        max: i64,
-    },
 }
 
 // The pure function the UI calls on every selection change. `selection`
@@ -198,11 +177,10 @@ pub fn coverage_report(
             .collect(),
         rules: scopes
             .iter()
-            .map(|(scope, _, rules)| {
+            .flat_map(|(scope, _, rules)| {
                 scope_reports(*scope, rules, program, selection, &credits)
             })
-            .collect::<Result<Vec<Vec<RuleReport>>, _>>()?
-            .concat(),
+            .collect(),
         language_requirement: program
             .language_requirement
             .as_ref()
@@ -222,18 +200,18 @@ fn scope_reports(
     program: &Program,
     selection: &BTreeSet<String>,
     credits: &BTreeMap<&str, u32>,
-) -> Result<Vec<RuleReport>, CoverageError> {
+) -> Vec<RuleReport> {
     let mut claimed: BTreeSet<String> = BTreeSet::new();
     rules
         .iter()
         .map(|rule| {
             let report = rule_report(
                 scope, rule, program, selection, credits, &claimed,
-            )?;
+            );
             if rule.constraint.is_some() {
                 claimed.extend(report.counted.iter().flatten().cloned());
             }
-            Ok(report)
+            report
         })
         .collect()
 }
@@ -296,10 +274,15 @@ fn rule_report(
     selection: &BTreeSet<String>,
     credits: &BTreeMap<&str, u32>,
     claimed: &BTreeSet<String>,
-) -> Result<RuleReport, CoverageError> {
+) -> RuleReport {
     // a reference is resolved before the constraint check: a broken
-    // reference is an error even on a rule that then only gets reported
-    match (resolved_rule_courses(program, rule)?, &rule.constraint) {
+    // reference marks this rule uncounted even when it would only be
+    // reported — but it marks nothing beyond it
+    let listed = match resolved_rule_courses(program, rule) {
+        Ok(listed) => listed,
+        Err(defect) => return uncounted(scope, rule, defect),
+    };
+    match (listed, &rule.constraint) {
         (Some(listed), Some(constraint)) => evaluated(
             scope, rule, listed, constraint, selection, credits, claimed,
         ),
@@ -307,58 +290,66 @@ fn rule_report(
         // verdict, but the split is still shown (ADR
         // `2026-08-regle-sans-contrainte-comptee-mais-reportee`)
         (Some(listed), None) => {
-            Ok(listed_reported(scope, rule, listed, selection))
+            listed_reported(scope, rule, listed, selection)
         }
         // Keyword (any/negotiated) or raw-only
-        (None, _) => Ok(reported(scope, rule)),
+        (None, _) => reported(scope, rule),
+    }
+}
+
+// a rule whose own data defeated the count: named, never silently dropped
+fn uncounted(scope: Scope, rule: &Rule, defect: RuleDefect) -> RuleReport {
+    RuleReport {
+        scope,
+        title: rule.title.clone(),
+        status: RuleStatus::Uncounted,
+        counted: None,
+        elsewhere: Vec::new(),
+        missing: None,
+        candidates: None,
+        raw: rule_raw(rule).map(str::to_string),
+        defect: Some(defect),
     }
 }
 
 pub fn resolved_rule_courses<'a>(
     program: &'a Program,
     rule: &'a Rule,
-) -> Result<Option<&'a [String]>, CoverageError> {
+) -> Result<Option<&'a [String]>, RuleDefect> {
     match &rule.courses {
         RuleCourses::List { courses } => Ok(Some(courses)),
         RuleCourses::Reference { courses, .. } => {
-            resolve_reference(&rule.title, courses, program).map(Some)
+            resolve_reference(courses, program).map(Some)
         }
         RuleCourses::Keyword { .. } | RuleCourses::Raw { .. } => Ok(None),
     }
 }
 
 // « tous les cours de la Règle N du cheminement X » : both titles come from
-// the same scraped page; a target that is itself not a plain list is an
-// error, not a chase
+// the same scraped page. The three ways the chase can fail — no such
+// concentration, no such rule, a target that is not a plain list — are one
+// `BrokenReference` because they read alike to whoever sees the rule.
 fn resolve_reference<'a>(
-    rule_title: &str,
     reference: &RuleReference,
     program: &'a Program,
-) -> Result<&'a [String], CoverageError> {
+) -> Result<&'a [String], RuleDefect> {
+    let broken = || RuleDefect::BrokenReference {
+        concentration: reference.concentration.clone(),
+        target: reference.rule.clone(),
+    };
     let concentration = program
         .concentrations
         .iter()
         .find(|block| block.title == reference.concentration)
-        .ok_or_else(|| CoverageError::ReferenceUnknownConcentration {
-            rule: rule_title.to_string(),
-            concentration: reference.concentration.clone(),
-        })?;
+        .ok_or_else(broken)?;
     let target = concentration
         .rules
         .iter()
         .find(|target| target.title == reference.rule)
-        .ok_or_else(|| CoverageError::ReferenceUnknownRule {
-            rule: rule_title.to_string(),
-            concentration: reference.concentration.clone(),
-            target: reference.rule.clone(),
-        })?;
+        .ok_or_else(broken)?;
     match &target.courses {
         RuleCourses::List { courses } => Ok(courses),
-        _ => Err(CoverageError::ReferenceNotAList {
-            rule: rule_title.to_string(),
-            concentration: reference.concentration.clone(),
-            target: reference.rule.clone(),
-        }),
+        _ => Err(broken()),
     }
 }
 
@@ -370,16 +361,15 @@ fn evaluated(
     selection: &BTreeSet<String>,
     credits: &BTreeMap<&str, u32>,
     claimed: &BTreeSet<String>,
-) -> Result<RuleReport, CoverageError> {
+) -> RuleReport {
     let (counted, candidates) = split_selection(listed, selection);
     // a code an earlier rule of this scope already claimed no longer counts
     // here — shown as `elsewhere` instead so the student sees it, but the
     // verdict is computed on the reduced set (that is the whole point)
     let (elsewhere, counted): (Vec<String>, Vec<String>) =
         counted.into_iter().partition(|code| claimed.contains(code));
-    let (status, missing) =
-        verdict(scope, &rule.title, constraint, &counted, credits)?;
-    Ok(RuleReport {
+    let (status, missing, defect) = verdict(constraint, &counted, credits);
+    RuleReport {
         scope,
         title: rule.title.clone(),
         status,
@@ -388,7 +378,8 @@ fn evaluated(
         missing,
         candidates: Some(candidates),
         raw: None,
-    })
+        defect,
+    }
 }
 
 // the same set split as an evaluated rule, but no verdict: whether a listed
@@ -411,6 +402,7 @@ fn listed_reported(
         missing: None,
         candidates: Some(candidates),
         raw: rule_raw(rule).map(str::to_string),
+        defect: None,
     }
 }
 
@@ -434,60 +426,67 @@ fn split_selection(
     (counted, candidates)
 }
 
+// One rule's verdict, which never fails: over the maximum is a status the
+// student can see and act on, not a refusal that costs him the report (ADR
+// `2026-08-depassement-de-regle-en-statut-rouge`). Only a credits rule can
+// come back uncounted, and only because a code carries no `Course`.
 fn verdict(
-    scope: Scope,
-    title: &str,
     constraint: &Constraint,
     counted: &[String],
     credits: &BTreeMap<&str, u32>,
-) -> Result<(RuleStatus, Option<Missing>), CoverageError> {
+) -> (RuleStatus, Option<Missing>, Option<RuleDefect>) {
     match *constraint {
         Constraint::Course { min, max } => {
             let total = counted.len() as i64;
-            if total > max {
-                Err(CoverageError::CountOverMax {
-                    rule: title.to_string(),
-                    scope,
-                    total,
-                    max,
-                })
-            } else if total >= min {
-                Ok((RuleStatus::Satisfied, None))
-            } else {
-                Ok((
-                    RuleStatus::Incomplete,
-                    Some(Missing::Count { count: min - total }),
-                ))
-            }
+            let (status, missing) = over_or(
+                total,
+                min,
+                max,
+                Missing::Count { count: min - total },
+            );
+            (status, missing, None)
         }
         Constraint::Credits { min, max } => {
-            let total = counted.iter().try_fold(0i64, |acc, code| {
+            let summed = counted.iter().try_fold(0i64, |acc, code| {
                 credits
                     .get(code.as_str())
                     .map(|&value| acc + i64::from(value))
-                    .ok_or_else(|| CoverageError::MissingCourse {
-                        rule: title.to_string(),
+                    .ok_or_else(|| RuleDefect::MissingCourse {
                         code: code.clone(),
                     })
-            })?;
-            if total > max {
-                Err(CoverageError::CreditsOverMax {
-                    rule: title.to_string(),
-                    scope,
-                    total,
-                    max,
-                })
-            } else if total >= min {
-                Ok((RuleStatus::Satisfied, None))
-            } else {
-                Ok((
-                    RuleStatus::Incomplete,
-                    Some(Missing::Credits {
-                        credits: min - total,
-                    }),
-                ))
+            });
+            match summed {
+                Err(defect) => (RuleStatus::Uncounted, None, Some(defect)),
+                Ok(total) => {
+                    let (status, missing) = over_or(
+                        total,
+                        min,
+                        max,
+                        Missing::Credits {
+                            credits: min - total,
+                        },
+                    );
+                    (status, missing, None)
+                }
             }
         }
+    }
+}
+
+// the shared three-way verdict, `shortfall` being what the caller's unit
+// names as still missing when the total sits below the minimum
+fn over_or(
+    total: i64,
+    min: i64,
+    max: i64,
+    shortfall: Missing,
+) -> (RuleStatus, Option<Missing>) {
+    if total > max {
+        (RuleStatus::OverMax, None)
+    } else if total >= min {
+        (RuleStatus::Satisfied, None)
+    } else {
+        (RuleStatus::Incomplete, Some(shortfall))
     }
 }
 
@@ -501,6 +500,7 @@ fn reported(scope: Scope, rule: &Rule) -> RuleReport {
         missing: None,
         candidates: None,
         raw: rule_raw(rule).map(str::to_string),
+        defect: None,
     }
 }
 
@@ -634,31 +634,23 @@ mod tests {
     }
 
     #[test]
-    fn a_selection_above_the_course_max_is_a_typed_error() {
-        // the course-count twin of the credits ceiling: same undecided
-        // semantics, same refusal to invent a verdict
+    fn a_selection_above_the_course_max_is_the_rule_s_own_verdict() {
+        // the course-count twin of the credits ceiling: a violation the
+        // student can see and undo, not a refusal that costs him the report
         let program = bare(
             r#"[{"title":"Règle 1",
                  "constraint":{"type":"course","min":1,"max":1},
                  "courses":["A-1","B-2"]}]"#,
         );
-        let error = coverage_report(
-            &program,
-            None,
-            None,
-            &selection(&["A-1", "B-2"]),
-            &[],
-        )
-        .expect_err("2 courses above max 1");
+        let coverage = report(&program, &["A-1", "B-2"], &[]);
+        assert_eq!(coverage.rules[0].status, RuleStatus::OverMax);
+        assert_eq!(coverage.rules[0].defect, None);
+        // every code stays counted: the excess is what the view shows
         assert_eq!(
-            error,
-            CoverageError::CountOverMax {
-                rule: "Règle 1".to_string(),
-                scope: Scope::Program,
-                total: 2,
-                max: 1,
-            }
+            coverage.rules[0].counted.as_deref(),
+            Some(&["A-1".to_string(), "B-2".to_string()][..])
         );
+        assert_eq!(coverage.rules[0].missing, None);
     }
 
     // --- one course, one rule per scope ---
@@ -786,40 +778,32 @@ mod tests {
     }
 
     #[test]
-    fn a_sum_above_the_max_is_a_typed_error() {
-        // ADR `2026-07-somme-au-dessus-du-max-en-erreur-typee`
+    fn a_sum_above_the_max_is_the_rule_s_own_verdict() {
+        // the arbitration the ADR
+        // `2026-07-somme-au-dessus-du-max-en-erreur-typee` awaited, taken
+        // on 2026-08-30: a violation on this rule, not a refusal of the
+        // report (ADR `2026-08-depassement-de-regle-en-statut-rouge`)
         let program = credits_rule(3, 3);
-        let error = coverage_report(
+        let coverage = report(
             &program,
-            None,
-            None,
-            &selection(&["A-1", "B-2"]),
+            &["A-1", "B-2"],
             &[course("A-1", "3"), course("B-2", "3")],
-        )
-        .expect_err("6 credits above max 3");
-        assert_eq!(
-            error,
-            CoverageError::CreditsOverMax {
-                rule: "Règle 2".to_string(),
-                scope: Scope::Program,
-                total: 6,
-                max: 3,
-            }
         );
+        assert_eq!(coverage.rules[0].status, RuleStatus::OverMax);
+        assert_eq!(coverage.rules[0].defect, None);
+        assert_eq!(coverage.rules[0].missing, None);
     }
 
     #[test]
-    fn a_counted_course_without_its_credits_is_an_error() {
+    fn a_counted_course_without_its_credits_marks_its_own_rule() {
         let program = credits_rule(3, 9);
-        let error =
-            coverage_report(&program, None, None, &selection(&["A-1"]), &[])
-                .expect_err("no Course carries A-1's credits");
+        let coverage = report(&program, &["A-1"], &[]);
+        assert_eq!(coverage.rules[0].status, RuleStatus::Uncounted);
         assert_eq!(
-            error,
-            CoverageError::MissingCourse {
-                rule: "Règle 2".to_string(),
+            coverage.rules[0].defect,
+            Some(RuleDefect::MissingCourse {
                 code: "A-1".to_string(),
-            }
+            })
         );
     }
 
@@ -891,7 +875,7 @@ mod tests {
         );
         assert_eq!(
             resolved_rule_courses(&program, &program.rules[0])
-                .unwrap_or_else(|e| panic!("{e}")),
+                .unwrap_or_else(|e| panic!("{e:?}")),
             Some(&["A-1".to_string(), "B-2".to_string()][..])
         );
     }
@@ -919,56 +903,34 @@ mod tests {
     }
 
     #[test]
-    fn a_reference_to_an_unknown_concentration_is_an_error() {
-        let program = referencing("[]");
-        let error =
-            coverage_report(&program, None, None, &selection(&[]), &[])
-                .expect_err("no Géotechnique block");
-        assert_eq!(
-            error,
-            CoverageError::ReferenceUnknownConcentration {
-                rule: "Règle 2".to_string(),
-                concentration: "Géotechnique".to_string(),
-            }
-        );
-    }
-
-    #[test]
-    fn a_reference_to_an_unknown_rule_is_an_error() {
-        let program = referencing(
-            r#"[{"title":"Géotechnique","mandatory":[],"rules":[]}]"#,
-        );
-        let error =
-            coverage_report(&program, None, None, &selection(&[]), &[])
-                .expect_err("no Règle 1 in the block");
-        assert_eq!(
-            error,
-            CoverageError::ReferenceUnknownRule {
-                rule: "Règle 2".to_string(),
-                concentration: "Géotechnique".to_string(),
-                target: "Règle 1".to_string(),
-            }
-        );
-    }
-
-    #[test]
-    fn a_reference_whose_target_is_not_a_list_is_an_error_not_a_chase() {
-        let program = referencing(
-            r#"[{"title":"Géotechnique","mandatory":[],
-                 "rules":[{"title":"Règle 1","constraint":{"type":"course","min":1,"max":1},
-                           "courses":"any","raw":"tous les cours"}]}]"#,
-        );
-        let error =
-            coverage_report(&program, None, None, &selection(&[]), &[])
-                .expect_err("the target is a keyword, not a list");
-        assert_eq!(
-            error,
-            CoverageError::ReferenceNotAList {
-                rule: "Règle 2".to_string(),
-                concentration: "Géotechnique".to_string(),
-                target: "Règle 1".to_string(),
-            }
-        );
+    fn every_broken_reference_marks_its_rule_and_nothing_else() {
+        // unknown concentration, unknown rule, target that is not a list:
+        // three ways to fail the same chase, one verdict on one rule
+        let broken = RuleDefect::BrokenReference {
+            concentration: "Géotechnique".to_string(),
+            target: "Règle 1".to_string(),
+        };
+        for program in [
+            referencing("[]"),
+            referencing(
+                r#"[{"title":"Géotechnique","mandatory":[],"rules":[]}]"#,
+            ),
+            referencing(
+                r#"[{"title":"Géotechnique","mandatory":[],
+                     "rules":[{"title":"Règle 1","constraint":{"type":"course","min":1,"max":1},
+                               "courses":"any","raw":"tous les cours"}]}]"#,
+            ),
+        ] {
+            let coverage = report(&program, &[], &[]);
+            let rule = &coverage.rules[0];
+            assert_eq!(rule.status, RuleStatus::Uncounted);
+            assert_eq!(rule.defect.as_ref(), Some(&broken));
+            // the raw text survives, as it does for every uncounted rule
+            assert_eq!(
+                rule.raw.as_deref(),
+                Some("tous les cours de la Règle 1")
+            );
+        }
     }
 
     // --- scopes: program plus the chosen concentration and profile ---
@@ -1123,48 +1085,33 @@ mod tests {
             title: "X".to_string()
         })
         .contains("X"));
-        assert!(text(CoverageError::ReferenceUnknownConcentration {
-            rule: "R".to_string(),
-            concentration: "X".to_string()
-        })
-        .contains("X"));
-        assert!(text(CoverageError::ReferenceUnknownRule {
-            rule: "R".to_string(),
-            concentration: "X".to_string(),
-            target: "T".to_string()
-        })
-        .contains("T"));
-        assert!(text(CoverageError::ReferenceNotAList {
-            rule: "R".to_string(),
-            concentration: "X".to_string(),
-            target: "T".to_string()
-        })
-        .contains("chase"));
-        assert!(text(CoverageError::MissingCourse {
-            rule: "R".to_string(),
-            code: "A-1".to_string()
-        })
-        .contains("A-1"));
-        assert!(text(CoverageError::CreditsOverMax {
-            rule: "R".to_string(),
-            scope: Scope::Program,
-            total: 6,
-            max: 3
-        })
-        .contains("6"));
-        assert!(text(CoverageError::CountOverMax {
-            rule: "R".to_string(),
-            scope: Scope::Program,
-            total: 2,
-            max: 1
-        })
-        .contains("2"));
     }
 
+    // a defect rides in the report, so it must survive serialization —
+    // an unnamed one would be a rule silently uncounted
     #[test]
-    fn scope_displays_the_same_words_as_its_serde_rename() {
-        assert_eq!(Scope::Program.to_string(), "program");
-        assert_eq!(Scope::Concentration.to_string(), "concentration");
-        assert_eq!(Scope::Profile.to_string(), "profile");
+    fn a_defect_serializes_beside_its_rule() {
+        let program = credits_rule(3, 9);
+        let coverage = report(&program, &["A-1"], &[]);
+        let json =
+            serde_json::to_value(&coverage).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(json["rules"][0]["status"], "uncounted");
+        assert_eq!(
+            json["rules"][0]["defect"]["missing_course"]["code"],
+            "A-1"
+        );
+        // every healthy rule stays free of the field
+        let clean = report(
+            &bare(
+                r#"[{"title":"Règle 1",
+                 "constraint":{"type":"course","min":1,"max":1},
+                 "courses":["A-1"]}]"#,
+            ),
+            &["A-1"],
+            &[],
+        );
+        let json =
+            serde_json::to_value(&clean).unwrap_or_else(|e| panic!("{e}"));
+        assert!(json["rules"][0].get("defect").is_none(), "{json}");
     }
 }

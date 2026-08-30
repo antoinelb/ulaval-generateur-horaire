@@ -735,14 +735,12 @@ fn ImportDrawer() -> Element {
                 }
             }
             if let Some(error) = error() {
-                // demande d'Antoine (2026-08-26) : le bloc en cinq parties
-                // (ERR-1) est réduit ici au titre et au détail technique —
-                // ce qui a été refusé, et pourquoi, sans le reste
+                // demande d'Antoine (2026-08-26) : le bloc en quatre
+                // parties est réduit ici à ce qui a été refusé et à la
+                // suite à donner, sans le reste
                 div { class: "panel-import-error", role: "alert",
                     p { class: "panel-import-error-what", "{error.what}" }
-                    pre { class: "panel-import-error-detail",
-                        "{error.detail}"
-                    }
+                    p { class: "panel-import-error-action", "{error.action}" }
                 }
             }
         }
@@ -944,18 +942,15 @@ fn PanelBody(model: PanelModel) -> Element {
     let mut scroll_to_results = use_signal(|| false);
     rsx! {
         div { class: "panel-body",
-            // ERR-1 : les cinq parties en français ; ERR-3 : le texte
-            // technique de `core` (anglais) reste derrière le repli
+            // les quatre parties, en français et rien d'autre : ni code
+            // ni texte du code source (ADR
+            // `2026-08-messages-d-erreur-sans-detail-technique`)
             if let Some(error) = model.coverage_error.as_ref() {
                 div { class: "warning", role: "alert",
                     p { "⚠ {error.what}" }
                     p { "{error.reaction}" }
                     p { "{error.affected}" }
                     p { "{error.action}" }
-                    details { class: "panel-error-detail",
-                        summary { "Détail technique" }
-                        pre { "{error.id} — {error.detail}" }
-                    }
                 }
             }
             for warning in model.warnings.iter() {
@@ -1549,7 +1544,6 @@ fn CapsuleDrawer() -> Element {
     let mut draft = use_signal(String::new);
     let mut error = use_signal(|| None::<crate::present::UiError>);
     let mut summary = use_signal(|| None::<crate::capsule::CapsuleSummary>);
-    let mut detail_open = use_signal(|| false);
 
     // `commit` below wraps the import in one undoable `edit_plan` act
     // (ACT-2), but `summary` is a signal local to this drawer that no undo
@@ -1667,19 +1661,6 @@ fn CapsuleDrawer() -> Element {
                             p { "{error.reaction}" }
                             p { "{error.affected}" }
                             p { class: "panel-import-error-action", "{error.action}" }
-                            p { class: "panel-import-error-id",
-                                "Identifiant : "
-                                code { "{error.id}" }
-                            }
-                            Disclosure {
-                                open: detail_open(),
-                                on_toggle: move |_| {
-                                    detail_open.set(!detail_open())
-                                },
-                                class: "panel-capsule-error-detail",
-                                summary: rsx! { "Détail technique" },
-                                pre { "{error.detail}" }
-                            }
                         }
                     }
                 }
