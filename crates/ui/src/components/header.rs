@@ -231,6 +231,11 @@ pub fn HeaderBar() -> Element {
                     }
                 }
             }
+            // « Tout geler » se range *avant* « Réinitialiser », jamais
+            // après : les 2 rem de `.header-reset` tiennent le geste
+            // destructeur à l'écart de ce qui le borde (ACT-5), et un
+            // bouton posé après lui mangerait cet écart.
+            FreezeAllButton {}
             // ACT-5: « Réinitialiser » vide le document et se tenait juste
             // à côté de « Partager », le geste courant — un clic de travers
             // coûtait tout l'organigramme (rapport Camille, 2026-08-29).
@@ -238,6 +243,35 @@ pub fn HeaderBar() -> Element {
             // (Antoine, 2026-08-30) : plus aucun geste courant ne le
             // jouxte, et il reste à découvert, jamais dans un menu (LAY-7).
             ResetButton {}
+        }
+    }
+}
+
+// La bascule de gel du ruban, portée sur l'horizon entier : un clic ferme
+// toutes les sessions au solveur, le suivant les rouvre. Un seul bouton,
+// annulable par lui-même autant que par « Annuler » (ACT-2) — ADR
+// `2026-08-bouton-tout-geler-dans-la-barre-du-haut`.
+#[component]
+fn FreezeAllButton() -> Element {
+    let plan = use_context::<Signal<Plan>>();
+    let history = use_context::<Signal<History>>();
+    // libellé, titre et étiquette d'annulation viennent du module pur : la
+    // vue ne décide rien
+    let act = crate::present::freeze_all(&plan.read());
+    rsx! {
+        button {
+            class: "status-undo",
+            title: "{act.title}",
+            onclick: move |_| {
+                // relu au clic : le plan a pu changer depuis ce rendu
+                let crate::present::FreezeAll {
+                    undo_label, frozen, ..
+                } = crate::present::freeze_all(&plan.peek());
+                super::edit_plan(plan, history, undo_label, move |plan| {
+                    plan.frozen = frozen;
+                });
+            },
+            "{act.label}"
         }
     }
 }
