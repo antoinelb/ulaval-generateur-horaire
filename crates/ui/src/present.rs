@@ -264,6 +264,164 @@ pub fn present_cheminement_error(error: &CheminementError) -> UiError {
     }
 }
 
+// --- ce que le solveur refuse de trancher ---------------------------------
+
+// The French suffix naming a rule's scope, shared by the rule header
+// (`panel::rule_lead`) and every over-max message below, so the wording
+// never drifts between them.
+pub fn scope_origin(scope: ulaval_scheduler_core::Scope) -> &'static str {
+    use ulaval_scheduler_core::Scope;
+    match scope {
+        Scope::Program => "",
+        Scope::Concentration => " de la concentration",
+        Scope::Profile => " du profil",
+    }
+}
+
+// A rule whose selection went past its maximum. Core refuses to decide
+// whether the surplus is a fault or uncounted extra credits (ADR
+// `2026-07-somme-au-dessus-du-max-en-erreur-typee`), so the arbitration is
+// the student's — which is exactly what `action` asks of him. The same
+// value is built from the typed `CoverageError` the panel counts with and
+// from the raw string the organigramme worker sends back, so both doors
+// say one thing (ADR `2026-08-refus-du-solveur-en-francais`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OverMax {
+    pub rule: String,
+    pub scope: ulaval_scheduler_core::Scope,
+    pub total: i64,
+    pub max: i64,
+    // credits summed, as opposed to a count of courses
+    pub credits: bool,
+}
+
+pub fn present_over_max(over: &OverMax, detail: &str) -> UiError {
+    let origin = scope_origin(over.scope);
+    let (rule, total, max) = (&over.rule, over.total, over.max);
+    let what = if over.credits {
+        format!(
+            "{rule}{origin} : les cours sélectionnés y totalisent {total} \
+             crédits, au-dessus de son maximum de {max}."
+        )
+    } else {
+        format!(
+            "{rule}{origin} : {total} cours sélectionnés y comptent, \
+             au-dessus de son maximum de {max}."
+        )
+    };
+    UiError {
+        what,
+        reaction: "Le comptage de cette règle est suspendu; ni votre \
+                   organigramme ni vos choix n'ont bougé."
+            .to_string(),
+        affected: "Cette règle seulement : les autres continuent d'être \
+                   comptées."
+            .to_string(),
+        action: "Retirez un cours de cette règle, ou rattachez-le à une \
+                 autre règle avec le menu « entente avec la direction… » de \
+                 sa ligne — un cours qu'admettent deux règles demande votre \
+                 arbitrage."
+            .to_string(),
+        id: error_id(detail),
+        detail: detail.to_string(),
+    }
+}
+
+// The organigramme worker answers in JSON strings, and its refusals are
+// core's own — English, written for whoever reads a stack trace
+// (« semantics await the director's ruling »). That text used to ride
+// whole into the primary message (constat Bernard 2026-08-29); it now
+// stays behind the fold as the technical detail, and the student reads a
+// French sentence with a way out (ERR-1/ERR-3).
+pub fn present_solver_error(message: &str) -> UiError {
+    if let Some(over) = parse_over_max(message) {
+        return present_over_max(&over, message);
+    }
+    if let Some(codes) = message.strip_prefix(VERIFY_UNPLACED) {
+        return UiError {
+            what: format!(
+                "La vérification demande une session pour chaque cours, et \
+                 ceux-ci n'en ont pas encore : {codes}."
+            ),
+            reaction: "La vérification s'arrête là; l'organigramme n'a pas \
+                       bougé."
+                .to_string(),
+            affected: "Le verdict de vérification seulement.".to_string(),
+            action: "Déposez ces cours sur une session du ruban, ou lancez \
+                     le placement automatique, puis relancez la \
+                     vérification."
+                .to_string(),
+            id: error_id(message),
+            detail: message.to_string(),
+        };
+    }
+    UiError {
+        what: "Le solveur n'a pas pu répondre à cette demande.".to_string(),
+        reaction: "La demande est abandonnée; votre organigramme n'a pas \
+                   bougé et le reste de l'application continue de \
+                   fonctionner."
+            .to_string(),
+        affected: "Le placement automatique et la vérification, jusqu'à \
+                   votre prochaine modification."
+            .to_string(),
+        action: "Modifiez le cheminement — retirez un cours, changez une \
+                 session, allongez l'horizon — puis relancez; si l'erreur \
+                 persiste, signalez-la avec l'identifiant et le détail \
+                 technique ci-dessous."
+            .to_string(),
+        id: error_id(message),
+        detail: message.to_string(),
+    }
+}
+
+// `wasm::organigramme::verify` refuses an incomplete question rather than
+// answering a false verdict — its wording, kept in one place so the test
+// below can prove the two still match.
+const VERIFY_UNPLACED: &str =
+    "verification needs a session for every course left to place : ";
+
+// The tail every over-max message of `CoverageError` carries. Reading the
+// wire back into a typed value is coupling, and it is a *checked* one: the
+// test `an_over_max_from_the_worker_is_read_back_into_french` feeds this
+// parser the real `CoverageError` Display, so a reworded core breaks CI
+// instead of silently falling back to the generic wrapper.
+const OVER_MAX_TAIL: &str = " — semantics await the director's ruling";
+
+fn parse_over_max(message: &str) -> Option<OverMax> {
+    use ulaval_scheduler_core::Scope;
+    let body = message.strip_suffix(OVER_MAX_TAIL)?;
+    let (head, tail) = body.split_once(" scope) : the selection ")?;
+    let (rule, scope) = head.rsplit_once(" (")?;
+    let scope = match scope {
+        "program" => Scope::Program,
+        "concentration" => Scope::Concentration,
+        "profile" => Scope::Profile,
+        // an unrecognized shape falls back to the generic French wrapper
+        // rather than inventing a scope: the raw text still rides in the
+        // detail, nothing is dropped
+        _ => return None,
+    };
+    let (counted, max) = tail.split_once(", above the max ")?;
+    let sums = counted
+        .strip_prefix("sums ")
+        .and_then(|rest| rest.strip_suffix(" credits"));
+    let counts = counted
+        .strip_prefix("counts ")
+        .and_then(|rest| rest.strip_suffix(" courses"));
+    let (total, credits) = match (sums, counts) {
+        (Some(total), _) => (total, true),
+        (_, Some(total)) => (total, false),
+        _ => return None,
+    };
+    Some(OverMax {
+        rule: rule.to_string(),
+        scope,
+        total: total.parse().ok()?,
+        max: max.parse().ok()?,
+        credits,
+    })
+}
+
 // deterministic (fnv of the message): the same failure always carries the
 // same id, so two reports of it can be recognized as one
 // A correction the catalogue could not honour, said in French. Every case
@@ -438,6 +596,33 @@ pub struct BacCreditNote {
     pub suffix: String,
     pub tooltip: String,
 }
+
+// LAY-4 : une explication en place, à la demande, refermable — jamais une
+// visite guidée, un accueil modal ni une infobulle qui masque la donnée.
+// LAY-3 : elle n'ajoute que du texte; aucun défaut, aucun comportement,
+// aucune action ne change. Les deux mots que rien n'expliquait nulle part
+// (constat étudiante-cegep 2026-08-29) : la « version » d'un programme et
+// les crédits « en sus » (ADR
+// `2026-08-vocabulaire-explique-en-place-a-la-demande`).
+pub const VINTAGE_HELP: &str =
+    "La version est celle du programme sous laquelle vous êtes admise : \
+     A26 = automne 2026, H27 = hiver 2027, E27 = été 2027. L'Université \
+     retouche ses programmes d'une session à l'autre, et ce sont les \
+     exigences de votre version d'admission qui s'appliquent à vous, pas \
+     celles de la version la plus récente. Dans le doute, prenez la \
+     version de la session où commencent vos études.";
+
+// `credits_in_addition` (le vrai porteur du « en sus ») n'est vrai que sur
+// la règle « Stages » promue depuis la prose des bacs de génie (ADR
+// `2026-08-stage-obligatoire-en-prose-promu-en-regle`), et
+// `wasm::credits::credit_summary` ne compte dans `in_addition` que les
+// cours de ces règles-là : la phrase ci-dessous peut donc nommer les
+// stages sans mentir.
+pub const IN_ADDITION_HELP: &str =
+    "« En sus » veut dire que ces crédits s'ajoutent au total du \
+     baccalauréat au lieu d'être comptés dedans : il faut les crédits du \
+     bac, et ceux-là en plus. Dans les baccalauréats de génie, ce sont les \
+     crédits de stage, que le répertoire décrit hors du total.";
 
 pub fn bac_credit_note(
     summary: &ulaval_scheduler_wasm::credits::CreditSummary,
@@ -1084,6 +1269,58 @@ pub fn credits_label(credits: &ulaval_scheduler_core::Credits) -> String {
 
 // --- the session ribbon ---------------------------------------------------
 
+// LAY-1 : la rangée des sessions garde la même hauteur quoi qu'elle
+// porte. Le corps d'une carte vaut un nombre fixe de lignes de texte; les
+// lignes d'annonce (conflit d'horaire, gel, annotation libre) se prennent
+// dessus, et les sigles qui ne tiennent plus sont *comptés*, jamais
+// coupés à mi-glyphe (constat étudiante-cegep 2026-08-29, ADR
+// `2026-08-carte-de-session-tronquee-en-lignes-entieres`).
+pub const CARD_BODY_LINES: usize = 5;
+
+// Ce que la carte ne montre pas, nommé plutôt que caché. `label` tient
+// dans la largeur d'une carte; `title` nomme les sigles absents et le
+// geste qui les rend tous — le clic sur la carte, déjà visible (jamais un
+// accès au seul survol).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CardMore {
+    pub label: String,
+    pub title: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RibbonBody {
+    pub codes: Vec<String>,
+    pub more: Option<CardMore>,
+}
+
+// `notes` = combien de lignes d'annonce la carte dépense déjà.
+pub fn ribbon_body(codes: &[String], notes: usize) -> RibbonBody {
+    // deux lignes au moins pour les sigles : un sigle et son compte —
+    // une carte qui n'annoncerait que « +6 » ne dirait plus rien
+    let budget = CARD_BODY_LINES.saturating_sub(notes).max(2);
+    if codes.len() <= budget {
+        return RibbonBody {
+            codes: codes.to_vec(),
+            more: None,
+        };
+    }
+    // la dernière ligne va au compte, il reste une place de moins
+    let shown = budget - 1;
+    let hidden = &codes[shown..];
+    RibbonBody {
+        codes: codes[..shown].to_vec(),
+        more: Some(CardMore {
+            label: format!("+{}", hidden.len()),
+            title: format!(
+                "{} de plus dans cette session : {} — cliquez la carte pour \
+                 l'afficher en entier.",
+                hidden.len(),
+                hidden.join(", ")
+            ),
+        }),
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct RibbonCard {
     // 1-based index in the horizon
@@ -1095,7 +1332,10 @@ pub struct RibbonCard {
     // above the student's own cap — marked, never silent
     pub over_cap: bool,
     pub has_range: bool,
+    // the sigles the card actually shows — truncated to a whole number of
+    // lines by `ribbon_body`, the rest counted in `more`
     pub codes: Vec<String>,
+    pub more: Option<CardMore>,
     // the free annotation (« à l'étranger »)
     pub special: Option<String>,
     pub current: bool,
@@ -1129,6 +1369,19 @@ pub fn ribbon_model(
             let index = i + 1;
             let codes = state::session_codes(plan, index);
             let credits = crate::solve::session_credits(snapshot, plan, index);
+            let frozen = plan.frozen.contains(&index);
+            let special = plan.special.get(&index).cloned();
+            let conflict = !codes.is_empty()
+                && !crate::solve::weekly_schedule(snapshot, plan, index)
+                    .report
+                    .valid;
+            // the announcement lines the card already owes: they eat into
+            // the same fixed budget as the sigles, so a card with
+            // something to say shows fewer of them rather than growing
+            let notes = usize::from(conflict)
+                + usize::from(frozen)
+                + usize::from(special.is_some());
+            let body = ribbon_body(&codes, notes);
             RibbonCard {
                 index,
                 label: state::session_label(&semesters, i),
@@ -1138,13 +1391,11 @@ pub fn ribbon_model(
                 over_cap: credits.total > plan.credit_cap,
                 has_range: credits.has_range,
                 passed: state::semester_precedes(semester, today),
-                frozen: plan.frozen.contains(&index),
-                conflict: !codes.is_empty()
-                    && !crate::solve::weekly_schedule(snapshot, plan, index)
-                        .report
-                        .valid,
-                codes,
-                special: plan.special.get(&index).cloned(),
+                frozen,
+                conflict,
+                codes: body.codes,
+                more: body.more,
+                special,
                 current: index == current,
             }
         })
@@ -1342,6 +1593,162 @@ mod tests {
             profile_only: 0,
             unknown: Vec::new(),
         }
+    }
+
+    // --- solver refusals -------------------------------------------------
+
+    // The coupling this test exists for: the parser reads back the very
+    // string `CoverageError` prints, so a reworded core fails here instead
+    // of silently degrading every over-max into the generic wrapper.
+    #[test]
+    fn an_over_max_from_the_worker_is_read_back_into_french() {
+        use ulaval_scheduler_core::{CoverageError, Scope};
+        let credits = CoverageError::CreditsOverMax {
+            rule: "Règle 1".to_string(),
+            scope: Scope::Concentration,
+            total: 15,
+            max: 12,
+        }
+        .to_string();
+        let error = present_solver_error(&credits);
+        assert_eq!(
+            error.what,
+            "Règle 1 de la concentration : les cours sélectionnés y \
+             totalisent 15 crédits, au-dessus de son maximum de 12."
+        );
+        assert!(
+            error.action.contains("Retirez un cours de cette règle")
+                && error.action.contains("entente avec la direction"),
+            "the way out names both moves: {}",
+            error.action
+        );
+        for part in [&error.what, &error.reaction, &error.affected] {
+            assert!(!part.contains("scope"), "no English up front: {part}");
+            assert!(!part.contains("semantics"), "{part}");
+        }
+        assert_eq!(error.detail, credits, "the raw text is kept whole");
+        assert!(error.id.starts_with("GH-"));
+
+        // the course-count twin, and the two other scopes
+        let counted = CoverageError::CountOverMax {
+            rule: "Règle 3".to_string(),
+            scope: Scope::Profile,
+            total: 2,
+            max: 1,
+        }
+        .to_string();
+        assert_eq!(
+            present_solver_error(&counted).what,
+            "Règle 3 du profil : 2 cours sélectionnés y comptent, au-dessus \
+             de son maximum de 1."
+        );
+        let program = CoverageError::CountOverMax {
+            rule: "Règle 1".to_string(),
+            scope: Scope::Program,
+            total: 2,
+            max: 1,
+        }
+        .to_string();
+        assert!(present_solver_error(&program)
+            .what
+            .starts_with("Règle 1 : 2 cours"));
+    }
+
+    #[test]
+    fn a_refusal_the_parser_cannot_read_still_speaks_french() {
+        // every near-miss of the over-max shape falls back rather than
+        // inventing a rule, a scope or a number — and the raw text always
+        // survives in the detail (never dropped silently)
+        let tail = " — semantics await the director's ruling";
+        for message in [
+            "GEX-1001 is pinned to session 9, outside 1..=8",
+            "Règle 1 (faculty scope) : the selection sums 15 credits, \
+             above the max 12 — semantics await the director's ruling",
+            &format!("Règle 1 (program scope) : the selection sums 15 credits, above the max 12{tail} and more"),
+            &format!("Règle 1 : the selection sums 15 credits, above the max 12{tail}"),
+            &format!("Règle 1 scope) : the selection sums 15 credits, above the max 12{tail}"),
+            &format!("Règle 1 (program scope) : the selection weighs 15 credits, above the max 12{tail}"),
+            &format!("Règle 1 (program scope) : the selection sums 15 credits, at the max 12{tail}"),
+            &format!("Règle 1 (program scope) : the selection sums quinze credits, above the max 12{tail}"),
+            &format!("Règle 1 (program scope) : the selection sums 15 credits, above the max douze{tail}"),
+        ] {
+            let error = present_solver_error(message);
+            assert_eq!(
+                error.what,
+                "Le solveur n'a pas pu répondre à cette demande.",
+                "{message}"
+            );
+            assert_eq!(error.detail, message);
+            assert!(!error.action.is_empty(), "{message}");
+            assert!(error.id.starts_with("GH-"), "{message}");
+        }
+    }
+
+    #[test]
+    fn an_incomplete_verification_names_the_courses_without_a_session() {
+        let message = format!("{VERIFY_UNPLACED}GEX-1000, GEX-2000");
+        let error = present_solver_error(&message);
+        assert!(error.what.contains("GEX-1000, GEX-2000"), "{}", error.what);
+        assert!(
+            error
+                .what
+                .starts_with("La vérification demande une session"),
+            "{}",
+            error.what
+        );
+        assert!(error.action.contains("placement automatique"));
+        assert_eq!(error.affected, "Le verdict de vérification seulement.");
+        assert_eq!(error.detail, message);
+    }
+
+    // --- ribbon truncation -----------------------------------------------
+
+    #[test]
+    fn a_session_that_fits_shows_every_sigle_and_counts_nothing() {
+        let codes: Vec<String> = (0..CARD_BODY_LINES)
+            .map(|i| format!("GEX-100{i}"))
+            .collect();
+        let body = ribbon_body(&codes, 0);
+        assert_eq!(body.codes, codes);
+        assert_eq!(body.more, None);
+        assert_eq!(ribbon_body(&[], 0).codes, Vec::<String>::new());
+    }
+
+    #[test]
+    fn a_session_that_overflows_is_counted_never_cut() {
+        // A1 de B-GPH : 6 cours pour 5 lignes de corps (constat
+        // étudiante-cegep 2026-08-29)
+        let codes: Vec<String> = [
+            "PHY-1000", "PHY-1001", "PHY-1002", "PHY-1003", "MAT-1900",
+            "GLG-1000",
+        ]
+        .iter()
+        .map(|code| code.to_string())
+        .collect();
+        let body = ribbon_body(&codes, 0);
+        assert_eq!(body.codes.len(), CARD_BODY_LINES - 1);
+        assert_eq!(body.codes, codes[..4]);
+        let more = body.more.expect("the two left over are counted");
+        assert_eq!(more.label, "+2");
+        assert!(more.title.contains("MAT-1900, GLG-1000"), "{}", more.title);
+        assert!(more.title.contains("cliquez la carte"), "{}", more.title);
+        // le corps fait toujours le même nombre de lignes : la rangée ne
+        // change pas de hauteur (LAY-1)
+        assert_eq!(body.codes.len() + 1, CARD_BODY_LINES);
+    }
+
+    #[test]
+    fn an_announcing_card_spends_its_budget_on_the_announcements() {
+        let codes: Vec<String> =
+            (0..6).map(|i| format!("GEX-100{i}")).collect();
+        // conflit + gel : deux lignes de moins pour les sigles
+        let body = ribbon_body(&codes, 2);
+        assert_eq!(body.codes.len(), 2);
+        assert_eq!(body.more.map(|more| more.label), Some("+4".to_string()));
+        // conflit + gel + annotation : le plancher garde un sigle visible
+        let body = ribbon_body(&codes, 3);
+        assert_eq!(body.codes.len(), 1, "never a card that shows no sigle");
+        assert_eq!(body.more.map(|more| more.label), Some("+5".to_string()));
     }
 
     #[test]

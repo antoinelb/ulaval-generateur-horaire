@@ -2,6 +2,8 @@
 
 Date : 2026-08-27
 
+> **Remplacé le 2026-08-30** par `2026-08-carte-de-session-tronquee-en-lignes-entieres` : la promesse « sigles toujours tous visibles » ne tenait pas — le plancher était calculé pour des sigles à 0.6875rem alors que le CSS les rend à 0.875rem, et `.ribbon` (en `overflow-x: auto`, donc de taille minimale automatique nulle) était comprimé par la coquille en `height: 100vh`. La carte a désormais une hauteur fixe et compte ce qu'elle ne montre pas.
+
 ## Contexte
 
 L'audit LAY-2 (V1, la plus grave) a constaté qu'une carte de session affichait « à planifier » (une ligne) quand `card.codes` était vide, puis 5-6 lignes de sigles dès que le placement automatique arrivait.
