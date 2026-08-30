@@ -1186,9 +1186,19 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                                 if let Some(note) =
                                     crate::present::start_move_note(&moved)
                                 {
-                                    super::push_alert(
+                                    // un sujet, donc un seul avis : sans
+                                    // lui, trois changements de Début en
+                                    // empilaient trois, le libellé variant
+                                    // avec la liste des sigles. `Document`
+                                    // et non `Sticky` : c'est le bilan d'un
+                                    // acte passé, vrai jusqu'à la bascule
+                                    // de document (ADR
+                                    // `2026-08-un-sujet-pour-le-bilan-du-debut`)
+                                    super::push_topic_alert(
                                         alerts,
                                         super::AlertBody::Note(note),
+                                        super::AlertCause::Document,
+                                        super::AlertTopic::StartMove,
                                     );
                                 }
                             }

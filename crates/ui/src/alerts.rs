@@ -111,6 +111,10 @@ pub enum AlertTopic {
     ProposalKept,
     ScopeGrants,
     ScopeDepartures,
+    // le bilan d'un changement de « Début » : sans sujet, chaque
+    // changement en empilait un de plus, le libellé variant avec la liste
+    // des sigles (ADR `2026-08-un-sujet-pour-le-bilan-du-debut`)
+    StartMove,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -270,6 +274,44 @@ mod tests {
 
     fn bodies(stack: &AlertStack) -> Vec<AlertBody> {
         stack.alerts().iter().map(|a| a.body.clone()).collect()
+    }
+
+    // Régression (rapport directeur-gci 2026-08-29) : « après deux ou trois
+    // changements de "Début", cinq à six avertissements quasi identiques
+    // s'empilent dans le coin ». Le libellé change à chaque fois — la liste
+    // des sigles en fait partie — donc la déduplication par corps ne peut
+    // rien ; seul le sujet le peut (ADR
+    // `2026-08-un-sujet-pour-le-bilan-du-debut`).
+    #[test]
+    fn three_start_moves_leave_one_alert() {
+        let bilan = |codes: &[&str]| {
+            crate::present::start_move_note(&crate::state::StartMove {
+                evicted: codes.iter().map(|code| code.to_string()).collect(),
+                unfrozen: Vec::new(),
+            })
+            .map(AlertBody::Note)
+            .unwrap_or_else(|| panic!("un déplacement qui coûte un siège"))
+        };
+        let mut stack = AlertStack::default();
+        let mut last = None;
+        for codes in [
+            &["GCI-1000"][..],
+            &["GCI-1000", "GCI-1001"][..],
+            &["GCI-1000", "GCI-1001", "GCI-1002"][..],
+        ] {
+            let body = bilan(codes);
+            last = Some(body.clone());
+            stack.push_topic(
+                body,
+                AlertCause::Document,
+                AlertTopic::StartMove,
+            );
+        }
+        assert_eq!(
+            bodies(&stack),
+            [last.unwrap_or_else(|| panic!("trois bilans poussés"))],
+            "un seul avis, celui du dernier changement"
+        );
     }
 
     #[test]
@@ -651,6 +693,7 @@ mod tests {
             AlertTopic::ProposalKept,
             AlertTopic::ScopeGrants,
             AlertTopic::ScopeDepartures,
+            AlertTopic::StartMove,
         ];
         let mut stack = AlertStack::default();
         for body in bodies.iter() {
