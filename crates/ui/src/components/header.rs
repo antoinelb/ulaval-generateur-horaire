@@ -582,6 +582,94 @@ pub fn StatusStrip() -> Element {
     }
 }
 
+// La bande de statut est aussi la zone de retrait : pendant un
+// glissement un calque la recouvre, et le cours lâché là sort du
+// cheminement — immédiat et annulable, jamais un dialogue (ACT-2, ADR
+// `2026-08-retrait-par-glissement`). Le calque est le *frère* du
+// `role="status"`, monté par `Shell` à côté de lui et jamais dedans :
+// l'insérer dans la région vivante ferait annoncer son apparition comme
+// un changement de statut.
+#[component]
+pub fn RemovalDropZone() -> Element {
+    let plan = use_context::<Signal<Plan>>();
+    let history = use_context::<Signal<History>>();
+    let snapshot = use_context::<Signal<Option<Snapshot>>>();
+    let super::DraggedCourse(mut dragged) =
+        use_context::<super::DraggedCourse>();
+    let super::SelectedCourse(mut selected) =
+        use_context::<super::SelectedCourse>();
+    // le survol n'intéresse que ce calque : un signal local suffit —
+    // `DropHover` est indexé par session et ne saurait pas le dire
+    let mut landing = use_signal(|| false);
+    let dragged_code = dragged.read().clone();
+    // le même prédicat que le « ✕ » du panneau : les deux chemins de
+    // retrait ne peuvent pas diverger sur ce qu'est un obligatoire
+    let mandatory = dragged_code.as_deref().is_some_and(|code| {
+        snapshot.read().as_ref().is_some_and(|snapshot| {
+            crate::panel::is_mandatory(snapshot, &plan.read(), code)
+        })
+    });
+    let Some(band) =
+        crate::present::removal_band(dragged_code.as_deref(), mandatory)
+    else {
+        // hors glissement le calque n'existe pas du tout : rien ne
+        // recouvre la bande ni n'intercepte ses boutons
+        return rsx! {};
+    };
+    let barred = band.barred;
+    rsx! {
+        div {
+            class: "status-drop",
+            class: if barred { "status-drop--barred" },
+            class: if landing() { "status-drop--landing" },
+            // geste au pointeur seul ; le « ✕ » du panneau reste le
+            // chemin clavier (INP-4)
+            aria_hidden: "true",
+            // un obligatoire n'accepte rien : sans `prevent_default` le
+            // navigateur refuse le dépôt de lui-même (curseur « interdit »)
+            // et aucun `drop` ne part — le refus est déjà écrit dans la
+            // bande, il n'a pas à s'empiler ensuite en avis
+            ondragover: move |event| {
+                if barred {
+                    return;
+                }
+                event.prevent_default();
+                let stale = !*landing.peek();
+                if stale {
+                    landing.set(true);
+                }
+            },
+            ondragleave: move |_| {
+                landing.set(false);
+            },
+            ondrop: move |event| {
+                event.prevent_default();
+                landing.set(false);
+                // the read borrow must die before edit_plan opens the write
+                let code = dragged.read().clone();
+                let Some(code) = code else {
+                    return;
+                };
+                dragged.set(None);
+                // sinon la grille garderait les fantômes d'un cours parti
+                let shown = selected.read().as_deref() == Some(code.as_str());
+                if shown {
+                    selected.set(None);
+                }
+                // mot pour mot le libellé du « ✕ » : les deux chemins
+                // posent la même entrée d'historique
+                super::edit_plan(
+                    plan,
+                    history,
+                    &format!("{code} retiré"),
+                    |plan| state::remove_course(plan, &code),
+                );
+            },
+            "{band.label}"
+        }
+    }
+}
+
 // Les alertes flottent en coin bas-droite, par-dessus la grille — le
 // panneau et l'horaire ne bougent jamais (ADR
 // `2026-08-alertes-en-toasts-flottants`). Les ⚠ persistent jusqu'au clic

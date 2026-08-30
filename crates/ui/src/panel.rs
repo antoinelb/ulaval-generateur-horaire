@@ -2153,8 +2153,10 @@ pub fn offered_sessions(
 
 // imposed by the program, its chosen concentration or its chosen profile —
 // read from the program itself, so an obligatoire listed under a rule or
-// met while browsing is marked there too
-fn is_mandatory(snapshot: &Snapshot, plan: &Plan, code: &str) -> bool {
+// met while browsing is marked there too. Public because the two removal
+// paths — the panel's ✕ and the status strip's drop zone — must never
+// disagree on what « obligatoire » means.
+pub fn is_mandatory(snapshot: &Snapshot, plan: &Plan, code: &str) -> bool {
     let Some(program) = chosen_program(snapshot, plan) else {
         return false;
     };

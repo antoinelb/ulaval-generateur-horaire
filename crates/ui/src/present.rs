@@ -655,6 +655,41 @@ pub fn share_note(copied: bool) -> String {
     }
 }
 
+// La bande de statut est aussi la zone de retrait : pendant un
+// glissement, un calque la recouvre et un cours lâché là sort du
+// cheminement (ADR `2026-08-retrait-par-glissement`). Le calque nomme
+// toujours le sigle — l'objet d'un geste destructeur se dit, et
+// l'entrée d'historique le nomme déjà de son côté.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RemovalBand {
+    // un cours obligatoire ne peut pas être retiré : la bande le dit et
+    // refuse le dépôt plutôt que de l'avaler en silence, comme une carte
+    // de session dont la saison n'offre pas le cours
+    pub barred: bool,
+    pub label: String,
+}
+
+// `None` hors glissement : le calque n'existe alors pas du tout, donc
+// rien ne recouvre la bande ni n'intercepte ses boutons.
+pub fn removal_band(
+    dragged: Option<&str>,
+    mandatory: bool,
+) -> Option<RemovalBand> {
+    let code = dragged?;
+    let label = if mandatory {
+        format!(
+            "{code} est obligatoire au programme — il ne peut pas être \
+             retiré"
+        )
+    } else {
+        format!("Retirer {code} du cheminement")
+    };
+    Some(RemovalBand {
+        barred: mandatory,
+        label,
+    })
+}
+
 pub fn error_id(detail: &str) -> String {
     let hash = fnv1a_64(0xcbf2_9ce4_8422_2325, detail.as_bytes());
     format!("GH-{:08X}", (hash >> 32) as u32 ^ hash as u32)
@@ -1492,6 +1527,34 @@ pub fn ribbon_model(
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod removal_band_tests {
+    use super::removal_band;
+
+    #[test]
+    fn nothing_covers_the_strip_outside_a_drag() {
+        assert_eq!(removal_band(None, false), None);
+    }
+
+    #[test]
+    fn a_removable_course_is_named_by_the_band_that_would_take_it() {
+        let band = removal_band(Some("GLG-1000"), false)
+            .expect("un glissement en cours ouvre la zone");
+        assert!(!band.barred);
+        assert_eq!(band.label, "Retirer GLG-1000 du cheminement");
+    }
+
+    #[test]
+    fn a_mandatory_course_is_refused_before_the_drop_and_told_why() {
+        let band = removal_band(Some("GCI-1000"), true)
+            .expect("la zone s'affiche aussi pour dire non");
+        assert!(band.barred);
+        assert!(band.label.starts_with("GCI-1000 est obligatoire"));
+        assert!(band.label.contains("ne peut pas être retiré"));
+    }
 }
 
 #[cfg(test)]

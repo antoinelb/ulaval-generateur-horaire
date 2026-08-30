@@ -340,6 +340,52 @@ code {
   flex: none;
 }
 
+/* la bande et son calque de retrait : l'emballage n'existe que pour donner
+   au calque un repère de position, le `role="status"` reste intact dessous
+   (ADR `2026-08-retrait-par-glissement`) */
+.status-band {
+  position: relative;
+  flex: none;
+}
+
+/* pendant un glissement, toute la bande devient la cible — accent dès le
+   premier instant du geste, pour que le retrait se découvre sans qu'on
+   l'ait cherché. Aucune icône : le mot porte seul le sens (INP-3). */
+.status-drop {
+  position: absolute;
+  inset: 0;
+  /* au-dessus du menu d'export (z-index 20), qui peut être resté ouvert
+     quand le glissement commence */
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.875rem;
+  text-align: center;
+  font-size: 0.75rem;
+  border: 0.125rem dashed var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* le curseur est dessus : bordure et fond pleins, comme
+   `.ribbon-card--landing` appuie sur la carte survolée */
+.status-drop--landing {
+  border-style: solid;
+  /* --accent-dark plutôt que --accent : le blanc y tient 9,6:1, contre
+     5,9:1 sur le rouge vif */
+  background: var(--accent-dark);
+  color: var(--card);
+}
+
+/* un obligatoire : la bande refuse et dit pourquoi avant même le dépôt —
+   même grammaire que `.ribbon-card--barred`, qui refuse sans rien pousser */
+.status-drop--barred {
+  border-color: var(--muted-3);
+  background: var(--band);
+  color: var(--muted);
+}
+
 .status-undo {
   font: inherit;
   font-size: 0.75rem;

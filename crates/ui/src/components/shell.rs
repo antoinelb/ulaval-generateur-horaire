@@ -116,7 +116,12 @@ fn Shell() -> Element {
             },
             header::HeaderBar {}
             ribbon::SessionRibbon {}
-            header::StatusStrip {}
+            // la bande porte sa zone de retrait en frère du `role="status"`,
+            // jamais en enfant (ADR `2026-08-retrait-par-glissement`)
+            div { class: "status-band",
+                header::StatusStrip {}
+                header::RemovalDropZone {}
+            }
             div { class: "main-split",
                 panel::LeftPanel {}
                 grid::WeeklyGrid {}
