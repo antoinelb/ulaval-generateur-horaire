@@ -93,6 +93,20 @@ pub fn WeeklyGrid() -> Element {
         section { class: "grid-panel", aria_label: "Horaire hebdomadaire",
             div { class: "grid-head",
                 h2 { "{title}" }
+                // le statut porte le pivot élastique de la rangée
+                // (`.grid-head h2 + .grid-status`) : ancré à gauche, il ne
+                // bouge pas quand « ⚠ N cours hors grille » arrive, et
+                // l'avertissement ancré à droite ne bouge pas quand le
+                // préfixe de recalcul apparaît — aucun des deux arrivants
+                // asynchrones ne déplace l'autre (LAY-2, ADR
+                // `2026-08-ancrage-des-statuts-de-l-entete-de-grille`)
+                span {
+                    class: "grid-status",
+                    class: if grid.conflict { "grid-status--conflict" },
+                    class: if searching { "grid-status--searching" },
+                    title: "{status}",
+                    "{status}"
+                }
                 if off_grid > 0 {
                     // le détail est déjà toujours visible sous la grille
                     // (`GridFootnotes`) et la légende le dit aussi — le
@@ -102,13 +116,6 @@ pub fn WeeklyGrid() -> Element {
                         title: "Détail sous l'horaire",
                         "⚠ {off_grid} cours hors grille"
                     }
-                }
-                span {
-                    class: "grid-status",
-                    class: if grid.conflict { "grid-status--conflict" },
-                    class: if searching { "grid-status--searching" },
-                    title: "{status}",
-                    "{status}"
                 }
                 if forced {
                     button {
