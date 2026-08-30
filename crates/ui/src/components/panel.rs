@@ -362,7 +362,7 @@ fn ImportDrawer() -> Element {
     // restarts it when a signal read inside changes (unlike `use_resource`)
     // — gating start/stop on `phase` would freeze after the first import.
     // Instead this single ticker runs for the drawer's whole lifetime
-    // (mirrors `SolverStatus`, components/header.rs:18-25) and rechecks
+    // (mirrors `SolverStatus`, components/header.rs) and rechecks
     // `phase` on every tick, incrementing `elapsed` only while a phase is
     // running; `commit` resets it to 0 at the start of each import.
     use_future(move || async move {
@@ -1130,10 +1130,12 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
             settled.set(fresh);
         }
     });
-    // le drapeau « ça date » n'a rien à poser ici : `RecalcNotice`, en
-    // tête du bloc, le dit déjà en toutes lettres pour tout ce qui suit —
-    // et atténuer un ⚠ pour le marquer périmé le rendrait moins lisible
-    // qu'il ne le mérite (ALR)
+    // le drapeau « ça date » n'a rien à poser ici : la bande de statut le
+    // dit déjà en toutes lettres, avec son compteur, pour tout ce que
+    // l'attente retient (ADR
+    // `2026-08-attente-du-solveur-dans-la-bande-de-statut`) — et atténuer
+    // un ⚠ pour le marquer périmé le rendrait moins lisible qu'il ne le
+    // mérite (ALR)
     let (facts, _held) = crate::present::held_while_awaited(
         settled.read().as_ref(),
         &current,
@@ -1328,7 +1330,6 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
             // toute façon, exception LAY-2 assumée (ADR
             // `2026-08-verdicts-du-panneau-sans-hauteur-reservee`).
             div { class: "panel-verdicts",
-                RecalcNotice {}
                 if !conflicted.is_empty() {
                     p { class: "panel-verdict panel-verdict--bad",
                         "⚠ Conflit d'horaire en {conflicted} — plages \
@@ -1521,46 +1522,6 @@ fn verdict_facts(
         readiness,
         conflicted,
         overloaded,
-    }
-}
-
-// L'attente, dite là où s'affiche déjà l'état du placement — avec son
-// temps écoulé, jamais un sablier nu (LAT-4). Un composant à part, et non
-// quelques lignes dans `OrganigrammeControls`, pour deux raisons :
-//
-// - la minuterie qui fait avancer le compteur ne re-rend que cette ligne;
-//   dans le parent elle relancerait `conflicted_sessions` (l'horaire
-//   hebdomadaire de chaque session) une fois par seconde (LAT-3);
-// - la ligne est *toujours* montée, hauteur réservée par `.panel-recalc` :
-//   son apparition et sa disparition ne déplacent rien sous le curseur,
-//   ce qui est précisément le défaut qu'elle vient signaler (LAY-1).
-#[component]
-fn RecalcNotice() -> Element {
-    let solver = use_context::<Signal<super::SolverState>>();
-    let mut now_ms = use_signal(crate::browser::now_epoch_ms);
-    use_future(move || async move {
-        // bounded ticker; idles harmlessly when nothing is awaited
-        for _ in 0..86_400u32 {
-            crate::browser::sleep_ms(1_000).await;
-            now_ms.set(crate::browser::now_epoch_ms());
-        }
-    });
-    let awaited = {
-        let state = solver.read();
-        crate::solve::awaited_ms(
-            state.awaited_since,
-            state.running.map(|running| running.started_ms),
-            now_ms(),
-        )
-    };
-    rsx! {
-        p {
-            class: "panel-verdict panel-recalc",
-            role: "status",
-            if let Some(elapsed) = awaited {
-                "{crate::present::recalc_notice(elapsed)}"
-            }
-        }
     }
 }
 

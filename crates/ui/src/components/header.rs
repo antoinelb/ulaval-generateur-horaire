@@ -5,7 +5,16 @@ use crate::data::Snapshot;
 use crate::state::{self, History, Plan, View};
 
 // LAT-4: a visible search is never a bare spinner — elapsed seconds and a
-// real cancel (the worker dies, a fresh one boots)
+// real cancel (the worker dies, a fresh one boots).
+//
+// It follows `awaited_ms` and not `running` alone, so it also covers the
+// 500 ms debounce that precedes a query: that window is a wait like any
+// other, and it used to be announced by a second line in the panel whose
+// reserved height showed as an empty band at rest (ADR
+// `2026-08-attente-du-solveur-dans-la-bande-de-statut`). Nothing here
+// reserves anything: the strip already stands at its `min-height`, and
+// `.status-exports` is pushed right by `margin-left: auto`, so what this
+// span occupies moves neither its neighbours nor the panel below (LAY-1).
 #[component]
 fn SolverStatus() -> Element {
     let plan = use_context::<Signal<Plan>>();
@@ -22,14 +31,28 @@ fn SolverStatus() -> Element {
             now_ms.set(crate::browser::now_epoch_ms());
         }
     });
-    let Some(running) = solver.read().running else {
+    let (awaited, running) = {
+        let state = solver.read();
+        (
+            crate::solve::awaited_ms(
+                state.awaited_since,
+                state.running.map(|running| running.started_ms),
+                now_ms(),
+            ),
+            state.running,
+        )
+    };
+    let Some(awaited) = awaited else {
         return rsx! {};
     };
-    let elapsed = now_ms().saturating_sub(running.started_ms) / 1_000;
-    let what = match running.kind {
-        super::QueryKind::Propose => "recherche d'un organigramme",
-        super::QueryKind::Verify => "vérification du cheminement",
-    };
+    let (what, elapsed) = crate::present::solver_status(
+        running.map(|running| running.kind),
+        awaited,
+    );
+    // on n'annule que ce qui est parti : pendant la temporisation il n'y a
+    // aucune requête à tuer, et un bouton qui ne ferait rien mentirait
+    // (TRU-1)
+    let cancellable = running.is_some();
     rsx! {
         span { class: "status-running",
             "{what} - "
@@ -37,14 +60,16 @@ fn SolverStatus() -> Element {
             // bien au-delà d'une recherche réelle avant annulation) —
             // au-delà le texte s'élargirait quand même, ce cas est assumé
             span { class: "status-running-elapsed", "{elapsed} s" }
-            button {
-                class: "status-undo",
-                onclick: move |_| {
-                    super::cancel_search(
-                        &handle, solver, plan, alerts, manual, snapshot,
-                    );
-                },
-                "Annuler la recherche"
+            if cancellable {
+                button {
+                    class: "status-undo",
+                    onclick: move |_| {
+                        super::cancel_search(
+                            &handle, solver, plan, alerts, manual, snapshot,
+                        );
+                    },
+                    "Annuler la recherche"
+                }
             }
         }
     }

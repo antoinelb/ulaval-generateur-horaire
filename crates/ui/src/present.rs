@@ -1274,15 +1274,32 @@ pub fn verification_verdict(searching: bool) -> (&'static str, String) {
     }
 }
 
+// Ce que dit la bande de statut pendant une attente : ce qui tourne, et
+// depuis combien de temps.
+//
 // LAT-4 : l'attente se dit avec son temps écoulé, jamais par un sablier nu
 // — sans compteur, personne ne distingue « lent » de « mort », et le
 // réflexe est de recharger. Les secondes, pas les millisecondes : un
-// chiffre qui change soixante fois par seconde ne se lit pas.
-pub fn recalc_notice(awaited_ms: u64) -> String {
-    format!(
-        "⟳ Recalcul du placement… {} s — valeurs de la solution précédente.",
-        awaited_ms / 1_000
-    )
+// chiffre qui change soixante fois par seconde ne se lit pas, et la
+// division tronque — jamais une durée plus longue que celle écoulée
+// (TRU-1).
+//
+// `kind` vaut `None` pendant la temporisation de 500 ms : aucune requête
+// n'est encore partie, donc rien ne peut être nommé plus précisément que
+// le recalcul lui-même. Annoncer « recherche d'un organigramme » à cet
+// instant serait deviner laquelle des deux requêtes suivra (TRU-1).
+pub fn solver_status(
+    kind: Option<crate::solve::QueryKind>,
+    awaited_ms: u64,
+) -> (&'static str, u64) {
+    let what = match kind {
+        Some(crate::solve::QueryKind::Propose) => {
+            "recherche d'un organigramme"
+        }
+        Some(crate::solve::QueryKind::Verify) => "vérification du cheminement",
+        None => "recalcul du placement",
+    };
+    (what, awaited_ms / 1_000)
 }
 
 // LAT-6 (stale-while-revalidate) : tant qu'une réponse est attendue, un
@@ -2800,15 +2817,20 @@ mod tests {
     }
 
     #[test]
-    fn the_recalc_notice_always_carries_its_elapsed_seconds() {
-        assert_eq!(
-            recalc_notice(0),
-            "⟳ Recalcul du placement… 0 s — valeurs de la solution \
-             précédente."
-        );
+    fn the_solver_status_names_what_runs_and_its_elapsed_seconds() {
+        use crate::solve::QueryKind;
+        let (what, elapsed) = solver_status(Some(QueryKind::Propose), 0);
+        assert_eq!(what, "recherche d'un organigramme");
+        assert_eq!(elapsed, 0);
+        let (what, _) = solver_status(Some(QueryKind::Verify), 0);
+        assert_eq!(what, "vérification du cheminement");
+        // la temporisation de 500 ms : rien n'est encore parti, donc rien
+        // de plus précis que le recalcul ne peut être annoncé
+        let (what, elapsed) = solver_status(None, 2_900);
+        assert_eq!(what, "recalcul du placement");
         // arrondi vers le bas : 2 900 ms est la 2ᵉ seconde révolue, pas la
         // 3ᵉ — jamais une durée plus longue que celle réellement écoulée
-        assert!(recalc_notice(2_900).contains("2 s"));
+        assert_eq!(elapsed, 2);
     }
 
     // Régression du 2026-08-29 : le total est tombé à « 30/120 cr » —

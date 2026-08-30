@@ -37,6 +37,8 @@ Le verdict `verification_verdict(searching)` prévu par l'ADR `2026-08-recalcul-
 
 **2. Un indicateur explicite avec son temps écoulé (LAT-4), dans la ligne de verdict du panneau.**
 
+> **Remplacé le 2026-08-30** par l'ADR `2026-08-attente-du-solveur-dans-la-bande-de-statut` : `RecalcNotice` et `.panel-recalc` n'existent plus, la bande de statut portant seule l'annonce et son compteur. La hauteur réservée dans le panneau était une bande blanche permanente ; la bande de statut n'a rien à réserver. Le reste du présent ADR — `awaited_since`, `awaited_ms`, `held_while_awaited`, la hauteur réservée du verdict d'état — reste en vigueur.
+
 `RecalcNotice`, premier enfant de `div.panel-verdicts`, affiche « ⟳ Recalcul du placement… N s — valeurs de la solution précédente. » (`present::recalc_notice`, pure et testée).
 Composant à part, pour deux raisons : sa minuterie d'une seconde ne re-rend que cette ligne — dans `OrganigrammeControls` elle relancerait `conflicted_sessions` (l'horaire hebdomadaire de chaque session) chaque seconde, LAT-3 — et la ligne est **toujours montée**, hauteur réservée par `.panel-recalc`, pour que son apparition ne déplace rien (LAY-1).
 Le bouton « Annuler la recherche » reste où il est, dans la bande de statut : on n'annule que ce qui est parti.
