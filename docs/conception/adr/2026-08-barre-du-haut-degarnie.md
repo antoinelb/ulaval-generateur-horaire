@@ -3,6 +3,7 @@
 Date : 2026-08-30
 
 > Suite : l'écart de 3 rem décrit ici est ramené à 2 rem par l'ADR `2026-08-tout-geler-sur-une-ligne-et-verdict-ecourte`, le voisin de « Réinitialiser » n'étant plus « Partager » mais « Tout geler ».
+> Puis à 0.5 rem par l'ADR `2026-08-ecart-reduit-entre-tout-geler-et-reinitialiser`, où l'écart cesse de porter ACT-5 : la teinte, le libellé et l'annulabilité le portent seuls.
 
 ## Contexte
 

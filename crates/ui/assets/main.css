@@ -157,18 +157,30 @@ code {
   flex: none;
 }
 
-/* ACT-5 : un contrôle destructeur n'est jamais collé à un contrôle
-   fréquent. Depuis le retrait du trait vertical, l'écart seul porte la
-   séparation ; il valait 3 rem (le `gap: 1rem` de la barre plus 2 rem
-   ici) du temps où « Partager », geste courant, bordait
-   « Réinitialiser ». Le voisin est maintenant « Tout geler » : rare et
-   entièrement annulable, un clic de travers n'y coûte rien. 1 rem ici,
-   soit 2 rem au total, reste le double du rythme de la barre — la
-   séparation se voit encore, et rien ne se cache derrière un menu
-   (LAY-7). La teinte d'accent double l'écart pour que la couleur ne
-   porte pas seule la différence (INP-3). */
+/* « Tout geler » et « Réinitialiser » forment un groupe, sur le modèle de
+   `.status-exports` qui tient « Partager » et « Exporter » : l'emballage
+   porte seul leur écart, et le `gap: 1rem` de la barre ne s'y ajoute plus.
+   C'est ce qui permet le 0.5 rem demandé — un `margin-left: 0` sur
+   `.header-reset` aurait laissé les 16 px de la barre, soit le double.
+   `flex: none` reprend pour le groupe ce que `.header-bar .status-undo`
+   donne aux boutons : c'est lui, maintenant, l'élément flexible de la
+   barre, donc lui que la barre serrée comprimerait. */
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex: none;
+}
+
+/* ACT-5 veut qu'un contrôle destructeur ne jouxte pas un contrôle
+   fréquent. Antoine ramène l'écart au rythme commun (0.5 rem, celui de
+   `.status-exports`) : la séparation spatiale ne fait donc plus ce
+   travail. Ce qui le fait à sa place — le libellé explicite, la teinte
+   d'accent que ce bouton est seul à porter (INP-3 : la couleur ne dit
+   jamais rien seule), le fait qu'il reste à découvert (LAY-7) et que son
+   propre avis porte « Annuler » — et le fait que son unique voisin,
+   « Tout geler », soit un geste rare et entièrement annulable. ADR
+   `2026-08-ecart-reduit-entre-tout-geler-et-reinitialiser`. */
 .header-reset {
-  margin-left: 1rem;
   color: var(--accent-dark);
   border-color: var(--accent-dark);
 }

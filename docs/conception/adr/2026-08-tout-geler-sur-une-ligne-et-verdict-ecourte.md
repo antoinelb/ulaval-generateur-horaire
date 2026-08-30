@@ -2,6 +2,8 @@
 
 Date : 2026-08-30
 
+> Suite : les 2 rem retenus ici passent à 0.5 rem par l'ADR `2026-08-ecart-reduit-entre-tout-geler-et-reinitialiser`, qui emballe les deux boutons plutôt que d'écarter le second, et constate que l'écart ne porte plus ACT-5.
+
 ## Contexte
 
 Trois constats d'Antoine, sans rapport l'un avec l'autre.

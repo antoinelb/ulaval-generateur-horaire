@@ -256,18 +256,20 @@ pub fn HeaderBar() -> Element {
                     }
                 }
             }
-            // « Tout geler » se range *avant* « Réinitialiser », jamais
-            // après : le 1 rem de `.header-reset` tient le geste
-            // destructeur à l'écart de ce qui le borde (ACT-5), et un
-            // bouton posé après lui mangerait cet écart.
-            FreezeAllButton {}
-            // ACT-5: « Réinitialiser » vide le document et se tenait juste
-            // à côté de « Partager », le geste courant — un clic de travers
-            // coûtait tout l'organigramme (rapport Camille, 2026-08-29).
-            // « Partager » a rejoint « Exporter » dans la bande de statut
-            // (Antoine, 2026-08-30) : plus aucun geste courant ne le
-            // jouxte, et il reste à découvert, jamais dans un menu (LAY-7).
-            ResetButton {}
+            // Les deux boutons forment un groupe, comme « Partager » et
+            // « Exporter » dans `.status-exports` : l'emballage porte seul
+            // leur écart, sans que le `gap` de la barre s'y ajoute — ADR
+            // `2026-08-ecart-reduit-entre-tout-geler-et-reinitialiser`.
+            div { class: "header-actions",
+                FreezeAllButton {}
+                // ACT-5: « Réinitialiser » vide le document. L'écart ne
+                // l'écarte plus de son voisin ; ce qui tient le geste,
+                // c'est que « Tout geler » soit rare et entièrement
+                // annulable, que le libellé et la teinte d'accent le
+                // distinguent (INP-3), qu'il reste à découvert (LAY-7) et
+                // que son propre avis porte « Annuler ».
+                ResetButton {}
+            }
         }
     }
 }
