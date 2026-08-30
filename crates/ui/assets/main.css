@@ -1398,6 +1398,28 @@ code {
   font-style: italic;
 }
 
+/* Les deux formulations du même verdict — le ✓ et le « recalcul en
+   cours… » — occupent exactement la même place : trois lignes à la
+   largeur du panneau. Sans cela, la version en cours, plus courte d'une
+   ligne, remontait toute la liste des règles de 21 px au moment précis
+   où l'étudiante y cliquait (LAY-1, ADR
+   2026-08-etat-d-attente-du-solveur-visible). */
+.panel-verdict--state {
+  min-height: 3.9375rem;
+}
+
+/* LAT-4 + LAY-1 (ADR 2026-08-etat-d-attente-du-solveur-visible) : la ligne
+   d'attente est toujours montée et occupe toujours la même hauteur — deux
+   lignes de texte à la largeur du panneau — pour que son apparition et sa
+   disparition ne déplacent jamais les règles sous le curseur. Elle est la
+   seule exception réservée du bloc, dont le reste assume LAY-2 (ADR
+   2026-08-verdicts-du-panneau-sans-hauteur-reservee). */
+.panel-recalc {
+  min-height: 2.625rem; /* exactement les deux lignes du message */
+  color: var(--muted);
+  font-style: italic;
+}
+
 /* puces de sessions (9a) */
 .panel-chips {
   display: flex;
@@ -1507,6 +1529,14 @@ code {
 
 .header-credits--over {
   color: var(--accent);
+}
+
+/* LAT-6 : un total tenu depuis la solution précédente pendant qu'une
+   réponse est attendue. L'atténuation ne porte jamais le fait toute seule
+   (INP-3) — le `title` de chaque chiffre le dit en toutes lettres, et la
+   ligne « Recalcul du placement… » du panneau le dit à l'écran. */
+.header-credits--stale {
+  opacity: 0.55;
 }
 
 .status-alert-ok {

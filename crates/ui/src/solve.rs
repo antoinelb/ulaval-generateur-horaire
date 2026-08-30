@@ -1089,6 +1089,39 @@ pub fn propose_needed(
     verification_empty && !restored_screen
 }
 
+// --- « une réponse est attendue » ------------------------------------------
+
+// Both automatic effects wait this long after the last plan change before
+// sending anything (`auto_propose`, `auto_verify`): a burst of edits costs
+// one query. Nothing used to be said during that window, so the screen
+// looked settled while it was not — un « 30/120 cr » transitoire sans le
+// moindre signe de calcul en cours (rapport directeur-gci 2026-08-29).
+pub const RECALC_DEBOUNCE_MS: u64 = 500;
+
+// How long the view has been waiting for an answer it can trust, `None`
+// when nothing is coming.
+//
+// Two clocks feed it and the *earliest* wins: `awaited_since`, stamped by
+// the plan change that armed the debounce, and the start of a query
+// already in flight. Taking the minimum is what keeps the counter from
+// jumping backwards at the moment the debounce turns into a real search —
+// one wait, one age (LAT-4).
+//
+// A `now_ms` behind the stamp (a clock nudged backwards between the two
+// reads) yields 0, never a wrapped-around age: the wait is young, and
+// that is all the counter may claim (TRU-1).
+pub fn awaited_ms(
+    awaited_since: Option<u64>,
+    running_started_ms: Option<u64>,
+    now_ms: u64,
+) -> Option<u64> {
+    let since = match (awaited_since, running_started_ms) {
+        (Some(armed), Some(running)) => armed.min(running),
+        (armed, running) => armed.or(running)?,
+    };
+    Some(now_ms.saturating_sub(since))
+}
+
 // the chosen concentration and profile titles, read off the plan's choice
 fn scope_choice(plan: &Plan) -> (Option<String>, Option<String>) {
     match plan.program.as_ref() {
@@ -1675,6 +1708,37 @@ mod worker_tests {
     use super::*;
 
     use crate::state::ProgramChoice;
+
+    // Régression du 2026-08-29 (rapports directeur-gci et étudiante-cegep) :
+    // pendant la temporisation de 500 ms, aucune requête n'est encore
+    // partie — `running` est `None` — et l'écran avait donc l'air arrêté
+    // alors qu'un recalcul allait tout réécrire. C'est ce trou qui rendait
+    // la course atteignable et invisible : si `awaited_ms` cessait d'y
+    // répondre `Some`, le trou reviendrait tel quel.
+    #[test]
+    fn the_wait_is_visible_before_any_query_has_left() {
+        assert_eq!(
+            awaited_ms(Some(1_000), None, 1_300),
+            Some(300),
+            "la temporisation compte comme une attente"
+        );
+        assert_eq!(awaited_ms(None, None, 1_300), None, "rien n'est attendu");
+    }
+
+    #[test]
+    fn the_counter_never_jumps_backwards_when_the_query_starts() {
+        // armé à 1 000, la requête part à 1 500 : l'attente a bien 800 ms
+        // à 1 800, pas 300 — une seule attente, un seul âge (LAT-4)
+        assert_eq!(awaited_ms(Some(1_000), Some(1_500), 1_800), Some(800));
+        // une requête sans horodatage d'armement (annulation puis relance)
+        // compte depuis son propre départ
+        assert_eq!(awaited_ms(None, Some(1_500), 1_800), Some(300));
+    }
+
+    #[test]
+    fn a_clock_nudged_backwards_yields_a_young_wait_never_an_age_wrapped() {
+        assert_eq!(awaited_ms(Some(2_000), None, 1_000), Some(0));
+    }
 
     #[test]
     fn a_place_request_carries_the_plan_faithfully() {

@@ -920,7 +920,7 @@ fn PanelBody(model: PanelModel) -> Element {
                 p { class: "warning", "⚠ {error}" }
             }
             for warning in model.warnings.iter() {
-                p { class: "warning", "⚠ {warning}" }
+                p { key: "{warning}", class: "warning", "⚠ {warning}" }
             }
             if has_program {
                 CheminementKnobs {}
@@ -929,13 +929,16 @@ fn PanelBody(model: PanelModel) -> Element {
                     GroupView { key: "{group.title}", group }
                 }
                 if let Some(preparatory) = model.preparatory.clone() {
-                    SectionView { section: preparatory }
+                    SectionView {
+                        key: "{preparatory.key}",
+                        section: preparatory,
+                    }
                 }
                 if let Some(note) = model.language_note.as_ref() {
                     p { class: "panel-note", b { "{note}" } }
                 }
                 for note in model.notes.iter() {
-                    p { class: "panel-note", "{note}" }
+                    p { key: "{note}", class: "panel-note", "{note}" }
                 }
             }
             div { class: "panel-search-wrap",
@@ -1055,71 +1058,57 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
     let credit_cap = plan.read().credit_cap;
     let summers_open = plan.read().summers_open;
     let concomitant = plan.read().concomitant;
-    let left_out = solver.read().left_out.clone();
     // jamais un ✓ à côté d'un état provisoire (rapport directeur-gci
-    // 2026-08-29 ; ADR `2026-08-recalcul-visible-sur-la-grille`)
-    let searching = solver.read().running.is_some();
+    // 2026-08-29 ; ADR `2026-08-recalcul-visible-sur-la-grille`). Le
+    // verdict reste affiché pendant le recalcul, atténué — le faire
+    // disparaître vidait le bloc et déplaçait toutes les règles sous le
+    // curseur (ADR `2026-08-etat-d-attente-du-solveur-visible`).
+    let searching = solver.read().verification_stale;
     let (verdict_class, verdict_label) =
         crate::present::verification_verdict(searching);
-    let verification = solver.read().verification.clone();
-    let credit_shortfalls = solver.read().credit_shortfalls.clone();
-    let shortfall_messages: Vec<String> = credit_shortfalls
-        .iter()
-        .map(|shortfall| {
-            crate::solve::credit_shortfall_message(shortfall, &plan.read())
-        })
-        .collect();
-    let nothing_placed = {
-        let plan_read = plan.read();
-        plan_read.displayed_placement.is_empty()
-            && plan_read.manual.values().all(Vec::is_empty)
-    };
-    // the placement and the verification both run by themselves (ADR
-    // `2026-08-organigramme-en-continu-sans-bouton`) — this only explains
-    // why no verdict shows yet: courses still floating, or an unreadable
-    // input
-    let readiness = {
-        let read = snapshot.read();
-        let plan_read = plan.read();
-        read.as_ref().map(|snapshot| {
-            let program = panel::effective_program(snapshot, &plan_read);
-            solve::unplaced_codes(snapshot, &plan_read, program.as_ref())
-        })
-    };
-    // facts the verdict must never contradict: which sessions clash or
-    // overflow, by name (rapport étudiante : « quelle session ? »)
-    let (conflicted, overloaded) = {
-        let read = snapshot.read();
-        let plan_read = plan.read();
-        match read.as_ref() {
-            None => (String::new(), String::new()),
-            Some(snapshot) => {
-                let seasons = ulaval_scheduler_core::horizon_sessions(
-                    plan_read.start.season,
-                    plan_read.study_sessions,
-                );
-                let semesters =
-                    state::session_semesters(plan_read.start, &seasons);
-                let label = |session: usize| {
-                    state::session_label(&semesters, session - 1)
-                };
-                let conflicted: Vec<String> =
-                    solve::conflicted_sessions(snapshot, &plan_read)
-                        .into_iter()
-                        .map(label)
-                        .collect();
-                let overloaded: Vec<String> = (1..=semesters.len())
-                    .filter(|&session| {
-                        solve::session_credits(snapshot, &plan_read, session)
-                            .total
-                            > plan_read.credit_cap
-                    })
-                    .map(label)
-                    .collect();
-                (conflicted.join(", "), overloaded.join(", "))
-            }
+    // Tout ce que le bloc de verdicts affiche, d'un seul tenant : pendant
+    // qu'une réponse est attendue, il garde ces faits-là — donc sa
+    // hauteur — au lieu d'en publier un jeu intermédiaire puis un autre,
+    // ce qui déplaçait chaque entête de règle deux fois sous le curseur
+    // (LAT-7 ; ADR `2026-08-etat-d-attente-du-solveur-visible`).
+    let current = verdict_facts(solver, snapshot, plan);
+    let awaited = solver.read().awaited_since.is_some();
+    let mut settled = use_signal(|| None::<VerdictFacts>);
+    // même règle de capture que les totaux de l'entête : seul un verdict
+    // présent et non périmé arrête une valeur; un verdict disparu
+    // (bascule de document) l'efface
+    use_effect(move || {
+        let (vouched, verdictless) = {
+            let state = solver.read();
+            (
+                state.verification.is_some() && !state.verification_stale,
+                state.verification.is_none(),
+            )
+        };
+        let fresh = vouched.then(|| verdict_facts(solver, snapshot, plan));
+        if fresh.is_some() || verdictless {
+            settled.set(fresh);
         }
-    };
+    });
+    // le drapeau « ça date » n'a rien à poser ici : `RecalcNotice`, en
+    // tête du bloc, le dit déjà en toutes lettres pour tout ce qui suit —
+    // et atténuer un ⚠ pour le marquer périmé le rendrait moins lisible
+    // qu'il ne le mérite (ALR)
+    let (facts, _held) = crate::present::held_while_awaited(
+        settled.read().as_ref(),
+        &current,
+        awaited,
+    );
+    let VerdictFacts {
+        left_out,
+        verification,
+        credit_shortfalls,
+        shortfall_messages,
+        nothing_placed,
+        readiness,
+        conflicted,
+        overloaded,
+    } = facts;
     rsx! {
         div { class: "panel-organigramme",
             div { class: "panel-knobs",
@@ -1299,6 +1288,7 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
             // toute façon, exception LAY-2 assumée (ADR
             // `2026-08-verdicts-du-panneau-sans-hauteur-reservee`).
             div { class: "panel-verdicts",
+                RecalcNotice {}
                 if !conflicted.is_empty() {
                     p { class: "panel-verdict panel-verdict--bad",
                         "⚠ Conflit d'horaire en {conflicted} — plages \
@@ -1310,8 +1300,13 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                         "⚠ Plafond de crédits dépassé en {overloaded}."
                     }
                 }
+                // clé tirée de la donnée (le message nomme son cours et sa
+                // session), jamais de la position : une ligne qui
+                // disparaît au-dessus ne doit pas renuméroter les autres
                 for message in shortfall_messages.iter() {
-                    p { class: "panel-verdict panel-verdict--bad",
+                    p {
+                        key: "{message}",
+                        class: "panel-verdict panel-verdict--bad",
                         "⚠ {message}"
                     }
                 }
@@ -1384,11 +1379,146 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                         }
                     }
                     for blocked in verification.blocked.iter() {
-                        p { class: "warning",
+                        p {
+                            key: "{blocked.code}",
+                            class: "warning",
                             "⚠ {crate::solve::blocked_note(blocked)}"
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+// Ce que le bloc de verdicts affiche, rassemblé en une valeur : c'est
+// l'unité que `held_while_awaited` retient pendant un recalcul. Un simple
+// porteur de données — aucune décision n'est prise ici, chaque champ vient
+// d'une fonction déjà testée de `panel`, `solve` ou `state`.
+#[derive(Clone, PartialEq)]
+struct VerdictFacts {
+    left_out: std::collections::BTreeSet<String>,
+    verification: Option<crate::solve::PlacementAnswer>,
+    credit_shortfalls: Vec<crate::solve::CreditShortfallAnswer>,
+    shortfall_messages: Vec<String>,
+    nothing_placed: bool,
+    // `None` tant que l'instantané n'est pas chargé; `Err` pour une entrée
+    // illisible, que la zone de verdict explique
+    readiness: Option<Result<Vec<String>, String>>,
+    // les sessions qui se chevauchent ou débordent, nommées (rapport
+    // étudiante : « quelle session ? »)
+    conflicted: String,
+    overloaded: String,
+}
+
+fn verdict_facts(
+    solver: Signal<super::SolverState>,
+    snapshot: Signal<Option<Snapshot>>,
+    plan: Signal<Plan>,
+) -> VerdictFacts {
+    let credit_shortfalls = solver.read().credit_shortfalls.clone();
+    let shortfall_messages: Vec<String> = credit_shortfalls
+        .iter()
+        .map(|shortfall| {
+            crate::solve::credit_shortfall_message(shortfall, &plan.read())
+        })
+        .collect();
+    let nothing_placed = {
+        let plan_read = plan.read();
+        plan_read.displayed_placement.is_empty()
+            && plan_read.manual.values().all(Vec::is_empty)
+    };
+    // the placement and the verification both run by themselves (ADR
+    // `2026-08-organigramme-en-continu-sans-bouton`) — this only explains
+    // why no verdict shows yet: courses still floating, or an unreadable
+    // input
+    let readiness = {
+        let read = snapshot.read();
+        let plan_read = plan.read();
+        read.as_ref().map(|snapshot| {
+            let program = panel::effective_program(snapshot, &plan_read);
+            solve::unplaced_codes(snapshot, &plan_read, program.as_ref())
+        })
+    };
+    let (conflicted, overloaded) = {
+        let read = snapshot.read();
+        let plan_read = plan.read();
+        match read.as_ref() {
+            None => (String::new(), String::new()),
+            Some(snapshot) => {
+                let seasons = ulaval_scheduler_core::horizon_sessions(
+                    plan_read.start.season,
+                    plan_read.study_sessions,
+                );
+                let semesters =
+                    state::session_semesters(plan_read.start, &seasons);
+                let label = |session: usize| {
+                    state::session_label(&semesters, session - 1)
+                };
+                let conflicted: Vec<String> =
+                    solve::conflicted_sessions(snapshot, &plan_read)
+                        .into_iter()
+                        .map(label)
+                        .collect();
+                let overloaded: Vec<String> = (1..=semesters.len())
+                    .filter(|&session| {
+                        solve::session_credits(snapshot, &plan_read, session)
+                            .total
+                            > plan_read.credit_cap
+                    })
+                    .map(label)
+                    .collect();
+                (conflicted.join(", "), overloaded.join(", "))
+            }
+        }
+    };
+    VerdictFacts {
+        left_out: solver.read().left_out.clone(),
+        verification: solver.read().verification.clone(),
+        credit_shortfalls,
+        shortfall_messages,
+        nothing_placed,
+        readiness,
+        conflicted,
+        overloaded,
+    }
+}
+
+// L'attente, dite là où s'affiche déjà l'état du placement — avec son
+// temps écoulé, jamais un sablier nu (LAT-4). Un composant à part, et non
+// quelques lignes dans `OrganigrammeControls`, pour deux raisons :
+//
+// - la minuterie qui fait avancer le compteur ne re-rend que cette ligne;
+//   dans le parent elle relancerait `conflicted_sessions` (l'horaire
+//   hebdomadaire de chaque session) une fois par seconde (LAT-3);
+// - la ligne est *toujours* montée, hauteur réservée par `.panel-recalc` :
+//   son apparition et sa disparition ne déplacent rien sous le curseur,
+//   ce qui est précisément le défaut qu'elle vient signaler (LAY-1).
+#[component]
+fn RecalcNotice() -> Element {
+    let solver = use_context::<Signal<super::SolverState>>();
+    let mut now_ms = use_signal(crate::browser::now_epoch_ms);
+    use_future(move || async move {
+        // bounded ticker; idles harmlessly when nothing is awaited
+        for _ in 0..86_400u32 {
+            crate::browser::sleep_ms(1_000).await;
+            now_ms.set(crate::browser::now_epoch_ms());
+        }
+    });
+    let awaited = {
+        let state = solver.read();
+        crate::solve::awaited_ms(
+            state.awaited_since,
+            state.running.map(|running| running.started_ms),
+            now_ms(),
+        )
+    };
+    rsx! {
+        p {
+            class: "panel-verdict panel-recalc",
+            role: "status",
+            if let Some(elapsed) = awaited {
+                "{crate::present::recalc_notice(elapsed)}"
             }
         }
     }

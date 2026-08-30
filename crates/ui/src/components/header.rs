@@ -2,7 +2,6 @@ use dioxus::prelude::*;
 
 use super::{AlertBody, AlertStack, SolverHandle, SolverState};
 use crate::data::Snapshot;
-use crate::solve;
 use crate::state::{self, History, Plan, View};
 
 // LAT-4: a visible search is never a bare spinner — elapsed seconds and a
@@ -93,39 +92,75 @@ pub fn HeaderBar() -> Element {
     // (code, millésime) — two vintages of one program are two programs,
     // and the chosen one stays named on screen, concentration et profil
     // compris (rapport étudiante ; décision 2026-08-19)
-    let chosen = crate::panel::chosen_program(snapshot, &plan.read());
     let program_title = crate::panel::program_subtitle(snapshot, &plan.read())
         .unwrap_or_else(|| "aucun programme choisi".to_string());
-    let has_program = chosen.is_some();
+    let has_program =
+        crate::panel::chosen_program(snapshot, &plan.read()).is_some();
     let history = use_context::<Signal<crate::state::History>>();
     // note 8: the whole bac's tally next to the session's — counted by
-    // `ui-calculations`, en-sus and préparatoire credits kept out
-    let bac = chosen.map(|program| {
-        let plan_read = plan.read();
-        let granted = crate::panel::effective_program(snapshot, &plan_read);
-        let (concentration, profile) = crate::panel::scope_of(&plan_read);
-        let summary = ulaval_scheduler_wasm::credits::credit_summary(
-            granted.as_ref(),
-            concentration,
-            profile,
-            &crate::panel::selection(&plan_read),
-            &snapshot.courses,
-        );
-        let note = crate::present::bac_credit_note(&summary);
-        let label = crate::present::bac_credit_label(
-            summary.counted,
-            program.credits_required,
-            &note,
-        );
-        (label, note.tooltip)
+    // `ui-calculations`, en-sus and préparatoire credits kept out. Both
+    // tallies are composed together by `panel::credit_readout` so the hold
+    // below can never freeze one and refresh the other.
+    let current = crate::panel::credit_readout(
+        snapshot,
+        &plan.read(),
+        view.read().session,
+    );
+    // LAT-6 : tant qu'une réponse est attendue, les totaux gardent leur
+    // dernière valeur arrêtée, atténuée et dite comme telle — jamais la
+    // valeur intermédiaire que le recalcul est en train de remplacer
+    // (« 30/120 cr » pendant trois secondes, rapport directeur-gci
+    // 2026-08-29). Le premier calcul n'a rien à tenir : il passe tel quel.
+    let awaited = solver.read().awaited_since.is_some();
+    let mut settled = use_signal(|| None::<crate::panel::CreditReadout>);
+    // Le seul instant où une valeur mérite d'être retenue est celui où le
+    // solveur vient de se prononcer sur ce qui est affiché : un verdict
+    // présent et non périmé. S'abonner au plan à la place retiendrait
+    // l'état intermédiaire lui-même — c'est le « 21/120 cr » qu'il faut
+    // tenir à l'écart, pas le figer. `peek` sur le plan, la vue et
+    // l'instantané pour cette même raison : eux seuls ne déclenchent
+    // aucune capture.
+    use_effect(move || {
+        let (vouched, verdictless) = {
+            let state = solver.read();
+            (
+                state.verification.is_some() && !state.verification_stale,
+                state.verification.is_none(),
+            )
+        };
+        let read = snapshot_signal.peek();
+        let fresh = read.as_ref().filter(|_| vouched).map(|snapshot| {
+            crate::panel::credit_readout(
+                snapshot,
+                &plan.peek(),
+                view.peek().session,
+            )
+        });
+        // un verdict frais remplace la valeur tenue; un verdict *disparu*
+        // (bascule de document) l'efface — tenir celle du document quitté
+        // serait un mensonge d'un autre genre; un verdict simplement
+        // périmé la laisse telle quelle, c'est tout son emploi
+        if fresh.is_some() || verdictless {
+            settled.set(fresh);
+        }
     });
-    let credits =
-        solve::session_credits(snapshot, &plan.read(), view.read().session);
+    let (shown, stale) = crate::present::held_while_awaited(
+        settled.read().as_ref(),
+        &current,
+        awaited,
+    );
+    let credits = shown.session;
     // a Range counted at its lower bound says so (TRU-6: never a false
     // precision)
     let range_mark = if credits.has_range { " (min.)" } else { "" };
-    let cap = plan.read().credit_cap;
+    let cap = shown.cap;
     let over_cap = credits.total > cap;
+    let bac = shown.bac;
+    let stale_title = if stale {
+        " — valeur de la solution précédente, recalcul en cours"
+    } else {
+        ""
+    };
     rsx! {
         header { class: "header-bar",
             div { class: "header-logo", aria_hidden: true }
@@ -183,16 +218,21 @@ pub fn HeaderBar() -> Element {
                  à chaque session au cas où des horaires de cours \
                  auraient changé."
             }
-            span { class: "header-credits",
-                if let Some((label, tooltip)) = bac {
+            span {
+                class: "header-credits",
+                // la couleur seule ne dit jamais rien (INP-3) : le titre
+                // porte le fait, l'atténuation ne fait que le rappeler
+                class: if stale { "header-credits--stale" },
+                if let Some(label) = bac {
                     span {
                         class: if label.over { "header-credits--over" },
-                        title: "{tooltip}",
+                        title: "{label.tooltip}{stale_title}",
                         "{label.text} - "
                     }
                 }
                 b {
                     class: if over_cap { "header-credits--over" },
+                    title: "{stale_title}",
                     "{credits.total} cr{range_mark} cette session"
                 }
                 if over_cap {
@@ -337,8 +377,11 @@ pub fn StatusStrip() -> Element {
     // état provisoire (ADR
     // `2026-08-le-debut-n-herite-pas-d-un-placement-hors-saison`)
     let solver = use_context::<Signal<SolverState>>();
-    let export_pending =
-        crate::export::menu::pending_note(solver.read().running.is_some());
+    // la temporisation compte : un export lancé dans les 500 ms qui suivent
+    // une modification fige lui aussi un état que le solveur va réécrire
+    let export_pending = crate::export::menu::pending_note(
+        solver.read().awaited_since.is_some(),
+    );
 
     // The two print paths are unchanged; the JSON one writes the very file
     // « Charger depuis JSON » reads back (ADR

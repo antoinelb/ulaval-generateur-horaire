@@ -79,7 +79,10 @@ pub fn WeeklyGrid() -> Element {
     // plausible ne doit jamais se lire comme le résultat final (rapport
     // directeur-gci 2026-08-29)
     let solver = use_context::<Signal<super::SolverState>>();
-    let searching = solver.read().running.is_some();
+    // `awaited_since` couvre aussi la temporisation de 500 ms, la fenêtre
+    // pendant laquelle rien ne disait qu'un recalcul s'en venait (ADR
+    // `2026-08-etat-d-attente-du-solveur-visible`)
+    let searching = solver.read().awaited_since.is_some();
     let status = present::grid_status_label(
         &present::schedule_status(&schedule.read(), forced),
         searching,

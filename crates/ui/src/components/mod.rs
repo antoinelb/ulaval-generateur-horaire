@@ -79,8 +79,19 @@ pub struct SolverState {
     pub ready: bool,
     // the one blocking query (proposition/vérification)
     pub running: Option<Running>,
-    // the last verify answer, shown until the plan changes
+    // « une réponse est attendue » : l'horodatage du changement de plan qui
+    // a armé la temporisation de 500 ms, avant même qu'une requête ne parte
+    // (`track_plan_change`). Sans lui, l'écran avait l'air arrêté pendant
+    // toute la temporisation — le trou par lequel le total transitoire
+    // passait sans le moindre signe de calcul (rapport directeur-gci
+    // 2026-08-29).
+    pub awaited_since: Option<u64>,
+    // the last verify answer; it stays on screen once the plan moves,
+    // marked stale, instead of disappearing and coming back — c'est sa
+    // disparition qui déplaçait les règles sous le curseur (LAT-7)
     pub verification: Option<crate::solve::PlacementAnswer>,
+    // whether that answer describes a plan the student has since changed
+    pub verification_stale: bool,
     // the last automatic verify errored: do not refire until the plan
     // changes, or the effect would loop on the same failure
     pub verify_failed: bool,
@@ -197,6 +208,8 @@ fn handle_worker_answer(
             if matches_running || id == 0 {
                 let mut state = state.write();
                 state.running = None;
+                // plus rien n'est en vol : l'attente cesse d'être annoncée
+                state.awaited_since = None;
                 if running
                     .is_some_and(|running| running.kind == QueryKind::Verify)
                 {
@@ -220,7 +233,11 @@ fn handle_worker_answer(
                 // a superseded answer: the student cancelled it — dropped
                 return;
             };
-            state.write().running = None;
+            {
+                let mut state = state.write();
+                state.running = None;
+                state.awaited_since = None;
+            }
             // a query just answered: whatever refusal was on screen
             // described an input that no longer stands. A retirement, not
             // a rejection — the student said nothing about it.
@@ -242,6 +259,7 @@ fn handle_worker_answer(
                 QueryKind::Verify => {
                     let mut state = state.write();
                     state.verification = Some(report.placement.clone());
+                    state.verification_stale = false;
                     state.credit_shortfalls = report.credit_shortfalls;
                 }
             }
@@ -539,7 +557,12 @@ pub fn cancel_search(
     // `proposed` deliberately survives: the student's cancel must hold
     // until the next edit, or `auto_propose` would relaunch the very
     // search just killed
-    state.write().running = None;
+    {
+        let mut state = state.write();
+        state.running = None;
+        // plus rien n'arrive : annoncer une attente serait un mensonge
+        state.awaited_since = None;
+    }
     boot_solver(handle, state, plan, alerts, manual, snapshot);
 }
 
@@ -597,17 +620,7 @@ pub fn App() -> Element {
             );
         });
     });
-    // a plan change stales the verify answer — `left_out` has its own
-    // retirement: `retire_stale_alerts` purges entry and toast together
-    // when the cause disappears, and keeps what an answer just reported
-    // (its codes still float)
-    use_effect(move || {
-        let _ = plan.read();
-        let mut solver_state = solver_state;
-        let mut state = solver_state.write();
-        state.verification = None;
-        state.verify_failed = false;
-    });
+    track_plan_change(plan, solver_state);
     retire_stale_alerts(plan, snapshot, manual, solver_state, alerts);
     apply_corrections(
         plan,
@@ -769,11 +782,14 @@ pub fn swap_document(
     history.set(History::default());
     let mut view = view;
     view.set(View::default());
-    // the plan-change effect clears the verification; these two belong to
-    // the propose answers of the *previous* document and would otherwise
-    // survive into the new one
+    // the verdict now *survives* a plan change (marked stale) so the panel
+    // stops blanking under the pointer — which makes clearing it here the
+    // swap's own job: it judged the document just left, and nothing of it
+    // may be read as describing the one entered
     let mut solver_state = solver_state;
     let mut state = solver_state.write();
+    state.verification = None;
+    state.verification_stale = false;
     state.left_out.clear();
     state.credit_shortfalls.clear();
     state.proposed = None;
@@ -1133,6 +1149,64 @@ fn apply_corrections(
     });
 }
 
+// Every plan change stales the verify answer and starts the wait clock:
+// from that instant the screen shows something no solver has judged, and
+// the two automatic effects below will only send their query 500 ms later
+// (`crate::solve::RECALC_DEBOUNCE_MS`). That silent window is what let a
+// transitory « 30/120 cr » sit on screen with no sign of computation at
+// all (rapport directeur-gci 2026-08-29) — `awaited_since` is what lets
+// the view say « recalcul en cours » from the very first frame.
+//
+// The stale flag replaces the outright `verification = None` this effect
+// used to do: dropping the verdict emptied `panel-verdicts` and refilled
+// it a second later, and everything below — every « Règle N ▸ » — moved
+// twice under the pointer (LAT-7). It now stays put, marked.
+//
+// `left_out` has its own retirement: `retire_stale_alerts` purges entry
+// and toast together when the cause disappears, and keeps what an answer
+// just reported (its codes still float).
+//
+// The timer is the other half of the contract: if the debounce elapses
+// without a query starting, nothing is coming and the clock stops. A
+// notice must never outlive the wait it describes (TRU-1).
+fn track_plan_change(plan: Signal<Plan>, solver_state: Signal<SolverState>) {
+    let mut generation = use_signal(|| 0u64);
+    use_effect(move || {
+        let _ = plan.read();
+        // peek: the effect must not re-run on its own bookkeeping
+        let current = *generation.peek() + 1;
+        generation.set(current);
+        let mut solver_state = solver_state;
+        {
+            let mut state = solver_state.write();
+            state.verification_stale = true;
+            state.verify_failed = false;
+            state.awaited_since = Some(crate::browser::now_epoch_ms());
+        }
+        spawn(async move {
+            // the debounce both effects wait out, plus a frame's margin for
+            // the query they may then send
+            crate::browser::sleep_ms(
+                crate::solve::RECALC_DEBOUNCE_MS as u32 + 100,
+            )
+            .await;
+            if *generation.peek() != current {
+                return;
+            }
+            // peek before write: `Signal::write` marks dirty whatever it
+            // does with the value, and a query that did start owns the
+            // clock until its answer lands
+            let idle = {
+                let state = solver_state.peek();
+                state.running.is_none() && state.awaited_since.is_some()
+            };
+            if idle {
+                solver_state.write().awaited_since = None;
+            }
+        });
+    });
+}
+
 // The proposal is not a button either (décision 2026-08-19, ADR
 // `2026-08-organigramme-en-continu-sans-bouton`): whenever the plan
 // settles with floating courses — or a verify just failed and the grid
@@ -1160,7 +1234,8 @@ fn auto_propose(
         generation.set(current);
         let handle = handle.clone();
         spawn(async move {
-            crate::browser::sleep_ms(500).await;
+            crate::browser::sleep_ms(crate::solve::RECALC_DEBOUNCE_MS as u32)
+                .await;
             if *generation.peek() != current {
                 return;
             }
@@ -1187,6 +1262,16 @@ fn auto_propose(
             // means a student act broke a constraint, and the placement
             // reorganizes the unpinned courses around it; an unreadable
             // input is the verdict area's to explain
+            // a verdict the plan has outrun proves nothing about the grid
+            // on screen: only a fresh « aucune solution » calls for a repair
+            let refused = {
+                let state = solver_state.peek();
+                !state.verification_stale
+                    && state
+                        .verification
+                        .as_ref()
+                        .is_some_and(|answer| answer.solutions.is_empty())
+            };
             let needed = match crate::solve::unplaced_codes(
                 snapshot_ref,
                 &plan_read,
@@ -1194,11 +1279,7 @@ fn auto_propose(
             ) {
                 Ok(unplaced) => crate::solve::propose_needed(
                     &unplaced,
-                    solver_state
-                        .peek()
-                        .verification
-                        .as_ref()
-                        .is_some_and(|answer| answer.solutions.is_empty()),
+                    refused,
                     // peek: the plan is already the subscription, and this
                     // effect must not re-run on an undo's bookkeeping
                     history.peek().restored(),
@@ -1256,7 +1337,8 @@ fn auto_verify(
         generation.set(current);
         let handle = handle.clone();
         spawn(async move {
-            crate::browser::sleep_ms(500).await;
+            crate::browser::sleep_ms(crate::solve::RECALC_DEBOUNCE_MS as u32)
+                .await;
             if *generation.peek() != current {
                 return;
             }
@@ -1264,7 +1346,8 @@ fn auto_verify(
                 let state = solver_state.peek();
                 state.ready
                     && state.running.is_none()
-                    && state.verification.is_none()
+                    && (state.verification.is_none()
+                        || state.verification_stale)
                     && !state.verify_failed
             };
             if !idle {
