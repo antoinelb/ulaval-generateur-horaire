@@ -68,7 +68,11 @@ pub fn HeaderBar() -> Element {
     let alerts = use_context::<Signal<AlertStack>>();
     let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
     // note 9: the link carries the whole organigramme — the button lives
-    // up here because its scope is everything, not one session's grid
+    // up here because its scope is everything, not one session's grid.
+    // Nothing on screen used to change when it fired (rapports Camille et
+    // Élodie, 2026-08-29): it now confirms, and says so honestly when the
+    // browser refuses the clipboard (ADR
+    // `2026-08-partager-confirme-ou-dit-son-echec`).
     let share = move |_| {
         let (url, payload) = {
             let plan_read = plan.read();
@@ -77,18 +81,22 @@ pub fn HeaderBar() -> Element {
                 crate::persist::encode_organigramme(&plan_read, &manual_read);
             (crate::browser::share_url(&payload), payload)
         };
-        crate::browser::clipboard_write(&url);
         // the link also lands in the address bar — copyable there even if
         // the clipboard was blocked, without flooding the status strip
         crate::browser::set_fragment(&payload);
-        super::push_alert(
-            alerts,
-            AlertBody::Success(
-                "Lien copié (aussi dans la barre d'adresse) — il rouvre \
-                 tout l'organigramme tel quel."
-                    .to_string(),
-            ),
-        );
+        spawn(async move {
+            let copied = crate::browser::clipboard_write(&url).await;
+            let note = crate::present::share_note(copied);
+            // a ✓ that clears itself after five seconds is fine for a
+            // confirmation nobody has to act on; a refusal is a standing
+            // instruction (ALR-4), so it stays until dismissed
+            let body = if copied {
+                AlertBody::Success(note)
+            } else {
+                AlertBody::Note(note)
+            };
+            super::push_alert(alerts, body);
+        });
     };
     // (code, millésime) — two vintages of one program are two programs,
     // and the chosen one stays named on screen, concentration et profil
@@ -167,9 +175,20 @@ pub fn HeaderBar() -> Element {
                                 swap,
                             );
                             if let Some(note) = kept {
-                                super::push_alert(
+                                // `Standing`, not `Success`: the ✓ that
+                                // clears itself after five seconds was
+                                // gone before the student had read the
+                                // rest of the screen, which meanwhile
+                                // reads as a total loss. `Document`, not
+                                // `Sticky`: pushed after the purge it
+                                // survives its own swap and leaves at the
+                                // next one, so three programs browsed
+                                // never stack three avis (ALR-3) — ADR
+                                // `2026-08-la-bascule-dit-ou-va-le-travail-et-pourquoi-annuler-est-eteint`
+                                super::push_caused_alert(
                                     alerts,
-                                    AlertBody::Success(note),
+                                    AlertBody::Standing(note),
+                                    super::AlertCause::Document,
                                 );
                             }
                         }
@@ -207,6 +226,12 @@ pub fn HeaderBar() -> Element {
                 onclick: share,
                 "Partager"
             }
+            // ACT-5: « Réinitialiser » vide le document, « Partager » est
+            // le geste courant juste à côté — un clic de travers coûtait
+            // tout l'organigramme (rapport Camille, 2026-08-29). Le trait
+            // et l'écart les séparent, sans rien cacher dans un menu
+            // (LAY-7).
+            span { class: "header-sep", aria_hidden: true }
             ResetButton {}
         }
     }
@@ -224,6 +249,10 @@ pub fn HeaderBar() -> Element {
 // hand-entered course fiches stay, they extend the catalogue, not the
 // document — an undo may restore a plan that references them (ADR
 // `2026-08-bouton-tout-reinitialiser`).
+// Its own avis carries the way back: « Annuler » stayed lit but nothing
+// on screen said the work was recoverable, so a reflex click read as a
+// silent, total loss (ADR
+// `2026-08-reinitialiser-annulable-depuis-son-avis`).
 #[component]
 fn ResetButton() -> Element {
     let plan = use_context::<Signal<Plan>>();
@@ -236,9 +265,9 @@ fn ResetButton() -> Element {
     let snapshot = use_context::<Signal<Option<crate::data::Snapshot>>>();
     rsx! {
         button {
-            class: "status-undo",
+            class: "status-undo header-reset",
             title: "Repartir de zéro — ce programme seulement, annulable \
-                    avec « Annuler »",
+                    depuis l'avis qui suit et avec « Annuler »",
             onclick: move |_| {
                 // a search in flight must not land its proposal in the
                 // fresh plan
@@ -281,6 +310,9 @@ fn ResetButton() -> Element {
                 );
                 let shelf = reset.shelf;
                 let next = reset.next;
+                // the document as it stood, carried by the avis so its
+                // « Annuler » works whatever the student does next
+                let before = plan.peek().clone();
                 super::edit_plan(plan, history, "Réinitialisation", |plan| {
                     *plan = next;
                 });
@@ -288,13 +320,16 @@ fn ResetButton() -> Element {
                     crate::browser::local_remove(&key);
                 }
                 view.set(View::default());
-                super::push_alert(
+                // `Document`, never `Sticky` : l'avis transporte le plan
+                // d'*un* programme, et son « Annuler » le réinstallerait
+                // dans un autre si l'étudiante changeait de programme
+                // entre-temps — la bascule doit l'emporter avec le
+                // document qu'il décrit (ADR
+                // `2026-08-historique-par-document-vide-a-la-bascule`)
+                super::push_caused_alert(
                     alerts,
-                    AlertBody::Success(
-                        "Ce programme a été réinitialisé — « Annuler » \
-                         restaure votre organigramme."
-                            .to_string(),
-                    ),
+                    AlertBody::DocumentReset(Box::new(before)),
+                    super::AlertCause::Document,
                 );
             },
             "Réinitialiser"
@@ -311,16 +346,9 @@ fn ResetButton() -> Element {
 pub fn StatusStrip() -> Element {
     let mut plan = use_context::<Signal<Plan>>();
     let mut history = use_context::<Signal<History>>();
-    let undo_label = history
-        .read()
-        .undo_label()
-        .map(|label| format!("Annuler : {label}"))
-        .unwrap_or_else(|| "Rien à annuler".to_string());
-    let redo_label = history
-        .read()
-        .redo_label()
-        .map(|label| format!("Rétablir : {label}"))
-        .unwrap_or_else(|| "Rien à rétablir".to_string());
+    // the wording, dark state included, comes from the pure module (AP-5)
+    let undo_label = crate::present::undo_title(history.read().undo_label());
+    let redo_label = crate::present::redo_title(history.read().redo_label());
     let can_undo = history.read().undo_label().is_some();
     let can_redo = history.read().redo_label().is_some();
     let print_target = use_context::<super::PrintTarget>().0;
@@ -519,6 +547,10 @@ pub fn Toasts() -> Element {
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     let super::LocalPrograms(local_programs) =
         use_context::<super::LocalPrograms>();
+    // « Réinitialiser » is undone from its own toast, so the stack needs
+    // the two signals its undo writes
+    let plan = use_context::<Signal<Plan>>();
+    let history = use_context::<Signal<History>>();
     let mut expanded = use_signal(|| false);
     // chaque ✓ n'arme qu'une seule minuterie (peek : l'effet ne dépend
     // que de la liste, jamais de sa propre comptabilité)
@@ -575,7 +607,9 @@ pub fn Toasts() -> Element {
                     class: if matches!(
                         alert.body,
                         AlertBody::Success(_)
+                            | AlertBody::Standing(_)
                             | AlertBody::LocalProgramRemoved(_)
+                            | AlertBody::DocumentReset(_)
                     ) {
                         "toast--success"
                     },
@@ -594,7 +628,8 @@ pub fn Toasts() -> Element {
                         AlertBody::Note(note) => rsx! {
                             span { "⚠ {note}" }
                         },
-                        AlertBody::Success(note) => rsx! {
+                        AlertBody::Success(note)
+                        | AlertBody::Standing(note) => rsx! {
                             span { class: "status-alert-ok", "✓ {note}" }
                         },
                         AlertBody::Error(error) => rsx! {
@@ -603,6 +638,44 @@ pub fn Toasts() -> Element {
                                 code { "{error.id}" }
                             }
                         },
+                        // ACT-2: the destructive act carries its own way
+                        // back, right where the eye already is — the
+                        // status strip's « Annuler » says nothing about
+                        // what just happened
+                        AlertBody::DocumentReset(before) => {
+                            let before = (**before).clone();
+                            let note = crate::present::reset_note(
+                                before.program.as_ref().map(|choice| {
+                                    (
+                                        choice.code.as_str(),
+                                        choice.semester.as_str(),
+                                    )
+                                }),
+                            );
+                            let key = alert.key;
+                            rsx! {
+                                span { class: "status-alert-ok", "✓ {note}" }
+                                button {
+                                    class: "toast-undo",
+                                    onclick: move |event: Event<MouseData>| {
+                                        // the toast is its own dismiss
+                                        // (note 12) — it must not fire
+                                        // before the undo has read `before`
+                                        event.stop_propagation();
+                                        super::restore_document(
+                                            plan,
+                                            history,
+                                            before.clone(),
+                                        );
+                                        // consumed, not rejected
+                                        alerts
+                                            .write()
+                                            .retire(|kept| kept.key == key);
+                                    },
+                                    "↶ Annuler"
+                                }
+                            }
+                        }
                         AlertBody::LocalProgramRemoved(local) => {
                             let local = (**local).clone();
                             let key = alert.key;

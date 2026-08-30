@@ -728,6 +728,22 @@ pub fn edit_plan(
     state::apply(&mut plan, &mut history, label, edit);
 }
 
+// The inverse of « Réinitialiser », driven by its toast's « Annuler ».
+// It restores the carried document as a fresh, labelled step rather than
+// calling `state::undo`: the avis persists until dismissed, so the reset
+// may no longer be the top of the stack by the time the student reaches
+// for it, and undoing whatever he did since would be a second surprise
+// (ADR `2026-08-reinitialiser-annulable-depuis-son-avis`).
+pub fn restore_document(
+    plan: Signal<Plan>,
+    history: Signal<History>,
+    before: Plan,
+) {
+    edit_plan(plan, history, "Retour avant la réinitialisation", |plan| {
+        *plan = before;
+    });
+}
+
 // The second door beside `edit_plan`: swapping documents — « changer »,
 // « Choisir » — replaces the document instead of editing it. The history
 // dies with its document (an undo across documents would fork the shelf

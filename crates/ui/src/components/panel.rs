@@ -1553,15 +1553,26 @@ fn CheminementLoader() -> Element {
                         class: "panel-import-submit",
                         r#type: "button",
                         onclick: move |_| {
-                            crate::browser::clipboard_write(
-                                crate::cheminement::TEMPLATE,
-                            );
-                            super::push_alert(
-                                alerts,
-                                super::AlertBody::Success(
-                                    "Gabarit copié.".to_string(),
-                                ),
-                            );
+                            // ERR-2 : le presse-papiers peut refuser, et
+                            // un « copié » qui ne l'est pas est un
+                            // mensonge (ADR
+                            // `2026-08-partager-confirme-ou-dit-son-echec`)
+                            spawn(async move {
+                                let copied = crate::browser::clipboard_write(
+                                    crate::cheminement::TEMPLATE,
+                                )
+                                .await;
+                                let note = crate::present::copied_note(
+                                    "le gabarit",
+                                    copied,
+                                );
+                                let body = if copied {
+                                    super::AlertBody::Success(note)
+                                } else {
+                                    super::AlertBody::Note(note)
+                                };
+                                super::push_alert(alerts, body);
+                            });
                         },
                         "Copier le gabarit"
                     }
@@ -3127,15 +3138,22 @@ fn ManualCourseActions(course: ulaval_scheduler_core::Course) -> Element {
                 title: "Copie la fiche du cours, à coller dans un \
                         courriel si vous n'avez pas de compte GitHub",
                 onclick: move |_| {
-                    crate::browser::clipboard_write(&copy_json);
-                    super::push_alert(
-                        alerts,
-                        super::AlertBody::Note(
-                            "Fiche du cours copiée — collez-la dans un \
-                             courriel ou une issue GitHub."
-                                .to_string(),
-                        ),
-                    );
+                    let copy_json = copy_json.clone();
+                    spawn(async move {
+                        let copied =
+                            crate::browser::clipboard_write(&copy_json).await;
+                        let note = crate::present::copied_note(
+                            "la fiche du cours, à coller dans un courriel \
+                             ou une issue GitHub",
+                            copied,
+                        );
+                        let body = if copied {
+                            super::AlertBody::Success(note)
+                        } else {
+                            super::AlertBody::Note(note)
+                        };
+                        super::push_alert(alerts, body);
+                    });
                 },
                 "Copier la fiche du cours"
             }
