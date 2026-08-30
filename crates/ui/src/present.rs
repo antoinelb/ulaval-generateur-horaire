@@ -663,25 +663,25 @@ pub fn error_id(detail: &str) -> String {
 // --- the bac credit total, explained ---------------------------------------
 
 // F3: the header's « X/120 cr au bac » rarely matches summing the sessions
-// by hand — stages ridden en-sus of the total and préparatoire (0xxx)
+// by hand — stage credits riding outside the total and préparatoire (0xxx)
 // credits are excluded from the count, and nothing on screen said so
-// (rapport étudiante-gex 2026-08-27). `suffix` names the en-sus credits
-// right next to the total they are *not* part of; `tooltip` decomposes
-// the whole gap. `CreditSummary` does not distinguish a course selected
-// but outside the program's own scope from one counted normally, so that
-// case is never claimed here — only what the summary actually knows.
-pub struct BacCreditNote {
-    pub suffix: String,
-    pub tooltip: String,
-}
+// (rapport étudiante-gex 2026-08-27). The tally itself now carries the
+// count alone: the parenthesis that named the extra credits beside it was
+// dropped (Antoine, 2026-08-30), and this tooltip decomposes the whole
+// gap. Dropping it hides no requirement — the stages keep their own
+// « Stages » rule in the panel, listed and counted like any other.
+// `CreditSummary` does not distinguish a course selected but outside the
+// program's own scope from one counted normally, so that case is never
+// claimed here — only what the summary actually knows.
 
 // LAY-4 : une explication en place, à la demande, refermable — jamais une
 // visite guidée, un accueil modal ni une infobulle qui masque la donnée.
 // LAY-3 : elle n'ajoute que du texte; aucun défaut, aucun comportement,
-// aucune action ne change. Les deux mots que rien n'expliquait nulle part
-// (constat étudiante-cegep 2026-08-29) : la « version » d'un programme et
-// les crédits « en sus » (ADR
-// `2026-08-vocabulaire-explique-en-place-a-la-demande`).
+// aucune action ne change. Le mot que rien n'expliquait nulle part
+// (constat étudiante-cegep 2026-08-29) : la « version » d'un programme
+// (ADR `2026-08-vocabulaire-explique-en-place-a-la-demande`). Les crédits
+// « en sus » avaient le leur ; renommés « supplémentaires », ils se
+// passent d'explication et le repli a été retiré (Antoine, 2026-08-30).
 pub const VINTAGE_HELP: &str =
     "La version est celle du programme sous laquelle vous êtes admise : \
      A26 = automne 2026, H27 = hiver 2027, E27 = été 2027. L'Université \
@@ -690,26 +690,9 @@ pub const VINTAGE_HELP: &str =
      celles de la version la plus récente. Dans le doute, prenez la \
      version de la session où commencent vos études.";
 
-// `credits_in_addition` (le vrai porteur du « en sus ») n'est vrai que sur
-// la règle « Stages » promue depuis la prose des bacs de génie (ADR
-// `2026-08-stage-obligatoire-en-prose-promu-en-regle`), et
-// `wasm::credits::credit_summary` ne compte dans `in_addition` que les
-// cours de ces règles-là : la phrase ci-dessous peut donc nommer les
-// stages sans mentir.
-pub const IN_ADDITION_HELP: &str =
-    "« En sus » veut dire que ces crédits s'ajoutent au total du \
-     baccalauréat au lieu d'être comptés dedans : il faut les crédits du \
-     bac, et ceux-là en plus. Dans les baccalauréats de génie, ce sont les \
-     crédits de stage, que le répertoire décrit hors du total.";
-
-pub fn bac_credit_note(
+pub fn bac_credit_tooltip(
     summary: &ulaval_scheduler_wasm::credits::CreditSummary,
-) -> BacCreditNote {
-    let suffix = if summary.in_addition > 0 {
-        format!(" (+{} cr en sus)", summary.in_addition)
-    } else {
-        String::new()
-    };
+) -> String {
     let mut parts = Vec::new();
     if summary.in_addition > 0 {
         parts.push(format!(
@@ -724,39 +707,32 @@ pub fn bac_credit_note(
             summary.preparatory
         ));
     }
-    let tooltip = if parts.is_empty() {
+    if parts.is_empty() {
         "Le compte inclut tous les cours sélectionnés — aucun écart."
             .to_string()
     } else {
         parts.join(" ; ")
-    };
-    BacCreditNote { suffix, tooltip }
+    }
 }
 
 // F5 (constat d'Antoine 2026-08-27, B-GCI + concentration + profil rempli
 // à 129/120) : the header said nothing when the tally passed the program's
 // own total — a filet naming the overrun instead of a number that reads as
-// fine. `text` composes with `BacCreditNote.suffix` rather than replacing
-// it — an en-sus stage total must stay visible even past the cap.
+// fine.
 pub struct BacCreditLabel {
     pub text: String,
     pub over: bool,
 }
 
-pub fn bac_credit_label(
-    counted: u32,
-    required: i64,
-    note: &BacCreditNote,
-) -> BacCreditLabel {
+pub fn bac_credit_label(counted: u32, required: i64) -> BacCreditLabel {
     let over = i64::from(counted) > required;
     let text = if over {
         format!(
-            "⚠ {counted}/{required} cr au bac{} — au-delà des {required} cr \
-             du programme",
-            note.suffix
+            "⚠ {counted}/{required} cr au bac — au-delà des {required} cr \
+             du programme"
         )
     } else {
-        format!("{counted}/{required} cr au bac{}", note.suffix)
+        format!("{counted}/{required} cr au bac")
     };
     BacCreditLabel { text, over }
 }
@@ -1918,62 +1894,54 @@ mod tests {
     }
 
     #[test]
-    fn no_gap_has_neither_suffix_nor_anything_to_decompose() {
-        let note = bac_credit_note(&credit_summary(0, 0));
-        assert_eq!(note.suffix, "");
-        assert!(!note.tooltip.is_empty(), "still says there is no gap");
-        assert!(!note.tooltip.contains("stage"));
-        assert!(!note.tooltip.contains("préparatoire"));
+    fn no_gap_leaves_nothing_to_decompose() {
+        let tooltip = bac_credit_tooltip(&credit_summary(0, 0));
+        assert!(!tooltip.is_empty(), "still says there is no gap");
+        assert!(!tooltip.contains("stage"));
+        assert!(!tooltip.contains("préparatoire"));
+    }
+
+    // Le total lui-même ne porte plus que le compte : la parenthèse qui
+    // nommait les crédits hors total à côté de lui a été retirée (Antoine,
+    // 2026-08-30). L'écart reste décomposé dans l'infobulle, et les stages
+    // gardent leur propre règle « Stages » dans le panneau — rien d'exigé
+    // ne disparaît de l'écran.
+    #[test]
+    fn extra_stage_credits_are_decomposed_in_the_tooltip_alone() {
+        let tooltip = bac_credit_tooltip(&credit_summary(9, 0));
+        assert!(tooltip.contains("9 cr de stages"));
+        assert!(!tooltip.contains("préparatoire"), "{tooltip}");
+        let label = bac_credit_label(104, 120);
+        assert_eq!(
+            label.text, "104/120 cr au bac",
+            "le compte seul, sans parenthèse"
+        );
     }
 
     #[test]
-    fn stages_en_sus_show_in_the_suffix_and_the_tooltip() {
-        let note = bac_credit_note(&credit_summary(9, 0));
-        assert_eq!(note.suffix, " (+9 cr en sus)");
-        assert!(note.tooltip.contains("9 cr de stages"));
-        assert!(!note.tooltip.contains("préparatoire"), "{}", note.tooltip);
-    }
-
-    #[test]
-    fn preparatory_credits_explain_the_gap_without_a_suffix() {
-        let note = bac_credit_note(&credit_summary(0, 6));
-        assert_eq!(note.suffix, "", "not en-sus of the required total");
-        assert!(note.tooltip.contains("6 cr de scolarité préparatoire"));
-        assert!(!note.tooltip.contains("stage"), "{}", note.tooltip);
+    fn preparatory_credits_explain_the_gap_in_the_tooltip() {
+        let tooltip = bac_credit_tooltip(&credit_summary(0, 6));
+        assert!(tooltip.contains("6 cr de scolarité préparatoire"));
+        assert!(!tooltip.contains("stage"), "{tooltip}");
     }
 
     #[test]
     fn a_total_at_or_under_the_required_credits_carries_no_overrun() {
-        let note = bac_credit_note(&credit_summary(0, 0));
-        let at = bac_credit_label(120, 120, &note);
+        let at = bac_credit_label(120, 120);
         assert!(!at.over);
         assert_eq!(at.text, "120/120 cr au bac");
-        let under = bac_credit_label(99, 120, &note);
+        let under = bac_credit_label(99, 120);
         assert!(!under.over);
         assert_eq!(under.text, "99/120 cr au bac");
     }
 
     #[test]
     fn a_total_over_the_required_credits_gets_the_overrun_warning() {
-        let note = bac_credit_note(&credit_summary(0, 0));
-        let label = bac_credit_label(129, 120, &note);
+        let label = bac_credit_label(129, 120);
         assert!(label.over);
         assert_eq!(
             label.text,
             "⚠ 129/120 cr au bac — au-delà des 120 cr du programme"
-        );
-    }
-
-    #[test]
-    fn the_overrun_warning_composes_with_the_en_sus_suffix() {
-        let note = bac_credit_note(&credit_summary(9, 0));
-        let label = bac_credit_label(129, 120, &note);
-        assert!(label.over);
-        assert_eq!(
-            label.text,
-            "⚠ 129/120 cr au bac (+9 cr en sus) — au-delà des 120 cr du \
-             programme",
-            "the suffix survives, it is never overwritten"
         );
     }
 

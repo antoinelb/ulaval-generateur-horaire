@@ -1126,11 +1126,6 @@ pub struct BacReadout {
     pub text: String,
     pub over: bool,
     pub tooltip: String,
-    // whether the tally carries en-sus credits, so the « ? » that explains
-    // them travels *inside* the composed readout: derived beside it, it
-    // would refresh while the rest is held, and the header would offer an
-    // explanation for a suffix no longer on screen
-    pub en_sus: bool,
 }
 
 pub fn credit_readout(
@@ -1148,17 +1143,14 @@ pub fn credit_readout(
             &selection(plan),
             &snapshot.courses,
         );
-        let note = crate::present::bac_credit_note(&summary);
         let label = crate::present::bac_credit_label(
             summary.counted,
             program.credits_required,
-            &note,
         );
         BacReadout {
             text: label.text,
             over: label.over,
-            tooltip: note.tooltip,
-            en_sus: !note.suffix.is_empty(),
+            tooltip: crate::present::bac_credit_tooltip(&summary),
         }
     });
     CreditReadout {
@@ -2579,10 +2571,6 @@ mod tests {
         assert!(bac.text.contains("/120 cr au bac"), "{}", bac.text);
         assert!(!bac.over, "6 cr placés sur 120 exigés");
         assert!(!bac.tooltip.is_empty(), "la provenance du compte est dite");
-        // le drapeau des crédits en sus voyage dans la lecture composée :
-        // le « ? » qui les explique ne peut donc pas s'afficher pendant
-        // qu'un total tenu n'en montre aucun (fusion 2026-08-30)
-        assert!(!bac.en_sus, "ce programme n'a aucun crédit en sus");
         // GMN-1000 (3 cr) est le seul cours de la session 1
         assert_eq!(readout.session.total, 3);
         assert!(!readout.session.has_range);

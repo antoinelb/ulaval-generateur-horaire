@@ -60,48 +60,14 @@ pub fn HeaderBar() -> Element {
     let snapshot_signal = snapshot;
     let solver = use_context::<Signal<SolverState>>();
     let handle = use_context::<SolverHandle>();
-    // LAY-4 : « en sus » s'explique sur place, à la demande, refermable —
-    // le repli s'ouvre sous la bande, il ne recouvre rien (ADR
-    // `2026-08-vocabulaire-explique-en-place-a-la-demande`). Déclaré avant
-    // le retour anticipé ci-dessous : un hook est inconditionnel (AP-4).
-    let mut en_sus_help = use_signal(|| false);
     let read = snapshot.read();
     let Some(snapshot) = read.as_ref() else {
         return rsx! {};
     };
     let alerts = use_context::<Signal<AlertStack>>();
+    // « changer » emporte le document entier : les cours manuels voyagent
+    // avec lui
     let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
-    // note 9: the link carries the whole organigramme — the button lives
-    // up here because its scope is everything, not one session's grid.
-    // Nothing on screen used to change when it fired (rapports Camille et
-    // Élodie, 2026-08-29): it now confirms, and says so honestly when the
-    // browser refuses the clipboard (ADR
-    // `2026-08-partager-confirme-ou-dit-son-echec`).
-    let share = move |_| {
-        let (url, payload) = {
-            let plan_read = plan.read();
-            let manual_read = manual.read();
-            let payload =
-                crate::persist::encode_organigramme(&plan_read, &manual_read);
-            (crate::browser::share_url(&payload), payload)
-        };
-        // the link also lands in the address bar — copyable there even if
-        // the clipboard was blocked, without flooding the status strip
-        crate::browser::set_fragment(&payload);
-        spawn(async move {
-            let copied = crate::browser::clipboard_write(&url).await;
-            let note = crate::present::share_note(copied);
-            // a ✓ that clears itself after five seconds is fine for a
-            // confirmation nobody has to act on; a refusal is a standing
-            // instruction (ALR-4), so it stays until dismissed
-            let body = if copied {
-                AlertBody::Success(note)
-            } else {
-                AlertBody::Note(note)
-            };
-            super::push_alert(alerts, body);
-        });
-    };
     // (code, millésime) — two vintages of one program are two programs,
     // and the chosen one stays named on screen, concentration et profil
     // compris (rapport étudiante ; décision 2026-08-19)
@@ -168,9 +134,6 @@ pub fn HeaderBar() -> Element {
     let range_mark = if credits.has_range { " (min.)" } else { "" };
     let cap = shown.cap;
     let over_cap = credits.total > cap;
-    // read off the held readout, never recomputed beside it: the « ? » must
-    // appear exactly when the suffix it explains is on screen
-    let has_en_sus = shown.bac.as_ref().is_some_and(|bac| bac.en_sus);
     let bac = shown.bac;
     let stale_title = if stale {
         " — valeur de la solution précédente, recalcul en cours"
@@ -257,21 +220,6 @@ pub fn HeaderBar() -> Element {
                         "{label.text} - "
                     }
                 }
-                if has_en_sus {
-                    button {
-                        class: "panel-cheminement-help-toggle",
-                        r#type: "button",
-                        aria_expanded: en_sus_help(),
-                        aria_controls: "header-en-sus-help",
-                        aria_label: "Ce que veulent dire les crédits en sus",
-                        title: "Les crédits « en sus »",
-                        onclick: move |_| {
-                            let open = !en_sus_help();
-                            en_sus_help.set(open);
-                        },
-                        "?"
-                    }
-                }
                 b {
                     class: if over_cap { "header-credits--over" },
                     title: "{stale_title}",
@@ -283,28 +231,13 @@ pub fn HeaderBar() -> Element {
                     }
                 }
             }
-            button {
-                class: "grid-share",
-                title: "Copier un lien qui rouvre tout l'organigramme",
-                onclick: share,
-                "Partager"
-            }
-            // ACT-5: « Réinitialiser » vide le document, « Partager » est
-            // le geste courant juste à côté — un clic de travers coûtait
-            // tout l'organigramme (rapport Camille, 2026-08-29). Le trait
-            // et l'écart les séparent, sans rien cacher dans un menu
-            // (LAY-7).
-            span { class: "header-sep", aria_hidden: true }
+            // ACT-5: « Réinitialiser » vide le document et se tenait juste
+            // à côté de « Partager », le geste courant — un clic de travers
+            // coûtait tout l'organigramme (rapport Camille, 2026-08-29).
+            // « Partager » a rejoint « Exporter » dans la bande de statut
+            // (Antoine, 2026-08-30) : plus aucun geste courant ne le
+            // jouxte, et il reste à découvert, jamais dans un menu (LAY-7).
             ResetButton {}
-        }
-        // sous la bande, jamais par-dessus : elle pousse le contenu vers
-        // le bas sans rien déplacer ni recouvrir (LAY-2/LAY-4)
-        if en_sus_help() {
-            p {
-                id: "header-en-sus-help",
-                class: "header-help",
-                "{crate::present::IN_ADDITION_HELP}"
-            }
         }
     }
 }
@@ -426,6 +359,7 @@ pub fn StatusStrip() -> Element {
     let print_target = use_context::<super::PrintTarget>().0;
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
     let alerts = use_context::<Signal<AlertStack>>();
+    let super::ManualCourses(manual) = use_context::<super::ManualCourses>();
     let mut export_open = use_signal(|| false);
     // bumped by every focusin inside the menu, so a deferred close can
     // tell « le focus a quitté le menu » from « le focus s'est déplacé
@@ -442,6 +376,39 @@ pub fn StatusStrip() -> Element {
     let export_pending = crate::export::menu::pending_note(
         solver.read().awaited_since.is_some(),
     );
+
+    // note 9 : le lien emporte tout l'organigramme, pas la session
+    // affichée — il se range donc avec « Exporter », l'autre geste qui sort
+    // le document entier (Antoine, 2026-08-30), et non plus dans la bande
+    // du haut. Rien à l'écran ne bougeait quand il partait (rapports
+    // Camille et Élodie, 2026-08-29) : il confirme désormais, et dit
+    // honnêtement quand le navigateur refuse le presse-papiers (ADR
+    // `2026-08-partager-confirme-ou-dit-son-echec`).
+    let share = move |_| {
+        let (url, payload) = {
+            let plan_read = plan.read();
+            let manual_read = manual.read();
+            let payload =
+                crate::persist::encode_organigramme(&plan_read, &manual_read);
+            (crate::browser::share_url(&payload), payload)
+        };
+        // the link also lands in the address bar — copyable there even if
+        // the clipboard was blocked, without flooding the status strip
+        crate::browser::set_fragment(&payload);
+        spawn(async move {
+            let copied = crate::browser::clipboard_write(&url).await;
+            let note = crate::present::share_note(copied);
+            // a ✓ that clears itself after five seconds is fine for a
+            // confirmation nobody has to act on; a refusal is a standing
+            // instruction (ALR-4), so it stays until dismissed
+            let body = if copied {
+                AlertBody::Success(note)
+            } else {
+                AlertBody::Note(note)
+            };
+            super::push_alert(alerts, body);
+        });
+    };
 
     // The two print paths are unchanged; the JSON one writes the very file
     // « Charger depuis JSON » reads back (ADR
@@ -526,8 +493,8 @@ pub fn StatusStrip() -> Element {
                 kbd { "Ctrl+Y" }
             }
             SolverStatus {}
-            // les deux exports se rangent à droite de la bande, figés avec
-            // elle : la grille défile sous eux sans les emporter
+            // le partage et les exports se rangent à droite de la bande,
+            // figés avec elle : la grille défile sous eux sans les emporter
             div {
                 class: "status-exports",
                 // Échap referme, comme partout ailleurs. Il s'ouvre au
@@ -556,6 +523,13 @@ pub fn StatusStrip() -> Element {
                         }
                     });
                 },
+                button {
+                    class: "grid-share",
+                    r#type: "button",
+                    title: "Copier un lien qui rouvre tout l'organigramme",
+                    onclick: share,
+                    "Partager"
+                }
                 button {
                     class: "grid-share",
                     r#type: "button",
