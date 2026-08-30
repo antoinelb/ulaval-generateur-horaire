@@ -3,6 +3,7 @@
 Date : 2026-08-30
 
 > Suite : le libellé perd son ❄ (« Tout dégeler » tout court) et l'écart de `.header-reset` passe à 1 rem — ADR `2026-08-tout-geler-sur-une-ligne-et-verdict-ecourte`.
+> Suite : la bascule élargissait le bouton de 15 px et déplaçait « Réinitialiser »; une largeur plancher de 6,75 rem la fige (LAY-1) — ADR `2026-08-largeur-constante-du-bouton-tout-geler`.
 
 ## Contexte
 
