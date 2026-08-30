@@ -2,6 +2,8 @@
 
 Date : 2026-08-30
 
+> Suite : l'écart de 3 rem décrit ici est ramené à 2 rem par l'ADR `2026-08-tout-geler-sur-une-ligne-et-verdict-ecourte`, le voisin de « Réinitialiser » n'étant plus « Partager » mais « Tout geler ».
+
 ## Contexte
 
 La barre du haut avait accumulé, à droite du sous-titre, quatre choses de natures différentes : le compte de crédits du bac, une parenthèse « (+9 cr en sus) » nommant les crédits hors total, un « ? » qui expliquait ce que « en sus » voulait dire (ADR `2026-08-vocabulaire-explique-en-place-a-la-demande`), puis « Partager » et « Réinitialiser » séparés par un trait vertical (ADR `2026-08-reinitialiser-annulable-depuis-son-avis`).
