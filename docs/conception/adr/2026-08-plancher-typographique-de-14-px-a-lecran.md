@@ -1,6 +1,7 @@
-# Plancher typographique de 14 px à l'écran
+# Plancher typographique à l'écran
 
-Date : 2026-08-29
+Date : 2026-08-29 — **révisé le 2026-08-30 : le plancher passe de 14 px à 12 px** (voir la révision en fin de fichier).
+Le corps du document décrit la décision d'origine ; ce qui suit reste vrai sauf là où la révision le dit.
 
 ## Contexte
 
@@ -48,3 +49,21 @@ Les tailles des feuilles d'impression sont donc une **fonction du papier**, pas 
 - En 1440×900, « Génie des eaux : introduction à la profession » demande désormais trois lignes dans sa colonne et se tronque à deux (`-webkit-line-clamp: 2`). C'est le mécanisme existant du composant, qui se déclenchait déjà à 1024 px et au zoom 200 % avant ce changement.
 - La semaine complète ne tient plus dans la hauteur visible : la grille défile davantage. C'est le prix accepté pour que les blocs de 50 minutes lisent à 14 px.
 - Le débordement horizontal en 390 px de large (466 px avant, 512 px après) est antérieur à ce changement et n'est pas traité ici.
+
+## Révision 2026-08-30 — le plancher descend à 12 px
+
+« La taille minimale a été établie à 14 px, mais c'est trop grand. Mets la taille minimale à 12 px » (Antoine).
+Le plancher devient **0.75rem**, toujours en `rem` et jamais en `px`, pour la même raison qu'à l'origine : `html { font-size: 100% }` est le pivot du zoom texte à 200 % (AIR INP-8).
+87 règles `font-size` de `main.css` sont à 0.75rem ; restent `100%` (racine), `0.9375rem`, `1rem` et l'exception `0.7em` de `.status-undo kbd`.
+
+AIR n'impose aucune taille minimale : INP-2 gouverne le contraste, INP-8 le zoom. Le plancher est donc un choix de lisibilité du projet, pas une contrainte de règle, et il peut bouger sans dérogation.
+
+Trois constantes avaient été **calculées à partir du plancher de 14 px** et le suivent, toutes remesurées au navigateur (B-GEX/A1, 1280 px de large) :
+
+- **`.grid-axis` / `.grid-day-col` reviennent de `60rem` à `40.5rem`.** L'agrandissement n'existait que pour loger le duo titre + sigle à 14 px dans une plage de 50 minutes. Le balayage à 12 px (36, 40.5, 44, 48, 54 et 60rem) ne trouve **aucun bloc coupé à aucune hauteur** — le motif qui avait imposé 60rem a disparu, et la semaine complète redevient visible sans défiler. Reste la troncature de titre par `-webkit-line-clamp: 2` (2 titres écrêtés à 40.5rem, 1 à partir de 54rem) : c'est le mécanisme de dégradation prévu du composant, le titre entier restant au `title` du bloc.
+- **`.panel-verdict--state` passe de `3.9375rem` à `3.375rem`** — les trois lignes du verdict mesurent 54 px à 12 px au lieu de 63.
+- **`.panel-recalc` passe de `2.625rem` à `2.25rem`** — les deux lignes du message mesurent 36 px à 12 px au lieu de 42. C'est la bande vide visible au repos, et elle est vide **exprès** : la ligne est toujours montée pour que son apparition ne déplace jamais les règles sous le curseur (LAY-1, ADR `2026-08-etat-d-attente-du-solveur-visible`). Sa disparition complète appartient au bandeau d'avis unique, qui doit absorber cet état (ADR `2026-08-bandeau-d-avis-unique`).
+
+`.toast-detail` / `.panel-error-detail` quittent aussi leur `0.8125rem` pour le plancher : à 13 px ils étaient un peu plus petits que le corps à 14 px, ils en seraient devenus plus **gros** à 12 px.
+
+Les feuilles d'impression restent exclues, pour les raisons inchangées ci-dessus — elles sont une fonction du papier, pas une préférence de lecture.
