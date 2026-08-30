@@ -257,7 +257,7 @@ pub fn HeaderBar() -> Element {
                 }
             }
             // « Tout geler » se range *avant* « Réinitialiser », jamais
-            // après : les 2 rem de `.header-reset` tiennent le geste
+            // après : le 1 rem de `.header-reset` tient le geste
             // destructeur à l'écart de ce qui le borde (ACT-5), et un
             // bouton posé après lui mangerait cet écart.
             FreezeAllButton {}

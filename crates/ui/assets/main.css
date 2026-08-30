@@ -145,15 +145,30 @@ code {
   color: var(--ink);
 }
 
+/* Les boutons de la barre gardent leur largeur naturelle. Sans cela ils
+   héritent du `flex-shrink: 1` par défaut : à 1280 px la barre manque de
+   place, les comprime, et « Tout geler » repliait son libellé sur deux
+   lignes (52 × 50 px au lieu des 92 × 32 px de « Réinitialiser »). On
+   traite la compression elle-même plutôt que le repli qui en découle —
+   un `white-space: nowrap` aurait laissé le bouton rétréci et son texte
+   déborder de sa bordure. La place se prend sur `.header-notice`, prose
+   qui se recompose sans rien perdre. */
+.header-bar .status-undo {
+  flex: none;
+}
+
 /* ACT-5 : un contrôle destructeur n'est jamais collé à un contrôle
-   fréquent. « Réinitialiser » suivait « Partager » dans la même foulée.
-   Le trait vertical qui les séparait a été retiré (Antoine, 2026-08-30) :
-   l'écart seul porte la séparation, `gap: 1rem` plus les 2 rem ci-dessous,
-   soit les mêmes 3 rem qu'avant — largement au-delà d'un clic de travers,
-   et sans rien cacher derrière un menu (LAY-7). La teinte d'accent double
-   l'écart pour que la couleur ne porte pas seule la différence (INP-3). */
+   fréquent. Depuis le retrait du trait vertical, l'écart seul porte la
+   séparation ; il valait 3 rem (le `gap: 1rem` de la barre plus 2 rem
+   ici) du temps où « Partager », geste courant, bordait
+   « Réinitialiser ». Le voisin est maintenant « Tout geler » : rare et
+   entièrement annulable, un clic de travers n'y coûte rien. 1 rem ici,
+   soit 2 rem au total, reste le double du rythme de la barre — la
+   séparation se voit encore, et rien ne se cache derrière un menu
+   (LAY-7). La teinte d'accent double l'écart pour que la couleur ne
+   porte pas seule la différence (INP-3). */
 .header-reset {
-  margin-left: 2rem;
+  margin-left: 1rem;
   color: var(--accent-dark);
   border-color: var(--accent-dark);
 }

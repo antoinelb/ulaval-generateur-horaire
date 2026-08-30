@@ -582,7 +582,10 @@ pub fn reset_note(program: Option<(&str, &str)>) -> String {
 // click to be undone session by session (ACT-2 wants the inverse where
 // the eye already is). The word says what the click will do, so « tout
 // est gelé » never rides on colour alone (INP-3) — ADR
-// `2026-08-bouton-tout-geler-dans-la-barre-du-haut`.
+// `2026-08-bouton-tout-geler-dans-la-barre-du-haut`. C'est bien le *mot*
+// qui porte l'état : le ❄ qui préfixait « Tout dégeler » ne faisait que
+// le doubler, et il est parti avec (ADR
+// `2026-08-tout-geler-sur-une-ligne-et-verdict-ecourte`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FreezeAll {
     pub label: &'static str,
@@ -607,7 +610,7 @@ pub fn freeze_all(plan: &Plan) -> FreezeAll {
     let all_frozen = sessions > 0 && whole.is_subset(&plan.frozen);
     if all_frozen {
         FreezeAll {
-            label: "❄ Tout dégeler",
+            label: "Tout dégeler",
             title: "Dégeler toutes les sessions : le solveur pourra de \
                     nouveau ajouter ou déplacer des cours",
             undo_label: "Toutes les sessions dégelées",
@@ -1834,7 +1837,7 @@ mod tests {
         // word rather than in a colour (INP-3)
         plan.frozen = freeze.frozen;
         let thaw = freeze_all(&plan);
-        assert_eq!(thaw.label, "❄ Tout dégeler");
+        assert_eq!(thaw.label, "Tout dégeler");
         assert!(thaw.frozen.is_empty());
         assert!(thaw.title.contains("de nouveau"), "{}", thaw.title);
         assert_eq!(thaw.undo_label, "Toutes les sessions dégelées");

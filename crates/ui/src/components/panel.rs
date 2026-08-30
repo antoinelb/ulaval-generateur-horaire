@@ -1415,8 +1415,7 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                             p { class: "{verdict_class}", "{verdict_label}" }
                             p { class: "panel-verdict panel-verdict--bad",
                                 "⚠ mais {rules_missing} sections de règles \
-                                 restent à combler ci-dessous — le bac n'est \
-                                 pas complet."
+                                 restent à combler ci-dessous."
                             }
                         }
                     } else {

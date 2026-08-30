@@ -2,6 +2,8 @@
 
 Date : 2026-08-30
 
+> Suite : le libellé perd son ❄ (« Tout dégeler » tout court) et l'écart de `.header-reset` passe à 1 rem — ADR `2026-08-tout-geler-sur-une-ligne-et-verdict-ecourte`.
+
 ## Contexte
 
 Geler une session la ferme au solveur sans la fermer à l'étudiante (ADR `2026-08-sessions-gelees-generalisent-les-completees`) : il n'y ajoute ni n'en déplace plus rien, elle continue d'y toucher librement.
