@@ -365,19 +365,21 @@ code {
   font-size: 0.75rem;
   border: 0.125rem dashed var(--accent);
   background: var(--accent-bg);
-  color: var(--accent);
+  /* --accent-dark et non --accent : le rouge vif ne tient que 4,2:1 sur
+     ce rose, sous le plancher AA, contre 8,3:1 pour le rouge sombre */
+  color: var(--accent-dark);
 }
 
-/* le curseur est dessus : bordure et fond pleins, comme
-   `.ribbon-card--landing` appuie sur la carte survolée */
+/* le curseur est dessus : bordure pleine, et un rose à peine assombri —
+   un tout petit peu plus foncé que le fond du glissement, pas un aplat
+   appuyé (Antoine, 2026-08-30) */
 .status-drop--landing {
   border-style: solid;
-  /* mi-chemin exact entre --accent-bg (#fdeaec) et --accent-dark
-     (#8f0410), canal par canal : le fond plein marque le survol sans
-     l'assombrir autant qu'un rouge appuyé (Antoine, 2026-08-30). Le
-     libellé passe à l'encre : le blanc n'y tiendrait que 3,3:1, sous le
-     plancher AA, alors que --ink y tient 5,1:1. */
-  background: #c6777e;
+  /* un dixième du chemin de --accent-bg (#fdeaec) vers --accent-dark
+     (#8f0410) : ΔL* ≈ 8, assez pour se voir, trop peu pour peser. La
+     bascule d'état ne repose donc pas sur la seule couleur — la bordure
+     passe de pointillée à pleine (INP-3). L'encre y tient 11,8:1. */
+  background: #f2d0d4;
   color: var(--ink);
 }
 
