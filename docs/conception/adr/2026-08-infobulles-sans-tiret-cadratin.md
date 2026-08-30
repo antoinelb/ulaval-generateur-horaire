@@ -2,11 +2,15 @@
 
 ## Contexte
 
-Quatorze infobulles (`title`) employaient le tiret cadratin « — » comme
+Quinze infobulles (`title`) employaient le tiret cadratin « — » comme
 séparateur : six en littéral dans `crates/ui/src/components/`, huit
 construites dans `crates/ui/src/present.rs` (`freeze_toggle`, `freeze_all`,
-`chosen_chip_title`, `ribbon_body`, `grid_status_label`,
+`chosen_chip_title`, `ribbon_body`, `grid_status_label`, `schedule_status`,
 `bac_credit_tooltip`) et une dans `header.rs` (`stale_title`).
+
+La moitié d'entre elles ne se voient pas dans les composants : elles sont
+calculées par le présentateur, et deux d'entre elles à travers une
+composition (`schedule_status` → `grid_status_label` → `title`).
 
 Le tiret cadratin est une ponctuation d'incise : il ne dit ni « et ensuite »,
 ni « c'est-à-dire », ni « mais ».
