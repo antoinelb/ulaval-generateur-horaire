@@ -170,7 +170,7 @@ fn SessionCard(card: RibbonCard) -> Element {
                 if card.conflict {
                     div {
                         class: "ribbon-card-special header-credits--over",
-                        title: "Conflit d'horaire dans cette session — \
+                        title: "Conflit d'horaire dans cette session, \
                                 plages hachurées dans sa grille",
                         "⚠ conflit d'horaire"
                     }

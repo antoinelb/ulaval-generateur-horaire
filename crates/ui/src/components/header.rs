@@ -161,7 +161,7 @@ pub fn HeaderBar() -> Element {
     let over_cap = credits.total > cap;
     let bac = shown.bac;
     let stale_title = if stale {
-        " — valeur de la solution précédente, recalcul en cours"
+        " Valeur de la solution précédente, recalcul en cours."
     } else {
         ""
     };
@@ -173,8 +173,8 @@ pub fn HeaderBar() -> Element {
             if has_program {
                 button {
                     class: "status-undo",
-                    title: "Revenir au choix de programme — ce cheminement \
-                            est conservé et revient en le rechoisissant",
+                    title: "Revenir au choix de programme. Ce cheminement \
+                            est conservé et revient en le rechoisissant.",
                     onclick: {
                         let handle = handle.clone();
                         move |_| {
@@ -336,8 +336,8 @@ fn ResetButton() -> Element {
     rsx! {
         button {
             class: "status-undo header-reset",
-            title: "Repartir de zéro — ce programme seulement, annulable \
-                    depuis l'avis qui suit et avec « Annuler »",
+            title: "Repartir de zéro. Ce programme seulement, annulable \
+                    depuis l'avis qui suit et avec « Annuler ».",
             onclick: move |_| {
                 // a search in flight must not land its proposal in the
                 // fresh plan

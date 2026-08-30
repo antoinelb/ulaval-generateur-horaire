@@ -498,8 +498,8 @@ pub fn freeze_all(plan: &Plan) -> FreezeAll {
         FreezeAll {
             label: "Tout geler",
             title: "Geler toutes les sessions : le solveur n'ajoutera ni ne \
-                    déplacera plus rien dans l'organigramme — vous pourrez \
-                    toujours le modifier vous-même",
+                    déplacera plus rien dans l'organigramme. Vous pourrez \
+                    toujours le modifier vous-même.",
             undo_label: "Toutes les sessions gelées",
             // union, never assignment: a freeze the horizon no longer
             // reaches is kept rather than silently dropped
@@ -625,10 +625,12 @@ pub fn bac_credit_tooltip(
         ));
     }
     if parts.is_empty() {
-        "Le compte inclut tous les cours sélectionnés — aucun écart."
+        "Le compte inclut tous les cours sélectionnés, aucun écart."
             .to_string()
     } else {
-        parts.join(" ; ")
+        // la phrase se termine : le titre du bandeau y accole encore la
+        // mention « valeur de la solution précédente » pendant un recalcul
+        format!("{}.", parts.join(" ; "))
     }
 }
 
@@ -674,13 +676,13 @@ pub fn chosen_chip_title(
         Some(label) => (
             format!("{code} est déjà gelé en {label}"),
             vec![
-                "choisissez une autre session pour le déplacer",
+                "Choisissez une autre session pour le déplacer",
                 "« automatique » pour rendre sa session au solveur",
             ],
         ),
         None => (
             format!("{code} est déjà pris, sa session laissée au solveur"),
-            vec!["choisissez une session pour le geler"],
+            vec!["Choisissez une session pour le geler"],
         ),
     };
     if removable {
@@ -693,7 +695,7 @@ pub fn chosen_chip_title(
     } else {
         " Le programme l'impose : rien ne peut le retirer."
     };
-    format!("{held} — {}.{imposed}", ways.join(", "))
+    format!("{held}. {}.{imposed}", ways.join(", "))
 }
 
 // --- the weekly grid geometry ---------------------------------------------
@@ -1156,7 +1158,7 @@ pub fn schedule_status(schedule: &WeeklySchedule, forced: bool) -> String {
 // pas de nouvelle hauteur, LAY-2).
 pub fn grid_status_label(status: &str, searching: bool) -> String {
     if searching {
-        format!("⟳ recalcul en cours… — {status}")
+        format!("⟳ recalcul en cours… {status}")
     } else {
         status.to_string()
     }
@@ -1343,7 +1345,7 @@ pub fn ribbon_body(codes: &[String], notes: usize) -> RibbonBody {
         more: Some(CardMore {
             label: format!("+{}", hidden.len()),
             title: format!(
-                "{} de plus dans cette session : {} — cliquez la carte pour \
+                "{} de plus dans cette session : {}. Cliquez la carte pour \
                  l'afficher en entier.",
                 hidden.len(),
                 hidden.join(", ")
@@ -1507,11 +1509,11 @@ pub fn freeze_toggle(session_label: &str, frozen: bool) -> FreezeToggle {
     FreezeToggle {
         label: format!("Gelé — session {session_label}"),
         title: if frozen {
-            "Session gelée — le solveur n'y ajoute ni n'en déplace rien; \
-             vous pouvez toujours la modifier vous-même"
+            "Session gelée. Le solveur n'y ajoute ni n'en déplace rien; \
+             vous pouvez toujours la modifier vous-même."
         } else {
             "Geler : le solveur n'ajoutera ni ne déplacera plus rien dans \
-             cette session — vous pourrez toujours la modifier vous-même"
+             cette session. Vous pourrez toujours la modifier vous-même."
         },
         act: if frozen {
             "Session dégelée"
@@ -1963,7 +1965,7 @@ mod tests {
         let more = body.more.expect("the three left over are counted");
         assert_eq!(more.label, "+3");
         assert!(more.title.contains("GEX-1006, GEX-1007, GEX-1008"));
-        assert!(more.title.contains("cliquez la carte"), "{}", more.title);
+        assert!(more.title.contains("Cliquez la carte"), "{}", more.title);
         // le corps fait toujours le même nombre de lignes : la rangée ne
         // change pas de hauteur (LAY-1)
         assert_eq!(body.codes.len() + 1, CARD_BODY_LINES);
@@ -2066,13 +2068,13 @@ mod tests {
         let auto = chosen_chip_title("FOR-2020", None, true);
         assert_eq!(
             auto,
-            "FOR-2020 est déjà pris, sa session laissée au solveur — \
-             choisissez une session pour le geler, « ✕ » pour le retirer."
+            "FOR-2020 est déjà pris, sa session laissée au solveur. \
+             Choisissez une session pour le geler, « ✕ » pour le retirer."
         );
         let pinned = chosen_chip_title("FOR-2020", Some("A1-A26"), true);
         assert_eq!(
             pinned,
-            "FOR-2020 est déjà gelé en A1-A26 — choisissez une autre \
+            "FOR-2020 est déjà gelé en A1-A26. Choisissez une autre \
              session pour le déplacer, « automatique » pour rendre sa \
              session au solveur, « ✕ » pour le retirer."
         );
@@ -2081,8 +2083,8 @@ mod tests {
         let imposed = chosen_chip_title("GCI-1000", None, false);
         assert_eq!(
             imposed,
-            "GCI-1000 est déjà pris, sa session laissée au solveur — \
-             choisissez une session pour le geler. Le programme l'impose : \
+            "GCI-1000 est déjà pris, sa session laissée au solveur. \
+             Choisissez une session pour le geler. Le programme l'impose : \
              rien ne peut le retirer."
         );
         assert!(
@@ -2801,7 +2803,7 @@ mod tests {
                 "combinaison automatique - sans conflit ✓",
                 true
             ),
-            "⟳ recalcul en cours… — combinaison automatique - sans \
+            "⟳ recalcul en cours… combinaison automatique - sans \
              conflit ✓"
         );
     }

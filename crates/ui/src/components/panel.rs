@@ -1265,7 +1265,7 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
                             placement automatique ne dépasse jamais ce \
                             plafond ; un placement à la main peut le \
                             dépasser et l'outil l'avertit. 17 cr est la \
-                            charge pleine usuelle — ajustable.",
+                            charge pleine usuelle, ajustable.",
                     "Plafond (cr)"
                     input {
                         r#type: "number",
@@ -2539,7 +2539,7 @@ fn CreditedToggle(code: String) -> Element {
         format!("Retirer le crédit de {code}")
     } else {
         format!(
-            "Créditer {code} : compté sans occuper de session — \
+            "Créditer {code} : compté sans occuper de session, \
              contrairement à « automatique », qui le place dans une \
              session"
         )
@@ -3037,8 +3037,8 @@ fn ManualCourseActions(course: ulaval_scheduler_core::Course) -> Element {
                 href: "{issue}",
                 target: "_blank",
                 rel: "noopener",
-                title: "Ouvre une page GitHub prérendue — un compte \
-                        GitHub est requis pour l'envoyer",
+                title: "Ouvre une page GitHub prérendue. Un compte \
+                        GitHub est requis pour l'envoyer.",
                 "Proposer au catalogue (GitHub)"
             }
             button {
