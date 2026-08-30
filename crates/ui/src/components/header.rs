@@ -287,7 +287,11 @@ fn FreezeAllButton() -> Element {
     let act = crate::present::freeze_all(&plan.read());
     rsx! {
         button {
-            class: "status-undo",
+            // `header-freeze` porte la largeur plancher : « Tout dégeler »
+            // est plus long que « Tout geler » et le bouton grandissait à
+            // la bascule, déplaçant « Réinitialiser » sous le curseur
+            // (LAY-1) — ADR `2026-08-largeur-constante-du-bouton-tout-geler`
+            class: "status-undo header-freeze",
             title: "{act.title}",
             onclick: move |_| {
                 // relu au clic : le plan a pu changer depuis ce rendu

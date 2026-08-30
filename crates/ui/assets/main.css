@@ -171,6 +171,29 @@ code {
   flex: none;
 }
 
+/* LAY-1 : largeur plancher pour le plus long des deux libellés, sur le
+   modèle de `.status-running-elapsed`. La bascule fait passer « Tout
+   geler » à « Tout dégeler » — deux glyphes de plus — et le bouton
+   grandissait d'autant, poussant « Réinitialiser » vers la droite : la
+   cible se déplaçait sous le curseur juste avant le clic le plus probable.
+   Mesure au navigateur à 1280 px : 82 × 32 px au repos, 97 × 32 px une
+   fois tout gelé. Le poste résout `system-ui` en Verdana, la plus large
+   des sans installées (« Tout dégeler » à 12 px : Verdana 74,8 px, Arial
+   et Liberation Sans 66,0 px) — 97 px est donc déjà le haut de la
+   fourchette des fontes réelles, pas son milieu. 6,75 rem = 108 px laisse
+   86 px de contenu (108 − 20 de padding − 2 de bordure, `box-sizing:
+   border-box`), soit 15 % au-dessus de Verdana. En rem, jamais en px :
+   c'est ce qui suit le zoom texte à 200 % (INP-8), le libellé étant
+   lui-même en rem.
+   `justify-content` est requis : `.status-undo` est un `inline-flex` sans
+   alignement principal, donc le libellé se collerait à gauche du bouton
+   élargi. Cohabite avec le `flex: none` de `.header-bar .status-undo` —
+   base de contenu non compressible, que `min-width` ne fait que relever. */
+.header-freeze {
+  min-width: 6.75rem;
+  justify-content: center;
+}
+
 /* ACT-5 veut qu'un contrôle destructeur ne jouxte pas un contrôle
    fréquent. Antoine ramène l'écart au rythme commun (0.5 rem, celui de
    `.status-exports`) : la séparation spatiale ne fait donc plus ce
