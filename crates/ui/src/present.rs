@@ -638,6 +638,57 @@ pub fn reset_note(program: Option<(&str, &str)>) -> String {
     }
 }
 
+// « Tout geler » beside « Réinitialiser »: one click closes the whole
+// horizon to the solver, the next reopens it. A *toggle*, never two
+// buttons — a « Tout geler » with no inverse in reach leaves a stray
+// click to be undone session by session (ACT-2 wants the inverse where
+// the eye already is). The word says what the click will do, so « tout
+// est gelé » never rides on colour alone (INP-3) — ADR
+// `2026-08-bouton-tout-geler-dans-la-barre-du-haut`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FreezeAll {
+    pub label: &'static str,
+    pub title: &'static str,
+    pub undo_label: &'static str,
+    // the set the click writes into `Plan.frozen`
+    pub frozen: std::collections::BTreeSet<usize>,
+}
+
+pub fn freeze_all(plan: &Plan) -> FreezeAll {
+    // the sessions are numbered as the ribbon numbers them: 1-based over
+    // the *expanded* horizon, étés included. `study_sessions` counts only
+    // the A/H alternation and would leave every été unfrozen.
+    let sessions = ulaval_scheduler_core::horizon_sessions(
+        plan.start.season,
+        plan.study_sessions,
+    )
+    .len();
+    let whole: std::collections::BTreeSet<usize> = (1..=sessions).collect();
+    // an empty horizon holds no freeze: `is_subset` of an empty set is
+    // vacuously true and would offer to dégeler what was never gelé
+    let all_frozen = sessions > 0 && whole.is_subset(&plan.frozen);
+    if all_frozen {
+        FreezeAll {
+            label: "❄ Tout dégeler",
+            title: "Dégeler toutes les sessions : le solveur pourra de \
+                    nouveau ajouter ou déplacer des cours",
+            undo_label: "Toutes les sessions dégelées",
+            frozen: std::collections::BTreeSet::new(),
+        }
+    } else {
+        FreezeAll {
+            label: "Tout geler",
+            title: "Geler toutes les sessions : le solveur n'ajoutera ni ne \
+                    déplacera plus rien dans l'organigramme — vous pourrez \
+                    toujours le modifier vous-même",
+            undo_label: "Toutes les sessions gelées",
+            // union, never assignment: a freeze the horizon no longer
+            // reaches is kept rather than silently dropped
+            frozen: plan.frozen.union(&whole).copied().collect(),
+        }
+    }
+}
+
 // « Partager » writes the fragment *and* the clipboard; only the first of
 // the two always succeeds. A browser that refuses the clipboard must never
 // get a « copié ✓ » anyway (ERR-2), and the refusal names the way out —
@@ -1796,6 +1847,64 @@ mod tests {
         assert!(note.contains("A26"), "{note}");
         let picker = reset_note(None);
         assert!(picker.contains("aucun programme"), "{picker}");
+    }
+
+    // « Tout geler » is one toggle — the label always says what the click
+    // will do, and it numbers the sessions the way the ribbon does: over
+    // the expanded horizon, étés included
+    #[test]
+    fn tout_geler_covers_the_expanded_horizon_then_toggles_back() {
+        use std::collections::BTreeSet;
+
+        let mut plan = Plan {
+            study_sessions: 2,
+            ..Plan::default()
+        };
+        // A26, H27 *and* the été that follows: three slots, not two
+        let freeze = freeze_all(&plan);
+        assert_eq!(freeze.label, "Tout geler");
+        assert_eq!(freeze.frozen, BTreeSet::from([1, 2, 3]));
+        assert!(
+            freeze.title.contains("n'ajoutera ni ne"),
+            "{}",
+            freeze.title
+        );
+        assert_eq!(freeze.undo_label, "Toutes les sessions gelées");
+
+        // one session short of the whole horizon still offers to freeze
+        plan.frozen = BTreeSet::from([1, 2]);
+        assert_eq!(freeze_all(&plan).label, "Tout geler");
+
+        // everything frozen: the same button now thaws, and says so in the
+        // word rather than in a colour (INP-3)
+        plan.frozen = freeze.frozen;
+        let thaw = freeze_all(&plan);
+        assert_eq!(thaw.label, "❄ Tout dégeler");
+        assert!(thaw.frozen.is_empty());
+        assert!(thaw.title.contains("de nouveau"), "{}", thaw.title);
+        assert_eq!(thaw.undo_label, "Toutes les sessions dégelées");
+    }
+
+    // a freeze the horizon no longer reaches is kept, never dropped in
+    // silence; and an empty horizon holds no freeze at all — it must not
+    // read as « tout est gelé »
+    #[test]
+    fn tout_geler_keeps_a_stray_freeze_and_refuses_an_empty_horizon() {
+        use std::collections::BTreeSet;
+
+        let plan = Plan {
+            study_sessions: 2,
+            frozen: BTreeSet::from([9]),
+            ..Plan::default()
+        };
+        assert_eq!(freeze_all(&plan).frozen, BTreeSet::from([1, 2, 3, 9]));
+
+        let empty = Plan {
+            study_sessions: 0,
+            ..Plan::default()
+        };
+        assert_eq!(freeze_all(&empty).label, "Tout geler");
+        assert!(freeze_all(&empty).frozen.is_empty());
     }
 
     // ERR-2: a refused clipboard never gets a « copié ✓ », and the refusal
