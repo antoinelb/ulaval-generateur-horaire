@@ -1517,8 +1517,8 @@ pub fn ribbon_model(
             // the same fixed budget as the sigles, so a card with
             // something to say shows fewer of them rather than growing.
             // `frozen` no longer counts: the gel is a checkbox in the
-            // head, which costs the body nothing (ADR
-            // `2026-08-gel-en-case-a-cocher-dans-la-carte`)
+            // card's foot, which costs the body nothing (ADR
+            // `2026-08-case-de-gel-en-pied-de-carte`)
             let notes = usize::from(conflict) + usize::from(special.is_some());
             let body = ribbon_body(&codes, notes);
             RibbonCard {
@@ -1541,12 +1541,15 @@ pub fn ribbon_model(
         .collect()
 }
 
-// Les trois textes de la case « geler » d'une carte. Le nom accessible ne
+// Les trois textes de la case « Gelé » d'une carte. Le nom accessible ne
 // bouge pas avec l'état — c'est la case cochée qui dit si la session est
 // gelée, pas son étiquette (une étiquette qui bascule ferait lire
-// « Dégeler » à une case décochée). Le `title` explique ce que geler
-// veut dire dans l'état où l'on est, et `act` nomme l'acte que
-// l'historique retiendra (ACT-2).
+// « Dégeler » à une case décochée). Il commence par le mot visible à
+// côté de la case, sans quoi le nom entendu et le mot lu divergeraient
+// (WCAG 2.5.3), et nomme la session ensuite, puisque huit cases
+// identiques se suivent. Le `title` explique ce que geler veut dire dans
+// l'état où l'on est, et `act` nomme l'acte que l'historique retiendra
+// (ACT-2).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FreezeToggle {
     pub label: String,
@@ -1556,7 +1559,7 @@ pub struct FreezeToggle {
 
 pub fn freeze_toggle(session_label: &str, frozen: bool) -> FreezeToggle {
     FreezeToggle {
-        label: format!("Geler la session {session_label}"),
+        label: format!("Gelé — session {session_label}"),
         title: if frozen {
             "Session gelée — le solveur n'y ajoute ni n'en déplace rien; \
              vous pouvez toujours la modifier vous-même"
@@ -2058,7 +2061,7 @@ mod tests {
         let codes: Vec<String> =
             (0..8).map(|i| format!("GEX-100{i}")).collect();
         // conflit + annotation, le maximum qu'une carte puisse devoir
-        // depuis que le gel vit dans l'en-tête : deux lignes de moins
+        // depuis que le gel vit dans son pied : deux lignes de moins
         let body = ribbon_body(&codes, 2);
         assert_eq!(body.codes.len(), 4);
         assert_eq!(body.more.map(|more| more.label), Some("+4".to_string()));
@@ -2074,7 +2077,11 @@ mod tests {
     fn the_freeze_checkbox_is_named_by_its_session_not_by_its_state() {
         let thawed = freeze_toggle("A1-A26", false);
         let frozen = freeze_toggle("A1-A26", true);
-        assert_eq!(thawed.label, "Geler la session A1-A26");
+        assert_eq!(thawed.label, "Gelé — session A1-A26");
+        assert!(
+            thawed.label.starts_with("Gelé"),
+            "le nom entendu commence par le mot lu à côté de la case"
+        );
         assert_eq!(
             thawed.label, frozen.label,
             "la case cochée dit l'état, jamais son étiquette"

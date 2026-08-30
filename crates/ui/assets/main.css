@@ -178,26 +178,30 @@ code {
 }
 
 /* Hauteur constante (LAY-1) : en-tête + `present::CARD_BODY_LINES` lignes
-   de corps, quoi que la session porte. Ce qui ne tient pas est compté par
-   `present::ribbon_body` (« +3 »), jamais coupé.
+   de corps + pied, quoi que la session porte. Ce qui ne tient pas est
+   compté par `present::ribbon_body` (« +3 »), jamais coupé.
    Calcul, tout à 0.75rem d'interligne 1.5 depuis le plancher
    typographique (ADR 2026-08-plancher-typographique-de-14-px-a-lecran),
    donc 1.125rem la ligne :
      bordure   2 × 0.125  = 0.25   (la carte affichée porte la plus épaisse)
      padding   2 × 0.375  = 0.75
-     en-tête              = 1.125  (la case à cocher fait 0.875, elle tient)
+     en-tête              = 1.125
      retrait  .ribbon-card-codes    0.25
      corps     7 × 1.125  = 7.875
      gouttières 6 × 0.0625 = 0.375
+     pied     1.125 + 0.0625 = 1.1875 (la case fait 0.875, elle y tient)
                             ------
-                            10.625, arrondi à 10.75 pour la marge.
+                            11.8125, arrondi à 12 pour la marge.
+   Le pied a coûté une ligne de plus qu'hier : les sept sigles sont le
+   budget qu'Antoine a fixé, c'est donc la carte qui grandit, jamais le
+   corps qui se rogne (ADR 2026-08-case-de-gel-en-pied-de-carte).
    Les lignes d'annonce coûtent exactement une ligne + sa gouttière
    (1.125 + 0.0625 = 1.1875 = 1.125 + 0.0625 de `padding-top`), donc le
    compte tient quoi que la carte annonce. */
 .ribbon-card {
   flex: 1 1 0;
   min-width: 5.5rem;
-  height: 10.75rem;
+  height: 12rem;
   overflow: hidden; /* garde-fou : la troncature vient de Rust */
   display: flex;
   flex-direction: column;
@@ -210,9 +214,10 @@ code {
   color: var(--muted);
 }
 
-/* La face : tout sous l'en-tête, et le bouton qui affiche la session
-   (INP-1 — c'est la grande cible). L'en-tête reste hors du bouton : sa
-   case à cocher y serait du HTML invalide (ADR
+/* La face : entre l'en-tête et le pied, le bouton qui affiche la session
+   (INP-1 — c'est la grande cible). `flex: 1 1 auto` la fait manger tout
+   le jeu, ce qui pousse le pied contre le bas de la carte. La case du gel
+   reste hors du bouton : elle y serait du HTML invalide (ADR
    2026-08-carte-de-session-chassis-et-face). */
 .ribbon-card-face {
   flex: 1 1 auto;
@@ -231,9 +236,10 @@ code {
   cursor: pointer;
 }
 
-/* gelée : bordure en tirets — le sens est porté par la case cochée et son
-   glyphe ❄, jamais par la seule bordure (INP-3) ; placé avant --current
-   pour que la session affichée garde sa bordure pleine accentuée */
+/* gelée : bordure en tirets — le sens est porté par le mot « Gelé » et sa
+   case cochée, jamais par la seule bordure (INP-3) ; placé avant
+   --current pour que la session affichée garde sa bordure pleine
+   accentuée */
 .ribbon-card--frozen {
   border-style: dashed;
 }
@@ -253,34 +259,49 @@ code {
   flex: none; /* garde sa taille naturelle, ne s'étire jamais */
   display: flex;
   justify-content: space-between;
-  /* centré, non aligné sur la ligne de base : la case à cocher n'en a
-     pas et se poserait sous les deux textes */
-  align-items: center;
+  align-items: baseline;
   gap: 0.25rem;
-  height: 1.125rem; /* une ligne, la case comprise (voir le calcul) */
+  height: 1.125rem; /* une ligne (voir le calcul) */
 }
 
-/* La case du gel, entre le libellé et les crédits — là où l'on voit d'un
-   coup quelles sessions sont gelées. Elle s'étire sur toute la hauteur de
-   l'en-tête pour offrir la plus grande cible que cette densité permette;
-   le glyphe ❄ dit ce que la case coche (INP-3). */
+/* Le pied : la case du gel, en bas à droite de la carte. Hors du bouton
+   de la face — une case à cocher dans un `<button>` est du HTML invalide
+   (ADR 2026-08-carte-de-session-chassis-et-face). Une ligne et sa
+   gouttière, comme une ligne de corps. */
+.ribbon-card-foot {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 1.1875rem;
+  padding-top: 0.0625rem;
+}
+
+/* Le mot « Gelé » puis sa case : cochée seule elle ne dirait pas de quoi
+   il s'agit, et l'état ne tient jamais à la seule couleur (INP-3).
+   L'étiquette s'étire sur toute la hauteur du pied pour offrir la plus
+   grande cible que cette densité permette. */
 .ribbon-card-freeze {
   flex: none;
   display: flex;
   align-items: center;
   align-self: stretch;
-  gap: 0.125rem;
+  gap: 0.1875rem;
   padding: 0 0.125rem;
   font-size: 0.75rem;
   color: var(--muted-2);
   cursor: pointer;
 }
 
+/* le neutre des cases à cocher de l'application (`.panel-fit input`), pas
+   l'accent : le rouge est réservé à ce qui doit être remarqué, et geler
+   n'est pas une alerte. `--ink` porte aussi le meilleur contraste du
+   crochet blanc (INP-2). */
 .ribbon-card-freeze input {
   width: 0.875rem;
   height: 0.875rem;
   margin: 0;
-  accent-color: var(--accent);
+  accent-color: var(--ink);
   cursor: pointer;
 }
 
@@ -346,10 +367,10 @@ code {
   color: var(--warn);
 }
 
-/* Même châssis que la carte, en 1.75rem de large : la case du gel en
-   haut, la face dessous. Un été vide n'a pas de place pour un en-tête,
-   mais il doit garder son affordance de gel (ADR
-   2026-08-gel-en-case-a-cocher-dans-la-carte). */
+/* Même châssis que la carte, en 1.75rem de large, mais sans case du gel :
+   un été vide se gèle par « Tout geler », et le glyphe ❄ de sa face le
+   dit (ADR 2026-08-case-de-gel-en-pied-de-carte). Le châssis reste un
+   `div` : c'est lui qui porte le glisser-déposer. */
 .ribbon-summer {
   flex: none;
   width: 1.75rem;
@@ -360,17 +381,6 @@ code {
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.ribbon-summer .ribbon-card-freeze {
-  align-self: auto;
-  padding: 0 0 0.125rem;
-}
-
-/* le glyphe ❄ ne tient pas à côté de la case dans 1.75rem : il préfixe le
-   contenu vertical de la face, qui porte aussi le `title` (INP-3) */
-.ribbon-summer .ribbon-card-freeze span {
-  display: none;
 }
 
 .ribbon-summer-face {

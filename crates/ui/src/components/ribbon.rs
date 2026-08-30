@@ -6,13 +6,13 @@ use crate::present::{self, RibbonCard};
 use crate::state::{Plan, View};
 
 // The A1→H8 ribbon: one card per study session, narrow strips for the
-// étés. A card is a chassis carrying two controls — the freeze checkbox
-// in its head and a face button, everything under it, that displays the
-// session (INP-1: the face is the large target). It stopped being one
-// single button the day the gel moved in: a checkbox inside a `<button>`
-// is invalid HTML and its clicks would go to the button (ADR
+// étés. A card is a chassis carrying two controls — a face button, which
+// displays the session (INP-1: the face is the large target), and the
+// freeze checkbox in the foot under it. It stopped being one single
+// button the day the gel moved in: a checkbox inside a `<button>` is
+// invalid HTML and its clicks would go to the button (ADR
 // `2026-08-carte-de-session-chassis-et-face`). States are carried by
-// glyphs and wording, never colour alone (INP-3).
+// wording and glyphs, never colour alone (INP-3).
 #[component]
 pub fn SessionRibbon() -> Element {
     let plan = use_context::<Signal<Plan>>();
@@ -153,12 +153,8 @@ fn SessionCard(card: RibbonCard) -> Element {
                     plan, history, &code, index, &drop_label, None, None,
                 );
             },
-            // hors du bouton : une case à cocher dans un `<button>` est du
-            // HTML invalide et son clic partirait au bouton
             div { class: "ribbon-card-head",
                 span { class: "ribbon-card-label", "{card.label}" }
-                FreezeBox { index, label: card.label.clone(),
-                            frozen: card.frozen }
                 span { class: "ribbon-card-credits",
                     "{credits}{range_mark}"
                 }
@@ -202,6 +198,12 @@ fn SessionCard(card: RibbonCard) -> Element {
                     div { class: "ribbon-card-special", "{special}" }
                 }
             }
+            // hors du bouton : une case à cocher dans un `<button>` est du
+            // HTML invalide et son clic partirait au bouton
+            div { class: "ribbon-card-foot",
+                FreezeBox { index, label: card.label.clone(),
+                            frozen: card.frozen }
+            }
         }
     }
 }
@@ -227,8 +229,9 @@ fn SummerStrip(card: RibbonCard) -> Element {
         .clone()
         .or_else(|| (!card.codes.is_empty()).then(|| card.codes.join(" ")))
         .unwrap_or_else(|| "—".to_string());
-    // la bande étroite n'a pas de place pour un insigne à côté de la
-    // case : le glyphe préfixe le contenu, le `title` porte le mot
+    // un été vide ne porte pas de case à cocher — mais « Tout geler » peut
+    // encore le geler, et l'écran doit le dire (TRU-1) : le glyphe préfixe
+    // le contenu vertical, le `title` porte le mot (INP-3)
     let content = if card.frozen {
         format!("❄ {content}")
     } else {
@@ -280,11 +283,6 @@ fn SummerStrip(card: RibbonCard) -> Element {
                     plan, history, &code, index, &drop_label, None, None,
                 );
             },
-            // même case que sur une carte : sans elle un été vide n'aurait
-            // plus aucune affordance de gel depuis que l'horaire n'en
-            // porte plus (ADR `2026-08-gel-en-case-a-cocher-dans-la-carte`)
-            FreezeBox { index, label: card.label.clone(),
-                        frozen: card.frozen }
             button {
                 class: "ribbon-summer-face",
                 title: if card.frozen { "{freeze.title}" },
@@ -300,8 +298,8 @@ fn SummerStrip(card: RibbonCard) -> Element {
 }
 
 // ACT-2 : une bascule annulable et étiquetée, jamais de confirmation
-// (ADR `2026-08-sessions-gelees-generalisent-les-completees`). Le glyphe
-// ❄ accompagne la case : cochée seule elle ne dirait pas de quoi il
+// (ADR `2026-08-sessions-gelees-generalisent-les-completees`). Le mot
+// « Gelé » précède la case : cochée seule elle ne dirait pas de quoi il
 // s'agit, et l'état ne tient jamais à la seule couleur (INP-3).
 #[component]
 fn FreezeBox(index: usize, label: String, frozen: bool) -> Element {
@@ -313,6 +311,7 @@ fn FreezeBox(index: usize, label: String, frozen: bool) -> Element {
         label {
             class: "ribbon-card-freeze",
             title: "{freeze.title}",
+            span { "Gelé" }
             input {
                 r#type: "checkbox",
                 checked: frozen,
@@ -326,7 +325,6 @@ fn FreezeBox(index: usize, label: String, frozen: bool) -> Element {
                     });
                 },
             }
-            span { aria_hidden: "true", "❄" }
         }
     }
 }
