@@ -32,7 +32,7 @@ Les références `fichier:ligne` pointent dans `crates/ui/src` sauf mention cont
 |---|---|---|---|---|
 | Sélecteur de programme | une carte par code tant qu'aucun programme n'est choisi | automatique | `components/panel.rs:57` | évident |
 | Choix du millésime | `select` des versions, la plus récente en premier | menu + « Choisir » | `components/panel.rs:148` | évident |
-| Concentration par défaut experte | la première concentration est présélectionnée | effet de « Choisir » | `components/panel.rs:191`, `panel.rs:1325` | caché |
+| Concentration par défaut experte | « sans concentration » : le bloc neutre du millésime s'il existe, « Aucune » sinon | effet de « Choisir » | `components/panel.rs:191`, `panel.rs` (`default_concentration`) | caché |
 | Horizon par défaut dérivé des crédits | sessions d'études = `ceil(crédits / 15)` | effet de « Choisir » | `state.rs:119` | caché |
 | Étagère par (programme, millésime) | chaque document revient intact au retour | « changer » puis « Choisir » | `persist.rs:213`, `components/mod.rs:706` | semi-caché |
 | Bouton « changer » | renvoie au sélecteur en conservant le cheminement | en-tête | `components/header.rs:129` | évident |

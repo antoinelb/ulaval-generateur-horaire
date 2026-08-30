@@ -6,6 +6,10 @@ use ulaval_scheduler_core::{
 };
 
 use crate::data::Snapshot;
+// the French suffix naming a rule's scope, shared between the rule header
+// (`rule_lead`) and the over-max message (`present::present_over_max`) so
+// the wording never drifts between the two
+use crate::present::scope_origin;
 use crate::solve::{self, weekly_schedule};
 use crate::state::{self, Plan};
 
@@ -21,7 +25,8 @@ pub fn subject_of(code: &str) -> &str {
 #[derive(Debug, Clone, PartialEq)]
 pub struct PanelModel {
     // ERR-5: a coverage error degrades this region alone, named in French
-    pub coverage_error: Option<String>,
+    // in five parts, its English detail one click away (ERR-1/ERR-3)
+    pub coverage_error: Option<crate::present::UiError>,
     pub mandatory: Option<Section>,
     pub rules: Vec<Section>,
     pub groups: Vec<PanelGroup>,
@@ -292,45 +297,59 @@ fn preparatory_badge(rules: &mut [Section], plan: &Plan) {
     }
 }
 
-// the two reachable-by-clicking errors get real French with a way out;
-// the rest (data defects) a generic French wrapper around the detail
+// The two reachable-by-clicking errors get the shared over-max wording and
+// its way out; the rest (data defects) a generic French wrapper. Neither
+// puts core's English in the primary message — it rides in `detail`, one
+// click away (ERR-3, ADR `2026-08-refus-du-solveur-en-francais`).
 fn coverage_error_message(
     error: &ulaval_scheduler_core::CoverageError,
-) -> String {
+) -> crate::present::UiError {
+    use crate::present::{present_over_max, OverMax};
     use ulaval_scheduler_core::CoverageError;
-    match error {
+    let detail = error.to_string();
+    let over = match error {
         CoverageError::CreditsOverMax {
             rule,
             scope,
             total,
             max,
-        } => {
-            let origin = scope_origin(*scope);
-            format!(
-                "{rule}{origin} : les cours sélectionnés y totalisent \
-                 {total} crédits, au-dessus de son maximum de {max}. \
-                 Retirez-en un (ou déplacez une entente); en attendant, \
-                 les règles s'affichent sans comptage."
-            )
-        }
+        } => Some((rule, scope, total, max, true)),
         CoverageError::CountOverMax {
             rule,
             scope,
             total,
             max,
-        } => {
-            let origin = scope_origin(*scope);
-            format!(
-                "{rule}{origin} : {total} cours sélectionnés y comptent, \
-                 au-dessus de son maximum de {max}. Retirez-en un (ou \
-                 déplacez une entente); en attendant, les règles \
-                 s'affichent sans comptage."
-            )
-        }
-        other => format!(
-            "Les règles ne peuvent pas être comptées pour l'instant — \
-             elles s'affichent sans comptage. Détail : {other}."
-        ),
+        } => Some((rule, scope, total, max, false)),
+        _ => None,
+    };
+    if let Some((rule, scope, total, max, credits)) = over {
+        return present_over_max(
+            &OverMax {
+                rule: rule.clone(),
+                scope: *scope,
+                total: *total,
+                max: *max,
+                credits,
+            },
+            &detail,
+        );
+    }
+    crate::present::UiError {
+        what: "Les règles de ce programme ne peuvent pas être comptées \
+               pour l'instant."
+            .to_string(),
+        reaction: "Elles s'affichent quand même, sans comptage; rien n'a \
+                   été perdu et l'organigramme n'a pas bougé."
+            .to_string(),
+        affected: "Les insignes et les verdicts des règles, dans ce \
+                   panneau seulement."
+            .to_string(),
+        action: "Vérifiez la concentration et le profil choisis \
+                 ci-dessous; si l'erreur persiste, signalez-la avec \
+                 l'identifiant et le détail technique."
+            .to_string(),
+        id: crate::present::error_id(&detail),
+        detail,
     }
 }
 
@@ -345,7 +364,7 @@ fn uncounted_panel(
     chosen: &Program,
     concentration: Option<&str>,
     profile: Option<&str>,
-    message: String,
+    message: crate::present::UiError,
     mut warnings: Vec<String>,
 ) -> PanelModel {
     let mandatory_rows: Vec<Row> =
@@ -1395,9 +1414,17 @@ fn listed_codes<'a>(
     }
 }
 
-// The expert-safe default (AIR LAY-3) : the page's first concentration
-// when the program has any — never a profile.
-// An explicit « Aucune » afterwards is the student's and persists.
+// The expert-safe default (AIR LAY-3), the same one for every program:
+// no concentration — never a profile either.
+// When the page carries a neutral block — B-GCI's and B-GMC's
+// « Cheminement sans concentration », B-GIN's « Approche généraliste » —
+// that block *is* « sans concentration » and is what gets selected, since
+// the menu then offers no synthetic « Aucune » of its own (ADR
+// `2026-08-aucune-retiree-quand-un-bloc-neutre-existe`). A page carrying
+// only named concentrations — B-GPH — opens on « Aucune », not on its
+// first one: nothing was chosen for the student (ADR
+// `2026-08-defaut-sans-concentration-uniforme`).
+// An explicit choice afterwards is the student's and persists.
 pub fn default_concentration(
     snapshot: &Snapshot,
     code: &str,
@@ -1408,9 +1435,12 @@ pub fn default_concentration(
         .iter()
         .find(|program| {
             program.code == code && program.semester.to_string() == semester
-        })
-        .and_then(|program| program.concentrations.first())
-        .map(|block| block.title.clone())
+        })?
+        .concentrations
+        .iter()
+        .map(|block| block.title.as_str())
+        .find(|title| neutral_concentration(title))
+        .map(str::to_string)
 }
 
 // The chosen vintage's own `credits_required` — never
@@ -1673,17 +1703,6 @@ fn rule_lead(scope: Scope, constraint: Option<&Constraint>) -> String {
     };
     let origin = scope_origin(scope);
     format!("{pick}{origin} — rien n'est pris automatiquement.")
-}
-
-// the French suffix naming a rule's scope, shared between the rule
-// header (`rule_lead`) and the over-max error message
-// (`coverage_error_message`) so the wording never drifts between the two
-fn scope_origin(scope: Scope) -> &'static str {
-    match scope {
-        Scope::Program => "",
-        Scope::Concentration => " de la concentration",
-        Scope::Profile => " du profil",
-    }
 }
 
 // The répertoire's lists can repeat a code (B-GMC's « Règle 1 » carries
@@ -3057,8 +3076,15 @@ mod tests {
         }
         let model = panel_model(&snapshot(), &plan);
         let error = model.coverage_error.clone().expect("must be named");
-        assert!(error.contains("Aucune"), "{error}");
-        assert!(error.contains("sans comptage"), "{error}");
+        assert!(
+            !error.what.contains("concentration titled"),
+            "core's English never leads: {}",
+            error.what
+        );
+        assert!(error.reaction.contains("sans comptage"), "{error:?}");
+        // the English is kept, one click away, and names the culprit
+        assert!(error.detail.contains("Aucune"), "{}", error.detail);
+        assert!(error.id.starts_with("GH-"), "{}", error.id);
         // the sections still render, badges neutral — never a blank panel
         let mandatory = model.mandatory.expect("still shown");
         assert_eq!(mandatory.rows.len(), 2);
@@ -3103,9 +3129,17 @@ mod tests {
         )]);
         let model = panel_model(&snapshot, &plan);
         let error = model.coverage_error.expect("over-max must be named");
-        assert!(error.contains("Règle 1"), "{error}");
-        assert!(error.contains("au-dessus de son maximum de 1"), "{error}");
-        assert!(error.contains("Retirez-en"), "{error}");
+        assert!(error.what.contains("Règle 1"), "{}", error.what);
+        assert!(
+            error.what.contains("au-dessus de son maximum de 1"),
+            "{}",
+            error.what
+        );
+        assert!(
+            error.action.contains("Retirez un cours"),
+            "{}",
+            error.action
+        );
         assert!(model.mandatory.is_some(), "panel never blank");
         // the chosen concentration's rules join the fallback sections
         if let Some(choice) = plan.program.as_mut() {
@@ -3133,11 +3167,12 @@ mod tests {
             },
         );
         assert!(
-            credits.starts_with("Règle 2 de la concentration"),
-            "{credits}"
+            credits.what.starts_with("Règle 2 de la concentration"),
+            "{}",
+            credits.what
         );
-        assert!(credits.contains("12 crédits"), "{credits}");
-        assert!(credits.contains("maximum de 9"), "{credits}");
+        assert!(credits.what.contains("12 crédits"), "{}", credits.what);
+        assert!(credits.what.contains("maximum de 9"), "{}", credits.what);
 
         let count = coverage_error_message(
             &ulaval_scheduler_core::CoverageError::CountOverMax {
@@ -3147,7 +3182,7 @@ mod tests {
                 max: 1,
             },
         );
-        assert!(count.contains("du profil"), "{count}");
+        assert!(count.what.contains("du profil"), "{}", count.what);
 
         let program = coverage_error_message(
             &ulaval_scheduler_core::CoverageError::CountOverMax {
@@ -3157,7 +3192,20 @@ mod tests {
                 max: 1,
             },
         );
-        assert!(program.starts_with("Règle 1 :"), "{program}");
+        assert!(program.what.starts_with("Règle 1 :"), "{}", program.what);
+        // whichever shape, core's English stays behind the fold (ERR-3)
+        for error in [&credits, &count, &program] {
+            assert!(
+                !error.what.contains("semantics"),
+                "no English up front: {}",
+                error.what
+            );
+            assert!(
+                error.detail.contains("semantics await"),
+                "the raw text is kept whole: {}",
+                error.detail
+            );
+        }
     }
 
     #[test]
@@ -5245,22 +5293,50 @@ mod tests {
     }
 
     #[test]
-    fn the_default_concentration_is_the_pages_first() {
+    fn the_default_concentration_is_none_unless_the_page_names_one() {
         let snapshot = snapshot();
-        assert_eq!(
-            default_concentration(&snapshot, "B-GEX", "A26").as_deref(),
-            Some("Génie urbain")
+        // « Génie urbain » is a named concentration: opening on it would
+        // show a specific cheminement nobody asked for (constat
+        // étudiante-cegep 2026-08-29, B-GPH)
+        assert!(
+            default_concentration(&snapshot, "B-GEX", "A26").is_none(),
+            "only named concentrations: the document opens on « Aucune »"
         );
         assert!(
             default_concentration(&snapshot, "B-GEX", "H99").is_none(),
             "an unknown vintage imposes nothing"
         );
+        // a scraped neutral block *is* « sans concentration » — the menu
+        // offers no « Aucune » beside it, so it is what gets selected
+        for neutral in
+            ["Cheminement sans concentration", "Approche généraliste"]
+        {
+            let mut with_block = snapshot.clone();
+            with_block.programs[0]
+                .concentrations
+                .insert(0, concentration_block(neutral));
+            assert_eq!(
+                default_concentration(&with_block, "B-GEX", "A26").as_deref(),
+                Some(neutral)
+            );
+        }
         let mut bare = snapshot;
         bare.programs[0].concentrations.clear();
         assert!(
             default_concentration(&bare, "B-GEX", "A26").is_none(),
             "no concentration on the page, none imposed (B-GEX)"
         );
+    }
+
+    // a bare block carrying only its title — enough for the default, which
+    // reads nothing else
+    fn concentration_block(
+        title: &str,
+    ) -> ulaval_scheduler_core::Concentration {
+        serde_json::from_str(&format!(
+            r#"{{"title":"{title}","mandatory":[],"rules":[]}}"#
+        ))
+        .unwrap_or_else(|e| panic!("block literal: {e}"))
     }
 
     #[test]

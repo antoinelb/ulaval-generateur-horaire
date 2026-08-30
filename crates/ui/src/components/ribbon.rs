@@ -180,6 +180,17 @@ fn SessionCard(card: RibbonCard) -> Element {
                     for code in card.codes.iter() {
                         RibbonCode { key: "{code}", code: code.clone() }
                     }
+                    // ce que la carte ne montre pas est compté, jamais
+                    // coupé à mi-glyphe (LAY-1) ; le clic sur la carte —
+                    // déjà l'affordance visible — affiche la session
+                    // entière
+                    if let Some(more) = card.more.as_ref() {
+                        span {
+                            class: "ribbon-card-more",
+                            title: "{more.title}",
+                            "{more.label}"
+                        }
+                    }
                 }
             }
             if let Some(special) = card.special.as_ref() {

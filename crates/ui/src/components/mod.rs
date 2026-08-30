@@ -186,7 +186,12 @@ fn handle_worker_answer(
     snapshot: Signal<Option<Snapshot>>,
 ) {
     match crate::solve::parse_worker_answer(text) {
-        Err(message) => push_alert(alerts, AlertBody::Note(message)),
+        // an unreadable answer is a solver refusal like any other: French
+        // up front, the raw text behind the fold (ERR-1/ERR-3)
+        Err(message) => push_alert(
+            alerts,
+            AlertBody::Error(crate::present::present_solver_error(&message)),
+        ),
         Ok(crate::solve::WorkerAnswer::Ready { .. }) => {
             state.write().ready = true;
         }
@@ -203,11 +208,15 @@ fn handle_worker_answer(
                     state.verify_failed = true;
                 }
                 drop(state);
+                // core writes its refusals in English, for whoever reads a
+                // stack trace; `present_solver_error` says them in French
+                // with a way out and keeps the raw text one click away
+                // (constat Bernard 2026-08-29, ADR
+                // `2026-08-refus-du-solveur-en-francais`)
                 push_caused_alert(
                     alerts,
-                    AlertBody::Note(format!(
-                        "Le solveur n'a pas pu répondre — détail \
-                         technique : {message}"
+                    AlertBody::Error(crate::present::present_solver_error(
+                        &message,
                     )),
                     AlertCause::SolverError,
                 );

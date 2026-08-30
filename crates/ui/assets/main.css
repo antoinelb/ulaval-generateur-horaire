@@ -176,20 +176,28 @@ code {
   border-bottom: 0.0625rem solid var(--border);
   align-items: stretch;
   overflow-x: auto;
+  /* La rangée ne rétrécit jamais (LAY-1) : `overflow-x: auto` met sa
+     taille minimale automatique à 0, si bien que la coquille en
+     `height: 100vh` la comprimait et coupait la dernière ligne d'une
+     carte à mi-glyphe. Sa hauteur est désormais bornée par celle des
+     cartes ; le jeu manquant va à `.main-split`, dont les deux colonnes
+     défilent d'elles-mêmes (ADR
+     2026-08-carte-de-session-tronquee-en-lignes-entieres). */
+  flex: none;
 }
 
-/* Exception LAY-2 assumée (décision d'Antoine, ADR
-   2026-08-hauteur-minimale-du-ruban-pour-cinq-cours) : plancher
-   dimensionné pour l'en-tête + 5 sigles — la session GEX typique
-   (4-6 cours) tient sans que le placement automatique (500 ms après la
-   frappe) ne change la hauteur ; au-delà de 5, la carte grandit et
-   pousse le reste, plutôt que de cacher des sigles dans un défilement.
-   Calcul : bordure 0.25 + padding 0.75 + en-tête 1.03 + retrait 0.25 +
-   5 × 1.03 + 4 × 0.0625 ≈ 7.69rem. */
+/* Hauteur constante (LAY-1) : en-tête + `present::CARD_BODY_LINES` lignes
+   de corps, quoi que la session porte. Ce qui ne tient pas est compté par
+   `present::ribbon_body` (« +2 »), jamais coupé.
+   Calcul : bordure 0.125 + padding 0.75 + en-tête 1.3125 + retrait 0.25 +
+   5 × 1.3125 + 4 × 0.0625 ≈ 9.25rem, arrondi à 9.5rem — les sigles sont
+   à 0.875rem (interligne 1.5), pas aux 0.6875rem qu'avait supposés le
+   plancher de 7.75rem qu'ils débordaient. */
 .ribbon-card {
   flex: 1 1 0;
   min-width: 5.5rem;
-  min-height: 7.75rem; /* INP-1 : toute la carte est la cible */
+  height: 9.5rem; /* INP-1 : toute la carte est la cible */
+  overflow: hidden; /* garde-fou : la troncature vient de Rust */
   display: flex;
   flex-direction: column;
   text-align: left;
@@ -242,8 +250,8 @@ code {
 }
 
 .ribbon-card-codes {
-  /* occupe le plancher de la carte ; au-delà de 5 sigles, c'est elle
-     qui fait grandir la carte — jamais de défilement interne */
+  /* occupe le reste de la carte ; le nombre de lignes est décidé en
+     amont (`present::ribbon_body`), jamais par un débordement */
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -251,10 +259,18 @@ code {
   font-family: var(--font-mono);
   font-size: 0.875rem;
   padding-top: 0.25rem;
+  overflow: hidden;
 }
 
 .ribbon-card-codes span {
   cursor: grab;
+}
+
+/* le compte des sigles que la carte ne montre pas — ni un sigle ni un
+   objet à glisser : il se lit comme le reste du corps, en retrait */
+.ribbon-card-codes .ribbon-card-more {
+  cursor: pointer;
+  color: var(--muted-2);
 }
 
 .ribbon-card-empty,
@@ -262,7 +278,7 @@ code {
   font-size: 0.875rem;
   font-style: italic;
   color: var(--muted-3);
-  padding-top: 0.25rem;
+  padding-top: 0.0625rem;
 }
 
 .ribbon-card-empty {
@@ -437,6 +453,49 @@ code {
   color: var(--accent-dark);
 }
 
+/* ERR-1 : les cinq parties d'une erreur, empilées dans le toast ;
+   ERR-3 : le détail technique derrière un repli, jamais en tête */
+.toast-error {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.toast-error-action {
+  font-weight: 600;
+}
+
+.toast-detail,
+.panel-error-detail {
+  font-size: 0.8125rem;
+}
+
+.toast-detail summary,
+.panel-error-detail summary {
+  cursor: pointer;
+  min-height: 1.5rem;
+}
+
+.toast-detail pre,
+.panel-error-detail pre {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  color: var(--muted);
+}
+
+/* les quatre parties françaises d'une erreur de comptage, dans le
+   panneau : des paragraphes serrés, pas les marges par défaut */
+.warning p {
+  margin: 0 0 0.25rem;
+}
+
+.warning p:last-of-type {
+  margin-bottom: 0;
+}
+
 .status-dismiss {
   margin-left: auto;
   font: inherit;
@@ -486,6 +545,15 @@ code {
 
   .main-split {
     min-height: min(12rem, 50vh);
+  }
+
+  /* Même soupape que pour le bandeau ci-dessus : au zoom texte 200 %
+     (INP-8) la rangée, qui ne rétrécit plus, pourrait manger l'écran.
+     Passé ce plafond elle défile elle-même — avec un ascenseur, donc
+     jamais une ligne coupée en silence. Sans effet à l'échelle normale :
+     la rangée fait ~10.75rem. */
+  .ribbon {
+    max-height: 40vh;
   }
 }
 
@@ -567,6 +635,37 @@ code {
   color: var(--muted);
   font-size: 0.875rem;
   margin: 0;
+}
+
+/* LAY-4 : le « ? » de la version, à côté de l'intitulé — l'explication se
+   déplie en dessous, en place, et ne recouvre pas la liste */
+.panel-picker-lead-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.panel-picker-lead-row .panel-picker-lead {
+  flex: 1 1 auto;
+}
+
+.panel-picker-help,
+.header-help {
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  background: var(--active-bg);
+  border: 0.0625rem solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* la bande d'en-tête ne bouge pas : l'explication s'ouvre sous elle et
+   pousse le reste vers le bas (LAY-2) */
+.header-help {
+  flex: none;
+  margin: 0 1.125rem 0.6875rem;
 }
 
 /* la carte n'est plus un bouton : elle porte un select et un bouton, et ne

@@ -61,6 +61,11 @@ pub fn HeaderBar() -> Element {
     let snapshot_signal = snapshot;
     let solver = use_context::<Signal<SolverState>>();
     let handle = use_context::<SolverHandle>();
+    // LAY-4 : « en sus » s'explique sur place, à la demande, refermable —
+    // le repli s'ouvre sous la bande, il ne recouvre rien (ADR
+    // `2026-08-vocabulaire-explique-en-place-a-la-demande`). Déclaré avant
+    // le retour anticipé ci-dessous : un hook est inconditionnel (AP-4).
+    let mut en_sus_help = use_signal(|| false);
     let read = snapshot.read();
     let Some(snapshot) = read.as_ref() else {
         return rsx! {};
@@ -125,8 +130,10 @@ pub fn HeaderBar() -> Element {
             program.credits_required,
             &note,
         );
-        (label, note.tooltip)
+        let has_en_sus = !note.suffix.is_empty();
+        (label, note.tooltip, has_en_sus)
     });
+    let has_en_sus = bac.as_ref().is_some_and(|(_, _, en_sus)| *en_sus);
     let credits =
         solve::session_credits(snapshot, &plan.read(), view.read().session);
     // a Range counted at its lower bound says so (TRU-6: never a false
@@ -203,11 +210,26 @@ pub fn HeaderBar() -> Element {
                  auraient changé."
             }
             span { class: "header-credits",
-                if let Some((label, tooltip)) = bac {
+                if let Some((label, tooltip, _)) = bac {
                     span {
                         class: if label.over { "header-credits--over" },
                         title: "{tooltip}",
                         "{label.text} - "
+                    }
+                }
+                if has_en_sus {
+                    button {
+                        class: "panel-cheminement-help-toggle",
+                        r#type: "button",
+                        aria_expanded: en_sus_help(),
+                        aria_controls: "header-en-sus-help",
+                        aria_label: "Ce que veulent dire les crédits en sus",
+                        title: "Les crédits « en sus »",
+                        onclick: move |_| {
+                            let open = !en_sus_help();
+                            en_sus_help.set(open);
+                        },
+                        "?"
                     }
                 }
                 b {
@@ -233,6 +255,15 @@ pub fn HeaderBar() -> Element {
             // (LAY-7).
             span { class: "header-sep", aria_hidden: true }
             ResetButton {}
+        }
+        // sous la bande, jamais par-dessus : elle pousse le contenu vers
+        // le bas sans rien déplacer ni recouvrir (LAY-2/LAY-4)
+        if en_sus_help() {
+            p {
+                id: "header-en-sus-help",
+                class: "header-help",
+                "{crate::present::IN_ADDITION_HELP}"
+            }
         }
     }
 }
@@ -632,10 +663,31 @@ pub fn Toasts() -> Element {
                         | AlertBody::Standing(note) => rsx! {
                             span { class: "status-alert-ok", "✓ {note}" }
                         },
+                        // ERR-1 : les cinq parties, toutes en français ;
+                        // ERR-3 : le texte technique (anglais, celui du
+                        // solveur ou du navigateur) reste derrière le
+                        // repli, jamais dans le message principal
                         AlertBody::Error(error) => rsx! {
-                            span { class: "status-alert-error",
-                                "⚠ {error.what} {error.action} "
-                                code { "{error.id}" }
+                            div { class: "toast-error",
+                                span { class: "status-alert-error",
+                                    "⚠ {error.what}"
+                                }
+                                span { "{error.reaction}" }
+                                span { "{error.affected}" }
+                                span { class: "toast-error-action",
+                                    "{error.action}"
+                                }
+                                details {
+                                    class: "toast-detail",
+                                    // le message entier est son propre
+                                    // rejet (note 12) : déplier ne doit
+                                    // pas le fermer
+                                    onclick: move |event: Event<MouseData>| {
+                                        event.stop_propagation();
+                                    },
+                                    summary { "Détail technique" }
+                                    pre { "{error.id} — {error.detail}" }
+                                }
                             }
                         },
                         // ACT-2: the destructive act carries its own way

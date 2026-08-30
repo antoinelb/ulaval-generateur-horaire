@@ -74,14 +74,41 @@ fn ProgramPicker() -> Element {
     // option, the newest vintage.
     let mut pending =
         use_signal(std::collections::HashMap::<String, String>::new);
+    // LAY-4 : le « ? » déplie l'explication sur place, comme celui de
+    // « Charger depuis JSON » — jamais une visite guidée ni une infobulle
+    // qui masque la liste (ADR
+    // `2026-08-vocabulaire-explique-en-place-a-la-demande`)
+    let mut vintage_help = use_signal(|| false);
     let read = snapshot.read();
     let Some(snapshot) = read.as_ref() else {
         return rsx! {};
     };
     rsx! {
         div { class: "panel-picker",
-            p { class: "panel-picker-lead",
-                "Choisissez un programme pour voir ses règles :"
+            div { class: "panel-picker-lead-row",
+                p { class: "panel-picker-lead",
+                    "Choisissez un programme pour voir ses règles :"
+                }
+                button {
+                    class: "panel-cheminement-help-toggle",
+                    r#type: "button",
+                    aria_expanded: vintage_help(),
+                    aria_controls: "panel-vintage-help",
+                    aria_label: "Ce que veut dire la version d'un programme",
+                    title: "La version (A26, H27)",
+                    onclick: move |_| {
+                        let open = !vintage_help();
+                        vintage_help.set(open);
+                    },
+                    "?"
+                }
+            }
+            if vintage_help() {
+                p {
+                    id: "panel-vintage-help",
+                    class: "panel-picker-help",
+                    "{crate::present::VINTAGE_HELP}"
+                }
             }
             for row in panel::program_vintages(snapshot) {
                 div { class: "panel-picker-item", key: "{row.code}",
@@ -182,10 +209,12 @@ fn ProgramPicker() -> Element {
                                     else {
                                         return;
                                     };
-                                    // défaut expert-sûr (AIR LAY-3) : la
-                                    // première concentration du millésime,
-                                    // jamais de profil imposé — l'instantané
-                                    // de l'étagère, s'il existe, garde son
+                                    // défaut expert-sûr (AIR LAY-3) : sans
+                                    // concentration — le bloc neutre du
+                                    // millésime quand la page en porte un,
+                                    // « Aucune » sinon — et jamais de
+                                    // profil imposé; l'instantané de
+                                    // l'étagère, s'il existe, garde son
                                     // propre choix
                                     let (concentration, study_sessions) = {
                                         let read = snapshot_signal.read();
@@ -916,8 +945,19 @@ fn PanelBody(model: PanelModel) -> Element {
     let mut scroll_to_results = use_signal(|| false);
     rsx! {
         div { class: "panel-body",
+            // ERR-1 : les cinq parties en français ; ERR-3 : le texte
+            // technique de `core` (anglais) reste derrière le repli
             if let Some(error) = model.coverage_error.as_ref() {
-                p { class: "warning", "⚠ {error}" }
+                div { class: "warning", role: "alert",
+                    p { "⚠ {error.what}" }
+                    p { "{error.reaction}" }
+                    p { "{error.affected}" }
+                    p { "{error.action}" }
+                    details { class: "panel-error-detail",
+                        summary { "Détail technique" }
+                        pre { "{error.id} — {error.detail}" }
+                    }
+                }
             }
             for warning in model.warnings.iter() {
                 p { class: "warning", "⚠ {warning}" }
