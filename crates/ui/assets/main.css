@@ -179,15 +179,25 @@ code {
 
 /* Hauteur constante (LAY-1) : en-tête + `present::CARD_BODY_LINES` lignes
    de corps, quoi que la session porte. Ce qui ne tient pas est compté par
-   `present::ribbon_body` (« +2 »), jamais coupé.
-   Calcul : bordure 0.125 + padding 0.75 + en-tête 1.3125 + retrait 0.25 +
-   5 × 1.3125 + 4 × 0.0625 ≈ 9.25rem, arrondi à 9.5rem — les sigles sont
-   à 0.875rem (interligne 1.5), pas aux 0.6875rem qu'avait supposés le
-   plancher de 7.75rem qu'ils débordaient. */
+   `present::ribbon_body` (« +3 »), jamais coupé.
+   Calcul, tout à 0.75rem d'interligne 1.5 depuis le plancher
+   typographique (ADR 2026-08-plancher-typographique-de-14-px-a-lecran),
+   donc 1.125rem la ligne :
+     bordure   2 × 0.125  = 0.25   (la carte affichée porte la plus épaisse)
+     padding   2 × 0.375  = 0.75
+     en-tête              = 1.125  (la case à cocher fait 0.875, elle tient)
+     retrait  .ribbon-card-codes    0.25
+     corps     7 × 1.125  = 7.875
+     gouttières 6 × 0.0625 = 0.375
+                            ------
+                            10.625, arrondi à 10.75 pour la marge.
+   Les lignes d'annonce coûtent exactement une ligne + sa gouttière
+   (1.125 + 0.0625 = 1.1875 = 1.125 + 0.0625 de `padding-top`), donc le
+   compte tient quoi que la carte annonce. */
 .ribbon-card {
   flex: 1 1 0;
   min-width: 5.5rem;
-  height: 9.5rem; /* INP-1 : toute la carte est la cible */
+  height: 10.75rem;
   overflow: hidden; /* garde-fou : la troncature vient de Rust */
   display: flex;
   flex-direction: column;
@@ -196,14 +206,34 @@ code {
   border: 0.0625rem solid rgba(0, 0, 0, 0.12);
   border-radius: 0.375rem;
   padding: 0.375rem 0.4375rem;
-  cursor: pointer;
   font: inherit;
   color: var(--muted);
 }
 
-/* gelée : bordure en tirets + insigne « ❄ gelée » — le mot porte le sens,
-   jamais la seule bordure (INP-3) ; placé avant --current pour que la
-   session affichée garde sa bordure pleine accentuée */
+/* La face : tout sous l'en-tête, et le bouton qui affiche la session
+   (INP-1 — c'est la grande cible). L'en-tête reste hors du bouton : sa
+   case à cocher y serait du HTML invalide (ADR
+   2026-08-carte-de-session-chassis-et-face). */
+.ribbon-card-face {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 0.25rem;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* gelée : bordure en tirets — le sens est porté par la case cochée et son
+   glyphe ❄, jamais par la seule bordure (INP-3) ; placé avant --current
+   pour que la session affichée garde sa bordure pleine accentuée */
 .ribbon-card--frozen {
   border-style: dashed;
 }
@@ -223,13 +253,43 @@ code {
   flex: none; /* garde sa taille naturelle, ne s'étire jamais */
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  /* centré, non aligné sur la ligne de base : la case à cocher n'en a
+     pas et se poserait sous les deux textes */
+  align-items: center;
   gap: 0.25rem;
+  height: 1.125rem; /* une ligne, la case comprise (voir le calcul) */
+}
+
+/* La case du gel, entre le libellé et les crédits — là où l'on voit d'un
+   coup quelles sessions sont gelées. Elle s'étire sur toute la hauteur de
+   l'en-tête pour offrir la plus grande cible que cette densité permette;
+   le glyphe ❄ dit ce que la case coche (INP-3). */
+.ribbon-card-freeze {
+  flex: none;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: 0.125rem;
+  padding: 0 0.125rem;
+  font-size: 0.75rem;
+  color: var(--muted-2);
+  cursor: pointer;
+}
+
+.ribbon-card-freeze input {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .ribbon-card-label {
   font-weight: 700;
   font-size: 0.75rem;
+  /* l'en-tête vaut une ligne dans le calcul de la hauteur : il ne doit
+     pas se replier sur deux (LAY-1) */
+  white-space: nowrap;
 }
 
 .ribbon-card--current .ribbon-card-label {
@@ -238,6 +298,7 @@ code {
 
 .ribbon-card-credits {
   font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .ribbon-card-codes {
@@ -285,17 +346,45 @@ code {
   color: var(--warn);
 }
 
+/* Même châssis que la carte, en 1.75rem de large : la case du gel en
+   haut, la face dessous. Un été vide n'a pas de place pour un en-tête,
+   mais il doit garder son affordance de gel (ADR
+   2026-08-gel-en-case-a-cocher-dans-la-carte). */
 .ribbon-summer {
   flex: none;
   width: 1.75rem;
   border: 0.0625rem dashed rgba(0, 0, 0, 0.1);
   border-radius: 0.375rem;
   background: transparent;
-  cursor: pointer;
   padding: 0.25rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ribbon-summer .ribbon-card-freeze {
+  align-self: auto;
+  padding: 0 0 0.125rem;
+}
+
+/* le glyphe ❄ ne tient pas à côté de la case dans 1.75rem : il préfixe le
+   contenu vertical de la face, qui porte aussi le `title` (INP-3) */
+.ribbon-summer .ribbon-card-freeze span {
+  display: none;
+}
+
+.ribbon-summer-face {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
 .ribbon-summer span {
@@ -600,7 +689,7 @@ code {
      (INP-8) la rangée, qui ne rétrécit plus, pourrait manger l'écran.
      Passé ce plafond elle défile elle-même — avec un ascenseur, donc
      jamais une ligne coupée en silence. Sans effet à l'échelle normale :
-     la rangée fait ~10.75rem. */
+     la rangée fait 12rem (carte 10.75 + 2 × 0.625 de padding). */
   .ribbon {
     max-height: 40vh;
   }
