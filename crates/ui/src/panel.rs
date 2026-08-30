@@ -1106,6 +1106,68 @@ pub fn effective_program(snapshot: &Snapshot, plan: &Plan) -> Option<Program> {
     })
 }
 
+// --- l'entête : les deux totaux, composés d'un seul tenant ----------------
+
+// The bac tally and the session tally, built together so the view can hold
+// the *pair* while a recalculation is in flight (LAT-6). Split, one half
+// could update while the other stayed frozen — two numbers describing two
+// different cheminements side by side, which is exactly the lie the hold
+// exists to prevent.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CreditReadout {
+    // `None` while no program is chosen: there is no bac to count against
+    pub bac: Option<BacReadout>,
+    pub session: solve::SessionCredits,
+    pub cap: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BacReadout {
+    pub text: String,
+    pub over: bool,
+    pub tooltip: String,
+    // whether the tally carries en-sus credits, so the « ? » that explains
+    // them travels *inside* the composed readout: derived beside it, it
+    // would refresh while the rest is held, and the header would offer an
+    // explanation for a suffix no longer on screen
+    pub en_sus: bool,
+}
+
+pub fn credit_readout(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    session: usize,
+) -> CreditReadout {
+    let bac = chosen_program(snapshot, plan).map(|program| {
+        let granted = effective_program(snapshot, plan);
+        let (concentration, profile) = scope_of(plan);
+        let summary = ulaval_scheduler_wasm::credits::credit_summary(
+            granted.as_ref(),
+            concentration,
+            profile,
+            &selection(plan),
+            &snapshot.courses,
+        );
+        let note = crate::present::bac_credit_note(&summary);
+        let label = crate::present::bac_credit_label(
+            summary.counted,
+            program.credits_required,
+            &note,
+        );
+        BacReadout {
+            text: label.text,
+            over: label.over,
+            tooltip: note.tooltip,
+            en_sus: !note.suffix.is_empty(),
+        }
+    });
+    CreditReadout {
+        bac,
+        session: solve::session_credits(snapshot, plan, session),
+        cap: plan.credit_cap,
+    }
+}
+
 // the chosen concentration and profile titles, read off the plan's choice
 pub fn scope_of(plan: &Plan) -> (Option<&str>, Option<&str>) {
     match plan.program.as_ref() {
@@ -2501,6 +2563,36 @@ mod tests {
             ]),
             ..Plan::default()
         }
+    }
+
+    // Les deux totaux se composent d'un seul tenant, parce que la vue les
+    // *tient* d'un seul tenant pendant un recalcul (ADR
+    // `2026-08-etat-d-attente-du-solveur-visible`) : les tenir séparément
+    // laisserait afficher un total de bac et un total de session décrivant
+    // deux cheminements différents.
+    #[test]
+    fn the_two_credit_tallies_are_composed_together() {
+        let snapshot = snapshot();
+        let plan = plan();
+        let readout = credit_readout(&snapshot, &plan, 1);
+        let bac = readout.bac.as_ref().expect("un programme est choisi");
+        assert!(bac.text.contains("/120 cr au bac"), "{}", bac.text);
+        assert!(!bac.over, "6 cr placés sur 120 exigés");
+        assert!(!bac.tooltip.is_empty(), "la provenance du compte est dite");
+        // le drapeau des crédits en sus voyage dans la lecture composée :
+        // le « ? » qui les explique ne peut donc pas s'afficher pendant
+        // qu'un total tenu n'en montre aucun (fusion 2026-08-30)
+        assert!(!bac.en_sus, "ce programme n'a aucun crédit en sus");
+        // GMN-1000 (3 cr) est le seul cours de la session 1
+        assert_eq!(readout.session.total, 3);
+        assert!(!readout.session.has_range);
+        assert_eq!(readout.cap, plan.credit_cap, "le plafond voyage avec");
+        // sans programme, il n'y a pas de bac à compter — la session, si
+        let mut orphan = plan.clone();
+        orphan.program = None;
+        let readout = credit_readout(&snapshot, &orphan, 1);
+        assert_eq!(readout.bac, None);
+        assert_eq!(readout.session.total, 3);
     }
 
     #[test]

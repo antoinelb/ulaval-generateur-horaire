@@ -28,9 +28,12 @@ pub fn SessionRibbon() -> Element {
     // même voile discret que la grille pendant une recherche (ADR
     // `2026-08-recalcul-visible-sur-la-grille`) : les cartes de session
     // peuvent elles aussi refléter un placement transitoire
+    // `awaited_since` et non `running` : la temporisation de 500 ms compte
+    // comme une attente, c'est même le seul moment où l'écran avait l'air
+    // arrêté (ADR `2026-08-etat-d-attente-du-solveur-visible`)
     let searching = use_context::<Signal<super::SolverState>>()
         .read()
-        .running
+        .awaited_since
         .is_some();
     rsx! {
         nav {

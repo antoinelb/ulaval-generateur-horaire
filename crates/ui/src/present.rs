@@ -1275,21 +1275,59 @@ pub fn grid_status_label(status: &str, searching: bool) -> String {
 // à ce qui est affiché — le panneau le dit au lieu de laisser le ✓
 // figé pendant le recalcul. Renvoie la classe CSS et le texte ensemble :
 // les deux changent de pair, jamais l'un sans l'autre.
+// La classe partagée `panel-verdict--state` réserve la hauteur des deux
+// formulations (LAY-1) : la version « en cours » est plus courte d'une
+// ligne que le ✓, et cette ligne en moins déplaçait toute la liste des
+// règles au moment précis où l'étudiante y cliquait (ADR
+// `2026-08-etat-d-attente-du-solveur-visible`).
 pub fn verification_verdict(searching: bool) -> (&'static str, String) {
     if searching {
         (
-            "panel-verdict panel-verdict--pending",
+            "panel-verdict panel-verdict--state panel-verdict--pending",
             "⟳ recalcul en cours… (le verdict précédent ne s'applique \
              plus)"
                 .to_string(),
         )
     } else {
         (
-            "panel-verdict panel-verdict--ok",
+            "panel-verdict panel-verdict--state panel-verdict--ok",
             "Placement vérifié ✓ (préalables, plafond, une combinaison \
              d'horaire possible par session)"
                 .to_string(),
         )
+    }
+}
+
+// LAT-4 : l'attente se dit avec son temps écoulé, jamais par un sablier nu
+// — sans compteur, personne ne distingue « lent » de « mort », et le
+// réflexe est de recharger. Les secondes, pas les millisecondes : un
+// chiffre qui change soixante fois par seconde ne se lit pas.
+pub fn recalc_notice(awaited_ms: u64) -> String {
+    format!(
+        "⟳ Recalcul du placement… {} s — valeurs de la solution précédente.",
+        awaited_ms / 1_000
+    )
+}
+
+// LAT-6 (stale-while-revalidate) : tant qu'une réponse est attendue, un
+// affichage garde sa dernière valeur *arrêtée* au lieu de tomber à l'état
+// intermédiaire que le recalcul est en train de remplacer. Un « 30/120 cr »
+// qui n'a jamais décrit un cheminement est pire qu'un « 105/120 » vieux de
+// 300 ms marqué comme tel (rapport directeur-gci 2026-08-29).
+//
+// Le booléen renvoyé dit que la valeur date : l'appelant l'atténue et le
+// dit — jamais un chiffre périmé qui se fait passer pour à jour (TRU-1).
+// Sans valeur arrêtée (tout premier calcul), il n'y a rien à tenir : la
+// valeur courante passe, non marquée, parce que la marquer prétendrait
+// qu'une meilleure existe.
+pub fn held_while_awaited<T: Clone>(
+    settled: Option<&T>,
+    current: &T,
+    awaited: bool,
+) -> (T, bool) {
+    match settled {
+        Some(settled) if awaited => (settled.clone(), true),
+        _ => (current.clone(), false),
     }
 }
 
@@ -2775,15 +2813,53 @@ mod tests {
     #[test]
     fn verification_verdict_never_shows_a_checkmark_while_searching() {
         let (class, label) = verification_verdict(false);
-        assert_eq!(class, "panel-verdict panel-verdict--ok");
+        assert_eq!(
+            class,
+            "panel-verdict panel-verdict--state panel-verdict--ok"
+        );
         assert!(label.contains('✓'));
         let (class, label) = verification_verdict(true);
-        assert_eq!(class, "panel-verdict panel-verdict--pending");
+        assert_eq!(
+            class, "panel-verdict panel-verdict--state panel-verdict--pending",
+            "la même classe de hauteur réservée que le ✓ : les deux \
+             formulations doivent occuper exactement la même place"
+        );
         assert!(
             !label.contains('✓'),
             "no checkmark next to a provisional state"
         );
         assert!(label.contains("recalcul en cours"));
+    }
+
+    #[test]
+    fn the_recalc_notice_always_carries_its_elapsed_seconds() {
+        assert_eq!(
+            recalc_notice(0),
+            "⟳ Recalcul du placement… 0 s — valeurs de la solution \
+             précédente."
+        );
+        // arrondi vers le bas : 2 900 ms est la 2ᵉ seconde révolue, pas la
+        // 3ᵉ — jamais une durée plus longue que celle réellement écoulée
+        assert!(recalc_notice(2_900).contains("2 s"));
+    }
+
+    // Régression du 2026-08-29 : le total est tombé à « 30/120 cr » —
+    // un chiffre qui n'a jamais décrit un cheminement — le temps que le
+    // solveur réponde « 105/120 ». Tant qu'une réponse est attendue, c'est
+    // la dernière valeur arrêtée qui reste, marquée comme telle.
+    #[test]
+    fn an_awaited_readout_holds_its_last_settled_value_and_says_so() {
+        let (shown, stale) = held_while_awaited(Some(&105u32), &30, true);
+        assert_eq!(shown, 105, "jamais la valeur intermédiaire");
+        assert!(stale, "et jamais sans le dire");
+        // la réponse posée : la valeur courante reprend, non marquée
+        let (shown, stale) = held_while_awaited(Some(&105u32), &99, false);
+        assert_eq!(shown, 99);
+        assert!(!stale);
+        // premier calcul : rien à tenir, donc rien à atténuer
+        let (shown, stale) = held_while_awaited(None, &30u32, true);
+        assert_eq!(shown, 30);
+        assert!(!stale);
     }
 
     #[test]
