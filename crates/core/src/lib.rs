@@ -1,7 +1,6 @@
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 pub mod catalogue;
-pub mod cheminement;
 pub mod common;
 pub mod course;
 pub mod course_manual;
@@ -21,7 +20,6 @@ pub mod week;
 pub mod weekly;
 
 pub use catalogue::*;
-pub use cheminement::*;
 pub use common::*;
 pub use course::*;
 pub use course_manual::*;

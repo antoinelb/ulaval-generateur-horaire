@@ -1,8 +1,6 @@
 use std::fs;
 
-use ulaval_scheduler_core::{
-    parse_prereq_tree, Cheminement, CourseManual, Semester,
-};
+use ulaval_scheduler_core::{parse_prereq_tree, CourseManual};
 
 // The hand-maintained files the scraper never writes still have to parse
 // with the core types every consumer uses — a format drift must fail here,
@@ -76,42 +74,4 @@ fn every_vintage_correction_names_a_semester_and_parses() {
         parse_prereq_tree(text)
             .unwrap_or_else(|error| panic!("{code}: {error}"));
     }
-}
-
-#[test]
-fn every_cheminement_file_parses_with_the_core_type() {
-    let dir = format!("{DATA_DIR}/cheminements");
-    let mut seen = 0;
-    let entries = fs::read_dir(&dir)
-        .expect("data/cheminements is readable")
-        .flatten();
-    for entry in entries {
-        let name = entry.file_name().to_string_lossy().to_string();
-        let raw = fs::read_to_string(entry.path())
-            .unwrap_or_else(|error| panic!("{name} is readable: {error}"));
-        let cheminement: Cheminement = serde_json::from_str(&raw)
-            .unwrap_or_else(|error| panic!("{name} parses: {error}"));
-        // `{code}-{semester}[-{concentration}].json` : the code takes the
-        // first two segments, so the vintage is always the third (ADR
-        // `2026-08-un-cheminement-par-fichier`)
-        let admission: Semester = name
-            .split('-')
-            .nth(2)
-            .unwrap_or_default()
-            .trim_end_matches(".json")
-            .parse()
-            .unwrap_or_else(|error| panic!("{name} names a vintage: {error}"));
-        assert!(
-            cheminement
-                .sessions
-                .iter()
-                .any(|session| session.semester == admission),
-            "{name}: the admission {admission} must appear in the timeline",
-        );
-        seen += 1;
-    }
-    assert!(
-        seen >= 26,
-        "expected one file per converted cheminement, saw {seen}"
-    );
 }
