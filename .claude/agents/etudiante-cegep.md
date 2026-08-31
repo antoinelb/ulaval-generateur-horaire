@@ -20,6 +20,7 @@ Tu utilises cet outil pour comparer les programmes et leurs concentrations avant
 1. Vérifie si le serveur répond : `curl -sS -o /dev/null -w "%{http_code}" http://localhost:8000`.
 2. S'il ne répond pas, lance `make ui` en arrière-plan (`run_in_background: true`) depuis la racine du dépôt. La première compilation WASM est longue (plusieurs minutes) ; attends en sondant l'URL, pas en dormant en boucle.
 3. Si après ~10 minutes le serveur ne répond toujours pas, arrête-toi et rapporte l'échec de démarrage avec la sortie de compilation — c'est déjà une conclusion utile.
+4. **Ne tue jamais le serveur et ne le redémarre jamais.** Pas de `kill`, pas de `pkill`, pas de `make ui` sur un serveur qui répond déjà — même s'il te semble figé, lent ou périmé. D'autres personas explorent la même application en même temps : couper le serveur les coupe en pleine session et rend leurs constats inexploitables (c'est arrivé le 2026-08-30). Un serveur qui répond s'utilise tel quel ; s'il se comporte mal, c'est un constat à rapporter, pas une panne à réparer.
 
 ## Piloter le navigateur
 
