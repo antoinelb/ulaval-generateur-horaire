@@ -31,6 +31,7 @@ const FIXTURES: &[&str] = &[
     "profile-mandatory-and-rules",
     "raw-only-rule-reported",
     "reference-rule-resolved",
+    "stage-optionnel-ne-satisfait-pas",
     "unconstrained-rule-before-constrained",
 ];
 

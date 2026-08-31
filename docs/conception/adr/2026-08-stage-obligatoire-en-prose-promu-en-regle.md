@@ -1,6 +1,7 @@
 # Le stage obligatoire en prose promu en règle « Stages »
 
 Date : 2026-08-02
+Amendé le 2026-08-30 par `2026-08-stage-obligatoire-compte-dans-le-rapport-de-couverture` : la contrainte `min 1 / max 8` seule laissait un stage optionnel satisfaire l'exigence de diplomation ; l'ordre mandatory-first est désormais lu par le vérificateur, via `core::program::mandatory_stage`.
 
 ## Contexte
 
