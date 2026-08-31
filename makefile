@@ -1,4 +1,4 @@
-.PHONY: static lint test wasm docs ui ui-build ui-data ui-calc
+.PHONY: static lint test e2e wasm docs ui ui-build ui-data ui-calc
 
 static:
 	rm -f *.profraw
@@ -16,6 +16,17 @@ test: ui-data ui-calc
 	cargo +nightly llvm-cov --ignore-filename-regex \
 		'(lib\.rs|/mod\.rs|/main\.rs)$$|crates/ui/src/components/|build\.rs$$' \
 		--fail-under-lines 100 --fail-under-regions 100
+
+node_modules: package.json package-lock.json
+	npm install --no-audit --no-fund && touch node_modules
+
+# Tests navigateur (ADR `2026-08-fondation-playwright`). Ils portent sur le
+# rendu et les gestes — ce que les tests Rust ne peuvent pas voir — et
+# tournent contre le bundle de production, celui que la CI publie, servi
+# sous `ulaval-generateur-horaire` par tests/e2e/aides/serveur.mjs.
+e2e: node_modules ui-build
+	npx playwright install chromium
+	npx playwright test
 
 wasm:
 	wasm-pack build crates/wasm --target web
