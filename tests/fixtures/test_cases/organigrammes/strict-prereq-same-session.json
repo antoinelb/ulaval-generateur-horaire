@@ -1,0 +1,117 @@
+{
+  "sessions": [
+    "fall",
+    "winter"
+  ],
+  "credit_cap": 6,
+  "concomitant": false,
+  "pinned": {
+    "TST-1700": 1,
+    "TST-1701": 1
+  },
+  "courses": [
+    {
+      "code": "TST-1700",
+      "title": "Cours de test 1700",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": null,
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "90070",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "90070",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "TST-1701",
+      "title": "Cours de test 1701",
+      "credits": 3,
+      "cycle": 1,
+      "prerequisites": {
+        "raw": "TST-1700",
+        "tree": "TST-1700"
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "90071",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        "winter": {
+          "last_offered": null,
+          "options": [
+            [
+              {
+                "nrc": "90071",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "complete": true,
+    "solutions": []
+  }
+}

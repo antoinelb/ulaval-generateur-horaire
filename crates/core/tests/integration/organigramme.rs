@@ -35,6 +35,13 @@ const FIXTURES: &[&str] = &[
     "season-restricts-placement",
     "stage-pinned-in-fall-lifts-summer-restriction",
     "stage-unpinned-lands-in-summer",
+    // une épingle n'est pas un fait exempté : posée dans la session de son
+    // propre préalable strict, concomitance décochée, elle est réfutée —
+    // et rien d'autre ne peut refuser ici (les deux cours sont offerts aux
+    // deux saisons, tiennent ensemble sous le plafond et ne se chevauchent
+    // pas dans la semaine). ADR
+    // `2026-08-une-epingle-est-verifiee-comme-le-reste`
+    "strict-prereq-same-session",
     "unsatisfiable-prerequisite-proves-infeasible",
     "weekly-veto-splits-conflicting-courses",
     "winter-start-inverts-projects",
