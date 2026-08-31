@@ -59,3 +59,11 @@ web-time = "1"
 [features]
 default = ["web"]
 web = ["dioxus/web"]
+
+# The scenario tests (`docs/conception/adr/2026-08-tests-de-scenario-dans-ui.md`):
+# one target, declared because the files live in a subdirectory rather than
+# directly under `tests/`. They need no dev-dependency — an integration test
+# links the crate's own `[dependencies]`.
+[[test]]
+name = "scenarios"
+path = "tests/scenarios/main.rs"
