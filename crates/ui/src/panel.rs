@@ -1857,6 +1857,9 @@ fn rule_badge(
     report: &ulaval_scheduler_core::RuleReport,
     rule: Option<&Rule>,
 ) -> Badge {
+    if let Some(badge) = stage_badge(report, rule) {
+        return badge;
+    }
     match report.status {
         RuleStatus::Satisfied => {
             match rule.and_then(|rule| rule.constraint.as_ref()) {
@@ -1902,6 +1905,25 @@ fn rule_badge(
             }
         }
         RuleStatus::Uncounted => Badge::Missing("non comptée".to_string()),
+    }
+}
+
+// « 0/1 » rouge, « ✓ 1/1 » vert : sur la règle des stages, la fraction
+// compte le stage exigé pour diplômer, pas les quatre stages listés.
+// « 1/8 » nommait un maximum que personne n'atteint, et un stage optionnel
+// placé seul y ressemblait à un progrès. Le verdict de `core` porte déjà
+// l'information : il ne dit `Satisfied` que si le stage exigé est compté
+// (ADR `2026-08-stage-obligatoire-compte-dans-le-rapport-de-couverture`).
+// Un dépassement garde sa propre fraction — c'est la faute à défaire.
+fn stage_badge(
+    report: &ulaval_scheduler_core::RuleReport,
+    rule: Option<&Rule>,
+) -> Option<Badge> {
+    mandatory_stage(rule?)?;
+    match report.status {
+        RuleStatus::Satisfied => Some(Badge::Ok("✓ 1/1".to_string())),
+        RuleStatus::Incomplete => Some(Badge::Missing("0/1".to_string())),
+        _ => None,
     }
 }
 
@@ -4268,48 +4290,57 @@ mod tests {
 
     // le défaut rapporté, bout en bout : un stage optionnel placé seul
     // laissait la règle « Stages » au vert
-    #[test]
-    fn an_optional_stage_alone_leaves_the_stages_section_in_fault() {
-        const STAGES: &str = r#"{"code":"B-STG","slug":"stg",
-          "semester":"A26","title":"Bac avec stages","cycle":1,
-          "credits_required":120,"mandatory":[],
-          "rules":[{"title":"Stages",
-                    "constraint":{"type":"course","min":1,"max":8},
-                    "courses":["GEX-1000","GEX-2000"],
-                    "credits_in_addition":true}],
-          "concentrations":[],"profiles":[]}"#;
-        let snapshot = parse_data(
+    // GEX-1000 est le stage exigé (listé en tête), GEX-2000 et GEX-3000
+    // les optionnels
+    fn stages_snapshot(max: i64) -> Snapshot {
+        let program = format!(
+            r#"{{"code":"B-STG","slug":"stg",
+              "semester":"A26","title":"Bac avec stages","cycle":1,
+              "credits_required":120,"mandatory":[],
+              "rules":[{{"title":"Stages",
+                        "constraint":{{"type":"course","min":1,"max":{max}}},
+                        "courses":["GEX-1000","GEX-2000","GEX-3000"],
+                        "credits_in_addition":true}}],
+              "concentrations":[],"profiles":[]}}"#
+        );
+        parse_data(
             &RawData {
                 courses: COURSES.to_string(),
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
                 manual: None,
-                programs: vec![(
-                    "B-STG-A26.json".to_string(),
-                    STAGES.to_string(),
-                )],
+                programs: vec![("B-STG-A26.json".to_string(), program)],
             },
             Vec::new(),
             Vec::new(),
         )
-        .unwrap_or_else(|e| panic!("{e}"));
-        let plan = Plan {
+        .unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    fn stages_plan(placed: &[&str]) -> Plan {
+        Plan {
             program: Some(ProgramChoice {
                 code: "B-STG".to_string(),
                 semester: "A26".to_string(),
                 concentration: None,
                 profile: None,
             }),
-            // GEX-2000, l'optionnel — GEX-1000 est le stage exigé
-            displayed_placement: std::collections::BTreeMap::from([(
-                "GEX-2000".to_string(),
-                1,
-            )]),
+            displayed_placement: placed
+                .iter()
+                .map(|code| (code.to_string(), 1))
+                .collect(),
             ..Plan::default()
-        };
-        let model = panel_model(&snapshot, &plan);
+        }
+    }
+
+    #[test]
+    fn an_optional_stage_alone_leaves_the_stages_section_in_fault() {
+        let snapshot = stages_snapshot(8);
+        let model = panel_model(&snapshot, &stages_plan(&["GEX-2000"]));
         let stages = &model.rules[0];
         assert_eq!(stages.title, "Stages");
-        assert_eq!(stages.badge, Badge::Partial("1/8".to_string()));
+        // « 0/1 », pas « 1/8 » : la fraction compte le stage exigé, et un
+        // optionnel placé seul n'est pas un progrès vers le diplôme
+        assert_eq!(stages.badge, Badge::Missing("0/1".to_string()));
         let sub = |code: &str| {
             stages
                 .rows
@@ -4328,6 +4359,32 @@ mod tests {
             "{}",
             sub("GEX-2000")
         );
+    }
+
+    #[test]
+    fn the_required_stage_turns_the_section_green_whatever_rides_with_it() {
+        let snapshot = stages_snapshot(8);
+        for placed in [&["GEX-1000"][..], &["GEX-1000", "GEX-2000"][..]] {
+            let model = panel_model(&snapshot, &stages_plan(placed));
+            assert_eq!(
+                model.rules[0].badge,
+                Badge::Ok("✓ 1/1".to_string()),
+                "{placed:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_stages_section_over_its_maximum_shows_the_excess() {
+        // le dépassement est la faute que l'étudiant peut défaire (ADR
+        // `2026-08-depassement-de-regle-en-statut-rouge`) : « 3/2 » la
+        // montre, « 1/1 » la masquerait
+        let snapshot = stages_snapshot(2);
+        let model = panel_model(
+            &snapshot,
+            &stages_plan(&["GEX-1000", "GEX-2000", "GEX-3000"]),
+        );
+        assert_eq!(model.rules[0].badge, Badge::Missing("3/2".to_string()));
     }
 
     #[test]

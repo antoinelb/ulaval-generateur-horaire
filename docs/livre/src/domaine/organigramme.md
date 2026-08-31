@@ -1,7 +1,8 @@
 # Organigramme et cheminement
 
 L'**organigramme** est la grille cours × sessions du programme : quels cours à l'automne 1, à l'hiver 2, et ainsi de suite.
-Le **cheminement type** (A1→H8) est l'organigramme de référence publié par la direction — encodé à la main pour le génie des eaux, car aucune source lisible par machine n'existe ; il sert de *germe* (`seed`) pour ordonner la recherche, jamais de contrainte.
+Le **cheminement type** (A1→H8) est l'organigramme de référence publié par la direction.
+Aucune source lisible par machine n'en existe et l'application n'en embarque aucun : le *germe* (`seed`) qui ordonne la recherche est la grille que l'étudiant a déjà sous les yeux, son propre placement affiché, jamais une contrainte.
 
 ## Ce que le placement garantit
 

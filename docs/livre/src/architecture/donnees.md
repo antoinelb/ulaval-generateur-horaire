@@ -22,7 +22,8 @@ Le millésime est la session *suivant* le scrape : les étudiants conservent la 
 
 Le contenu est un `Program` : crédits exigés, sessions d'admission (`possible_semester_start`, en lettres `A`/`H`/`E`), cours obligatoires, règles, concentrations, profils, notes en prose, et l'exigence linguistique en champ dédié.
 
-À côté, `data/programmes/{code}.manuel.json` (sans millésime) porte le `cheminement_type` encodé à la main — l'organigramme A1→H8 de référence, qui n'existe sous aucune forme lisible par machine.
+Rien d'autre n'accompagne un snapshot de programme.
+L'organigramme A1→H8 de référence a longtemps vécu à côté, encodé à la main faute de source lisible par machine ; ces fichiers ont été retirés une fois que plus rien ne les lisait, et le type qui les décrivait avec eux.
 
 ## Programmes importés par URL
 
