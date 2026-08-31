@@ -30,7 +30,7 @@ async function empilerDesAvis(page) {
 }
 
 // 'libre' | 'TOAST' | la classe de ce qui recouvre.
-async function recouvrement(page, locator) {
+async function recouvrement(locator) {
     return locator.evaluate((element) => {
         const boite = element.getBoundingClientRect();
         const points = [
@@ -94,14 +94,14 @@ test.describe('bandeaux et occlusion', () => {
                 hasText: 'Exporter',
             });
             expect(
-                await recouvrement(page, exporter),
+                await recouvrement(exporter),
                 'le menu « Exporter ▾ » est recouvert par la pile d\'avis',
             ).not.toBe('TOAST');
 
             for (const jour of ['Jeudi', 'Vendredi']) {
                 const entete = page.locator('.grid-day-head', { hasText: jour });
                 expect(
-                    await recouvrement(page, entete),
+                    await recouvrement(entete),
                     `l'en-tête ${jour} est recouvert par la pile d'avis`,
                 ).not.toBe('TOAST');
             }
