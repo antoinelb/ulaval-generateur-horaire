@@ -38,3 +38,9 @@ docs/livre/book/
 /exemple_capsule.html
 
 docs/ux/rapport-*
+
+# Playwright : dépendances et artefacts de run (make e2e)
+/node_modules
+/test-results
+/playwright-report
+/blob-report

@@ -47,6 +47,38 @@ jobs:
       # exclusions and the blocking 100% threshold both live in the makefile
       - run: make test
 
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - uses: taiki-e/install-action@v2
+        with:
+          # `make e2e` construit le bundle qu'il teste : mêmes outils que
+          # le job deploy, dx épinglé à la version de développement
+          tool: wasm-pack,dioxus-cli@0.7.10
+      - uses: Swatinem/rust-cache@v2
+      # bibliothèques système du navigateur : de l'installation d'outils,
+      # au même titre que wasm-pack ci-dessus. Le navigateur lui-même et
+      # la suite sont l'affaire de `make e2e` — la CI ne recopie aucune
+      # commande de vérification (ADR
+      # `2026-08-makefile-definition-unique-de-la-ci`)
+      - run: npx --yes playwright@1.55.0 install-deps chromium
+      - run: make e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
   deploy:
     # the site only publishes tagged code: on a version tag push, or on the
     # data-refresh dispatch from scrape.yml (which redeploys the latest tag).
@@ -54,7 +86,7 @@ jobs:
     # never `v`-prefixed — release.yml agrees), so being a tag at all is
     # the whole condition here
     if: github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
-    needs: [static, test]
+    needs: [static, test, e2e]
     runs-on: ubuntu-latest
     permissions:
       pages: write
