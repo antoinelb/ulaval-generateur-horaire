@@ -308,15 +308,32 @@ pub fn floor_start(start: Semester, today: Semester) -> Semester {
     }
 }
 
+// how far under the clock « Début » stays offered, in years: the longest
+// a part-time bac realistically drags out
+const PAST_START_YEARS: u16 = 8;
+
 // The « Début » selector's span, in the two-digit years the options are
 // spelled with. It always covers the plan's own start — a relevé Capsule
 // can anchor it years back, and an option list missing it would leave the
 // select silently showing the wrong session — and always reaches five
 // years past the clock, so there is room to plan ahead.
+//
+// It also always reaches `PAST_START_YEARS` *under* the clock. Without a
+// start in the past, no session of the horizon is in the past either, and
+// the only way the interface has to say « ce cours-là est fait » — placing
+// it in a session already lived (ADR
+// `2026-08-retrait-de-la-notion-de-cours-reussi`) — is unreachable without
+// a real relevé Capsule (rapport directeur-gci 2026-08-30). Offering a past
+// start is not the same as defaulting to one: `floor_start` still raises
+// the factory A26 onto the clock for a document nobody dated (ADR
+// `2026-08-debut-offert-dans-le-passe`).
 pub fn start_year_window(start: Semester, today: Semester) -> (u16, u16) {
     let start_year = start.year % 100;
     let today_year = today.year % 100;
-    (start_year.min(today_year), start_year.max(today_year + 5))
+    (
+        start_year.min(today_year.saturating_sub(PAST_START_YEARS)),
+        start_year.max(today_year + 5),
+    )
 }
 
 // --- what one session holds ----------------------------------------------
@@ -949,6 +966,176 @@ mod tests {
         assert!(plan.displayed_placement.is_empty());
     }
 
+    // --- le Début offert dans le passé (ADR
+    // `2026-08-debut-offert-dans-le-passe`) -------------------------------
+
+    // deux cours d'automne, le second ayant le premier pour préalable :
+    // de quoi prouver qu'une session passée nourrit bien les suivantes
+    fn past_start_snapshot() -> crate::data::Snapshot {
+        crate::data::parse_data(
+            &crate::data::RawData {
+                courses: r#"{"courses":[
+                  {"code":"GCI-1000","title":"Statique","credits":3,
+                   "cycle":1,"prerequisites":null,"equivalents":[],
+                   "seasons":{"fall":{"last_offered":2026,"options":null}}},
+                  {"code":"GCI-2000","title":"Structures","credits":3,
+                   "cycle":1,
+                   "prerequisites":{"raw":"GCI-1000","tree":"GCI-1000"},
+                   "equivalents":[],
+                   "seasons":{"fall":{"last_offered":2026,"options":null}}}
+                ]}"#
+                .to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
+                programs: Vec::new(),
+            },
+            Vec::new(),
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    // Le scénario du directeur (rapport 2026-08-30) : reculer « Début »
+    // de A26 à A24 fait entrer dans l'horizon des sessions déjà vécues,
+    // que le ruban grise, où les cours faits s'épinglent — et dont le
+    // solveur tire les préalables des sessions suivantes.
+    fn plan_started_two_years_back() -> Plan {
+        let mut plan = Plan {
+            start: semester("A26"),
+            study_sessions: 8,
+            ..Plan::default()
+        };
+        let offerings = offered(&[
+            ("GCI-1000", &[Season::Fall]),
+            ("GCI-2000", &[Season::Fall]),
+        ]);
+        let moved = set_start(&mut plan, semester("A24"), &offerings);
+        assert!(moved.evicted.is_empty(), "{:?}", moved.evicted);
+        assert!(moved.unfrozen.is_empty(), "{:?}", moved.unfrozen);
+        assert_eq!(plan.start, semester("A24"));
+        assert_eq!(
+            plan.study_sessions, 8,
+            "l'horizon ne bouge pas : reculer le Début le décale vers le \
+             passé, l'étudiant rallonge « Sessions » lui-même"
+        );
+        plan
+    }
+
+    #[test]
+    fn a_start_moved_back_greys_the_sessions_already_lived() {
+        let snapshot = past_start_snapshot();
+        let today = semester("A26");
+        let mut plan = Plan {
+            start: semester("A26"),
+            study_sessions: 8,
+            ..Plan::default()
+        };
+        let before = crate::present::ribbon_model(&snapshot, &plan, 1, today);
+        assert!(
+            !before.iter().any(|card| card.passed),
+            "un départ sur l'horloge n'offre aucune session vécue"
+        );
+        plan = plan_started_two_years_back();
+        let ribbon = crate::present::ribbon_model(&snapshot, &plan, 1, today);
+        // A24 H25 É25 A25 H26 É26 A26 … : les six premiers créneaux
+        // précèdent l'horloge, le septième est l'automne courant
+        let passed: Vec<&str> = ribbon
+            .iter()
+            .filter(|card| card.passed)
+            .map(|card| card.label.as_str())
+            .collect();
+        assert_eq!(
+            passed,
+            ["A1-A24", "H2-H25", "É25", "A3-A25", "H4-H26", "É26"],
+            "le ruban grise tout ce qui précède l'horloge"
+        );
+        assert_eq!(ribbon[6].label, "A5-A26");
+        assert!(!ribbon[6].passed, "la session courante n'est pas passée");
+    }
+
+    #[test]
+    fn a_course_placed_in_a_lived_session_feeds_the_next_ones() {
+        let snapshot = past_start_snapshot();
+        let mut plan = plan_started_two_years_back();
+        // le geste du directeur : épingler le cours fait dans la session
+        // où il a été suivi (A24), et celui qui en dépend en A25
+        plan.pinned_sessions.insert("GCI-1000".to_string(), 1);
+        plan.pinned_sessions.insert("GCI-2000".to_string(), 4);
+        plan.displayed_placement = plan.pinned_sessions.clone();
+        assert_eq!(session_codes(&plan, 1), ["GCI-1000".to_string()]);
+        assert_eq!(session_codes(&plan, 4), ["GCI-2000".to_string()]);
+        assert!(
+            crate::present::ribbon_model(&snapshot, &plan, 1, semester("A26"))
+                [0]
+            .passed,
+            "la session qui porte le cours fait est bien une session vécue"
+        );
+        assert!(
+            verdict(&plan, &snapshot).is_ok(),
+            "le solveur assume le préalable suivi dans la session antérieure"
+        );
+        // et l'inverse reste refusé : l'antériorité est bien ce qui compte
+        plan.pinned_sessions.insert("GCI-1000".to_string(), 4);
+        plan.pinned_sessions.insert("GCI-2000".to_string(), 1);
+        assert!(
+            verdict(&plan, &snapshot).is_err(),
+            "un préalable suivi après son cours reste une impossibilité"
+        );
+    }
+
+    // le verdict du solveur sur l'organigramme épinglé, tel que le worker
+    // le rendrait : `Err` quand aucune solution ne tient
+    fn verdict(
+        plan: &Plan,
+        snapshot: &crate::data::Snapshot,
+    ) -> Result<(), String> {
+        let input = ulaval_scheduler_wasm::organigramme::OrganigrammeInput {
+            courses: None,
+            program: None,
+            concentration: None,
+            profile: None,
+            electives: vec!["GCI-1000".to_string(), "GCI-2000".to_string()],
+            passed: Vec::new(),
+            pinned: plan.pinned_sessions.clone(),
+            start: plan.start.season,
+            study_sessions: plan.study_sessions,
+            credit_cap: plan.credit_cap,
+            concomitant: false,
+            summers_open: false,
+            frozen: plan.frozen.clone(),
+            seed: BTreeMap::new(),
+            max_nodes: None,
+            max_solutions: None,
+        };
+        let report = ulaval_scheduler_wasm::organigramme::verify(
+            &input,
+            &snapshot.courses,
+        )?;
+        if report.placement.solutions.is_empty() {
+            return Err("aucune solution".to_string());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn moving_the_start_back_an_odd_step_still_names_what_it_costs() {
+        // A26 → H26, deux sessions en arrière mais d'un nombre impair de
+        // créneaux : le créneau 1 devient un hiver, et le cours d'automne
+        // qui y siégeait est retiré — nommé, jamais en silence (TRU-3)
+        let mut plan = Plan {
+            start: semester("A26"),
+            study_sessions: 8,
+            ..Plan::default()
+        };
+        plan.displayed_placement =
+            BTreeMap::from([("GCI-1000".to_string(), 1)]);
+        let offerings = offered(&[("GCI-1000", &[Season::Fall])]);
+        let moved = set_start(&mut plan, semester("H26"), &offerings);
+        assert_eq!(plan.start, semester("H26"));
+        assert_eq!(moved.evicted, vec!["GCI-1000".to_string()]);
+        assert!(plan.displayed_placement.is_empty());
+    }
+
     // --- le gel suit le semestre (ADR
     // `2026-08-le-gel-suit-le-semestre-au-changement-de-debut`) ------------
 
@@ -1147,18 +1334,49 @@ mod tests {
     fn start_year_window_always_covers_start_and_clock() {
         assert_eq!(
             start_year_window(semester("A26"), semester("A26")),
-            (26, 31),
-            "five years of headroom past the clock"
+            (18, 31),
+            "eight years of past, five of headroom"
         );
         assert_eq!(
             start_year_window(semester("H22"), semester("A27")),
-            (22, 32),
-            "a relevé anchored years back widens the low end"
+            (19, 32),
+            "a relevé anchored past the eight years widens the low end"
         );
         assert_eq!(
             start_year_window(semester("A40"), semester("A27")),
-            (27, 40),
+            (19, 40),
             "a start past the headroom widens the high end"
+        );
+    }
+
+    #[test]
+    fn start_year_window_offers_eight_years_of_past_under_any_clock() {
+        // the low end is the clock's own year minus eight, whatever season
+        // the clock sits in — an été does not shorten the offer
+        for clock in ["A26", "H26", "E26"] {
+            assert_eq!(
+                start_year_window(semester("A26"), semester(clock)),
+                (18, 31),
+                "clock {clock}"
+            );
+        }
+        // and the high end never moves with it
+        assert_eq!(start_year_window(semester("A26"), semester("A26")).1, 31);
+    }
+
+    #[test]
+    fn a_fresh_document_still_opens_on_the_clock() {
+        // offering a past start is not defaulting to one: the factory A26
+        // a 2029 student inherits is still raised (ADR
+        // `2026-08-debut-ancre-sur-lhorloge`), it is only the *option list*
+        // that now reaches under the clock
+        let today = semester("A29");
+        let start = floor_start(Plan::default().start, today);
+        assert_eq!(start, today, "the fresh document opens on the clock");
+        assert_eq!(
+            start_year_window(start, today),
+            (21, 34),
+            "and the selector still lets him walk back into his own past"
         );
     }
 
