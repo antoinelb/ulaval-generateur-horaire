@@ -13,10 +13,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use ulaval_scheduler_core::{
-    coverage_report, horizon_sessions, Constraint, Course, CoverageReport,
-    LanguageQualification, LanguageRequirement, PrereqTree, Prerequisites,
-    Program, Rule, RuleCourses, RuleReport, RuleStatus, Scope, Season,
-    Semester, PREPARATORY_RULE_TITLE, STAGES_RULE_TITLE,
+    coverage_report, horizon_sessions, mandatory_stage, Constraint, Course,
+    CoverageReport, LanguageQualification, LanguageRequirement, PrereqTree,
+    Prerequisites, Program, Rule, RuleCourses, RuleReport, RuleStatus, Scope,
+    Season, Semester, PREPARATORY_RULE_TITLE, STAGES_RULE_TITLE,
 };
 
 use crate::data::{Snapshot, OUT_OF_PROGRAM_RULE_TITLE};
@@ -500,26 +500,12 @@ fn is_mandatory_course(
 }
 
 fn is_required_stage_course(program: Option<&Program>, code: &str) -> bool {
-    let Some(program) = program else {
-        return false;
-    };
-    let Some(stage_rule) = program
-        .rules
+    program
+        .map(|program| program.rules.as_slice())
+        .unwrap_or_default()
         .iter()
-        .find(|rule| rule.title == STAGES_RULE_TITLE)
-    else {
-        return false;
-    };
-    if !matches!(
-        stage_rule.constraint,
-        Some(Constraint::Course { min, .. }) if min > 0
-    ) {
-        return false;
-    }
-    let RuleCourses::List { courses } = &stage_rule.courses else {
-        return false;
-    };
-    courses.first().is_some_and(|required| required == code)
+        .find_map(mandatory_stage)
+        == Some(code)
 }
 
 // The complete organigramme owns one wheel: collect every represented

@@ -2,7 +2,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::course::Course;
 use crate::program::{
-    Constraint, LanguageRequirement, Program, Rule, RuleCourses, RuleReference,
+    mandatory_stage, Constraint, LanguageRequirement, Program, Rule,
+    RuleCourses, RuleReference,
 };
 
 // The rules-coverage report the UI renders (jalon 8 product API, ADR
@@ -369,6 +370,8 @@ fn evaluated(
     let (elsewhere, counted): (Vec<String>, Vec<String>) =
         counted.into_iter().partition(|code| claimed.contains(code));
     let (status, missing, defect) = verdict(constraint, &counted, credits);
+    let (status, missing) =
+        required_stage_held(rule, &counted, status, missing);
     RuleReport {
         scope,
         title: rule.title.clone(),
@@ -380,6 +383,27 @@ fn evaluated(
         raw: None,
         defect,
     }
+}
+
+// The « Stages » rule's minimum counts stages, but only the first one is
+// exigé pour diplômer: the three optional ones satisfy nothing on their own
+// (ADR `2026-08-stage-obligatoire-compte-dans-le-rapport-de-couverture`).
+// Only a verdict of `Satisfied` is downgraded — a rule already incomplete,
+// over its maximum or uncounted is in fault for a reason of its own, and
+// hiding that reason behind this one would cost the student the fault he
+// can act on.
+fn required_stage_held(
+    rule: &Rule,
+    counted: &[String],
+    status: RuleStatus,
+    missing: Option<Missing>,
+) -> (RuleStatus, Option<Missing>) {
+    let held = mandatory_stage(rule)
+        .is_none_or(|required| counted.iter().any(|code| code == required));
+    if held || status != RuleStatus::Satisfied {
+        return (status, missing);
+    }
+    (RuleStatus::Incomplete, Some(Missing::Count { count: 1 }))
 }
 
 // the same set split as an evaluated rule, but no verdict: whether a listed
@@ -535,6 +559,7 @@ fn language_report(
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
+    use crate::program::STAGES_RULE_TITLE;
 
     fn program(body: &str) -> Program {
         serde_json::from_str(&format!(
@@ -727,6 +752,60 @@ mod tests {
         assert_eq!(r2.counted.as_deref(), Some(&["X-1".to_string()][..]));
         assert!(r2.elsewhere.is_empty());
         assert_eq!(r2.status, RuleStatus::Satisfied);
+    }
+
+    // --- the graduation stage, required on its own ---
+
+    // S-1 is the stage the prose names first (GMC-2580); S-2 to S-4 are its
+    // optional companions
+    fn stages(title: &str, min: i64, max: i64) -> Program {
+        bare(&format!(
+            r#"[{{"title":"{title}","constraint":{{"type":"course","min":{min},"max":{max}}},
+                 "courses":["S-1","S-2","S-3","S-4"]}}]"#
+        ))
+    }
+
+    #[test]
+    fn an_optional_stage_alone_leaves_the_stages_rule_incomplete() {
+        // le défaut rapporté : 1 ≥ 1 passait au vert sans le stage exigé
+        let coverage = report(&stages(STAGES_RULE_TITLE, 1, 8), &["S-2"], &[]);
+        let rule = &coverage.rules[0];
+        assert_eq!(rule.status, RuleStatus::Incomplete);
+        assert_eq!(rule.missing, Some(Missing::Count { count: 1 }));
+        // le stage optionnel reste compté : il a bien été suivi
+        assert_eq!(rule.counted.as_deref(), Some(&["S-2".to_string()][..]));
+    }
+
+    #[test]
+    fn the_first_listed_stage_satisfies_the_rule_alone_or_accompanied() {
+        for selected in [&["S-1"][..], &["S-1", "S-3"][..]] {
+            let coverage =
+                report(&stages(STAGES_RULE_TITLE, 1, 8), selected, &[]);
+            assert_eq!(
+                coverage.rules[0].status,
+                RuleStatus::Satisfied,
+                "{selected:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_rule_titled_otherwise_keeps_counting_alone() {
+        let coverage = report(&stages("Règle 1", 1, 8), &["S-2"], &[]);
+        assert_eq!(coverage.rules[0].status, RuleStatus::Satisfied);
+    }
+
+    #[test]
+    fn a_stages_rule_over_its_maximum_keeps_its_own_fault() {
+        // le dépassement est la faute que l'étudiant peut défaire (ADR
+        // `2026-08-depassement-de-regle-en-statut-rouge`) : la masquer
+        // derrière le stage manquant lui coûterait la seule action utile
+        let coverage = report(
+            &stages(STAGES_RULE_TITLE, 1, 2),
+            &["S-2", "S-3", "S-4"],
+            &[],
+        );
+        assert_eq!(coverage.rules[0].status, RuleStatus::OverMax);
     }
 
     // --- credits rules ---

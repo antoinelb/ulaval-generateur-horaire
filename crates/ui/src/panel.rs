@@ -1,8 +1,9 @@
 use std::collections::BTreeSet;
 
 use ulaval_scheduler_core::{
-    coverage_report, prerequisites_met, Constraint, CourseCycle, PrereqStatus,
-    Program, Rule, RuleCourses, RuleStatus, Scope, Season,
+    coverage_report, mandatory_stage, prerequisites_met, Constraint,
+    CourseCycle, PrereqStatus, Program, Rule, RuleCourses, RuleStatus, Scope,
+    Season,
 };
 
 use crate::data::Snapshot;
@@ -1594,6 +1595,12 @@ fn rule_section(
     } else {
         rows
     };
+    // the « Stages » rule lists three optional stages beside the one that
+    // gates the diploma: the list alone would read as a free choice
+    let rows = match rule.and_then(mandatory_stage) {
+        Some(required) => mark_required_stage_course(rows, required),
+        None => rows,
+    };
     let scope_prefix = match report.scope {
         Scope::Program => "p",
         Scope::Concentration => "c",
@@ -1661,6 +1668,15 @@ fn mark_required_language_course(
     for row in &mut rows {
         if row.code == requirement.francophone.course {
             row.sub = format!("{} - exigé par défaut", row.sub);
+        }
+    }
+    rows
+}
+
+fn mark_required_stage_course(mut rows: Vec<Row>, required: &str) -> Vec<Row> {
+    for row in &mut rows {
+        if row.code == required {
+            row.sub = format!("{} - exigé pour diplômer", row.sub);
         }
     }
     rows
@@ -1802,6 +1818,9 @@ fn unique_rows<'a>(
 // stage soient en sus du diplôme est dit par la note de la règle, jamais
 // répété sur le badge ni sur l'en-tête (décision d'Antoine, 2026-08-26)
 fn constraint_label(rule: &Rule) -> Option<String> {
+    if let Some(label) = stage_constraint_label(rule) {
+        return Some(label);
+    }
     match rule.constraint {
         None => None,
         Some(Constraint::Course { min, max }) if min == max => {
@@ -1816,6 +1835,20 @@ fn constraint_label(rule: &Rule) -> Option<String> {
         Some(Constraint::Credits { min, max }) => {
             Some(format!("{min}–{max} cr"))
         }
+    }
+}
+
+// « GMC-2580 + 0–7 optionnels » : sur la règle des stages, « 1–8 parmi » se
+// lit « n'importe lequel des quatre », la lecture même qui masquait un stage
+// de diplomation manquant (ADR
+// `2026-08-stage-obligatoire-compte-dans-le-rapport-de-couverture`)
+fn stage_constraint_label(rule: &Rule) -> Option<String> {
+    let required = mandatory_stage(rule)?;
+    match rule.constraint {
+        Some(Constraint::Course { max, .. }) if max > 1 => {
+            Some(format!("{required} + 0–{} optionnels", max - 1))
+        }
+        _ => None,
     }
 }
 
@@ -4182,6 +4215,114 @@ mod tests {
             serde_json::from_str(r#"{"title":"R","courses":["X-1"]}"#)
                 .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(constraint_label(&bare), None);
+    }
+
+    fn stages_rule(constraint: &str) -> Rule {
+        serde_json::from_str(&format!(
+            r#"{{"title":"Stages","constraint":{constraint},
+                 "courses":["GMC-2580","GMC-1590","GMC-3590","GMC-3591"]}}"#
+        ))
+        .unwrap_or_else(|e| panic!("rule literal: {e}"))
+    }
+
+    #[test]
+    fn the_stage_label_names_the_stage_instead_of_a_range() {
+        assert_eq!(
+            constraint_label(&stages_rule(
+                r#"{"type":"course","min":1,"max":8}"#
+            ))
+            .as_deref(),
+            Some("GMC-2580 + 0–7 optionnels")
+        );
+        // un seul stage admis : « 1 parmi » dit déjà tout, et
+        // « + 0–0 optionnels » ne dirait rien
+        assert_eq!(
+            constraint_label(&stages_rule(
+                r#"{"type":"course","min":1,"max":1}"#
+            ))
+            .as_deref(),
+            Some("1 parmi")
+        );
+    }
+
+    #[test]
+    fn the_required_stage_row_says_it_gates_the_diploma() {
+        let stage = |code: &str| Row {
+            code: code.to_string(),
+            title: "Stage".to_string(),
+            credits: "9 cr".to_string(),
+            sub: "9 cr".to_string(),
+            state: RowState::Available,
+            assumed: Vec::new(),
+        };
+        let rows = vec![stage("GMC-2580"), stage("GMC-1590")];
+        let marked = mark_required_stage_course(rows, "GMC-2580");
+        assert_eq!(marked[0].sub, "9 cr - exigé pour diplômer");
+        assert_eq!(marked[1].sub, "9 cr");
+    }
+
+    // le défaut rapporté, bout en bout : un stage optionnel placé seul
+    // laissait la règle « Stages » au vert
+    #[test]
+    fn an_optional_stage_alone_leaves_the_stages_section_in_fault() {
+        const STAGES: &str = r#"{"code":"B-STG","slug":"stg",
+          "semester":"A26","title":"Bac avec stages","cycle":1,
+          "credits_required":120,"mandatory":[],
+          "rules":[{"title":"Stages",
+                    "constraint":{"type":"course","min":1,"max":8},
+                    "courses":["GEX-1000","GEX-2000"],
+                    "credits_in_addition":true}],
+          "concentrations":[],"profiles":[]}"#;
+        let snapshot = parse_data(
+            &RawData {
+                courses: COURSES.to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
+                programs: vec![(
+                    "B-STG-A26.json".to_string(),
+                    STAGES.to_string(),
+                )],
+            },
+            Vec::new(),
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let plan = Plan {
+            program: Some(ProgramChoice {
+                code: "B-STG".to_string(),
+                semester: "A26".to_string(),
+                concentration: None,
+                profile: None,
+            }),
+            // GEX-2000, l'optionnel — GEX-1000 est le stage exigé
+            displayed_placement: std::collections::BTreeMap::from([(
+                "GEX-2000".to_string(),
+                1,
+            )]),
+            ..Plan::default()
+        };
+        let model = panel_model(&snapshot, &plan);
+        let stages = &model.rules[0];
+        assert_eq!(stages.title, "Stages");
+        assert_eq!(stages.badge, Badge::Partial("1/8".to_string()));
+        let sub = |code: &str| {
+            stages
+                .rows
+                .iter()
+                .find(|row| row.code == code)
+                .map(|row| row.sub.clone())
+                .unwrap_or_else(|| panic!("{code} listé"))
+        };
+        assert!(
+            sub("GEX-1000").ends_with("- exigé pour diplômer"),
+            "{}",
+            sub("GEX-1000")
+        );
+        assert!(
+            !sub("GEX-2000").contains("exigé pour diplômer"),
+            "{}",
+            sub("GEX-2000")
+        );
     }
 
     #[test]

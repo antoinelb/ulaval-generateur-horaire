@@ -14,6 +14,10 @@ Within a scope, a selected course is claimed by the first evaluated rule
 that lists it; later rules of the same scope report it as `elsewhere`
 instead of counting it again (ADR
 `2026-08-un-cours-compte-dans-une-seule-regle-par-portee`).
+The « Stages » rule of the génie bacs lists its graduation stage first and
+its optional companions after: the minimum alone would let an optional stage
+satisfy the diploma requirement, so the first sigle is required on its own
+(ADR `2026-08-stage-obligatoire-compte-dans-le-rapport-de-couverture`).
 
 Usage: python verify_rules.py fill|check [fixture-stems...]
 """
@@ -24,6 +28,7 @@ from common import FIXTURES, dump_canonical, load_json, resolve_credits
 
 DIR = FIXTURES / "rules"
 SCOPES = (("concentration", "concentrations"), ("profile", "profiles"))
+STAGES_RULE_TITLE = "Stages"
 
 
 def main():
@@ -234,6 +239,9 @@ def evaluate(constraint, counted, credits, rule):
         status, missing = over_or(
             total, constraint, {"count": constraint["min"] - total}
         )
+        # only a course rule can be a stage rule, so the credits branch
+        # below never needs the check
+        status, missing = required_stage_held(rule, counted, status, missing)
         return status, missing, None
     total = 0
     for code in counted:
@@ -244,6 +252,29 @@ def evaluate(constraint, counted, credits, rule):
         total, constraint, {"credits": constraint["min"] - total}
     )
     return status, missing, None
+
+
+def required_stage_held(rule, counted, status, missing):
+    """Downgrades a stage rule satisfied without its graduation stage."""
+    required = mandatory_stage(rule)
+    if required is None or required in counted or status != "satisfied":
+        return status, missing
+    return "incomplete", {"count": 1}
+
+
+def mandatory_stage(rule):
+    """The graduation stage the « Stages » rule lists first, if any."""
+    if rule["title"] != STAGES_RULE_TITLE:
+        return None
+    constraint = rule.get("constraint")
+    if constraint is None or constraint["type"] != "course":
+        return None
+    if constraint["min"] <= 0:
+        return None
+    courses = rule.get("courses")
+    if not isinstance(courses, list) or not courses:
+        return None
+    return courses[0]
 
 
 def over_or(total, constraint, shortfall):

@@ -18,6 +18,8 @@ Une règle vient du texte « Règle N – \<contrainte\> parmi : » de la page d
 - `courses` est une liste de sigles, une **référence** (« tous les cours de la Règle 1 du cheminement X »), ou un **mot-clé** : `"any"` (tout cours du cycle satisfait) ou `"negotiated"` (« convenus avec la direction » — pas de liste fixe).
 - Ce que la grammaire ne comprend pas reste en `raw`, montré tel quel.
 - `credits_in_addition: true` : les crédits de la règle (les stages des bacs de génie) sont *en sus* du total du programme.
+- La règle « Stages » des bacs de génie liste **en tête** le stage exigé pour diplômer, les optionnels après.
+  Sa contrainte compte les stages, mais le premier est exigé à lui seul : la règle reste incomplète tant qu'il n'est pas de la sélection, même si un stage optionnel la remplit numériquement.
 
 ## L'exigence linguistique
 

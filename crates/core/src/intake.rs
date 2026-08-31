@@ -5,8 +5,8 @@ use crate::course::{
 };
 use crate::preparatory::PREPARATORY_RULE_TITLE;
 use crate::program::{
-    Concentration, Profile, Program, Rule, RuleCourses, Semester,
-    STAGES_RULE_TITLE,
+    mandatory_stage, Concentration, Profile, Program, Rule, RuleCourses,
+    Semester, STAGES_RULE_TITLE,
 };
 use crate::weekly::resolve_offering;
 
@@ -496,8 +496,8 @@ pub fn parse_pins(
 // The préparatoire courses first — they gate the rest, and the passed set
 // naturally excludes the ones already done — then the program's mandatory
 // courses (reference order), the chosen concentration's and profile's
-// mandatory courses (décision 2026-08-19), the mandatory stage (the
-// « Stages » rule lists it first, ADR
+// mandatory courses (décision 2026-08-19), the mandatory stage (named by
+// `mandatory_stage`, the « Stages » rule listing it first, ADR
 // `2026-08-stage-obligatoire-en-prose-promu-en-regle`), the chosen
 // electives and the passed courses — deduplicated, so a passed mandatory
 // course appears once and carries its Course object (ADR
@@ -529,9 +529,12 @@ pub fn course_list(
                 .unwrap_or_default(),
         )
         .chain(
-            listed_rule_courses(program, STAGES_RULE_TITLE)
-                .first()
-                .cloned(),
+            program
+                .map(|program| program.rules.as_slice())
+                .unwrap_or_default()
+                .iter()
+                .find_map(mandatory_stage)
+                .map(str::to_string),
         )
         .chain(electives.iter().cloned())
         .chain(passed.iter().cloned())
@@ -863,6 +866,11 @@ mod tests {
         )
         .unwrap_or_else(|e| panic!("program literal: {e}"));
         assert_eq!(course_list(Some(&program), None, None, &[], &[]), ["M-1"]);
+        // ni la liste d'intake, ni les stages remis au solveur
+        let intake =
+            placement_intake(Some(&program), None, None, &[], &[], &[], &[])
+                .unwrap_or_else(|e| panic!("{e}"));
+        assert!(intake.stages.is_empty());
     }
 
     fn program_with_scopes() -> Program {

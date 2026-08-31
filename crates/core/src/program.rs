@@ -196,6 +196,27 @@ pub enum Constraint {
     Credits { min: i64, max: i64 },
 }
 
+// The graduation stage of the génie bacs, named by the « Stages » rule that
+// lists it first and its optional companions after (ADR
+// `2026-08-stage-obligatoire-en-prose-promu-en-regle`). The order alone
+// carries the distinction, so this is the single place that reads it: the
+// intake places it, the export marks its box, the coverage report requires
+// it. A rule with no positive course minimum demands nothing, and a rule
+// whose courses are not a plain list names nothing.
+pub fn mandatory_stage(rule: &Rule) -> Option<&str> {
+    if rule.title != STAGES_RULE_TITLE {
+        return None;
+    }
+    if !matches!(rule.constraint, Some(Constraint::Course { min, .. }) if min > 0)
+    {
+        return None;
+    }
+    let RuleCourses::List { courses } = &rule.courses else {
+        return None;
+    };
+    courses.first().map(String::as_str)
+}
+
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(untagged)]
@@ -528,6 +549,52 @@ mod tests {
         assert!(!serde_json::to_string(&ordinary)
             .expect("ser")
             .contains("credits_in_addition"));
+    }
+
+    // --- mandatory_stage: the first sigle, and only under the right shape ---
+
+    #[test]
+    fn the_stages_rule_names_the_stage_it_lists_first() {
+        let json = r#"{"title":"Stages","constraint":{"type":"course","min":1,"max":8},"courses":["GMC-2580","GMC-1590","GMC-3590","GMC-3591"],"credits_in_addition":true}"#;
+        let rule: Rule = serde_json::from_str(json).expect("rule");
+        assert_eq!(mandatory_stage(&rule), Some("GMC-2580"));
+    }
+
+    #[test]
+    fn no_other_rule_gains_a_required_first_course() {
+        let json = r#"{"title":"Règle 1","constraint":{"type":"course","min":1,"max":8},"courses":["GMC-2580","GMC-1590"]}"#;
+        let rule: Rule = serde_json::from_str(json).expect("rule");
+        assert_eq!(mandatory_stage(&rule), None);
+    }
+
+    #[test]
+    fn a_stages_rule_demanding_nothing_names_no_stage() {
+        // ni contrainte, ni minimum, ni unité de comptage : aucune des trois
+        // formes n'exige un stage — le répertoire n'en écrit aucune, mais un
+        // programme importé le pourrait
+        for shape in [
+            r#""raw":"Stages""#,
+            r#""constraint":{"type":"course","min":0,"max":8},"courses":["GMC-2580"]"#,
+            r#""constraint":{"type":"credits","min":9,"max":9},"courses":["GMC-2580"]"#,
+        ] {
+            let json = format!(r#"{{"title":"Stages",{shape}}}"#);
+            let rule: Rule = serde_json::from_str(&json).expect("rule");
+            assert_eq!(mandatory_stage(&rule), None, "{shape}");
+        }
+    }
+
+    #[test]
+    fn a_stages_rule_naming_no_course_names_no_stage() {
+        for shape in [
+            r#""courses":[]"#,
+            r#""courses":"negotiated","raw":"convenus avec la direction""#,
+        ] {
+            let json = format!(
+                r#"{{"title":"Stages","constraint":{{"type":"course","min":1,"max":8}},{shape}}}"#
+            );
+            let rule: Rule = serde_json::from_str(&json).expect("rule");
+            assert_eq!(mandatory_stage(&rule), None, "{shape}");
+        }
     }
 
     #[test]
