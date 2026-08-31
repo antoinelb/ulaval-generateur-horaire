@@ -1134,6 +1134,14 @@ fn close_cluster(
 // --- the schedule's status line -------------------------------------------
 
 // never colour alone: the glyph and the wording carry the state (INP-3)
+//
+// « sans conflit ✓ » said nothing about *what* it had checked, and sat one
+// line from the panel's « Placement vérifié ✓ » — an étudiante read the
+// schedule's ✓ as a verdict on her placement and concluded the tool had
+// blessed a course pinned beside its own préalable (rapport 2026-08-30).
+// `core::weekly::schedule_report` is handed no prerequisite, no earlier
+// session and no cap: it judges time overlaps and nothing else, so the
+// label names its scope (TRU-1).
 pub fn schedule_status(schedule: &WeeklySchedule, forced: bool) -> String {
     if schedule.report.courses.is_empty() {
         "aucun cours avec horaire dans cette session".to_string()
@@ -1141,9 +1149,9 @@ pub fn schedule_status(schedule: &WeeklySchedule, forced: bool) -> String {
         if forced {
             // the student pinned at least one section by hand — the word
             // « automatique » would lie (rapport étudiante 2026-08-13)
-            "sections forcées - sans conflit ✓".to_string()
+            "sections forcées - sans conflit d'horaire ✓".to_string()
         } else {
-            "combinaison automatique - sans conflit ✓".to_string()
+            "combinaison automatique - sans conflit d'horaire ✓".to_string()
         }
     } else {
         "⚠ conflit d'horaire, plages en cause hachurées".to_string()
@@ -2778,13 +2786,15 @@ mod tests {
             )],
             true,
         );
+        // la portée du ✓ est nommée : l'horaire, rien d'autre — un ✓ nu
+        // se lisait comme un verdict de placement (rapport 2026-08-30)
         assert_eq!(
             schedule_status(&one, false),
-            "combinaison automatique - sans conflit ✓"
+            "combinaison automatique - sans conflit d'horaire ✓"
         );
         assert_eq!(
             schedule_status(&one, true),
-            "sections forcées - sans conflit ✓",
+            "sections forcées - sans conflit d'horaire ✓",
             "a hand-pinned section must not claim « automatique »"
         );
     }

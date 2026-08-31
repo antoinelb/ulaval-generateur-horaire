@@ -308,8 +308,46 @@ pub fn validate_new_code(
             ));
         }
     }
-    // prerequisites: a warning, not a wall — the student may know better,
-    // but never learns it after the fact
+    // A warning, not a wall — the student may know better, but never
+    // learns it after the fact. The two notes below are exclusive by
+    // construction (the closed-été one needs a session, the prerequisite
+    // one only speaks without one), so the verdict is taken per branch
+    // rather than merged after the fact.
+    let warning = match session {
+        // a summer explicitly closed is not a wall either — but adding
+        // into it must never be silent (rapport étudiante 2026-08-14)
+        Some(session) => session_semester(plan, session)
+            .filter(|semester| {
+                semester.season == ulaval_scheduler_core::Season::Summer
+                    && !plan.summers_open
+            })
+            .map(|_| {
+                format!(
+                    "{code} ajouté dans un été fermé aux cours réguliers \
+                     — cochez « Ouvrir les étés » si c'est voulu."
+                )
+            }),
+        None => prerequisite_note(snapshot, plan, course, &code),
+    };
+    Ok(NewCode { code, warning })
+}
+
+// What the intake can honestly say about a take with *no session named*:
+// this set has no order in it — `displayed_placement` is read whole, so a
+// prerequisite seated after the course, or in the very same session,
+// counts as acquired. Honest for « automatique », where no session is
+// named yet and the solver will order things itself; a lie for a take
+// into a named session, and it is the lie that let MAT-1910 be pinned
+// beside MAT-1900 without a word (rapport étudiante 2026-08-30). A named
+// session is judged by `pin_warning` instead, on every door — chip strip,
+// ruban, grille — and saying it twice in two voices would only teach the
+// student to stop reading.
+fn prerequisite_note(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    course: &ulaval_scheduler_core::Course,
+    code: &str,
+) -> Option<String> {
     let held: std::collections::BTreeSet<String> = plan
         .displayed_placement
         .keys()
@@ -321,16 +359,16 @@ pub fn validate_new_code(
         .filter_map(|held_code| snapshot.by_code.get(held_code))
         .map(|&i| snapshot.courses[i].credits.planning())
         .sum();
-    // the source text, extracted for every course so the student learns
-    // *which* prerequisites when the verdict is Unmet (only a Parsed tree
-    // can be Unmet — a raw-only one is presumed satisfied)
+    // the source text, extracted for every course so the student
+    // learns *which* prerequisites when the verdict is Unmet (only a
+    // Parsed tree can be Unmet — a raw-only one is presumed satisfied)
     let source = match &course.prerequisites {
         Some(ulaval_scheduler_core::Prerequisites::Parsed { raw, .. }) => {
             format!(" (préalables : {raw})")
         }
         _ => String::new(),
     };
-    let warning = match ulaval_scheduler_core::prerequisites_met(
+    match ulaval_scheduler_core::prerequisites_met(
         course,
         &held,
         &std::collections::BTreeSet::new(),
@@ -344,26 +382,7 @@ pub fn validate_new_code(
         Err(error) => {
             Some(format!("{code} ajouté; préalables illisibles : {error}."))
         }
-    };
-    // a summer explicitly closed is not a wall either — but adding into
-    // it must never be silent (rapport étudiante 2026-08-14)
-    let summer_note = session
-        .and_then(|session| session_semester(plan, session))
-        .filter(|semester| {
-            semester.season == ulaval_scheduler_core::Season::Summer
-                && !plan.summers_open
-        })
-        .map(|_| {
-            format!(
-                "{code} ajouté dans un été fermé aux cours réguliers — \
-                 cochez « Ouvrir les étés » si c'est voulu."
-            )
-        });
-    let warning = match (summer_note, warning) {
-        (Some(summer), Some(other)) => Some(format!("{summer} {other}")),
-        (summer, other) => summer.or(other),
-    };
-    Ok(NewCode { code, warning })
+    }
 }
 
 fn session_label_of(plan: &Plan, session: usize) -> String {
@@ -769,13 +788,15 @@ mod tests {
                 .unwrap_or_else(|e| panic!("{e}"));
         let warning = accepted.warning.expect("a closed summer must speak");
         assert!(warning.contains("été fermé"), "{warning}");
-        // a closed summer AND unmet prerequisites: both spoken, in order
+        // l'été fermé et les préalables ne se disent plus d'une seule
+        // voix : la session nommée appartient à `pin_warning`, qui sait
+        // l'ordonner, et l'admission garde l'été pour elle
         let accepted =
             validate_new_code(&snapshot, &plan, Some(3), "ETE-3000")
                 .unwrap_or_else(|e| panic!("{e}"));
-        let warning = accepted.warning.expect("both warnings must speak");
+        let warning = accepted.warning.expect("the closed summer speaks");
         assert!(warning.contains("été fermé"), "{warning}");
-        assert!(warning.contains("préalables"), "{warning}");
+        assert!(!warning.contains("préalables"), "{warning}");
         // summers opened: nothing left to warn about
         plan.summers_open = true;
         let accepted =
@@ -813,13 +834,11 @@ mod tests {
                 raw: "deep".to_string(),
                 tree: deep,
             });
-        let accepted = validate_new_code(
-            &snapshot,
-            &Plan::default(),
-            Some(1),
-            "GEX-1000",
-        )
-        .unwrap_or_else(|e| panic!("{e}"));
+        // sans session : c'est l'admission qui parle (avec une session,
+        // c'est `pin_warning`, éprouvé dans `worker_tests`)
+        let accepted =
+            validate_new_code(&snapshot, &Plan::default(), None, "GEX-1000")
+                .unwrap_or_else(|e| panic!("{e}"));
         let warning = accepted.warning.expect("must warn");
         assert!(warning.contains("illisibles"), "{warning}");
     }
@@ -844,13 +863,9 @@ mod tests {
             Vec::new(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
-        let accepted = validate_new_code(
-            &snapshot,
-            &Plan::default(),
-            Some(1),
-            "GEX-5000",
-        )
-        .unwrap_or_else(|e| panic!("{e}"));
+        let accepted =
+            validate_new_code(&snapshot, &Plan::default(), None, "GEX-5000")
+                .unwrap_or_else(|e| panic!("{e}"));
         let warning = accepted.warning.expect("must warn");
         assert!(warning.contains("préalables"), "{warning}");
         assert!(warning.contains("ZZZ-1111"), "{warning}");
@@ -1433,11 +1448,37 @@ fn looks_like_code(text: &str) -> bool {
 
 // Why the grid did not move, said before the student can wonder — refusing
 // in silence would be exactly the drift this guards against.
-pub fn proposal_kept_note(codes: &[String]) -> String {
+//
+// And why the solver wanted the seat back: `adoption_regressions` filters
+// these very codes out of the `left_out` loop, so `left_out_line` — the
+// only message that names the offending préalable — was never reached for
+// them. « Proposition ignorée » alone told the student nothing about what
+// was wrong with his own pin (rapport étudiante 2026-08-30, MAT-1910 sur
+// MAT-1900), and the alert stack could remember it dismissed and stay
+// mute for good. The reason rides with the refusal now (ALR-1: an alert
+// with no operator response is a log entry).
+pub fn proposal_kept_note(
+    codes: &[String],
+    blocked: &[BlockedAnswer],
+    plan: &Plan,
+    snapshot: Option<&Snapshot>,
+) -> String {
+    let reasons: Vec<String> = codes
+        .iter()
+        .map(|code| {
+            left_out_line(
+                code,
+                blocked.iter().find(|blocked| &blocked.code == code),
+                plan,
+                snapshot,
+            )
+        })
+        .collect();
     format!(
         "Proposition ignorée : elle retirerait {} de la grille — votre \
-         agencement actuel est conservé.",
-        codes.join(", ")
+         agencement actuel est conservé. {}",
+        codes.join(", "),
+        reasons.join(" ")
     )
 }
 
@@ -1526,6 +1567,27 @@ fn pinned_refusal_causes(
             plan.credit_cap
         ));
     }
+    // an unreadable tree is not a refusal cause: the search refused for
+    // *some* reason, and « préalables illisibles » would name a different
+    // one. `pin_warning` is where that fact gets said.
+    causes.extend(
+        prerequisite_causes(course, code, session, plan, snapshot)
+            .unwrap_or_default(),
+    );
+    causes
+}
+
+// Why the session refuses the course's prerequisites, judged on the order
+// of the sessions — the only reading that tells « acquis avant » from
+// « suivi la même session ». The one place that judgement is written: the
+// pin's warning, the left-out line and the refusal line all come here.
+fn prerequisite_causes(
+    course: &ulaval_scheduler_core::Course,
+    code: &str,
+    session: usize,
+    plan: &Plan,
+    snapshot: &Snapshot,
+) -> Result<Vec<String>, String> {
     let (satisfied, same_session, credits) =
         acquired_before(code, session, plan, snapshot);
     let missing = ulaval_scheduler_core::unmet_prerequisites(
@@ -1534,7 +1596,7 @@ fn pinned_refusal_causes(
         &same_session,
         credits,
     )
-    .unwrap_or_default();
+    .map_err(|error| error.to_string())?;
     // a requirement the student *is* taking, only not early enough, is a
     // different fact from one he holds nowhere — and a different fix
     // (the répertoire's `*`, or the dérogation): naming them alike sent
@@ -1543,6 +1605,7 @@ fn pinned_refusal_causes(
         missing.into_iter().partition(|group| {
             group.iter().all(|code| same_session.contains(code))
         });
+    let mut causes = Vec::new();
     if !absent.is_empty() {
         causes.push(format!(
             "préalable manquant avant cette session : {}",
@@ -1555,7 +1618,44 @@ fn pinned_refusal_causes(
             requirement_list(&concurrent)
         ));
     }
-    causes
+    Ok(causes)
+}
+
+// The verdict every pin owes the student, whichever door he came through:
+// the chip strip, a drag onto the ruban, a drag onto the grid. Pinning
+// stays permitted — he may know something the répertoire does not, and the
+// act is undoable (ACT-2) — but it is never silent: an épingle is
+// verified like the rest (ADR
+// `2026-08-une-epingle-est-verifiee-comme-le-reste`).
+//
+// `None` means the session holds up. A code the catalogue does not carry
+// yields no verdict rather than a false clearance.
+pub fn pin_warning(
+    snapshot: &Snapshot,
+    plan: &Plan,
+    session: usize,
+    code: &str,
+) -> Option<String> {
+    let &index = snapshot.by_code.get(code)?;
+    let course = &snapshot.courses[index];
+    let label = session_label_of(plan, session);
+    match prerequisite_causes(course, code, session, plan, snapshot) {
+        // never silence: a tree too deep to read is a fact the student
+        // must hear, not a clearance (« ne jamais échouer en silence »)
+        Err(error) => Some(format!(
+            "{code} épinglé en {label}; préalables illisibles : {error}. \
+             Le placement est conservé — vérifiez vous-même l'ordre des \
+             cours."
+        )),
+        Ok(causes) if causes.is_empty() => None,
+        Ok(causes) => Some(format!(
+            "{code} épinglé en {label}, mais {}. Le placement est \
+             conservé, mais le cheminement affiché ne tient plus : \
+             déplacez {code} plus tard, placez le préalable plus tôt, ou \
+             cochez « Permettre un préalable en concomitance ».",
+            causes.join(" ; ")
+        )),
+    }
 }
 
 fn session_season(
@@ -1626,6 +1726,19 @@ fn acquired_before(
         satisfied.extend(same_session.iter().cloned());
     }
     (satisfied, same_session, credits)
+}
+
+// TRU-3, applied to a verdict instead of a gauge: a `verify` answer judges
+// the plan that was *sent*, never the plan now on screen. Between the send
+// and the answer the student can pin, move or drop a course — and clearing
+// the stale flag on such an answer freezes « Placement vérifié ✓ » over a
+// grid no solver ever looked at, since `auto_verify` then refuses to ask
+// again (`verification.is_some() && !verification_stale` is its idle
+// guard). `plan_generation` counts the edits; a verdict settles only when
+// the count it was asked under is still the current one, and otherwise the
+// plan change that outran it keeps its « ⟳ recalcul en cours… ».
+pub fn verdict_settles(asked_under: u64, plan_generation: u64) -> bool {
+    asked_under == plan_generation
 }
 
 // The left-out entries whose cause has disappeared: a code no longer
@@ -1914,6 +2027,46 @@ mod worker_tests {
         crate::data::parse_data(
             &crate::data::RawData {
                 courses: courses.to_string(),
+                meta: Some(r#"{"scraped_at":null}"#.to_string()),
+                manual: None,
+                programs: Vec::new(),
+            },
+            Vec::new(),
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    // Le cas de l'étudiante, réduit. STRICT-3000 porte le préalable
+    // strict et unique ; SUITE-2000 porte la forme réelle de MAT-1910 —
+    // « BASE-1000 OU ALT-1500* », dont la seconde branche est une étoile
+    // de concomitance sur un cours que la grille ne porte pas. Tous sont
+    // offerts aux trois saisons, donc toute session de l'horizon les
+    // accepte : seul l'ordre des sessions peut refuser.
+    fn prereq_snapshot() -> crate::data::Snapshot {
+        let seasons = r#""seasons":{
+            "fall":{"last_offered":2026,"options":null},
+            "winter":{"last_offered":2026,"options":null},
+            "summer":{"last_offered":2026,"options":null}}"#;
+        let courses = format!(
+            r#"{{"courses":[
+          {{"code":"BASE-1000","title":"Base","credits":3,"cycle":1,
+           "prerequisites":null,"equivalents":[],{seasons}}},
+          {{"code":"ALT-1500","title":"Autre voie","credits":3,"cycle":1,
+           "prerequisites":null,"equivalents":[],{seasons}}},
+          {{"code":"STRICT-3000","title":"Stricte","credits":3,"cycle":1,
+           "prerequisites":{{"raw":"BASE-1000","tree":"BASE-1000"}},
+           "equivalents":[],{seasons}}},
+          {{"code":"SUITE-2000","title":"Suite","credits":3,"cycle":1,
+           "prerequisites":{{"raw":"BASE-1000 OU ALT-1500*",
+                            "tree":{{"any":["BASE-1000",
+                                          {{"concomitant":"ALT-1500"}}]}}}},
+           "equivalents":[],{seasons}}}
+        ]}}"#
+        );
+        crate::data::parse_data(
+            &crate::data::RawData {
+                courses,
                 meta: Some(r#"{"scraped_at":null}"#.to_string()),
                 manual: None,
                 programs: Vec::new(),
@@ -2303,13 +2456,345 @@ mod worker_tests {
 
     #[test]
     fn proposal_kept_note_lists_the_codes() {
-        let note = proposal_kept_note(&[
-            "GEX-1000".to_string(),
-            "GEX-2000".to_string(),
-        ]);
+        let note = proposal_kept_note(
+            &["GEX-1000".to_string(), "GEX-2000".to_string()],
+            &[],
+            &Plan::default(),
+            None,
+        );
         assert!(note.contains("GEX-1000, GEX-2000"), "{note}");
         assert!(note.contains("conservé"), "{note}");
         assert!(!note.contains("·"), "{note}");
+    }
+
+    // Défaut 4 du rapport étudiante 2026-08-30 : le cours épinglé est
+    // filtré hors de `left_out` par `adoption_regressions`, donc la seule
+    // ligne qui nomme le préalable ne sortait jamais. Le refus la porte.
+    #[test]
+    fn a_kept_proposal_names_why_each_seat_was_wanted_back() {
+        let snapshot = prereq_snapshot();
+        let mut plan = Plan {
+            study_sessions: 4,
+            ..Plan::default()
+        };
+        plan.displayed_placement.insert("BASE-1000".to_string(), 1);
+        plan.displayed_placement
+            .insert("STRICT-3000".to_string(), 1);
+        plan.pinned_sessions.insert("STRICT-3000".to_string(), 1);
+        let note = proposal_kept_note(
+            &["STRICT-3000".to_string()],
+            &[],
+            &plan,
+            Some(&snapshot),
+        );
+        assert!(note.contains("Proposition ignorée"), "{note}");
+        assert!(note.contains("préalable suivi la même session"), "{note}");
+        assert!(note.contains("BASE-1000"), "{note}");
+        // ALR-1 : le refus porte le geste, pas seulement le constat
+        assert!(note.contains("Dépinglez-le"), "{note}");
+
+        // quand le pré-tri a nommé le coupable, c'est sa raison à lui que
+        // le refus reprend — elle est plus précise que l'épingle
+        let blocked = vec![BlockedAnswer {
+            code: "STRICT-3000".to_string(),
+            reason: "unsatisfiable-prerequisites".to_string(),
+            missing: vec![vec!["BASE-1000".to_string()]],
+        }];
+        let note = proposal_kept_note(
+            &["STRICT-3000".to_string()],
+            &blocked,
+            &plan,
+            Some(&snapshot),
+        );
+        assert!(note.contains("Proposition ignorée"), "{note}");
+        assert!(note.contains("BASE-1000"), "{note}");
+    }
+
+    // Le chemin complet, du geste au message, sans navigateur : la
+    // requête que l'interface enverrait, le solveur qui la juge, et ce que
+    // l'écran en dit. C'est la boucle que le rapport du 2026-08-30 a
+    // trouvée muette de bout en bout — le noyau refusait déjà, personne ne
+    // le répétait.
+    #[test]
+    fn the_whole_path_from_a_pin_to_a_message_that_names_the_prerequisite() {
+        let snapshot = prereq_snapshot();
+        let courses = snapshot.courses.clone();
+        // la grille automatique : le préalable en 1, le cours en 2
+        let mut plan = Plan {
+            study_sessions: 4,
+            credit_cap: 12,
+            electives: vec![
+                "BASE-1000".to_string(),
+                "STRICT-3000".to_string(),
+            ],
+            ..Plan::default()
+        };
+        plan.displayed_placement.insert("BASE-1000".to_string(), 1);
+        plan.displayed_placement
+            .insert("STRICT-3000".to_string(), 2);
+        let settled = ulaval_scheduler_wasm::protocol::handle(
+            &verify_request(1, &plan, None),
+            &courses,
+        );
+        let settled =
+            parse_worker_answer(&settled).unwrap_or_else(|e| panic!("{e}"));
+        let WorkerAnswer::Report { report, .. } = settled else {
+            panic!("la grille de départ doit se vérifier");
+        };
+        assert_eq!(
+            report.placement.solutions.len(),
+            1,
+            "témoin : la grille intacte tient"
+        );
+
+        // le geste de l'étudiante : `place_course` épingle le cours dans
+        // la session de son préalable et l'assoit dans la grille affichée
+        plan.pinned_sessions.insert("STRICT-3000".to_string(), 1);
+        plan.displayed_placement
+            .insert("STRICT-3000".to_string(), 1);
+
+        // 1. l'épingle elle-même se dit, tout de suite
+        let warning = pin_warning(&snapshot, &plan, 1, "STRICT-3000")
+            .expect("l'épingle doit parler");
+        assert!(warning.contains("BASE-1000"), "{warning}");
+
+        // 2. le noyau refuse la grille : aucune solution, recherche
+        //    épuisée — un verdict, pas un budget dépassé
+        let broken = ulaval_scheduler_wasm::protocol::handle(
+            &verify_request(2, &plan, None),
+            &courses,
+        );
+        let broken =
+            parse_worker_answer(&broken).unwrap_or_else(|e| panic!("{e}"));
+        let WorkerAnswer::Report { report, .. } = broken else {
+            panic!("une grille brisée reste un rapport, jamais une erreur");
+        };
+        assert!(
+            report.placement.solutions.is_empty(),
+            "le noyau doit refuser l'épingle"
+        );
+
+        // 3. la proposition qui suit veut le siège : le cours est filtré
+        //    hors de `left_out`, et c'est le refus qui doit porter la
+        //    raison — sans quoi le préalable n'est jamais nommé
+        let proposal = ulaval_scheduler_wasm::protocol::handle(
+            &place_request(3, &plan, None, PROPOSE_MAX_NODES),
+            &courses,
+        );
+        let proposal =
+            parse_worker_answer(&proposal).unwrap_or_else(|e| panic!("{e}"));
+        let WorkerAnswer::Report { report, .. } = proposal else {
+            panic!("la proposition doit répondre");
+        };
+        let solution = report
+            .placement
+            .solutions
+            .first()
+            .expect("le repli au mieux répond toujours");
+        let regressions = adoption_regressions(
+            &plan.displayed_placement,
+            &solution.left_out,
+        );
+        assert_eq!(regressions, vec!["STRICT-3000".to_string()]);
+        let note = proposal_kept_note(
+            &regressions,
+            &report.placement.blocked,
+            &plan,
+            Some(&snapshot),
+        );
+        assert!(note.contains("BASE-1000"), "{note}");
+    }
+
+    #[test]
+    fn a_verdict_asked_under_an_older_plan_never_settles() {
+        assert!(verdict_settles(7, 7));
+        assert!(!verdict_settles(6, 7));
+    }
+
+    // --- l'épingle est vérifiée comme le reste (rapport 2026-08-30) ------
+
+    fn prereq_plan() -> Plan {
+        let mut plan = Plan {
+            study_sessions: 4,
+            ..Plan::default()
+        };
+        plan.displayed_placement.insert("BASE-1000".to_string(), 3);
+        plan
+    }
+
+    // Le bogue même : épingler un cours dans la session qui porte déjà
+    // son préalable strict, concomitance décochée.
+    #[test]
+    fn pinning_onto_its_own_prerequisites_session_warns_and_names_it() {
+        let snapshot = prereq_snapshot();
+        let mut plan = prereq_plan();
+        plan.displayed_placement
+            .insert("STRICT-3000".to_string(), 3);
+        plan.pinned_sessions.insert("STRICT-3000".to_string(), 3);
+        let warning = pin_warning(&snapshot, &plan, 3, "STRICT-3000")
+            .expect("la même session que le préalable doit avertir");
+        assert!(
+            warning.contains(
+                "préalable suivi la même session sans concomitance permise"
+            ),
+            "{warning}"
+        );
+        assert!(warning.contains("BASE-1000"), "{warning}");
+        assert!(warning.contains("STRICT-3000"), "{warning}");
+        // ERR-1 : ce que le système a fait, et quoi faire maintenant
+        assert!(warning.contains("Le placement est conservé"), "{warning}");
+        assert!(warning.contains("concomitance"), "{warning}");
+        assert!(!warning.contains("·"), "{warning}");
+    }
+
+    // La forme réelle de MAT-1910 : « BASE-1000 OU ALT-1500* ». La branche
+    // étoilée est fausse — ALT-1500 n'est nulle part — donc le refus tient,
+    // mais l'exigence garde ses deux issues : aucune n'est acquise avant la
+    // session, et c'est un manque avant qu'elle se dit, pas une
+    // concomitance. Nommer les deux issues est ce qui rend le geste
+    // possible (l'étudiante peut placer l'une ou l'autre).
+    #[test]
+    fn a_two_way_requirement_is_named_as_missing_before_the_session() {
+        let snapshot = prereq_snapshot();
+        let mut plan = prereq_plan();
+        plan.displayed_placement.insert("SUITE-2000".to_string(), 3);
+        plan.pinned_sessions.insert("SUITE-2000".to_string(), 3);
+        let warning = pin_warning(&snapshot, &plan, 3, "SUITE-2000")
+            .expect("la même session que le préalable doit avertir");
+        assert!(
+            warning.contains("préalable manquant avant cette session"),
+            "{warning}"
+        );
+        assert!(warning.contains("BASE-1000"), "{warning}");
+        assert!(warning.contains("ALT-1500"), "{warning}");
+    }
+
+    // La même épingle, une session plus tard : le préalable est acquis
+    // avant, donc rien à dire — un avertissement ici serait du bruit.
+    #[test]
+    fn pinning_after_its_prerequisite_says_nothing() {
+        let snapshot = prereq_snapshot();
+        let mut plan = prereq_plan();
+        plan.displayed_placement
+            .insert("STRICT-3000".to_string(), 4);
+        plan.pinned_sessions.insert("STRICT-3000".to_string(), 4);
+        assert_eq!(pin_warning(&snapshot, &plan, 4, "STRICT-3000"), None);
+    }
+
+    // Avant le préalable, c'est un manque, pas une concomitance : les deux
+    // faits appellent des gestes différents et ne doivent pas se confondre.
+    #[test]
+    fn pinning_before_its_prerequisite_names_the_absence() {
+        let snapshot = prereq_snapshot();
+        let mut plan = prereq_plan();
+        plan.displayed_placement
+            .insert("STRICT-3000".to_string(), 1);
+        plan.pinned_sessions.insert("STRICT-3000".to_string(), 1);
+        let warning = pin_warning(&snapshot, &plan, 1, "STRICT-3000")
+            .expect("un préalable placé après doit avertir");
+        assert!(
+            warning.contains("préalable manquant avant cette session"),
+            "{warning}"
+        );
+        assert!(warning.contains("BASE-1000"), "{warning}");
+    }
+
+    // La dérogation globale est une dérogation : cochée, la même session
+    // passe. Sans elle, l'avertissement du premier test tient.
+    #[test]
+    fn the_blanket_derogation_silences_the_same_session_warning() {
+        let snapshot = prereq_snapshot();
+        let mut plan = prereq_plan();
+        plan.concomitant = true;
+        plan.displayed_placement
+            .insert("STRICT-3000".to_string(), 3);
+        plan.pinned_sessions.insert("STRICT-3000".to_string(), 3);
+        assert_eq!(pin_warning(&snapshot, &plan, 3, "STRICT-3000"), None);
+    }
+
+    // L'étoile du répertoire, elle, vaut la même session sans rien
+    // cocher : c'est la branche `{"concomitant": "ALT-1500"}` de l'arbre.
+    #[test]
+    fn a_starred_leaf_in_the_same_session_satisfies_on_its_own() {
+        let snapshot = prereq_snapshot();
+        let mut plan = Plan {
+            study_sessions: 4,
+            ..Plan::default()
+        };
+        plan.displayed_placement.insert("ALT-1500".to_string(), 3);
+        plan.displayed_placement.insert("SUITE-2000".to_string(), 3);
+        plan.pinned_sessions.insert("SUITE-2000".to_string(), 3);
+        assert_eq!(pin_warning(&snapshot, &plan, 3, "SUITE-2000"), None);
+    }
+
+    // Un sigle hors catalogue ne reçoit pas un feu vert par défaut :
+    // aucun verdict n'est rendu, et l'admission l'a déjà refusé.
+    #[test]
+    fn a_code_outside_the_catalogue_yields_no_verdict() {
+        let snapshot = prereq_snapshot();
+        assert_eq!(
+            pin_warning(&snapshot, &prereq_plan(), 1, "ZZZ-9999"),
+            None
+        );
+    }
+
+    // Jamais d'échec silencieux : un arbre trop profond pour être lu est
+    // dit, il n'autorise pas.
+    #[test]
+    fn an_unreadable_tree_is_said_rather_than_cleared() {
+        let mut snapshot = prereq_snapshot();
+        let deep = (0..10_000).fold(
+            ulaval_scheduler_core::PrereqTree::Course("X-1".to_string()),
+            |child, _| ulaval_scheduler_core::PrereqTree::All {
+                all: vec![child],
+            },
+        );
+        let index = snapshot.by_code["SUITE-2000"];
+        snapshot.courses[index].prerequisites =
+            Some(ulaval_scheduler_core::Prerequisites::Parsed {
+                raw: "deep".to_string(),
+                tree: deep,
+            });
+        let warning = pin_warning(&snapshot, &prereq_plan(), 1, "SUITE-2000")
+            .expect("un arbre illisible doit se dire");
+        assert!(warning.contains("illisibles"), "{warning}");
+        assert!(warning.contains("Le placement est conservé"), "{warning}");
+    }
+
+    // Le défaut 3 : `validate_new_code` n'ordonne pas les sessions et ne
+    // doit donc plus se prononcer sur les préalables dès qu'une session
+    // est nommée — sinon il rendrait, sur la session du préalable, le
+    // verdict inverse de `pin_warning`.
+    #[test]
+    fn the_intake_leaves_the_prerequisites_to_the_session_judge() {
+        let snapshot = prereq_snapshot();
+        let mut plan = prereq_plan();
+        plan.displayed_placement.remove("BASE-1000");
+        let accepted =
+            validate_new_code(&snapshot, &plan, Some(1), "SUITE-2000")
+                .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(accepted.warning, None);
+        // sans session, l'admission garde son avertissement à elle
+        let accepted = validate_new_code(&snapshot, &plan, None, "SUITE-2000")
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(
+            accepted
+                .warning
+                .as_deref()
+                .is_some_and(|w| w.contains("préalables")),
+            "{:?}",
+            accepted.warning
+        );
+        // et sans session, la grille compte sans ordre : BASE-1000 posé
+        // *après* SUITE-2000 la satisferait tout autant — c'est ce que
+        // « automatique » veut dire, et exactement ce qu'une session
+        // nommée ne doit pas hériter
+        let mut later = plan.clone();
+        later.displayed_placement.insert("BASE-1000".to_string(), 3);
+        let accepted =
+            validate_new_code(&snapshot, &later, None, "SUITE-2000")
+                .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(accepted.warning, None);
     }
 
     #[test]

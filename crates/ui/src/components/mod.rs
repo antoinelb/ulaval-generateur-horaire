@@ -110,6 +110,10 @@ pub struct SolverState {
     // Derived from the latest proposal or verification report. Never
     // persisted; a document swap clears it with the other solver facts.
     pub credit_shortfalls: Vec<crate::solve::CreditShortfallAnswer>,
+    // how many times the plan has changed (`track_plan_change`): a query
+    // records it at send, and only an answer asked under the current count
+    // may settle the verdict (`solve::verdict_settles`)
+    plan_generation: u64,
     next_id: u64,
 }
 
@@ -118,6 +122,10 @@ pub struct Running {
     pub id: u64,
     pub kind: QueryKind,
     pub started_ms: u64,
+    // the plan the query was asked under (`SolverState::plan_generation`
+    // at send time): what tells a verdict about the grid on screen from a
+    // verdict the student has already outrun — see `solve::verdict_settles`
+    pub plan_generation: u64,
 }
 
 // défini dans `crate::solve`, avec le reste du protocole du worker :
@@ -265,8 +273,16 @@ fn handle_worker_answer(
                 }
                 QueryKind::Verify => {
                     let mut state = state.write();
+                    // the verdict is kept either way — the panel holds the
+                    // last settled facts and would jump if this emptied
+                    // (LAT-7) — but it stops being *fresh* the moment the
+                    // plan it judged is not the plan on screen
+                    let settles = crate::solve::verdict_settles(
+                        running.plan_generation,
+                        state.plan_generation,
+                    );
                     state.verification = Some(report.placement.clone());
-                    state.verification_stale = false;
+                    state.verification_stale = !settles;
                     state.credit_shortfalls = report.credit_shortfalls;
                 }
             }
@@ -432,7 +448,12 @@ fn apply_proposal(
         say(
             alerts,
             &mut said,
-            AlertBody::Note(crate::solve::proposal_kept_note(&regressions)),
+            AlertBody::Note(crate::solve::proposal_kept_note(
+                &regressions,
+                &report.placement.blocked,
+                &plan.peek(),
+                snapshot.peek().as_ref(),
+            )),
             AlertCause::Answer,
             AlertTopic::ProposalKept,
         );
@@ -539,6 +560,7 @@ fn next_query(state: &mut Signal<SolverState>, kind: QueryKind) -> u64 {
         id: state.next_id,
         kind,
         started_ms: crate::browser::now_epoch_ms(),
+        plan_generation: state.plan_generation,
     });
     state.next_id
 }
@@ -1214,6 +1236,9 @@ fn track_plan_change(plan: Signal<Plan>, solver_state: Signal<SolverState>) {
             let mut state = solver_state.write();
             state.verification_stale = true;
             state.verify_failed = false;
+            // an answer already in flight was asked under the previous
+            // count: it will no longer settle this plan
+            state.plan_generation = current;
             state.awaited_since = Some(crate::browser::now_epoch_ms());
         }
         spawn(async move {

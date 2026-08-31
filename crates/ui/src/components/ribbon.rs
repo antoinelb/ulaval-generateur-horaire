@@ -86,6 +86,10 @@ fn SessionCard(card: RibbonCard) -> Element {
         use_context::<super::DraggedCourse>();
     let super::DropHover(mut hover) = use_context::<super::DropHover>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
+    // a drop is a pin like any other: `place_course` owes it the session's
+    // verdict, and needs somewhere to say it (ADR
+    // `2026-08-une-epingle-est-verifiee-comme-le-reste`)
+    let alerts = use_context::<Signal<super::AlertStack>>();
     let index = card.index;
     let dragged_code = dragged.read().clone();
     let target =
@@ -150,7 +154,8 @@ fn SessionCard(card: RibbonCard) -> Element {
                 // a drop is a move, never a choice: it must not tag the
                 // course with a block it was not picked under
                 super::panel::place_course(
-                    plan, history, &code, index, &drop_label, None, None,
+                    plan, history, snapshot, alerts, &code, index,
+                    &drop_label, None, None,
                 );
             },
             div { class: "ribbon-card-head",
@@ -219,6 +224,10 @@ fn SummerStrip(card: RibbonCard) -> Element {
         use_context::<super::DraggedCourse>();
     let super::DropHover(mut hover) = use_context::<super::DropHover>();
     let snapshot = use_context::<Signal<Option<Snapshot>>>();
+    // a drop is a pin like any other: `place_course` owes it the session's
+    // verdict, and needs somewhere to say it (ADR
+    // `2026-08-une-epingle-est-verifiee-comme-le-reste`)
+    let alerts = use_context::<Signal<super::AlertStack>>();
     let index = card.index;
     let dragged_code = dragged.read().clone();
     let target =
@@ -281,7 +290,8 @@ fn SummerStrip(card: RibbonCard) -> Element {
                 // a drop is a move, never a choice: it must not tag the
                 // course with a block it was not picked under
                 super::panel::place_course(
-                    plan, history, &code, index, &drop_label, None, None,
+                    plan, history, snapshot, alerts, &code, index,
+                    &drop_label, None, None,
                 );
             },
             button {

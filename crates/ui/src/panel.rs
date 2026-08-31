@@ -2227,8 +2227,13 @@ pub fn is_mandatory(snapshot: &Snapshot, plan: &Plan, code: &str) -> bool {
 // The sessions offered as freeze targets: a plain season filter over the
 // horizon, read from the snapshot — no solver probe, so every visible row
 // can show its strip at once (a probe per row cost one solve each). A
-// session barred by the prerequisites stays clickable; `validate_new_code`
-// warns then, as it always did.
+// session barred by the prerequisites stays clickable — the student may
+// know something the répertoire does not, and the pin is undoable — but
+// `solve::pin_warning`, taken by `place_course` on every pin, says what it
+// breaks. It used to be `validate_new_code` that was supposed to warn
+// here, and it did not: it never had a session to order the grid by, and
+// the chip strip skipped it for anything already mandatory or placed
+// (rapport étudiante 2026-08-30).
 fn candidate_sessions(
     snapshot: &Snapshot,
     plan: &Plan,

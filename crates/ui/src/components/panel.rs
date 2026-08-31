@@ -2443,8 +2443,9 @@ fn CourseChoice(
                                         grant_key.as_deref(),
                                     );
                                     place_course(
-                                        plan, history, &code, session, &label,
-                                        grant, origin,
+                                        plan, history, snapshot, alerts,
+                                        &code, session, &label, grant,
+                                        origin,
                                     );
                                     if let Some(warning) = warning {
                                         super::push_alert(
@@ -2490,9 +2491,13 @@ fn CourseChoice(
     }
 }
 
-// The same gate as the typed entry (saison, doublon, préalables) — a first
-// take must not be a silent side door (rapport étudiante). Switching from
-// one choice to another is a move: already accepted once, never re-judged.
+// The same gate as the typed entry (saison, doublon) — a first take must
+// not be a silent side door (rapport étudiante). Switching from one choice
+// to another is a *move*, and this gate would refuse it outright (« déjà
+// placé en A3 — retirez-le de là d'abord »): a move is judged by
+// `place_course`, which speaks the session's verdict on every pin,
+// whatever the choice was before it. What this early return skips is the
+// intake, never the préalables.
 // `None` means refused (the alert is already pushed); `Some(warning)` means
 // go ahead, saying that if it is there.
 fn take_verdict(
@@ -2663,10 +2668,21 @@ fn RuleAttach(code: String) -> Element {
 // act, and `origin` the block the course is being chosen under — the
 // ribbon and the grid pass None for both: moving a course is not choosing
 // it again, and must never overwrite the tag it already carries.
+//
+// This is the one door every pin goes through, which is why the session's
+// verdict is taken here rather than at each caller: the chip strip used to
+// gate only a *first* take (`take_verdict` returns early for anything
+// already mandatory, chosen or placed), and the two ribbon drops gated
+// nothing at all — an épingle onto a préalable's own session was accepted
+// in silence (rapport étudiante 2026-08-30). The decision itself is
+// `solve::pin_warning`, pure and tested; nothing is judged here (ADR
+// `2026-08-une-epingle-est-verifiee-comme-le-reste`).
 #[allow(clippy::too_many_arguments)]
 pub fn place_course(
     plan: Signal<Plan>,
     history: Signal<History>,
+    snapshot: Signal<Option<Snapshot>>,
+    alerts: Signal<super::AlertStack>,
     code: &str,
     session: usize,
     label: &str,
@@ -2705,8 +2721,21 @@ pub fn place_course(
             plan.rule_grants.insert(code.clone(), key);
         }
         plan.pinned_sessions.insert(code.clone(), session);
-        plan.displayed_placement.insert(code, session);
+        plan.displayed_placement.insert(code.clone(), session);
     });
+    // after the edit, never before: the verdict describes the grid the
+    // student now has, and the act it judges is already one « Annuler »
+    // away (ACT-2 — a confirmation dialog would be theatre here)
+    let warning = {
+        let read = snapshot.read();
+        let plan_read = plan.read();
+        read.as_ref().and_then(|snapshot| {
+            solve::pin_warning(snapshot, &plan_read, session, &code)
+        })
+    };
+    if let Some(warning) = warning {
+        super::push_alert(alerts, super::AlertBody::Note(warning));
+    }
 }
 
 // the session currently holding the course — placed by the solver or
