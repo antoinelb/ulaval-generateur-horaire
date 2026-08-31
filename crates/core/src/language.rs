@@ -675,4 +675,12 @@ mod tests {
 
         assert!(restore_stripped_language_prose(&mut program).is_empty());
     }
+
+    // `course_number` only ever sees sigles today: `subject_courses` keeps
+    // what `split_once('-')` accepts, and `english_floor` filters on the
+    // ANL prefix. The guard covers a snapshot that stops holding sigles.
+    #[test]
+    fn a_code_without_a_hyphen_has_no_number() {
+        assert_eq!(course_number("LANGUES"), None);
+    }
 }

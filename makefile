@@ -15,7 +15,7 @@ lint: ui-data ui-calc
 test: ui-data ui-calc
 	cargo +nightly llvm-cov --ignore-filename-regex \
 		'(lib\.rs|/mod\.rs|/main\.rs)$$|crates/ui/src/components/|build\.rs$$' \
-		--fail-under-lines 100
+		--fail-under-lines 100 --fail-under-regions 100
 
 wasm:
 	wasm-pack build crates/wasm --target web
