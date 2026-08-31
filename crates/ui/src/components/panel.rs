@@ -1082,7 +1082,12 @@ fn OrganigrammeControls(rules_missing: usize) -> Element {
     // and always widens to the plan's own start — a relevé Capsule import
     // (`capsule::apply_to_plan`) anchors it years back for a 4th/5th-year
     // student, and an option list missing that year would leave `selected`
-    // matching nothing and the select silently showing the wrong session
+    // matching nothing and the select silently showing the wrong session.
+    // It reaches eight years under the clock so a student already partway
+    // through his bac — or a directeur simulating one — can put the
+    // sessions he has lived into the horizon and place his done courses
+    // there, the only way to say « fait » since ✓/↩ went away (ADR
+    // `2026-08-debut-offert-dans-le-passe`)
     let today =
         crate::state::semester_of_epoch_ms(crate::browser::now_epoch_ms());
     let (year_lo, year_hi) =
