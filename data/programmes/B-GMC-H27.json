@@ -11,8 +11,11 @@
   "credits_required": 120,
   "mandatory": [
     "GMC-1001",
+    "GMC-1004",
+    "GMC-1005",
     "GMC-1024",
     "GML-1001",
+    "GMN-2900",
     "MAT-1900",
     "GMC-1003",
     "GMC-2001",
@@ -24,6 +27,7 @@
     "GMC-2005",
     "GMC-2006",
     "GMC-2024",
+    "ECN-4901",
     "GMC-2008",
     "GMC-2025",
     "GMC-3000",
@@ -40,40 +44,9 @@
     "GMC-3034",
     "PHI-2910",
     "GMC-3035",
-    "PHI-3900",
-    "ECN-4901",
-    "GMC-1004",
-    "GMC-1005",
-    "GMN-2900"
+    "PHI-3900"
   ],
   "rules": [
-    {
-      "title": "Scolarité préparatoire",
-      "constraint": {
-        "type": "credits",
-        "min": 21,
-        "max": 21
-      },
-      "courses": [
-        "CHM-0150",
-        "MAT-0130",
-        "MAT-0150",
-        "MAT-0260",
-        "PHY-0150",
-        "PHY-0250"
-      ]
-    },
-    {
-      "title": "Stages",
-      "constraint": {
-        "type": "credits",
-        "min": 9,
-        "max": 9
-      },
-      "courses": [
-        "GMC-2580"
-      ]
-    },
     {
       "title": "Règle 1",
       "constraint": {
@@ -84,6 +57,35 @@
       "courses": [
         "GLO-1901",
         "IFT-1903"
+      ]
+    },
+    {
+      "title": "Stages",
+      "constraint": {
+        "type": "course",
+        "min": 1,
+        "max": 8
+      },
+      "courses": [
+        "GMC-2580",
+        "GMC-1590",
+        "GMC-3590",
+        "GMC-3591"
+      ],
+      "notes": [
+        "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GMC-2580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GMC-1590, GMC-3590 et GMC-3591. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
+      ],
+      "credits_in_addition": true
+    },
+    {
+      "title": "Scolarité préparatoire",
+      "courses": [
+        "CHM-0150",
+        "MAT-0130",
+        "MAT-0150",
+        "MAT-0260",
+        "PHY-0150",
+        "PHY-0250"
       ]
     }
   ],
@@ -97,15 +99,10 @@
           "title": "Règle 1",
           "constraint": {
             "type": "credits",
-            "min": 15,
+            "min": 12,
             "max": 15
           },
           "courses": [
-            "OPT-ION1",
-            "OPT-ION2",
-            "OPT-ION3",
-            "OPT-ION4",
-            "OPT-ION5",
             "GMC-4054",
             "GMC-4150",
             "GMC-4151",
@@ -157,6 +154,20 @@
             "GMC-4351",
             "GMC-3550",
             "GMC-3551"
+          ],
+          "notes": [
+            "Aéronautique et aérospatiale",
+            "Entrepreneuriat",
+            "Génie du bâtiment durable",
+            "Génie biomécanique",
+            "Génie industriel",
+            "Génie manufacturier",
+            "Intelligence artificielle",
+            "Matériaux",
+            "Mécatronique",
+            "Systèmes mécaniques",
+            "Projets spécialisés",
+            "L'étudiant admis au profil entrepreneurial doit réussir les cours ENT-1000, (ENT-2023 ou ENT-4020), ENT-3000 et ENT-3010."
           ]
         },
         {
@@ -374,7 +385,7 @@
       ]
     },
     {
-      "title": "Génie du développement durable",
+      "title": "Génie du bâtiment durable",
       "credits_required": 18,
       "mandatory": [
         "GMC-3012",
@@ -389,6 +400,7 @@
             "max": 9
           },
           "courses": [
+            "ARC-3103",
             "GBO-2040",
             "GBO-4070",
             "GCI-2004",
@@ -398,8 +410,8 @@
             "GEL-2003",
             "GEL-4100",
             "GEL-4799",
-            "GMC-3551",
             "GMC-3550",
+            "GMC-3551",
             "GMC-4100"
           ]
         },
@@ -499,241 +511,17 @@
   ],
   "profiles": [
     {
-      "title": "Profil entrepreneurial",
-      "credits_required": 18,
-      "mandatory": [
-        "ENT-1000",
-        "ENT-3000",
-        "ENT-3010"
-      ],
-      "rules": [
-        {
-          "title": "Règle 1",
-          "constraint": {
-            "type": "credits",
-            "min": 3,
-            "max": 3
-          },
-          "courses": [
-            "ENT-2023",
-            "ENT-4020"
-          ]
-        },
-        {
-          "title": "Règle 2",
-          "constraint": {
-            "type": "credits",
-            "min": 3,
-            "max": 3
-          },
-          "courses": [
-            "ALL-1010",
-            "ALL-1020",
-            "ALL-1101",
-            "ALL-2010",
-            "ALL-2020",
-            "ALL-2100",
-            "ALL-2101",
-            "ALL-2200",
-            "ALL-2201",
-            "ALL-3010",
-            "ALL-3020",
-            "ALL-3101",
-            "ALL-3102",
-            "ALL-3103",
-            "ANL-2020",
-            "ANL-3010",
-            "ANL-3020",
-            "ANL-3030",
-            "ANL-3900",
-            "ANL-3905",
-            "ARA-1010",
-            "ARA-1020",
-            "ARA-1200",
-            "ARA-2010",
-            "ARA-2020",
-            "ARA-3010",
-            "ARA-3400",
-            "ARA-3401",
-            "CHN-1010",
-            "CHN-1020",
-            "CHN-2010",
-            "CHN-2020",
-            "CHN-2301",
-            "CHN-3010",
-            "CHN-3020",
-            "ESG-1010",
-            "ESG-1020",
-            "ESG-2010",
-            "ESG-2020",
-            "ESG-3010",
-            "ESG-3100",
-            "ESG-3105",
-            "ITL-1010",
-            "ITL-1020",
-            "ITL-2010",
-            "ITL-2020",
-            "ITL-2201",
-            "ITL-3010",
-            "ITL-3020",
-            "ITL-3105",
-            "JAP-1010",
-            "JAP-1020",
-            "JAP-2010",
-            "JAP-2020",
-            "JAP-3010",
-            "JAP-3020",
-            "LAN-GUES",
-            "POR-1010",
-            "POR-1020",
-            "POR-2010",
-            "POR-2020",
-            "POR-2200",
-            "POR-2201",
-            "POR-3010",
-            "POR-3020",
-            "POR-3600",
-            "RUS-1010",
-            "RUS-1020",
-            "RUS-1100",
-            "RUS-2010",
-            "RUS-2020",
-            "RUS-2021",
-            "RUS-2100",
-            "RUS-2101",
-            "RUS-2200",
-            "RUS-3010",
-            "RUS-3600",
-            "RUS-3601"
-          ],
-          "notes": [
-            "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues peut choisir un cours d'anglais de niveau supérieur ou, s'il a acquis le niveau Advanced English II (VEPT : 63), un cours d'une autre langue moderne."
-          ]
-        },
-        {
-          "title": "Règle 3",
-          "constraint": {
-            "type": "credits",
-            "min": 3,
-            "max": 3
-          },
-          "courses": [
-            "OPT-GMC1"
-          ]
-        }
-      ]
-    },
-    {
-      "title": "Profil international",
-      "credits_required": 18,
+      "title": "Passage intégré au deuxième cycle",
       "mandatory": [],
       "rules": [
         {
           "title": "Règle 1",
-          "constraint": {
-            "type": "credits",
-            "min": 15,
-            "max": 15
-          },
-          "courses": [
-            "OPT-ETR1",
-            "OPT-ETR2",
-            "OPT-ETR3",
-            "OPT-ETR4",
-            "OPT-ETR5"
-          ]
-        },
-        {
-          "title": "Règle 2",
-          "constraint": {
-            "type": "credits",
-            "min": 3,
-            "max": 3
-          },
-          "courses": [
-            "ALL-1010",
-            "ALL-1020",
-            "ALL-1101",
-            "ALL-2010",
-            "ALL-2020",
-            "ALL-2100",
-            "ALL-2101",
-            "ALL-2200",
-            "ALL-2201",
-            "ALL-3010",
-            "ALL-3020",
-            "ALL-3101",
-            "ALL-3102",
-            "ALL-3103",
-            "ANL-2020",
-            "ANL-3010",
-            "ANL-3020",
-            "ANL-3030",
-            "ANL-3900",
-            "ANL-3905",
-            "ARA-1010",
-            "ARA-1020",
-            "ARA-1200",
-            "ARA-2010",
-            "ARA-2020",
-            "ARA-3010",
-            "ARA-3400",
-            "ARA-3401",
-            "CHN-1010",
-            "CHN-1020",
-            "CHN-2010",
-            "CHN-2020",
-            "CHN-2301",
-            "CHN-3010",
-            "CHN-3020",
-            "ESG-1010",
-            "ESG-1020",
-            "ESG-2010",
-            "ESG-2020",
-            "ESG-3010",
-            "ESG-3100",
-            "ESG-3105",
-            "ITL-1010",
-            "ITL-1020",
-            "ITL-2010",
-            "ITL-2020",
-            "ITL-2201",
-            "ITL-3010",
-            "ITL-3020",
-            "ITL-3105",
-            "JAP-1010",
-            "JAP-1020",
-            "JAP-2010",
-            "JAP-2020",
-            "JAP-3010",
-            "JAP-3020",
-            "LAN-GUES",
-            "POR-1010",
-            "POR-1020",
-            "POR-2010",
-            "POR-2020",
-            "POR-2200",
-            "POR-2201",
-            "POR-3010",
-            "POR-3020",
-            "POR-3600",
-            "RUS-1010",
-            "RUS-1020",
-            "RUS-1100",
-            "RUS-2010",
-            "RUS-2020",
-            "RUS-2021",
-            "RUS-2100",
-            "RUS-2101",
-            "RUS-2200",
-            "RUS-3010",
-            "RUS-3600",
-            "RUS-3601"
-          ],
-          "notes": [
-            "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues peut choisir un cours d'anglais de niveau supérieur ou, s'il a acquis le niveau Advanced English II (VEPT : 63), un cours d'une autre langue moderne."
-          ]
+          "courses": "negotiated",
+          "raw": "deuxième cycle suivante :"
         }
+      ],
+      "notes": [
+        "Conditions requises : avoir acquis 60 crédits du programme et présenter la moyenne de programme exigée selon l'entente. Rencontrer la direction de programme pour établir le choix de cours selon l'entente de passage intégré au deuxième cycle."
       ]
     }
   ],

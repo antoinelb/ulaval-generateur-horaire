@@ -45,37 +45,6 @@
   ],
   "rules": [
     {
-      "title": "Scolarité préparatoire",
-      "constraint": {
-        "type": "credits",
-        "min": 33,
-        "max": 33
-      },
-      "courses": [
-        "MAT-0150",
-        "MAT-0260",
-        "MAT-0130",
-        "PHY-0150",
-        "PHY-0250",
-        "CHM-0150",
-        "CHM-0160",
-        "CHM-0250",
-        "CHM-0170",
-        "BIO-0150"
-      ]
-    },
-    {
-      "title": "Stages",
-      "constraint": {
-        "type": "credits",
-        "min": 9,
-        "max": 9
-      },
-      "courses": [
-        "GIN-3580"
-      ]
-    },
-    {
       "title": "Règle 1",
       "constraint": {
         "type": "credits",
@@ -84,8 +53,7 @@
       },
       "courses": [
         "MED-1100",
-        "RLT-2002",
-        "SAN-SÉCU"
+        "RLT-2002"
       ]
     },
     {
@@ -101,12 +69,11 @@
         "BIO-4900",
         "GLG-1000",
         "PHY-1000",
-        "PHY-2100",
-        "SCI-NATU"
+        "PHY-2100"
       ]
     },
     {
-      "title": "Autres exigences - Règle 1",
+      "title": "Autres exigences – Règle 1",
       "constraint": {
         "type": "credits",
         "min": 3,
@@ -195,6 +162,44 @@
       "notes": [
         "Réussir le cours ANL-2020 Intermediate English II. L'étudiant qui démontre qu'il a acquis ce niveau (VEPT : 53) lors du test administré par l'École de langues doit choisir un cours d'anglais de niveau supérieur. S'il a acquis le niveau Advanced English II (VEPT : 63), il peut choisir un cours d'une autre langue moderne."
       ]
+    },
+    {
+      "title": "Autres exigences – Règle 2",
+      "constraint": {
+        "type": "credits",
+        "min": 15,
+        "max": 15
+      },
+      "courses": "negotiated",
+      "raw": "Réussir les cours requis par sa concentration."
+    },
+    {
+      "title": "Stages",
+      "constraint": {
+        "type": "course",
+        "min": 1,
+        "max": 8
+      },
+      "courses": [
+        "GIN-3580",
+        "GIN-3590",
+        "GIN-3591",
+        "GIN-3592"
+      ],
+      "notes": [
+        "En plus des cours obligatoires du programme, l'étudiant doit réussir le stage de formation pratique GIN-3580 pour obtenir son diplôme. Il peut également suivre trois autres stages de formation pratique optionnels : GIN-3590, GIN-3591 et GIN-3592. Les crédits de ces stages sont en sus des crédits exigés du programme. Pour s'inscrire, s'adresser à la direction de programme."
+      ],
+      "credits_in_addition": true
+    },
+    {
+      "title": "Scolarité préparatoire",
+      "courses": [
+        "MAT-0130",
+        "MAT-0150",
+        "MAT-0250",
+        "MAT-0260",
+        "PHY-0150"
+      ]
     }
   ],
   "concentrations": [
@@ -223,14 +228,12 @@
             "IFT-1003",
             "MQT-2101",
             "MQT-3000",
-            "STT-1100",
-            "OPT-ION1",
-            "OPT-ION2",
-            "OPT-ION3",
-            "OPT-ION4",
-            "OPT-ION5"
+            "STT-1100"
           ]
         }
+      ],
+      "notes": [
+        "L'étudiant admis au profil entrepreneurial choisit les activités qui y sont prévues."
       ]
     },
     {
@@ -496,7 +499,7 @@
   "profiles": [
     {
       "title": "Profil entrepreneurial",
-      "credits_required": 15,
+      "credits_required": 12,
       "mandatory": [
         "ENT-1000",
         "ENT-3000",
@@ -514,53 +517,15 @@
             "ENT-2023",
             "ENT-2145"
           ]
-        },
-        {
-          "title": "Règle 2",
-          "constraint": {
-            "type": "credits",
-            "min": 3,
-            "max": 3
-          },
-          "courses": [
-            "GIF-1003",
-            "GIN-4021",
-            "GMC-2007",
-            "GMC-4100",
-            "GMC-4200",
-            "GMC-4202",
-            "GSO-2102",
-            "GSO-2104",
-            "GSO-2105",
-            "IFT-1003",
-            "MQT-2101",
-            "MQT-3000",
-            "STT-1100"
-          ]
         }
       ]
     },
     {
       "title": "Profil international",
-      "credits_required": 15,
-      "mandatory": [],
-      "rules": [
-        {
-          "title": "Règle 1",
-          "constraint": {
-            "type": "credits",
-            "min": 15,
-            "max": 15
-          },
-          "courses": [
-            "OPT-ETR1",
-            "OPT-ETR2",
-            "OPT-ETR3",
-            "OPT-ETR4",
-            "OPT-ETR5"
-          ]
-        }
-      ]
+      "mandatory": [
+        "EHE-1GIN"
+      ],
+      "rules": []
     }
   ],
   "language_requirement": {
