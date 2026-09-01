@@ -357,6 +357,10 @@ fn ImportDrawer() -> Element {
     // act worth undoing
     let mut json_program_file = use_signal(|| None::<dioxus::html::FileData>);
     let mut json_loading = use_signal(|| false);
+    // LAY-4 : le « ? » déplie sur place ce qu'est un fichier programme —
+    // même patron que la version d'un programme (ADR
+    // `2026-08-vocabulaire-explique-en-place-a-la-demande`)
+    let mut json_help = use_signal(|| false);
     // LAT-4/5: `use_future` spawns its closure once at mount and never
     // restarts it when a signal read inside changes (unlike `use_resource`)
     // — gating start/stop on `phase` would freeze after the first import.
@@ -627,6 +631,9 @@ fn ImportDrawer() -> Element {
         .as_ref()
         .map(|file| file.name())
         .unwrap_or_else(|| "Aucun fichier choisi".to_string());
+    // the shipped snapshot the help's « Télécharger un exemple » link
+    // serves — the choice is `present::example_program_file` (AP-7)
+    let json_example = crate::browser::example_program();
 
     rsx! {
         div { class: "panel-import",
@@ -675,10 +682,57 @@ fn ImportDrawer() -> Element {
                 // (opacity 0, full-size), and the chosen name is printed by
                 // the row itself. A fixed shape either way (LAY-1).
                 div { class: "panel-import-json",
-                    label {
-                        class: "panel-import-label",
-                        r#for: "panel-import-json-program",
-                        "Fichier programme ({{code}}-{{semestre}}.json)"
+                    div { class: "panel-import-label-row",
+                        label {
+                            class: "panel-import-label",
+                            r#for: "panel-import-json-program",
+                            "Fichier programme ({{code}}-{{semestre}}.json)"
+                        }
+                        button {
+                            class: "panel-help-toggle",
+                            r#type: "button",
+                            aria_expanded: json_help(),
+                            aria_controls: "panel-import-json-help",
+                            aria_label: "Ce qu'est un fichier programme \
+                                         et où en trouver un",
+                            title: "Le fichier programme",
+                            onclick: move |_| {
+                                let open = !json_help();
+                                json_help.set(open);
+                            },
+                            "?"
+                        }
+                    }
+                    if json_help() {
+                        div {
+                            id: "panel-import-json-help",
+                            class: "panel-picker-help",
+                            p { class: "panel-import-help-text",
+                                "{crate::present::PROGRAM_FILE_HELP}"
+                            }
+                            div { class: "panel-import-help-links",
+                                if let Some((name, url)) = json_example.as_ref() {
+                                    a {
+                                        class: "panel-chip",
+                                        href: "{url}",
+                                        download: "{name}",
+                                        title: "Télécharge l'instantané \
+                                                {name} embarqué avec \
+                                                l'application",
+                                        "Télécharger un exemple ({name})"
+                                    }
+                                }
+                                a {
+                                    class: "panel-chip",
+                                    href: "https://github.com/antoinelb/ulaval-generateur-horaire/tree/main/data/programmes",
+                                    target: "_blank",
+                                    rel: "noopener",
+                                    title: "Ouvre le dossier des \
+                                            instantanés publiés, sur GitHub",
+                                    "Tous les programmes (GitHub)"
+                                }
+                            }
+                        }
                     }
                     div { class: "panel-import-file",
                         input {

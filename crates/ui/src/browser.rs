@@ -335,6 +335,18 @@ pub fn encode_uri(text: &str) -> String {
     String::from(js_sys::encode_uri_component(text))
 }
 
+// The snapshot the import drawer's help links as a downloadable example —
+// (file name, asset URL). Only the lookup lives here: the choice itself is
+// `present::example_program_file`, native-tested (AP-7).
+pub fn example_program() -> Option<(String, String)> {
+    let names: Vec<&str> = PROGRAMS.iter().map(|(name, _)| *name).collect();
+    let chosen = crate::present::example_program_file(&names)?;
+    PROGRAMS
+        .iter()
+        .find(|(name, _)| *name == chosen)
+        .map(|(name, asset)| ((*name).to_string(), asset.to_string()))
+}
+
 // --- offline (DEG-3) -------------------------------------------------------
 
 // A service worker's scope is the directory it is served from, and

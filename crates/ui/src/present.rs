@@ -119,8 +119,8 @@ pub fn present_import_error(error: &ImportError) -> UiError {
         ImportError::InvalidProgramJson { .. } => (
             "Ce fichier n'est pas un instantané de programme valide."
                 .to_string(),
-            "Choisissez un fichier « {code}-{semestre}.json » produit par \
-             le scraper, puis réessayez."
+            "Partez d'un exemple téléchargé via le « ? » du tiroir, \
+             ajustez-le, puis réessayez."
                 .to_string(),
         ),
     };
@@ -606,6 +606,29 @@ pub const VINTAGE_HELP: &str =
      exigences de votre version d'admission qui s'appliquent à vous, pas \
      celles de la version la plus récente. Dans le doute, prenez la \
      version de la session où commencent vos études.";
+
+// Même patron LAY-4 pour l'import par fichier : rien ne disait ce qu'est
+// un fichier programme ni d'où il vient (Antoine, 2026-09-01). L'aide
+// pointe vers un vrai exemple plutôt qu'un schéma décrit en prose (ADR
+// `2026-09-aide-gabarit-et-lien-github-pour-l-import-json`).
+pub const PROGRAM_FILE_HELP: &str =
+    "Un fichier programme est un instantané JSON au même format que les \
+     programmes déjà offerts dans la liste. Le plus simple est de partir \
+     d'un vrai exemple — téléchargez-en un ci-dessous, ou parcourez ceux \
+     déjà publiés — puis d'ajuster son contenu avant de le charger ici.";
+
+// Le gabarit offert par cette aide est un vrai instantané embarqué, pas
+// un squelette écrit à la main qui ferait une seconde source de vérité du
+// schéma : B-GEX — le programme du mandat — quand il est embarqué, sinon
+// le premier du manifeste, pour qu'un jeu de données réduit garde un
+// exemple plutôt qu'un lien mort.
+pub fn example_program_file<'a>(names: &[&'a str]) -> Option<&'a str> {
+    names
+        .iter()
+        .find(|name| **name == "B-GEX-A26.json")
+        .or_else(|| names.first())
+        .copied()
+}
 
 pub fn bac_credit_tooltip(
     summary: &ulaval_scheduler_wasm::credits::CreditSummary,
@@ -1699,6 +1722,22 @@ mod override_note_tests {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
+
+    // the help's downloadable example: B-GEX — the commissioning
+    // program — when shipped, the first snapshot otherwise, never a
+    // dead link out of a reduced data set
+    #[test]
+    fn the_example_program_prefers_b_gex_then_falls_back_to_the_first() {
+        assert_eq!(
+            example_program_file(&["B-ANT-A26.json", "B-GEX-A26.json"]),
+            Some("B-GEX-A26.json")
+        );
+        assert_eq!(
+            example_program_file(&["B-ANT-A26.json", "B-GIN-A23.json"]),
+            Some("B-ANT-A26.json")
+        );
+        assert_eq!(example_program_file(&[]), None);
+    }
 
     #[test]
     fn both_data_errors_present_their_five_parts_in_french() {

@@ -1114,6 +1114,33 @@ code {
   white-space: nowrap;
 }
 
+/* l'aide du fichier programme (LAY-4) : le libellé et son « ? » sur une
+   rangée, puis — dépliée — la prose et les deux liens (gabarit embarqué,
+   dossier GitHub), en chips comme les autres */
+.panel-import-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.panel-import-help-text {
+  margin: 0;
+}
+
+.panel-import-help-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.panel-import-help-links a {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
 .panel-import-phases {
   list-style: none;
   margin: 0.5rem 0 0;
