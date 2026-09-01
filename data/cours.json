@@ -188,8 +188,8 @@
                   },
                   {
                     "day": "wednesday",
-                    "start": "17:30",
-                    "end": "20:20"
+                    "start": "18:30",
+                    "end": "21:20"
                   },
                   {
                     "day": "monday",
@@ -3987,6 +3987,14 @@
                 "mode": "in-person",
                 "slots": []
               }
+            ],
+            [
+              {
+                "nrc": "82272",
+                "section": "B",
+                "mode": "in-person",
+                "slots": []
+              }
             ]
           ]
         },
@@ -4083,28 +4091,12 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2024,
+          "last_offered": 2026,
           "options": [
             [
               {
-                "nrc": "82711",
+                "nrc": "82276",
                 "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "91740",
-                "section": "B",
-                "mode": "remote",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "91741",
-                "section": "C",
                 "mode": "in-person",
                 "slots": []
               }
@@ -75003,13 +74995,7 @@
                 "nrc": "83538",
                 "section": "A",
                 "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "friday",
-                    "start": "12:30",
-                    "end": "15:20"
-                  }
-                ]
+                "slots": []
               }
             ]
           ]
@@ -98545,16 +98531,16 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "83963",
+                "nrc": "83904",
                 "section": "A",
                 "mode": "in-person",
                 "slots": [
                   {
-                    "day": "tuesday",
+                    "day": "wednesday",
                     "start": "18:30",
                     "end": "21:20"
                   }
@@ -138713,6 +138699,20 @@
                 "slots": [
                   {
                     "day": "thursday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "91330",
+                "section": "Q2",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "wednesday",
                     "start": "12:30",
                     "end": "15:20"
                   }
@@ -183446,6 +183446,32 @@
               }
             ]
           ]
+        }
+      }
+    },
+    {
+      "code": "GMT-7024",
+      "title": "Télédétection radar avancé",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": {
+        "raw": "GMT-7001 OU GMT-7017",
+        "tree": {
+          "any": [
+            "GMT-7001",
+            "GMT-7017"
+          ]
+        }
+      },
+      "equivalents": [],
+      "seasons": {
+        "fall": {
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
         }
       }
     },
@@ -260307,19 +260333,6 @@
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "fall": {
-          "last_offered": 2026,
-          "options": [
-            [
-              {
-                "nrc": "86408",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        },
         "winter": {
           "last_offered": 2026,
           "options": [
@@ -273513,6 +273526,14 @@
                 "mode": "in-person",
                 "slots": []
               }
+            ],
+            [
+              {
+                "nrc": "91328",
+                "section": "W1",
+                "mode": "in-person",
+                "slots": []
+              }
             ]
           ]
         },
@@ -282211,12 +282232,12 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2025,
+          "last_offered": 2026,
           "options": [
             [
               {
-                "nrc": "86805",
-                "section": "B",
+                "nrc": "91332",
+                "section": "X",
                 "mode": "in-person",
                 "slots": []
               }
@@ -339040,7 +339061,7 @@
               {
                 "nrc": "88376",
                 "section": "H1",
-                "mode": "remote",
+                "mode": "hybrid",
                 "slots": []
               }
             ]
@@ -354929,7 +354950,7 @@
             [
               {
                 "nrc": "88656",
-                "section": "H1",
+                "section": "ZA",
                 "mode": "hybrid",
                 "slots": []
               }
@@ -385754,7 +385775,7 @@
               {
                 "nrc": "89398",
                 "section": "Z3",
-                "mode": "hybrid",
+                "mode": "remote",
                 "slots": [
                   {
                     "day": "monday",
@@ -387220,7 +387241,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-3101"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -387536,7 +387559,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-3103"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -387665,7 +387690,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-2104"
+      ],
       "seasons": {
         "winter": {
           "last_offered": 2026,
@@ -387688,7 +387715,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-3102"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2025,
@@ -387746,7 +387775,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-3104"
+      ],
       "seasons": {
         "winter": {
           "last_offered": 2026,
@@ -387775,7 +387806,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-3105"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -387811,7 +387844,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-2105"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -387860,7 +387895,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-3106"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -387968,7 +388005,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-3201"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -388004,7 +388043,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-3107"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2025,
@@ -388071,7 +388112,9 @@
       "credits": 6,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-3202"
+      ],
       "seasons": {
         "summer": {
           "last_offered": 2026,
