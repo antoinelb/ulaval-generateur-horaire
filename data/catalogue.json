@@ -4926,6 +4926,11 @@
       "url": "https://www.ulaval.ca/etudes/cours/bio-7023-diversite-evolution-et-ecologie-microbiennes"
     },
     {
+      "code": "BIO-7024",
+      "title": "Écosystèmes d'eau douce : limnologie théorique et appliquée",
+      "url": "https://www.ulaval.ca/etudes/cours/bio-7024-ecosystemes-deau-douce-limnologie-theorique-et-appliquee"
+    },
+    {
       "code": "BIO-7025",
       "title": "Plasticité phénotypique : causes et conséquences",
       "url": "https://www.ulaval.ca/etudes/cours/bio-7025-plasticite-phenotypique-causes-et-consequences"
@@ -5684,6 +5689,11 @@
       "code": "CHM-6009",
       "title": "Chimie organométallique",
       "url": "https://www.ulaval.ca/etudes/cours/chm-6009-chimie-organometallique"
+    },
+    {
+      "code": "CHM-6010",
+      "title": "Caractérisation des biomolécules",
+      "url": "https://www.ulaval.ca/etudes/cours/chm-6010-caracterisation-des-biomolecules"
     },
     {
       "code": "CHM-6011",

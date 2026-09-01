@@ -18,14 +18,14 @@
                 "mode": "in-person",
                 "slots": [
                   {
+                    "day": "monday",
+                    "start": "10:30",
+                    "end": "11:20"
+                  },
+                  {
                     "day": "tuesday",
                     "start": "15:30",
                     "end": "18:20"
-                  },
-                  {
-                    "day": "friday",
-                    "start": "12:30",
-                    "end": "13:20"
                   }
                 ]
               }
@@ -144,9 +144,9 @@
                     "end": "11:20"
                   },
                   {
-                    "day": "wednesday",
-                    "start": "09:30",
-                    "end": "11:20"
+                    "day": "friday",
+                    "start": "10:30",
+                    "end": "12:20"
                   }
                 ]
               }
@@ -181,6 +181,16 @@
                 "section": "A",
                 "mode": "in-person",
                 "slots": [
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "14:20"
+                  },
+                  {
+                    "day": "wednesday",
+                    "start": "17:30",
+                    "end": "20:20"
+                  },
                   {
                     "day": "monday",
                     "start": "12:30",
@@ -8505,33 +8515,7 @@
                 "nrc": "82362",
                 "section": "H1",
                 "mode": "hybrid",
-                "slots": [
-                  {
-                    "day": "wednesday",
-                    "start": "08:30",
-                    "end": "11:20"
-                  },
-                  {
-                    "day": "wednesday",
-                    "start": "08:30",
-                    "end": "11:20"
-                  },
-                  {
-                    "day": "wednesday",
-                    "start": "08:30",
-                    "end": "11:20"
-                  },
-                  {
-                    "day": "wednesday",
-                    "start": "08:30",
-                    "end": "11:20"
-                  },
-                  {
-                    "day": "wednesday",
-                    "start": "08:30",
-                    "end": "11:20"
-                  }
-                ]
+                "slots": []
               }
             ]
           ]
@@ -26249,20 +26233,6 @@
           "options": [
             [
               {
-                "nrc": "82640",
-                "section": "A1",
-                "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "thursday",
-                    "start": "09:00",
-                    "end": "10:50"
-                  }
-                ]
-              }
-            ],
-            [
-              {
                 "nrc": "82641",
                 "section": "A2",
                 "mode": "in-person",
@@ -26964,20 +26934,6 @@
                   }
                 ]
               }
-            ],
-            [
-              {
-                "nrc": "82656",
-                "section": "A2",
-                "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "friday",
-                    "start": "08:30",
-                    "end": "11:20"
-                  }
-                ]
-              }
             ]
           ]
         }
@@ -27213,13 +27169,13 @@
                 "slots": [
                   {
                     "day": "monday",
-                    "start": "12:30",
-                    "end": "15:20"
-                  },
-                  {
-                    "day": "thursday",
                     "start": "08:30",
                     "end": "11:20"
+                  },
+                  {
+                    "day": "monday",
+                    "start": "12:30",
+                    "end": "15:20"
                   },
                   {
                     "day": "thursday",
@@ -32733,11 +32689,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "80921",
+                "nrc": "80912",
                 "section": "A",
                 "mode": "in-person",
                 "slots": [
@@ -47235,6 +47191,42 @@
       }
     },
     {
+      "code": "BIO-7024",
+      "title": "Écosystèmes d'eau douce : limnologie théorique et appliquée",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "BIO-4903"
+      ],
+      "seasons": {
+        "fall": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "91291",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "13:30",
+                    "end": "16:20"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
       "code": "BIO-7025",
       "title": "Plasticité phénotypique : causes et conséquences",
       "credits": 3,
@@ -52481,11 +52473,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2024,
+          "last_offered": 2026,
           "options": [
             [
               {
-                "nrc": "81017",
+                "nrc": "91319",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -53521,6 +53513,47 @@
                     "day": "friday",
                     "start": "08:30",
                     "end": "10:20"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "CHM-6010",
+      "title": "Caractérisation des biomolécules",
+      "credits": 3,
+      "cycle": 2,
+      "prerequisites": null,
+      "equivalents": [
+        "CHM-4250"
+      ],
+      "seasons": {
+        "fall": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "91294",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "10:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "13:30",
+                    "end": "15:20"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "13:30",
+                    "end": "15:20"
                   }
                 ]
               }
@@ -69212,6 +69245,20 @@
                   }
                 ]
               }
+            ],
+            [
+              {
+                "nrc": "91325",
+                "section": "C",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "08:30",
+                    "end": "11:20"
+                  }
+                ]
+              }
             ]
           ]
         },
@@ -72022,18 +72069,7 @@
                 "nrc": "83468",
                 "section": "H1",
                 "mode": "hybrid",
-                "slots": [
-                  {
-                    "day": "friday",
-                    "start": "09:00",
-                    "end": "11:00"
-                  },
-                  {
-                    "day": "friday",
-                    "start": "11:30",
-                    "end": "14:30"
-                  }
-                ]
+                "slots": []
               }
             ]
           ]
@@ -73159,6 +73195,19 @@
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
+        "fall": {
+          "last_offered": 2026,
+          "options": [
+            [
+              {
+                "nrc": "91320",
+                "section": "Z1",
+                "mode": "remote",
+                "slots": []
+              }
+            ]
+          ]
+        },
         "winter": {
           "last_offered": 2026,
           "options": [
@@ -83929,6 +83978,42 @@
                 ]
               },
               {
+                "nrc": "83716",
+                "section": "D",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "friday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "83712",
+                "section": null,
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:00",
+                    "end": "17:00"
+                  }
+                ]
+              },
+              {
                 "nrc": "83717",
                 "section": "E",
                 "mode": "in-person",
@@ -84080,6 +84165,52 @@
         "fall": {
           "last_offered": 2026,
           "options": [
+            [
+              {
+                "nrc": "83718",
+                "section": null,
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:00",
+                    "end": "17:00"
+                  }
+                ]
+              },
+              {
+                "nrc": "83719",
+                "section": "A",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "monday",
+                    "start": "08:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "tuesday",
+                    "start": "08:00",
+                    "end": "17:00"
+                  },
+                  {
+                    "day": "friday",
+                    "start": "08:00",
+                    "end": "17:00"
+                  }
+                ]
+              }
+            ],
             [
               {
                 "nrc": "83718",
@@ -96722,18 +96853,18 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "83928",
+                "nrc": "83871",
                 "section": "A",
                 "mode": "in-person",
                 "slots": [
                   {
-                    "day": "tuesday",
-                    "start": "09:00",
-                    "end": "11:50"
+                    "day": "thursday",
+                    "start": "08:30",
+                    "end": "11:20"
                   }
                 ]
               }
@@ -106104,7 +106235,7 @@
                   {
                     "day": "wednesday",
                     "start": "08:30",
-                    "end": "12:20"
+                    "end": "11:20"
                   }
                 ]
               }
@@ -126368,11 +126499,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "84408",
+                "nrc": "84343",
                 "section": "G",
                 "mode": "in-person",
                 "slots": [
@@ -133192,11 +133323,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2019,
+          "last_offered": 2026,
           "options": [
             [
               {
-                "nrc": "84827",
+                "nrc": "91327",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -138568,6 +138699,20 @@
                 "slots": [
                   {
                     "day": "wednesday",
+                    "start": "12:30",
+                    "end": "15:20"
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "nrc": "91315",
+                "section": "M4",
+                "mode": "in-person",
+                "slots": [
+                  {
+                    "day": "thursday",
                     "start": "12:30",
                     "end": "15:20"
                   }
@@ -145791,28 +145936,12 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
-          "options": [
-            [
-              {
-                "nrc": "91019",
-                "section": "A",
-                "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "wednesday",
-                    "start": "13:30",
-                    "end": "16:20"
-                  },
-                  {
-                    "day": "thursday",
-                    "start": "15:30",
-                    "end": "16:20"
-                  }
-                ]
-              }
-            ]
-          ]
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
         }
       }
     },
@@ -183964,13 +184093,7 @@
                 "nrc": "85212",
                 "section": "A",
                 "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "wednesday",
-                    "start": "08:30",
-                    "end": "12:20"
-                  }
-                ]
+                "slots": []
               }
             ]
           ]
@@ -193713,13 +193836,7 @@
                 "nrc": "85376",
                 "section": "H1",
                 "mode": "hybrid",
-                "slots": [
-                  {
-                    "day": "wednesday",
-                    "start": "15:30",
-                    "end": "18:20"
-                  }
-                ]
+                "slots": []
               }
             ]
           ]
@@ -195756,20 +195873,14 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2019,
           "options": [
             [
               {
-                "nrc": "85405",
+                "nrc": "85758",
                 "section": "A",
                 "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "monday",
-                    "start": "15:30",
-                    "end": "18:20"
-                  }
-                ]
+                "slots": []
               }
             ]
           ]
@@ -207086,38 +207197,6 @@
               {
                 "nrc": "85554",
                 "section": "Z2",
-                "mode": "remote",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "85555",
-                "section": "Z3",
-                "mode": "remote",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "85556",
-                "section": "Z4",
-                "mode": "remote",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "85557",
-                "section": "Z5",
-                "mode": "remote",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "85558",
-                "section": "Z6",
                 "mode": "remote",
                 "slots": []
               }
@@ -273769,15 +273848,9 @@
             [
               {
                 "nrc": "86672",
-                "section": "Z11",
+                "section": "Z1",
                 "mode": "remote",
-                "slots": [
-                  {
-                    "day": "tuesday",
-                    "start": "10:00",
-                    "end": "12:00"
-                  }
-                ]
+                "slots": []
               }
             ]
           ]
@@ -278918,11 +278991,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "86780",
+                "nrc": "86677",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -278990,11 +279063,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "86785",
+                "nrc": "86682",
                 "section": "C",
                 "mode": "in-person",
                 "slots": []
@@ -279026,12 +279099,12 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2022,
           "options": [
             [
               {
-                "nrc": "86788",
-                "section": "C",
+                "nrc": "86901",
+                "section": "A",
                 "mode": "in-person",
                 "slots": []
               }
@@ -279278,11 +279351,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "86799",
+                "nrc": "86693",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -279290,7 +279363,7 @@
             ],
             [
               {
-                "nrc": "86800",
+                "nrc": "86694",
                 "section": "B",
                 "mode": "in-person",
                 "slots": []
@@ -279298,7 +279371,7 @@
             ],
             [
               {
-                "nrc": "86801",
+                "nrc": "86695",
                 "section": "D",
                 "mode": "in-person",
                 "slots": []
@@ -279306,7 +279379,7 @@
             ],
             [
               {
-                "nrc": "86802",
+                "nrc": "86696",
                 "section": "E",
                 "mode": "in-person",
                 "slots": []
@@ -279314,16 +279387,8 @@
             ],
             [
               {
-                "nrc": "91022",
-                "section": "CC",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "91023",
-                "section": "CO",
+                "nrc": "91128",
+                "section": "I",
                 "mode": "in-person",
                 "slots": []
               }
@@ -279617,9 +279682,9 @@
                 "mode": "in-person",
                 "slots": [
                   {
-                    "day": "monday",
-                    "start": "12:30",
-                    "end": "15:20"
+                    "day": "friday",
+                    "start": "09:00",
+                    "end": "11:50"
                   }
                 ]
               }
@@ -279669,11 +279734,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "86812",
+                "nrc": "86706",
                 "section": "H1",
                 "mode": "hybrid",
                 "slots": []
@@ -279778,8 +279843,8 @@
                   },
                   {
                     "day": "thursday",
-                    "start": "08:30",
-                    "end": "09:20"
+                    "start": "09:30",
+                    "end": "10:20"
                   }
                 ]
               }
@@ -280310,11 +280375,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "86831",
+                "nrc": "86726",
                 "section": "A",
                 "mode": "in-person",
                 "slots": [
@@ -281176,11 +281241,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "86854",
+                "nrc": "86750",
                 "section": "B",
                 "mode": "in-person",
                 "slots": []
@@ -281218,22 +281283,6 @@
               {
                 "nrc": "86858",
                 "section": "B",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "86860",
-                "section": "D",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "86861",
-                "section": "E",
                 "mode": "in-person",
                 "slots": []
               }
@@ -281767,8 +281816,8 @@
             ],
             [
               {
-                "nrc": "86890",
-                "section": "C",
+                "nrc": "86889",
+                "section": "B",
                 "mode": "in-person",
                 "slots": []
               }
@@ -281809,14 +281858,6 @@
         "fall": {
           "last_offered": 2026,
           "options": [
-            [
-              {
-                "nrc": "86894",
-                "section": "C",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
             [
               {
                 "nrc": "86895",
@@ -281895,11 +281936,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2025,
+          "last_offered": 2026,
           "options": [
             [
               {
-                "nrc": "86795",
+                "nrc": "86899",
                 "section": "B",
                 "mode": "in-person",
                 "slots": []
@@ -282170,20 +282211,12 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "86909",
+                "nrc": "86805",
                 "section": "B",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "91018",
-                "section": "CC",
                 "mode": "in-person",
                 "slots": []
               }
@@ -282291,7 +282324,7 @@
                 "slots": [
                   {
                     "day": "friday",
-                    "start": "08:30",
+                    "start": "09:30",
                     "end": "11:20"
                   }
                 ]
@@ -282360,8 +282393,8 @@
                 "slots": [
                   {
                     "day": "thursday",
-                    "start": "12:00",
-                    "end": "15:00"
+                    "start": "13:00",
+                    "end": "16:00"
                   }
                 ]
               }
@@ -282652,11 +282685,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "86921",
+                "nrc": "86817",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -283239,19 +283272,6 @@
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "fall": {
-          "last_offered": 2026,
-          "options": [
-            [
-              {
-                "nrc": "86950",
-                "section": "A",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        },
         "winter": {
           "last_offered": 2026,
           "options": [
@@ -283437,17 +283457,12 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
-          "options": [
-            [
-              {
-                "nrc": "86952",
-                "section": "H1",
-                "mode": "hybrid",
-                "slots": []
-              }
-            ]
-          ]
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
         }
       }
     },
@@ -283505,17 +283520,12 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
-          "options": [
-            [
-              {
-                "nrc": "86953",
-                "section": "H1",
-                "mode": "hybrid",
-                "slots": []
-              }
-            ]
-          ]
+          "last_offered": null,
+          "options": null
+        },
+        "winter": {
+          "last_offered": null,
+          "options": null
         }
       }
     },
@@ -283893,11 +283903,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2022,
           "options": [
             [
               {
-                "nrc": "86959",
+                "nrc": "81977",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -284364,11 +284374,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "86978",
+                "nrc": "86874",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -284400,11 +284410,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2025,
+          "last_offered": 2026,
           "options": [
             [
               {
-                "nrc": "86876",
+                "nrc": "86980",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -284423,11 +284433,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2025,
+          "last_offered": 2026,
           "options": [
             [
               {
-                "nrc": "86877",
+                "nrc": "86981",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -284763,11 +284773,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "86999",
+                "nrc": "90915",
                 "section": "C",
                 "mode": "in-person",
                 "slots": []
@@ -284835,11 +284845,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2024,
           "options": [
             [
               {
-                "nrc": "87001",
+                "nrc": "87228",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -284847,8 +284857,8 @@
             ],
             [
               {
-                "nrc": "91016",
-                "section": "CC",
+                "nrc": "91769",
+                "section": "C",
                 "mode": "in-person",
                 "slots": []
               }
@@ -287000,11 +287010,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "87079",
+                "nrc": "86970",
                 "section": "AA",
                 "mode": "in-person",
                 "slots": []
@@ -287012,7 +287022,7 @@
             ],
             [
               {
-                "nrc": "87082",
+                "nrc": "86973",
                 "section": "AE",
                 "mode": "in-person",
                 "slots": []
@@ -287020,31 +287030,15 @@
             ],
             [
               {
-                "nrc": "87087",
-                "section": "CC",
+                "nrc": "86977",
+                "section": "BM",
                 "mode": "in-person",
                 "slots": []
               }
             ],
             [
               {
-                "nrc": "87092",
-                "section": "JB",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87093",
-                "section": "JF",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87094",
+                "nrc": "86982",
                 "section": "VC",
                 "mode": "in-person",
                 "slots": []
@@ -287052,7 +287046,7 @@
             ],
             [
               {
-                "nrc": "87095",
+                "nrc": "86983",
                 "section": "VE",
                 "mode": "in-person",
                 "slots": []
@@ -287084,11 +287078,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "87096",
+                "nrc": "86984",
                 "section": "AA",
                 "mode": "in-person",
                 "slots": []
@@ -287096,7 +287090,7 @@
             ],
             [
               {
-                "nrc": "87099",
+                "nrc": "86987",
                 "section": "AE",
                 "mode": "in-person",
                 "slots": []
@@ -287104,47 +287098,7 @@
             ],
             [
               {
-                "nrc": "87102",
-                "section": "CC",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87103",
-                "section": "CI",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87107",
-                "section": "JB",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87108",
-                "section": "JD",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87109",
-                "section": "JF",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87111",
+                "nrc": "86994",
                 "section": "VC",
                 "mode": "in-person",
                 "slots": []
@@ -287152,7 +287106,7 @@
             ],
             [
               {
-                "nrc": "87112",
+                "nrc": "86995",
                 "section": "VE",
                 "mode": "in-person",
                 "slots": []
@@ -287325,22 +287279,6 @@
           "options": [
             [
               {
-                "nrc": "87117",
-                "section": "AA",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87121",
-                "section": "AE",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
                 "nrc": "87125",
                 "section": "AK",
                 "mode": "in-person",
@@ -287357,24 +287295,8 @@
             ],
             [
               {
-                "nrc": "87139",
-                "section": "CC",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
                 "nrc": "87142",
                 "section": "CI",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87143",
-                "section": "CJ",
                 "mode": "in-person",
                 "slots": []
               }
@@ -287405,30 +287327,6 @@
             ],
             [
               {
-                "nrc": "87161",
-                "section": "JB",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87162",
-                "section": "JD",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87163",
-                "section": "JF",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
                 "nrc": "87182",
                 "section": "VC",
                 "mode": "in-person",
@@ -287445,24 +287343,8 @@
             ],
             [
               {
-                "nrc": "87186",
-                "section": "VJ",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
                 "nrc": "87187",
                 "section": "VK",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "91021",
-                "section": null,
                 "mode": "in-person",
                 "slots": []
               }
@@ -287549,11 +287431,11 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "87190",
+                "nrc": "87069",
                 "section": "AA",
                 "mode": "in-person",
                 "slots": []
@@ -287561,7 +287443,7 @@
             ],
             [
               {
-                "nrc": "87194",
+                "nrc": "87073",
                 "section": "AE",
                 "mode": "in-person",
                 "slots": []
@@ -287569,63 +287451,31 @@
             ],
             [
               {
-                "nrc": "87209",
-                "section": "CC",
+                "nrc": "87085",
+                "section": "BM",
                 "mode": "in-person",
                 "slots": []
               }
             ],
             [
               {
-                "nrc": "87212",
-                "section": "CI",
+                "nrc": "87098",
+                "section": "GB",
                 "mode": "in-person",
                 "slots": []
               }
             ],
             [
               {
-                "nrc": "87213",
-                "section": "CJ",
+                "nrc": "87109",
+                "section": "PB",
                 "mode": "in-person",
                 "slots": []
               }
             ],
             [
               {
-                "nrc": "87216",
-                "section": "CO",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87230",
-                "section": "JB",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87231",
-                "section": "JD",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87232",
-                "section": "JF",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87246",
+                "nrc": "87121",
                 "section": "VC",
                 "mode": "in-person",
                 "slots": []
@@ -287633,7 +287483,7 @@
             ],
             [
               {
-                "nrc": "87248",
+                "nrc": "87123",
                 "section": "VE",
                 "mode": "in-person",
                 "slots": []
@@ -287641,7 +287491,7 @@
             ],
             [
               {
-                "nrc": "87249",
+                "nrc": "87124",
                 "section": "VJ",
                 "mode": "in-person",
                 "slots": []
@@ -287721,28 +287571,12 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "87252",
-                "section": "AA",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87253",
-                "section": "AE",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "91014",
-                "section": "AG",
+                "nrc": "87127",
+                "section": "CA",
                 "mode": "in-person",
                 "slots": []
               }
@@ -287772,27 +287606,6 @@
       "prerequisites": null,
       "equivalents": [],
       "seasons": {
-        "fall": {
-          "last_offered": 2026,
-          "options": [
-            [
-              {
-                "nrc": "87257",
-                "section": "AA",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87258",
-                "section": "AE",
-                "mode": "in-person",
-                "slots": []
-              }
-            ]
-          ]
-        },
         "winter": {
           "last_offered": 2026,
           "options": [
@@ -287819,22 +287632,6 @@
         "fall": {
           "last_offered": 2026,
           "options": [
-            [
-              {
-                "nrc": "87259",
-                "section": "AA",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87262",
-                "section": "AE",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
             [
               {
                 "nrc": "87268",
@@ -287881,22 +287678,6 @@
           "options": [
             [
               {
-                "nrc": "87277",
-                "section": "AA",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87280",
-                "section": "AE",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
                 "nrc": "91243",
                 "section": "BI",
                 "mode": "in-person",
@@ -287931,22 +287712,6 @@
         "fall": {
           "last_offered": 2026,
           "options": [
-            [
-              {
-                "nrc": "87290",
-                "section": "CI",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87293",
-                "section": "JB",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
             [
               {
                 "nrc": "87294",
@@ -287985,24 +287750,8 @@
           "options": [
             [
               {
-                "nrc": "87301",
-                "section": "CI",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
                 "nrc": "87304",
                 "section": "JD",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87307",
-                "section": "VJ",
                 "mode": "in-person",
                 "slots": []
               }
@@ -288039,38 +287788,6 @@
               {
                 "nrc": "87308",
                 "section": "AA",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87311",
-                "section": "AE",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87317",
-                "section": "CJ",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87322",
-                "section": "JB",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87323",
-                "section": "JF",
                 "mode": "in-person",
                 "slots": []
               }
@@ -288256,88 +287973,8 @@
             ],
             [
               {
-                "nrc": "87340",
-                "section": "AE",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87342",
-                "section": "AG",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
                 "nrc": "87344",
                 "section": "AK",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87355",
-                "section": "CC",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87358",
-                "section": "CI",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87359",
-                "section": "CJ",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87375",
-                "section": "JD",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87376",
-                "section": "JF",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87384",
-                "section": "TB",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87390",
-                "section": "VC",
-                "mode": "in-person",
-                "slots": []
-              }
-            ],
-            [
-              {
-                "nrc": "87392",
-                "section": "VE",
                 "mode": "in-person",
                 "slots": []
               }
@@ -289998,18 +289635,18 @@
       "equivalents": [],
       "seasons": {
         "fall": {
-          "last_offered": 2026,
+          "last_offered": 2025,
           "options": [
             [
               {
-                "nrc": "87423",
+                "nrc": "87285",
                 "section": "Z3",
                 "mode": "remote",
                 "slots": [
                   {
                     "day": "thursday",
-                    "start": "12:30",
-                    "end": "15:20"
+                    "start": "09:00",
+                    "end": "11:50"
                   }
                 ]
               }
@@ -291654,7 +291291,7 @@
           "options": [
             [
               {
-                "nrc": "81832",
+                "nrc": "91324",
                 "section": "A",
                 "mode": "in-person",
                 "slots": []
@@ -292390,6 +292027,20 @@
         "fall": {
           "last_offered": 2026,
           "options": [
+            [
+              {
+                "nrc": "87513",
+                "section": "Z1",
+                "mode": "hybrid",
+                "slots": [
+                  {
+                    "day": "tuesday",
+                    "start": "11:30",
+                    "end": "12:30"
+                  }
+                ]
+              }
+            ],
             [
               {
                 "nrc": "87514",
@@ -297126,14 +296777,9 @@
             [
               {
                 "nrc": "87591",
-                "section": "H1",
-                "mode": "hybrid",
+                "section": "Z3",
+                "mode": "remote",
                 "slots": [
-                  {
-                    "day": "monday",
-                    "start": "12:30",
-                    "end": "16:20"
-                  },
                   {
                     "day": "monday",
                     "start": "12:30",
@@ -336029,8 +335675,8 @@
                 "slots": [
                   {
                     "day": "friday",
-                    "start": "09:00",
-                    "end": "11:50"
+                    "start": "08:30",
+                    "end": "11:20"
                   }
                 ]
               }
@@ -341449,25 +341095,6 @@
         "fall": {
           "last_offered": 2026,
           "options": [
-            [
-              {
-                "nrc": "88429",
-                "section": "A",
-                "mode": "in-person",
-                "slots": [
-                  {
-                    "day": "wednesday",
-                    "start": "10:30",
-                    "end": "12:20"
-                  },
-                  {
-                    "day": "wednesday",
-                    "start": "13:30",
-                    "end": "15:20"
-                  }
-                ]
-              }
-            ],
             [
               {
                 "nrc": "88430",
@@ -350331,8 +349958,8 @@
                   },
                   {
                     "day": "tuesday",
-                    "start": "12:30",
-                    "end": "15:20"
+                    "start": "13:30",
+                    "end": "16:20"
                   }
                 ]
               }
@@ -354017,22 +353644,12 @@
                   {
                     "day": "thursday",
                     "start": "12:30",
-                    "end": "14:20"
+                    "end": "15:20"
                   },
                   {
                     "day": "thursday",
                     "start": "12:30",
-                    "end": "14:20"
-                  },
-                  {
-                    "day": "thursday",
-                    "start": "12:30",
-                    "end": "14:20"
-                  },
-                  {
-                    "day": "thursday",
-                    "start": "12:30",
-                    "end": "14:20"
+                    "end": "15:20"
                   }
                 ]
               }
@@ -357475,13 +357092,7 @@
                 "nrc": "88699",
                 "section": "DH1",
                 "mode": "remote",
-                "slots": [
-                  {
-                    "day": "wednesday",
-                    "start": "18:30",
-                    "end": "21:20"
-                  }
-                ]
+                "slots": []
               }
             ]
           ]
@@ -378800,14 +378411,6 @@
           "options": [
             [
               {
-                "nrc": "89221",
-                "section": "H1",
-                "mode": "hybrid",
-                "slots": []
-              }
-            ],
-            [
-              {
                 "nrc": "89222",
                 "section": "Z3",
                 "mode": "remote",
@@ -387579,7 +387182,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-1001"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -387649,7 +387254,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-1002"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -387672,7 +387279,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-1003"
+      ],
       "seasons": {
         "winter": {
           "last_offered": 2026,
@@ -387726,7 +387335,9 @@
       "credits": 1,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-1201"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -387787,7 +387398,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-2101"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -387823,7 +387436,9 @@
       "credits": 1,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-1202"
+      ],
       "seasons": {
         "summer": {
           "last_offered": 2026,
@@ -387846,7 +387461,9 @@
       "credits": 1,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-1102"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -387869,7 +387486,9 @@
       "credits": 1,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-1103"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2025,
@@ -387892,7 +387511,9 @@
       "credits": 1,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-1104"
+      ],
       "seasons": {
         "winter": {
           "last_offered": 2026,
@@ -387968,7 +387589,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-2102"
+      ],
       "seasons": {
         "fall": {
           "last_offered": 2026,
@@ -388017,7 +387640,9 @@
       "credits": 3,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-2103"
+      ],
       "seasons": {
         "winter": {
           "last_offered": 2026,
@@ -388415,7 +388040,9 @@
       "credits": 1,
       "cycle": 1,
       "prerequisites": null,
-      "equivalents": [],
+      "equivalents": [
+        "DPD-1203"
+      ],
       "seasons": {
         "summer": {
           "last_offered": 2026,
