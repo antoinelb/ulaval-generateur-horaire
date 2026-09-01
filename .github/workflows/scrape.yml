@@ -79,13 +79,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run ci.yml --ref main
-      # fail AFTER committing: the snapshot stays valid (atomic writes, >=90% catalogue
-      # guard) and the failure is only the free notification channel (GitHub email)
-      - name: Fail if the scraper logged anomalies
+      # anomalies never fail the job: the snapshot stays valid anyway (atomic writes,
+      # >=90% catalogue guard), so the run summary carries them instead of a red run
+      - name: Report the scraper anomalies
         if: steps.gate.outputs.run == 'true'
         run: |
           if ls data/*_errors.log >/dev/null 2>&1; then
-            echo "Scraper anomalies:" >&2
-            tail -n +1 data/*_errors.log >&2
-            exit 1
+            echo "::warning::Le scraper a journalisé des anomalies (voir le résumé du run)"
+            {
+              echo '## Anomalies du scraper'
+              echo '```'
+              tail -n +1 data/*_errors.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
